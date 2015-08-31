@@ -18,7 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ('lmap', 'lzip',)
+__all__ = ('lmap', 'lzip', 'autoexpand',)
+
+import collections
 
 
 def lmap(func, iterable):
@@ -34,10 +36,9 @@ def lzip(*args):
 
 
 def autoexpand(lst):
-  ''' Accepts a string, list of strings or a list of lists of strings
-  or even deeper nested levels and expands it to a list of only strings.
-  This is used to flatten concatenated command argument and file lists.
-  Also accepts tuples. None values will be ignored.'''
+  ''' Accepts a nested iterable and flattens it into a single list
+  where all elements are strings. None elements are ignored, iterables
+  besides strings are expanded. '''
 
   result = []
   stack = [lst]
@@ -45,7 +46,7 @@ def autoexpand(lst):
     item = stack.pop()
     if isinstance(item, str):
       result.insert(0, item)
-    elif isinstance(item, (list, tuple)):
+    elif not isinstance(item, bytes) and isinstance(item, collections.Iterable):
       stack.extend(item)
     elif item is not None:
       raise TypeError('autoexpand() only works with str and list', type(item))
