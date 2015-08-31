@@ -254,6 +254,7 @@ class Module(object):
     data.project_dir = os.path.dirname(self.filename)
     data.session = self.session
     data.mod = self  # note: cyclic reference
+    data.self = self.locals # note: cyclic reference
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`
@@ -305,6 +306,7 @@ class Module(object):
 
     entity = self.load_module(name)
     self.locals.__entity_deps__.append(entity)
+    return entity
 
   def load_module(self, name):
     ''' Loads the module with the specicied *name* and returns it. The
