@@ -10,6 +10,9 @@ def load_backend(backend_name):
   `craftr_<x>_backend` and then `craftr.backend.<x>` where `<x>` is
   to be replaced with the actual backend name. '''
 
+  if backend_name is None:
+    return craftr.backend.null
+
   try:
     return importlib.import_module('craftr_%s_backend')
   except ImportError:

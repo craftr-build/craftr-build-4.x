@@ -30,7 +30,7 @@ class Session(object):
     def _get_current(self):
       return self._session.namespaces[self._namespace]
 
-  def __init__(self, logger=None):
+  def __init__(self, backend=None, outfile=None, logger=None):
     super().__init__()
     self.path = []
     self.path.append(os.getcwd())
@@ -38,6 +38,8 @@ class Session(object):
     self.path.extend(os.getenv('CRAFTR_PATH', '').split(os.path.sep))
     self.globals = utils.DataEntity('session_globals')
     self.modules = {}
+    self.backend = craftr.backend.load_backend(backend)
+    self.outfile = outfile or self.backend.default_outfile
     self.namespaces = {}
     self.logger = logging.Logger()
     self._mod_idcache = {}
@@ -79,7 +81,7 @@ class Session(object):
     Returned will be an `utils.proxy.LocalProxy` that references the
     namespace entry. '''
 
-    if not validate_identifier(name):
+    if not utils.validate_ident(name):
       raise ValueError('invalid namespace identifier', name)
     parent = None
     parts = []
@@ -119,7 +121,7 @@ class Session(object):
         # craftr_module(module_name)
     '''
 
-    if not validate_identifier(name):
+    if not utils.validate_ident(name):
       raise ValueError('invalid module identifier', name)
 
     try:
@@ -269,7 +271,7 @@ class Module(object):
           match = re.match('^#\s*craftr_module\(([^\s]+)\)\s*$', line)
           if match:
             identifier = match.group(1)
-    if not identifier or not validate_identifier(identifier):
+    if not identifier or not utils.validate_ident(identifier):
       raise InvalidModule(self.filename)
 
     self.identifier = identifier
@@ -460,7 +462,7 @@ class Target(object):
       raise TypeError('<module> must be a Module object', type(module))
     if not isinstance(name, str):
       raise TypeError('<name> must be a string', type(name))
-    if not validate_variable(name):
+    if not utils.validate_var(name):
       raise ValueError('invalid target name', name)
 
     super().__init__()
@@ -538,17 +540,3 @@ class ModuleReturnException(Exception):
   pass
 
 
-def validate_identifier(ident):
-  ''' Returns True if *ident* is a valid module or target identifier.
-  Such an identifier can be like a Python variable but allowing
-  namespace access by dots. '''
-
-  if not re.match('^[A-z][A-z0-9\_\.]*$', ident):
-    return False
-  return not ident.endswith('.')
-
-
-def validate_variable(ident):
-  ''' Returns True if *ident* is a valid variable name (without dots). '''
-
-  return bool(re.match('^[A-z][A-z0-9\_\.]*$', ident))

@@ -1,6 +1,8 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 
+from craftr.utils.lists import autoexpand
+
 import os
 import re
 import shlex
@@ -31,23 +33,40 @@ class Process(object):
       return "Process '{0}' exited with exit-code {1}".format(
         self.process.command[0], self.process.returncode)
 
-  def __init__(self, command, shell=False, merge=False,
-      input_=None, encoding=sys.getdefaultencoding()):
+  def __init__(self, command, input_=None, encoding=sys.getdefaultencoding(),
+      pipe=True, merge=False, shell=False):
+
     super().__init__()
-    stderr = subprocess.STDOUT if merge else subprocess.PIPE
-    self.p = subprocess.Popen(command, shell=shell,
-      stdout=subprocess.PIPE, stderr=stderr)
-    self.stdout, self.stderr = self.p.communicate(input_)
+
+    command = autoexpand(command)
+    if pipe:
+      stdout = subprocess.PIPE
+      if merge:
+        stderr = subprocess.STDOUT
+      else:
+        stderr = subprocess.PIPE
+    else:
+      stdout = stderr = None
+
+    if shell:
+      command = [' '.join(map(quote, command))]
+
+    self.popen = subprocess.Popen(command, shell=shell, stdout=stdout,
+      stderr=stderr)
+    self.stdout, self.stderr = self.popen.communicate(input_)
+
     if encoding is not None:
-      self.stdout = self.stdout.decode(encoding)
-      if not merge:
+      if self.stdout is not None:
+        self.stdout = self.stdout.decode(encoding)
+      if self.stderr is not None:
         self.stderr = self.stderr.decode(encoding)
+
     if self.returncode != 0:
       raise Process.ExitCodeError(self)
 
   @property
   def returncode(self):
-    return self.p.returncode
+    return self.popen.returncode
 
 
 def quote(s):
@@ -62,3 +81,10 @@ def quote(s):
     return s
   else:
     return shlex.quote(s)
+
+
+def call(command, session=None, shell=False):
+  command = autoexpand(command)
+  if session is not None:
+    session.info('running {}'.format(' '.join(map(quote, command))))
+  Process(command, shell=shell, pipe=False)

@@ -3,5 +3,10 @@
 
 default_outfile = 'build.json'
 
+
 def export(fp, session, default_targets):
-  pass
+  session.error("JSON backend is not implemented.")
+
+
+def build(target):
+  raise RuntimeError("JSON backend can't build")

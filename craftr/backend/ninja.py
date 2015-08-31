@@ -1,7 +1,7 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 
-from craftr.utils.shell import quote
+from craftr.utils.shell import quote, Process
 from craftr.vendor import ninja_syntax
 import craftr
 import re
@@ -45,6 +45,22 @@ def export(fp, session, default_targets):
       writer.newline()
       writer.build(rule, 'phony',  target.outputs)
       writer.newline()
+
+  if default_targets:
+    defaults = set()
+    for target in default_targets:
+      defaults |= set(target.outputs)
+    writer.default(list(defaults))
+
+
+def build(target):
+  session = target.module.session
+  command = ['ninja', ident(target.identifier)]
+  session.info("building target '{}'...".format(target.identifier))
+  try:
+    Process(command)
+  except (Process.ExitCodeError, OSError) as exc:
+    session.error(exc)
 
 
 def ident(name):
