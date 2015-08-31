@@ -1,11 +1,11 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 #
-# craftr_module(platform.windows)
+# craftr_module(platform.cygwin)
 
 from craftr.utils.path import prefix, suffix
 
-obj = lambda x: suffix(x, 'obj')
+obj = lambda x: suffix(x, 'o')
 bin = lambda x: suffix(x, 'exe')
-lib = lambda x: suffix(x, 'lib')
+lib = lambda x: suffix(prefix(x, 'lib'), 'lib')
 dll = lambda x: suffix(x, 'dll')

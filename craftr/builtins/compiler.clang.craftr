@@ -3,34 +3,36 @@
 #
 # craftr_module(compiler.clang)
 
-mod.extends('compiler.gcc')
-
 name = 'Clang'
 c = 'clang'
 cxx = 'clang++'
+compile_only = '-c'
+w_all = '-Wall'
+obj_out = '-o'
+bin_out = '-o'
 
-detected = False
-version = None
-target = None
+def std(name):
+  return '-std=' + name
 
 def detect():
-  global detected, version, target
-  if detected:
-    return
-
   import re
   from craftr.utils.shell import Process
 
+  if detected:
+    return
+
   try:
-    p = Process([c, '--version'])
+    p = Process([bin or c, '--version'])
   except (Process.ExitCodeError, OSError) as exc:
-    error('Clang could not be detected on your system. ({0})'.format(exc))
-  else:
-    match = re.search('version ([\d\.]+)', p.stdout)
-    if not match:
-      error('Clang version could not be detected.')
-    version = match.group(1)
-    match = re.search('Target: (\w+)', p.stdout)
-    if not match:
-      error('Clang target architecture could not be detected.')
-    target = match.group(1)
+    mod.error('Clang could not be detected on your system. ({0})'.format(exc))
+
+  mv = re.search('version ([\d\.]+)', p.stdout)
+  mt = re.search('Target: (\w+)', p.stdout)
+  if not mv:
+    mod.error('Clang version could not be detected.')
+  if not mt:
+    mod.error('Clang target architecture could not be detected')
+
+  self.version = mv.group(1)
+  self.target = mt.group(1)
+  self.detected = True

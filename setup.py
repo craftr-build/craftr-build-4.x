@@ -8,4 +8,5 @@ setup(
   version='0.1.0',
   author='Niklas Rosenstein',
   author_email='rosensteinniklas(at)gmail.com',
+  install_requires=['glob2', 'colorama'],
 )

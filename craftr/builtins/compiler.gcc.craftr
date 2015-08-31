@@ -3,6 +3,12 @@
 #
 # craftr_module(compiler.gcc)
 
+# We could be on Mac in which case we'd rather use Clang.
+P = mod.load_module('platform')
+if P.name == 'Darwin':
+  mod.extends('compiler.clang')
+  mod.return_()
+
 name = 'GCC'
 c = 'gcc'
 cxx = 'g++'
@@ -19,4 +25,24 @@ version = None
 target = None
 
 def detect():
-  mod.error('GCC Compiler detection not implemented.')
+  import re
+  from craftr.utils.shell import Process
+
+  if detected:
+    return
+
+  try:
+    p = Process([c, '-v'])
+  except (Process.ExitCodeError, OSError) as exc:
+    mod.error('GCC Compiler could not be detected. ({0})'.format(exc))
+
+  mv = re.search('gcc version ([\d\.]+)', p.stderr)
+  mt = re.search('Target: (\w+)', p.stderr)
+  if not mv:
+    mod.error('GCC version could not be detected.')
+  if not mt:
+    mod.error('GCC target architecture could not be detected.')
+
+  self.version = mv.group(1)
+  self.target = mt.group(1)
+  self.detected = True

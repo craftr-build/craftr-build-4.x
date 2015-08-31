@@ -11,5 +11,7 @@ elif P.name == 'Linux':
   mod.extends('compiler.gcc')
 elif P.name == 'Windows':
   mod.extends('compiler.msvc')
+elif P.name == 'Cygwin':
+  mod.extends('compiler.gcc')
 else:
   mod.error("compiler can't be deduced for '{0}'".format(P.name))

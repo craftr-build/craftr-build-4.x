@@ -22,7 +22,6 @@ def detect():
   import re
   from craftr.utils.shell import Process
 
-  global detected, version, target
   if detected:
     return
 
@@ -34,6 +33,7 @@ def detect():
   m = re.search('compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)', p.stderr, re.I)
   if not m:
     mod.error('MSVC Compiler could not be detected. (unexpected output)')
-  version = m.group(1)
-  target = m.group(2)
-  detected = True
+
+  self.version = m.group(1)
+  self.target = m.group(2)
+  self.detected = True
