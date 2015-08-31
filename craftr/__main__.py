@@ -18,7 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import craftr.runtime
+from craftr import utils, runtime
+import craftr
 import argparse
 import os
 import sys
@@ -45,27 +46,51 @@ def parse_args():
     'debug output.')
   parser.add_argument('-f', '--func', default=[], action='append',
     help='The name of functions to be run after the export.')
+  parser.add_argument('-D', default=[], action='append', help='Define '
+    'options on the command-line before modules are being executed.')
   return parser.parse_args()
 
 
 def main():
   args = parse_args()
-  session = craftr.runtime.Session(args.backend, args.outfile)
+  session = runtime.Session(args.backend, args.outfile)
   session.logger.level = 0 if args.verbose else craftr.logging.INFO
 
-  # Determine the module to load.
-  try:
-    if not args.module:
-      if not os.path.isfile('Craftr'):
-        session.error('`Craftr` file does not exist.')
-      module = session.load_module_file('Craftr')
-      args.module = module.identifier
+  # Use the local "Craftr" file if no module was specified.
+  if not args.module:
+    if not os.path.isfile('Craftr'):
+      session.error('`Craftr` file does not exist.')
+    args.module = runtime.Module(session, 'Craftr').read_identifier()
+
+  # Set the any options.
+  for item in args.D:
+    key, eq, value = item.partition('=')
+    if not eq:
+      value = None
+    if not utils.validate_ident(key):
+      session.error("invalid identifier '{}'".format(key))
+
+    if value.lower() == 'true':
+      value = True
+    elif value.lower() == 'false':
+      value = False
     else:
       try:
-        module = session.load_module(args.module)
-      except craftr.runtime.NoSuchModule as exc:
-        session.error(exc)
-  except craftr.runtime.ModuleError as exc:
+        value = int(value)
+      except ValueError:
+        pass
+
+    key = utils.abs_ident(key, args.module)
+    modname, name = utils.split_ident(key)
+    mod = session.get_namespace(modname)
+    setattr(mod, name, value)
+
+  # Load the module.
+  try:
+    module = session.load_module(args.module)
+  except runtime.NoSuchModule as exc:
+    session.error(exc)
+  except runtime.ModuleError as exc:
     session.logger.debug(
       "error in module '{}', abort".format(exc.origin.identifier))
     sys.exit(exc.code)
@@ -73,13 +98,13 @@ def main():
   # Resolve the target names.
   targets = []
   for target in args.targets:
-    if not craftr.utils.validate_ident(target):
+    if not utils.validate_ident(target):
       session.error("invalid target identifier '{}'".format(target))
-    target = craftr.utils.abs_ident(target, module.identifier)
-    modname, target = craftr.utils.split_ident(target)
+    target = utils.abs_ident(target, module.identifier)
+    modname, target = utils.split_ident(target)
     try:
       mod = session.get_module(modname)
-    except craftr.runtime.NoSuchModule as exc:
+    except runtime.NoSuchModule as exc:
       session.error("no module '{}'".format(exc.name))
     if target not in mod.targets:
       session.error("no target '{}' in '{}'".format(parts[0], modname))
@@ -106,11 +131,11 @@ def main():
 
   functions = []
   for name in args.func:
-    name = craftr.utils.abs_ident(name, module.identifier)
-    modname, name = craftr.utils.split_ident(name)
+    name = utils.abs_ident(name, module.identifier)
+    modname, name = utils.split_ident(name)
     try:
       mod = session.get_module(modname)
-    except craftr.runtime.NoSuchModule as exc:
+    except runtime.NoSuchModule as exc:
       session.error("no module '{}'".format(exc.name))
 
     try:
