@@ -34,6 +34,7 @@ class Session(object):
     super().__init__()
     self.path = []
     self.path.append(os.getcwd())
+    self.path.append(os.path.join(os.path.dirname(__file__), 'builtins'))
     self.path.extend(os.getenv('CRAFTR_PATH', '').split(os.path.sep))
     self.globals = utils.DataEntity('session_globals')
     self.modules = {}
