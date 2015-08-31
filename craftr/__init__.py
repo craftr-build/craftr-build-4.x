@@ -2,7 +2,7 @@
 # All rights reserved.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.1.0'
+__version__ = '0.0.9'
 
 # The placeholder for the input and output file in the command
 # list of a target.
