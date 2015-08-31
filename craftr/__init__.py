@@ -9,4 +9,5 @@ __version__ = '0.1.0'
 IN = '%%in'
 OUT = '%%out'
 
+from . import backend
 from . import runtime

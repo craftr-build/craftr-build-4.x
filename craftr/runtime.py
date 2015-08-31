@@ -304,8 +304,7 @@ class Module(object):
     ''' Loads the module with the specified *name* and adds it as an
     entitiy dependency to the `Module.locals`. This will result in
     attribute lookups to be redirected to the dependency if it could
-    not be found on the original object.
-    '''
+    not be found on the original object. '''
 
     entity = self.load_module(name)
     self.locals.__entity_deps__.append(entity)
