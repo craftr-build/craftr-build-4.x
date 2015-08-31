@@ -127,6 +127,7 @@ of targets.
 
 ### Todo
 
+- [] Support for multiple backends (Ninja, Json)
 - [] Support for auto dependencies
 - [] Built-in modules to support common compilers like MSVC, Clang and GCC
 - [] Custom target classes that simplify the definition of targets (eg.
