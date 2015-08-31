@@ -79,6 +79,11 @@ except NameError:
 
 # or rather using setdefault() which does exactly the same.
 setdefault('debug', False)
+
+if debug:
+  message = "Hello, Debugger!"
+else:
+  message = "Hello, World!"
 ```
 
 __Important__: Craftr has no support for lazy evaluation as with Creator.
