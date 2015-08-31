@@ -472,11 +472,13 @@ class Target(object):
   The arguments to this function are automatically expanded to lists
   using the `craftr.utils.lists.autoexpand()` function. '''
 
-  def __init__(self, module, name, inputs, outputs, foreach=False, **commands):
+  def __init__(self, module, name, inputs, outputs, requires=(),
+      foreach=False, **commands):
     from craftr.utils.lists import autoexpand
 
     inputs = autoexpand(inputs)
     outputs = autoexpand(outputs)
+    requires = autoexpand(requires)
 
     if not isinstance(module, Module):
       raise TypeError('<module> must be a Module object', type(module))
@@ -490,6 +492,7 @@ class Target(object):
     self.name = name
     self.inputs = inputs
     self.outputs = outputs
+    self.requires = requires
     self.foreach = foreach
     self.commands = []
 
