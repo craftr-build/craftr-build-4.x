@@ -25,9 +25,6 @@ message = "Hello, World!"
 
 A very interesting feature about Craftr is that the namespaces can
 be accessed dotted in Python code, which was not possible in Creator.
-The `mod` variable is the `craftr.runtime.Module` object that represents
-your module and it contains a bunch of useful functions to interact with
-the Craftr eco-system.
 
 ```python
 # Copyright (C) 2015 Niklas Rosenstein
@@ -35,11 +32,11 @@ the Craftr eco-system.
 #
 # craftr_module(app)
 
-lib = mod.load_module('my.library')
+lib = load_module('my.library')
 
 # Now we can use `lib` or `my.library` to access the module.
-mod.info(lib.message)
-mod.info(my.library.message)
+info(lib.message)
+info(my.library.message)
 ```
 
 ### Options
@@ -48,11 +45,11 @@ In order to define options before a module is loaded, we can create
 the namespace beforehand and assign values to it.
 
 ```python
-lib = mod.get_namespace('my.library')
+lib = module.get_namespace('my.library')
 lib.debug = True
-mod.load_module(lib)
+load_module(lib)
 
-mod.info(lib.message)
+info(lib.message)
 ```
 
 We can also specify the option globally which can then be inherited
@@ -60,9 +57,9 @@ into the modules namespaces.
 
 ```python
 G.debug = True
-lib = mod.load_module('my.library')
+lib = load_module('my.library')
 
-mod.info(lib.message)
+info(lib.message)
 ```
 
 The module could either check if the `debug` variable was already
@@ -81,7 +78,7 @@ except NameError:
     debug = False
 
 # or rather using setdefault() which does exactly the same.
-setdefault('debug', False)
+module.setdefault('debug', False)
 
 if debug:
   message = "Hello, Debugger!"
@@ -106,13 +103,13 @@ from craftr.utils.path import *
 sources = glob(join(project_dir, '**', '*.cpp'))
 objects = move(sources, project_dir, join(project_dir, 'build'), suffix='o')
 program = join(project_dir, 'build', 'main')
-mod.target('Objects',
+module.target('Objects',
   inputs = sources,
   outputs = objects,
   foreach = True,
   command = ['g++', '-c', '%%in', '-o', '%%out'],
 )
-mod.target('Program',
+module.target('Program',
   inputs = objects,
   command = ['g++', '%%in', '-o', '%%out'],
 )
