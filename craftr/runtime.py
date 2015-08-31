@@ -294,7 +294,10 @@ class Module(object):
     filename = filename or self.filename
     with open(filename) as fp:
       code = compile(fp.read(), filename, 'exec')
-      exec(code, vars(self.locals), vars(self.locals))
+      try:
+        exec(code, vars(self.locals), vars(self.locals))
+      except ModuleReturnException:
+        pass
     self.executed = True
 
   def extends(self, name):
@@ -442,6 +445,13 @@ class Module(object):
     setattr(self.locals, name, target)
     return target
 
+  def return_(self):
+    ''' Raises a `ModuleReturnException` which can be done from the
+    modules execution to end the script pre-emptively without causing
+    an error. '''
+
+    raise ModuleReturnException()
+
 
 class Target(object):
   ''' This class represents a target that produces output files from a
@@ -532,6 +542,10 @@ class ModuleError(Exception):
 
   def __str__(self):
     return "error '{0}' ({1})".format(self.origin.identifier, self.code)
+
+
+class ModuleReturnException(Exception):
+  pass
 
 
 def validate_identifier(ident):
