@@ -1,7 +1,7 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 
-from craftr.utils.shell import quote, Process
+from craftr.utils.shell import quote, call
 from craftr.vendor import ninja_syntax
 import craftr
 import re
@@ -58,7 +58,7 @@ def build(target):
   command = ['ninja', ident(target.identifier)]
   session.info("building target '{}'...".format(target.identifier))
   try:
-    Process(command)
+    call(command, session)
   except (Process.ExitCodeError, OSError) as exc:
     session.error(exc)
 
