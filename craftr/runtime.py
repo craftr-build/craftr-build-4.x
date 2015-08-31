@@ -312,19 +312,14 @@ class Module(object):
     self.executed = True
 
   def extends(self, name):
-    ''' Loads the module with the specified *name* and copies all its
-    contents into the local scope of this module. '''
-
-    # TODO: inherit targets
-
-    defaults = utils.DataEntity('module:defaults')
-    self._init_locals(defaults)
-    defaults = vars(defaults).keys()
+    ''' Loads the module with the specified *name* and adds it as an
+    entitiy dependency to the `Module.locals`. This will result in
+    attribute lookups to be redirected to the dependency if it could
+    not be found on the original object.
+    '''
 
     entity = self.load_module(name)
-    for key, value in vars(entity).items():
-      if not key.startswith('__') and key not in defaults:
-        setattr(self.locals, key, value)
+    self.locals.__entity_deps__.append(entity)
 
   def load_module(self, name):
     ''' Loads the module with the specicied *name* and returns it. The

@@ -12,9 +12,18 @@ class DataEntity(object):
   def __init__(self, entity_id):
     super().__init__()
     self.__entity_id__ = entity_id
+    self.__entity_deps__ = []
 
   def __repr__(self):
     return '<DataEntity {0!r}>'.format(self.__entity_id__)
+
+  def __getattr__(self, name):
+    for dep in reversed(self.__entity_deps__):
+      try:
+        return getattr(dep, name)
+      except AttributeError:
+        pass
+    raise AttributeError(name)
 
 
 def singleton(x):
