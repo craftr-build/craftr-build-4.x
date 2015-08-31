@@ -423,7 +423,7 @@ class Module(object):
     code = kwargs.pop('code', 1)
     self.logger.error(*args, **kwargs)
     if code:
-      raise ModuleError(self.module, code)
+      raise ModuleError(self, code)
 
 
 class Target(object):
