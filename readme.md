@@ -125,12 +125,6 @@ you can pass a class that will be used instead of `craftr.runtime.Target`.
 We plan on using this feature as a plugin-hook to change the behaviour
 of targets.
 
-### Todo
+----------
 
-- [] Support for multiple backends (Ninja, Json)
-- [] Support for auto dependencies
-- [] Built-in modules to support common compilers like MSVC, Clang and GCC
-- [] Custom target classes that simplify the definition of targets (eg.
-  a specialized target class could automatically generate object filenames
-  from the input source filenames, these can later be accessed by the
-  `outputs` attribute of the target)
+Copyright (C) 2015 Niklas Rosenstein
