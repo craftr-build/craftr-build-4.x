@@ -87,9 +87,11 @@ def iter_tree(dirname, depth=1):
     dirname = [dirname]
 
   def recursion(dirname, depth):
-    if not os.path.isdir(dirname):
+    try:
+      items = os.listdir(dirname)
+    except OSError:
       return
-    for path in os.listdir(dirname):
+    for path in items:
       path = os.path.join(dirname, path)
       yield path
       if depth > 0 and os.path.isdir(path):
