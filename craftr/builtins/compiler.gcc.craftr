@@ -1,0 +1,23 @@
+# Copyright (C) 2015 Niklas Rosenstein
+# All rights reserved.
+#
+# craftr_module(compiler.gcc)
+
+c = 'gcc'
+cxx = 'g++'
+compile_only = '-c'
+w_all = '-Wall'
+obj_out = '-o'
+bin_out = '-o'
+
+def std(name):
+  return '-std=' + name
+
+detected = False
+version = None
+arch = None
+
+def detect():
+  error('GCC Compiler detection not implemented.')
+
+detect()

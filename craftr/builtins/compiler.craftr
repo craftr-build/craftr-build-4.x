@@ -1,0 +1,15 @@
+# Copyright (C) 2015 Niklas Rosenstein
+# All rights reserved.
+#
+# craftr_module(compiler)
+
+P = load_module('platform')
+
+if P.name == 'Darwin':
+  extends('compiler.clang')
+elif P.name == 'Linux':
+  extends('compiler.gcc')
+elif P.name == 'Windows':
+  extends('compiler.msvc')
+else:
+  raise EnvironmentError("compiler can't be deduced for '{0}'".format(P.name))

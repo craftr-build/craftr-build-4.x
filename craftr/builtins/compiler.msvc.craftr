@@ -1,0 +1,21 @@
+# Copyright (C) 2015 Niklas Rosenstein
+# All rights reserved.
+#
+# craftr_module(compiler.msvc)
+
+c = 'cl'
+cxx = 'cl'
+compile_only = '/c'
+w_all = '/Wall'
+obj_out = '/Fo'
+bin_out = '/Fe'
+
+def std(name):
+  return None
+
+detected = False
+version = None
+arch = None
+
+def detect():
+  error('MSVC Compiler detection not implemented.')

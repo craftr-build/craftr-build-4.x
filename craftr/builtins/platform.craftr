@@ -1,0 +1,29 @@
+# Copyright (C) 2015 Niklas Rosenstein
+# All rights reserved.
+#
+# craftr_module(platform)
+
+import sys
+
+if sys.platform.startswith('freebsd'):
+  std = 'BSD'
+  name = 'FreeBSD'
+elif sys.platform.startswith('bsd'):
+  std = 'BSD'
+  name = 'BSD'
+elif sys.platform.startswith('linux'):
+  std = 'Posix'
+  name = 'Linux'
+elif sys.platform.startswith('win32'):
+  std = 'NT'
+  name = 'Windows'
+elif sys.platform.startswith('cygwin'):
+  std = 'Posix'
+  name = 'Cygwin'
+elif sys.platform.startswith('darwin'):
+  std = 'Posix'
+  name = 'Darwin'
+else:
+  raise EnvironmentErrror("unsupported platform '{0}'".format(sys.platform))
+
+extends('platform.' + name.lower())

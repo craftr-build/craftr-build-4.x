@@ -1,0 +1,35 @@
+# Copyright (C) 2015 Niklas Rosenstein
+# All rights reserved.
+#
+# craftr_module(compiler.clang)
+
+extends('compiler.gcc')
+
+c = 'clang'
+cxx = 'clang++'
+
+detected = False
+version = None
+arch = None
+
+def detect():
+  global detected, version, arch
+  if detected:
+    return
+
+  import re
+  from craftr.utils.shell import Process
+
+  try:
+    p = Process([c, '--version'])
+  except (Process.ExitCodeError, OSError) as exc:
+    error('Clang could not be detected on your system. ({0})'.format(exc))
+  else:
+    match = re.search('version ([\d\.]+)', p.stdout)
+    if not match:
+      error('Clang version could not be detected.')
+    version = match.group(1)
+    match = re.search('Target: (\w+)', p.stdout)
+    if not match:
+      error('Clang target architecture could not be detected.')
+    arch = match.group(1)
