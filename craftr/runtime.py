@@ -177,6 +177,18 @@ class Session(object):
     logger = logging.Logger(prefix=prefix, level=level)
     return logger
 
+  def info(self, *args, **kwargs):
+    self.logger.info(*args, **kwargs)
+
+  def warn(self, *args, **kwargs):
+    self.logger.warn(*args, **kwargs)
+
+  def error(self, *args, **kwargs):
+    code = kwargs.pop('code', 1)
+    self.logger.error(*args, **kwargs)
+    if code:
+      sys.exit(code)
+
 
 class Module(object):
   ''' A module represents a unique entity in the build environment that

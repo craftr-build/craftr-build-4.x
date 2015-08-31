@@ -8,8 +8,8 @@ c = 'clang'
 cxx = 'clang++'
 compile_only = '-c'
 w_all = '-Wall'
-obj_out = '-o'
-bin_out = '-o'
+obj_out = lambda x: ['-o', x]
+bin_out = lambda x: ['-o', x]
 
 def std(name):
   return '-std=' + name

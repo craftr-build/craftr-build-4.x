@@ -1,6 +1,9 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 
+import os
+import re
+import shlex
 import subprocess
 import sys
 
@@ -45,3 +48,17 @@ class Process(object):
   @property
   def returncode(self):
     return self.p.returncode
+
+
+def quote(s):
+  ''' Enhanced implementation for Windows systems as the original
+  `shlex.quote()` function uses single-quotes on Windows which can lead
+  to problems. '''
+
+  if os.name == 'nt' and os.sep == '\\':
+    s = s.replace('"', '\\"')
+    if re.search('\s', s):
+      s = '"' + s + '"'
+    return s
+  else:
+    return shlex.quote(s)

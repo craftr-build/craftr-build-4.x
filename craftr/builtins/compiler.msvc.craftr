@@ -8,8 +8,8 @@ c = 'cl'
 cxx = 'cl'
 compile_only = '/c'
 w_all = '/Wall'
-obj_out = '/Fo'
-bin_out = '/Fe'
+obj_out = lambda x: ['/Fo' + x]
+bin_out = lambda x: ['/Fe' + x]
 
 def std(name):
   return None

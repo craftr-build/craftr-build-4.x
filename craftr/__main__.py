@@ -33,32 +33,31 @@ def parse_args():
 def main():
   args = parse_args()
   session = craftr.runtime.Session()
-  logger = session.logger
+  session.logger.level = 0 if args.verbose else craftr.logging.INFO
   backend = craftr.backend.load_backend(args.backend)
 
   # Determine the module to load.
   try:
     if not args.module:
       if not os.path.isfile('Craftr'):
-        logger.error('`Craftr` file does not exist.')
-        return 1
+        session.error('`Craftr` file does not exist.')
       module = session.load_module_file('Craftr')
       args.module = module.identifier
     else:
       try:
         module = session.load_module(args.module)
       except craftr.runtime.NoSuchModule as exc:
-        logger.error(exc)
-        return 1
+        session.error(exc)
   except craftr.runtime.ModuleError as exc:
-    logger.debug("error in module '{0}', abort".format(exc.origin.identifier))
+    session.logger.debug(
+      "error in module '{0}', abort".format(exc.origin.identifier))
     sys.exit(exc.code)
 
   # Resolve the target names.
   targets = []
   for target in args.targets:
     if not craftr.runtime.validate_identifier(target):
-      logger.error("invalid target identifier '{0}'".format(target))
+      session.error("invalid target identifier '{0}'".format(target))
     parts = target.split('.')
     modname = '.'.join(parts[:-1])
     target = parts[-1]
@@ -67,11 +66,9 @@ def main():
     try:
       mod = session.get_module(modname)
     except craftr.runtime.NoSuchModule as exc:
-      logger.error("no module '{0}'".format(exc.name))
-      return 1
+      session.error("no module '{0}'".format(exc.name))
     if target not in mod.targets:
-      logger.error("no target '{0}' in '{1}'".format(parts[0], modname))
-      return 1
+      session.error("no target '{0}' in '{1}'".format(parts[0], modname))
     targets.append(mod.targets[target])
 
   if args.clean:
@@ -82,24 +79,24 @@ def main():
     files = []
     for target in targets:
       files.extend(target.outputs)
-    logger.info('Cleaning {0} files ...'.format(len(files)))
+    session.info('Cleaning {0} files ...'.format(len(files)))
     for filename in files:
       if os.path.isfile(filename):
         try:
           os.remove(filename)
         except OSError as exc:
-          logger.warn('"{0}": {1}'.format(filename, exc))
+          session.warn('"{0}": {1}'.format(filename, exc))
       elif os.path.exists(filename):
-        logger.warn('"{0}": can not be removed (not a file)'.format(filename))
+        session.warn('"{0}": can not be removed (not a file)'.format(filename))
 
   if args.dry:
-    logger.debug('dry run, no export. abort')
+    session.logger.debug('dry run, no export. abort')
     return
 
   if not args.outfile:
     args.outfile = backend.default_outfile
 
-  logger.info('exporting to "{0}"...'.format(args.outfile))
+  session.info('exporting to "{0}"...'.format(args.outfile))
   with open(args.outfile, 'w') as fp:
     backend.export(fp, session, targets)
 
