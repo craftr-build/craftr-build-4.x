@@ -25,6 +25,8 @@ def parse_args():
   parser.add_argument('-b', '--backend', default='ninja', help='The backend '
     'that will perform the export of the build rules. Currently supports '
     'only ninja.')
+  parser.add_argument('-v', '--verbose', action='store_true', help='Show '
+    'debug output.')
   return parser.parse_args()
 
 

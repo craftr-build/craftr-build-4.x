@@ -24,14 +24,14 @@ def detect():
   try:
     p = Process([bin or c, '--version'])
   except (Process.ExitCodeError, OSError) as exc:
-    mod.error('Clang could not be detected on your system. ({0})'.format(exc))
+    error('Clang could not be detected on your system. ({0})'.format(exc))
 
   mv = re.search('version ([\d\.]+)', p.stdout)
   mt = re.search('Target: (\w+)', p.stdout)
   if not mv:
-    mod.error('Clang version could not be detected.')
+    error('Clang version could not be detected.')
   if not mt:
-    mod.error('Clang target architecture could not be detected')
+    error('Clang target architecture could not be detected')
 
   self.version = mv.group(1)
   self.target = mt.group(1)

@@ -28,11 +28,11 @@ def detect():
   try:
     p = Process([c, '/?'])
   except (Process.ExitCodeError, OSError) as exc:
-    mod.error('MSVC Compiler could not be detected. ({0})'.format(exc))
+    error('MSVC Compiler could not be detected. ({0})'.format(exc))
 
   m = re.search('compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)', p.stderr, re.I)
   if not m:
-    mod.error('MSVC Compiler could not be detected. (unexpected output)')
+    error('MSVC Compiler could not be detected. (unexpected output)')
 
   self.version = m.group(1)
   self.target = m.group(2)

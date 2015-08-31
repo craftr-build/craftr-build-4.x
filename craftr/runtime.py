@@ -1,9 +1,9 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 
-from craftr import utils
-import craftr
+from craftr import utils, logging
 
+import craftr
 import os
 import platform
 import re
@@ -13,40 +13,6 @@ try:
   import colorama
 except ImportError:
   colorama = None
-
-
-class DefaultLogger(object):
-  ''' Simple logger that supports `info`, `warn` and `error` functions. '''
-
-  def output(self, *args, sep=' ', end='\n', fg='RESET', bg='RESET', style=''):
-    if colorama:
-      reset = colorama.Style.RESET_ALL
-      prefix = getattr(colorama.Fore, fg) + getattr(colorama.Back, bg)
-      if isinstance(style, str):
-        style = style.split(',')
-      for name in style:
-        if name:
-          prefix += getattr(colorama.Style, name)
-    else:
-      prefix = ''
-      reset = ''
-
-    if args:
-      print(prefix + str(args[0]), *args[1:], sep=sep, end=reset + end)
-    else:
-      print()
-
-  def debug(self, *args):
-    self.output('==> craftr:', *args, fg='YELLOW')
-
-  def info(self, *args):
-    self.output('==> craftr:', *args, fg='CYAN')
-
-  def warn(self, *args):
-    self.output('==> craftr:', *args, fg='MAGENTA')
-
-  def error(self, *args):
-    self.output('==> craftr:', *args, fg='RED')
 
 
 class Session(object):
@@ -72,7 +38,7 @@ class Session(object):
     self.globals = utils.DataEntity('session_globals')
     self.modules = {}
     self.namespaces = {}
-    self.logger = logger or DefaultLogger()
+    self.logger = logging.Logger()
     self._mod_idcache = {}
     self._mod_filecache = {}
     self._init_globals()
@@ -203,6 +169,14 @@ class Session(object):
       self._register_module(module)
     return module
 
+  def module_logger(self, module):
+    ''' Factory to create a logger for a module. '''
+
+    prefix = utils.proxy.LocalProxy(lambda: '  [{}]'.format(module.identifier))
+    level = utils.proxy.LocalProxy(lambda: self.logger.level)
+    logger = logging.Logger(prefix=prefix, level=level)
+    return logger
+
 
 class Module(object):
   ''' A module represents a unique entity in the build environment that
@@ -236,6 +210,7 @@ class Module(object):
     self.filename = filename
     self.session = session  # todo: cyclic reference
     self.identifier = None
+    self.logger = session.module_logger(self)
     self.locals = None
     self.executed = False
     self.targets = {}
@@ -253,8 +228,12 @@ class Module(object):
     data.G = self.session.get_namespace('globals')
     data.project_dir = os.path.dirname(self.filename)
     data.session = self.session
-    data.mod = self  # note: cyclic reference
+    data.module = self  # note: cyclic reference
     data.self = self.locals # note: cyclic reference
+    data.load_module = self.load_module
+    data.info = self.info
+    data.warn = self.warn
+    data.error = self.error
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`
@@ -282,6 +261,7 @@ class Module(object):
 
     self.identifier = identifier
     self.locals = utils.DataEntity('module:{0}'.format(self.identifier))
+    self.logger.prefix = ' [{}]: '.format(self.identifier)
     self._init_locals()
     return identifier
 
@@ -399,24 +379,6 @@ class Module(object):
     setattr(self.locals, name, value)
     return value
 
-  def output(self, *args, prefix='', **kwargs):
-    prefix = '    [{0}]:'.format(self.identifier)
-    self.session.logger.output(prefix, *args, **kwargs)
-
-  def debug(self, *args):
-    self.output(*args, prefix='DEBG', fg='YELLOW')
-
-  def info(self, *args):
-    self.output(*args, prefix='INFO', fg='GREEN')
-
-  def warn(self, *args):
-    self.output(*args, prefix='WARN', fg='MAGENTA')
-
-  def error(self, *args, exit_code=1):
-    self.output(*args, prefix='ERRR', fg='RED')
-    if exit_code:
-      raise ModuleError(self, exit_code)
-
   def target(self, name, **kwargs):
     ''' Declares a target with the specified *name*. The target will
     automatically be inserted into the modules scope by the *name*.
@@ -450,6 +412,18 @@ class Module(object):
     an error. '''
 
     raise ModuleReturnException()
+
+  def info(self, *args, **kwargs):
+    self.logger.info(*args, **kwargs)
+
+  def warn(self, *args, **kwargs):
+    self.logger.warn(*args, **kwargs)
+
+  def error(self, *args, **kwargs):
+    code = kwargs.pop('code', 1)
+    self.logger.error(*args, **kwargs)
+    if code:
+      raise ModuleError(self.module, code)
 
 
 class Target(object):

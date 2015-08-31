@@ -3,15 +3,15 @@
 #
 # craftr_module(compiler)
 
-P = mod.load_module('platform')
+P = load_module('platform')
 
 if P.name == 'Darwin':
-  mod.extends('compiler.clang')
+  module.extends('compiler.clang')
 elif P.name == 'Linux':
-  mod.extends('compiler.gcc')
+  module.extends('compiler.gcc')
 elif P.name == 'Windows':
-  mod.extends('compiler.msvc')
+  module.extends('compiler.msvc')
 elif P.name == 'Cygwin':
-  mod.extends('compiler.gcc')
+  module.extends('compiler.gcc')
 else:
-  mod.error("compiler can't be deduced for '{0}'".format(P.name))
+  error("compiler can't be deduced for '{0}'".format(P.name))
