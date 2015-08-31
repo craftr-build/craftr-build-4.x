@@ -17,6 +17,8 @@ def normpath(path, parent_dir=None):
     if parent_dir is None:
       parent_dir = os.getcwd()
     path = os.path.join(parent_dir, path)
+  if os.name == 'nt':
+    path = path.lower()
   return os.path.normpath(path)
 
 
