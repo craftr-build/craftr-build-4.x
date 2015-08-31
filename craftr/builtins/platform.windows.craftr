@@ -1,0 +1,11 @@
+# Copyright (C) 2015 Niklas Rosenstein
+# All rights reserved.
+#
+# craftr_module(platform.windows)
+
+from craftr.utils.path import prefix, suffix
+
+obj = lambda x: suffix(x, 'obj')
+bin = lambda x: suffix(x, None)
+lib = lambda x: suffix(x, 'lib')
+dll = lambda x: suffix(x, 'dll')

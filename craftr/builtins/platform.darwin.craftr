@@ -5,7 +5,7 @@
 
 from craftr.utils.path import prefix, suffix
 
-obj = lambda x: suffix(x, 'obj')
+obj = lambda x: suffix(x, 'o')
 bin = lambda x: suffix(x, None)
 lib = lambda x: suffix(prefix(x, 'lib'), 'a')
 dll = lambda x: suffix(x, 'dylib')

@@ -25,6 +25,9 @@ message = "Hello, World!"
 
 A very interesting feature about Craftr is that the namespaces can
 be accessed dotted in Python code, which was not possible in Creator.
+The `mod` variable is the `craftr.runtime.Module` object that represents
+your module and it contains a bunch of useful functions to interact with
+the Craftr eco-system.
 
 ```python
 # Copyright (C) 2015 Niklas Rosenstein
@@ -32,11 +35,11 @@ be accessed dotted in Python code, which was not possible in Creator.
 #
 # craftr_module(app)
 
-lib = load_module('my.library')
+lib = mod.load_module('my.library')
 
 # Now we can use `lib` or `my.library` to access the module.
-info(lib.message)
-info(my.library.message)
+mod.info(lib.message)
+mod.info(my.library.message)
 ```
 
 ### Options
@@ -45,11 +48,11 @@ In order to define options before a module is loaded, we can create
 the namespace beforehand and assign values to it.
 
 ```python
-lib = get_namespace('my.library')
+lib = mod.get_namespace('my.library')
 lib.debug = True
-load_module(lib)
+mod.load_module(lib)
 
-info(lib.message)
+mod.info(lib.message)
 ```
 
 We can also specify the option globally which can then be inherited
@@ -57,9 +60,9 @@ into the modules namespaces.
 
 ```python
 G.debug = True
-lib = load_module('my.library')
+lib = mod.load_module('my.library')
 
-info(lib.message)
+mod.info(lib.message)
 ```
 
 The module could either check if the `debug` variable was already
@@ -103,13 +106,13 @@ from craftr.utils.path import *
 sources = glob(join(project_dir, '**', '*.cpp'))
 objects = move(sources, project_dir, join(project_dir, 'build'), suffix='o')
 program = join(project_dir, 'build', 'main')
-target('Objects',
+mod.target('Objects',
   inputs = sources,
   outputs = objects,
   foreach = True,
   command = ['g++', '-c', '%%in', '-o', '%%out'],
 )
-target('Program',
+mod.target('Program',
   inputs = objects,
   command = ['g++', '%%in', '-o', '%%out'],
 )

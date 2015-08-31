@@ -247,28 +247,13 @@ class Module(object):
       return '<Module at {0!r}>'.format(self.filename)
 
   def _init_locals(self, data=None):
-    if data is None:
-      data = self.locals
+    data = data or self.locals
     data.__name__ = '__craftr__'
     data.__file__ = self.filename
     data.G = self.session.get_namespace('globals')
     data.project_dir = os.path.dirname(self.filename)
     data.session = self.session
-    data.module = self  # note: cyclic reference
-    data.self = self.locals  # note: cyclic (self) reference
-    data.info = self.info
-    data.warn = self.warn
-    data.error = self.error
-    data.debug = self.debug
-    data.include = lambda f: self.execute(f)
-    data.defined = self.defined
-    data.setdefault = self.setdefault
-    data.get_namespace = self.get_namespace
-    data.load_module = self.load_module
-    data.extends = self.extends
-    data.target = self.target
-    data.IN = craftr.IN
-    data.OUT = craftr.OUT
+    data.mod = self  # note: cyclic reference
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`

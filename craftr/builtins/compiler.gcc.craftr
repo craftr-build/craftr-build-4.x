@@ -3,6 +3,7 @@
 #
 # craftr_module(compiler.gcc)
 
+name = 'GCC'
 c = 'gcc'
 cxx = 'g++'
 compile_only = '-c'
@@ -15,9 +16,7 @@ def std(name):
 
 detected = False
 version = None
-arch = None
+target = None
 
 def detect():
-  error('GCC Compiler detection not implemented.')
-
-detect()
+  mod.error('GCC Compiler detection not implemented.')

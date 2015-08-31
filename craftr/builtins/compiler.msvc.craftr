@@ -3,6 +3,7 @@
 #
 # craftr_module(compiler.msvc)
 
+name = 'MSVC'
 c = 'cl'
 cxx = 'cl'
 compile_only = '/c'
@@ -15,7 +16,24 @@ def std(name):
 
 detected = False
 version = None
-arch = None
+target = None
 
 def detect():
-  error('MSVC Compiler detection not implemented.')
+  import re
+  from craftr.utils.shell import Process
+
+  global detected, version, target
+  if detected:
+    return
+
+  try:
+    p = Process([c, '/?'])
+  except (Process.ExitCodeError, OSError) as exc:
+    mod.error('MSVC Compiler could not be detected. ({0})'.format(exc))
+
+  m = re.search('compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)', p.stderr, re.I)
+  if not m:
+    mod.error('MSVC Compiler could not be detected. (unexpected output)')
+  version = m.group(1)
+  target = m.group(2)
+  detected = True

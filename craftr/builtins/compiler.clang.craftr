@@ -3,17 +3,18 @@
 #
 # craftr_module(compiler.clang)
 
-extends('compiler.gcc')
+mod.extends('compiler.gcc')
 
+name = 'Clang'
 c = 'clang'
 cxx = 'clang++'
 
 detected = False
 version = None
-arch = None
+target = None
 
 def detect():
-  global detected, version, arch
+  global detected, version, target
   if detected:
     return
 
@@ -32,4 +33,4 @@ def detect():
     match = re.search('Target: (\w+)', p.stdout)
     if not match:
       error('Clang target architecture could not be detected.')
-    arch = match.group(1)
+    target = match.group(1)
