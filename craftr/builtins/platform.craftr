@@ -24,6 +24,6 @@ elif sys.platform.startswith('darwin'):
   std = 'Posix'
   name = 'Darwin'
 else:
-  raise EnvironmentErrror("unsupported platform '{0}'".format(sys.platform))
+  mod.error("unsupported platform '{0}'".format(sys.platform))
 
 mod.extends('platform.' + name.lower())
