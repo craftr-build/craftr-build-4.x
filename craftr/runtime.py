@@ -444,19 +444,23 @@ class Target(object):
   a list of arguments (with the first being the name of the program to
   invoke). The command may contain the placeholders `craftr.IN` and
   `craftr.OUT` that shall be replaced by the input and output files
-  during export or invokation respectively. '''
+  during export or invokation respectively.
+
+  The arguments to this function are automatically expanded to lists
+  using the `craftr.utils.lists.autoexpand()` function. '''
 
   def __init__(self, module, name, inputs, outputs, foreach=False, **commands):
+    from craftr.utils.lists import autoexpand
+
+    inputs = autoexpand(inputs)
+    outputs = autoexpand(outputs)
+
     if not isinstance(module, Module):
       raise TypeError('<module> must be a Module object', type(module))
     if not isinstance(name, str):
       raise TypeError('<name> must be a string', type(name))
     if not validate_variable(name):
       raise ValueError('invalid target name', name)
-    if not isinstance(inputs, list):
-      raise TypeError('<inputs> must be a list', type(inputs))
-    if not isinstance(outputs, list):
-      raise TypeError('<outputs> must be a list', type(outputs))
 
     super().__init__()
     self.module = module
@@ -471,7 +475,7 @@ class Target(object):
         raise TypeError('unexpected keyword argument ' + key)
       if not isinstance(value, list):
         raise TypeError('<' + key + '> must be a list', type(value))
-      self.commands.append(value)
+      self.commands.append(autoexpand(value))
 
   def __repr__(self):
     return "<Target '{0}'>".format(self.identifier)

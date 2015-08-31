@@ -4,12 +4,12 @@
 # craftr_module(compiler.msvc)
 
 name = 'MSVC'
-c = 'cl'
-cxx = 'cl'
+c = ['cl', '/nologo']
+cxx = ['cl', '/nologo']
 compile_only = '/c'
 w_all = '/Wall'
-obj_out = lambda x: ['/Fo' + x]
-bin_out = lambda x: ['/Fe' + x]
+obj_out = lambda x: '/Fo' + x
+bin_out = lambda x: '/Fe' + x
 
 def std(name):
   return None
@@ -26,7 +26,7 @@ def detect():
     return
 
   try:
-    p = Process([c, '/?'])
+    p = Process(['cl', '/?'])
   except (Process.ExitCodeError, OSError) as exc:
     error('MSVC Compiler could not be detected. ({0})'.format(exc))
 
