@@ -39,7 +39,7 @@ def std(name):
 
 detected = False
 version = None
-target = None
+arch = None
 
 def detect():
   import re
@@ -61,5 +61,5 @@ def detect():
     error('GCC target architecture could not be detected.')
 
   self.version = mv.group(1)
-  self.target = mt.group(1)
+  self.arch = mt.group(1)
   self.detected = True

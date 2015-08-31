@@ -93,7 +93,7 @@ def emit(prefix, message, level, fp=None):
   else:
     style = ('', '')
 
-  width = terminal_size()[0] - len(prefix)
+  width = terminal_size()[0] - len(prefix) - 1
   lines = textwrap.wrap(message, width)
 
   fp.write(style[0])

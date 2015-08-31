@@ -263,6 +263,9 @@ class Module(object):
     data.module = self  # note: cyclic reference
     data.self = self.locals # note: cyclic reference
     data.load_module = self.load_module
+    data.defined = self.defined
+    data.setdefault = self.setdefault
+    data.target = self.target
     data.info = self.info
     data.warn = self.warn
     data.error = self.error

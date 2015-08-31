@@ -33,7 +33,7 @@ def std(name):
 
 detected = False
 version = None
-target = None
+arch = None
 
 def detect():
   import re
@@ -52,5 +52,5 @@ def detect():
     error('MSVC Compiler could not be detected. (unexpected output)')
 
   self.version = m.group(1)
-  self.target = m.group(2)
+  self.arch = m.group(2)
   self.detected = True

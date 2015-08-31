@@ -31,6 +31,10 @@ bin_out = lambda x: ['-o', x]
 def std(name):
   return '-std=' + name
 
+detected = False
+version = None
+arch = None
+
 def detect():
   import re
   from craftr.utils.shell import Process
@@ -51,5 +55,5 @@ def detect():
     error('Clang target architecture could not be detected')
 
   self.version = mv.group(1)
-  self.target = mt.group(1)
+  self.arch = mt.group(1)
   self.detected = True
