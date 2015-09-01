@@ -43,7 +43,7 @@ def detect():
     return
 
   try:
-    p = Process([bin or c, '--version'])
+    p = Process([c, '--version'])
   except (Process.ExitCodeError, OSError) as exc:
     error('Clang could not be detected on your system. ({0})'.format(exc))
 
