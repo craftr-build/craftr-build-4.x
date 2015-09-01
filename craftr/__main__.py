@@ -148,13 +148,21 @@ def main():
       session.error("'{}.{}' is not callable".format(modname, name))
     functions.append(func)
 
-  if session.outfile:
+  # Do we even have any targets that could be exported?
+  has_target = False
+  for module in session.modules.values():
+    if module.targets:
+      has_target = True
+      break
+
+  if session.outfile and has_target:
     session.info('exporting to "{}"...'.format(session.outfile))
     with open(session.outfile, 'w') as fp:
       session.backend.export(fp, session, targets)
 
   for func in functions:
     func()
+
 
 if __name__ == '__main__':
   main()
