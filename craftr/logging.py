@@ -79,7 +79,7 @@ def get_level_style(level):
   return (prefix, colorama.Style.RESET_ALL)
 
 
-def emit(prefix, message, level, fp=None):
+def emit(prefix, message, level, fp=None, frame=None):
   ''' Emit the *message* with the specified *prefix* to the file-like
   object *fp*. If `fp.isatty()` returns True and if the `colorama`
   module is available, the output will be colorized. The prefix may
@@ -87,7 +87,13 @@ def emit(prefix, message, level, fp=None):
   substituted. '''
 
   fp = fp or sys.stdout
-  prefix = str(prefix).format(levelname=get_level_name(level))
+
+  fmtargs = {'levelname': get_level_name(level), 'lineno': None, 'fn': None}
+  if frame:
+    fmtargs['lineno'] = frame.f_lineno
+    fmtargs['fn'] = os.path.basename(frame.f_code.co_filename)
+
+  prefix = str(prefix).format(**fmtargs)
   if hasattr(fp, 'isatty') and fp.isatty():
     style = get_level_style(level)
   else:
@@ -149,9 +155,10 @@ class Logger(object):
     self.level = level
 
   def emit(self, level, *args, **kwargs):
+    frame = kwargs.pop('frame', None)
     if level >= self.level:
       message = print_as_str(*args, **kwargs)
-      emit(self.prefix, message, level)
+      emit(self.prefix, message, level, None, frame)
 
   def debug(self, *args, **kwargs):
     self.emit(DEBUG, *args, **kwargs)

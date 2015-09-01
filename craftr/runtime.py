@@ -192,7 +192,8 @@ class Session(object):
   def module_logger(self, module):
     ''' Factory to create a logger for a module. '''
 
-    prefix = utils.proxy.LocalProxy(lambda: '  [{}]'.format(module.identifier))
+    fmt = '  [{}|L{{lineno:<3}}]: '
+    prefix = utils.proxy.LocalProxy(lambda: fmt.format(module.identifier))
     level = utils.proxy.LocalProxy(lambda: self.logger.level)
     logger = logging.Logger(prefix=prefix, level=level)
     return logger
@@ -296,7 +297,6 @@ class Module(object):
 
     self.identifier = identifier
     self.locals = utils.DataEntity('module:{0}'.format(self.identifier))
-    self.logger.prefix = ' [{}]: '.format(self.identifier)
     self._init_locals()
     return identifier
 
@@ -449,14 +449,14 @@ class Module(object):
     raise ModuleReturnException()
 
   def info(self, *args, **kwargs):
-    self.logger.info(*args, **kwargs)
+    self.logger.info(*args, frame=sys._getframe().f_back, **kwargs)
 
   def warn(self, *args, **kwargs):
-    self.logger.warn(*args, **kwargs)
+    self.logger.warn(*args, frame=sys._getframe().f_back, **kwargs)
 
   def error(self, *args, **kwargs):
     code = kwargs.pop('code', 1)
-    self.logger.error(*args, **kwargs)
+    self.logger.error(*args, frame=sys._getframe().f_back, **kwargs)
     if code:
       raise ModuleError(self, code)
 
