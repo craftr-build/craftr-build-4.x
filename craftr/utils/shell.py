@@ -48,14 +48,18 @@ class Process(object):
 
     def __str__(self):
       return "Process '{0}' exited with exit-code {1}".format(
-        self.process.command[0], self.process.returncode)
+        self.process.program, self.process.returncode)
 
   def __init__(self, command, input_=None, encoding=sys.getdefaultencoding(),
       pipe=True, merge=False, shell=False, cwd=None):
 
     super().__init__()
 
-    command = autoexpand(command)
+    if shell and isinstance(command, (list, tuple)):
+      command = ' '.join(quote(x) for x in autoexpand(command))
+    elif not shell:
+      command = autoexpand(command)
+
     if pipe:
       stdout = subprocess.PIPE
       if merge:
@@ -65,10 +69,8 @@ class Process(object):
     else:
       stdout = stderr = None
 
-    if shell:
-      command = [' '.join(map(quote, command))]
-
     self.command = command
+    self.program = command[0] if not shell else shlex.split(command)[0]
     self.popen = subprocess.Popen(command, shell=shell, stdout=stdout,
       stderr=stderr, cwd=cwd)
     self.stdout, self.stderr = self.popen.communicate(input_)
@@ -101,8 +103,5 @@ def quote(s):
     return shlex.quote(s)
 
 
-def call(command, session=None, shell=False, cwd=None):
-  command = autoexpand(command)
-  if session is not None:
-    session.info('running {}'.format(' '.join(map(quote, command))))
+def call(command, shell=False, cwd=None):
   Process(command, shell=shell, cwd=cwd, pipe=False)
