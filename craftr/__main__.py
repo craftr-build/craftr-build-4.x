@@ -65,13 +65,13 @@ def main():
   # Set the any options.
   for item in args.D:
     key, eq, value = item.partition('=')
-    if not eq:
-      value = None
     if not utils.validate_ident(key):
       session.error("invalid identifier '{}'".format(key))
 
-    if not value:
-      value = None
+    if not eq:
+      value = True
+    elif not value:
+      value = ''
     elif value.lower() == 'true':
       value = True
     elif value.lower() == 'false':
