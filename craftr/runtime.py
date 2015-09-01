@@ -267,9 +267,9 @@ class Module(object):
     data.defined = self.defined
     data.setdefault = self.setdefault
     data.target = self.target
-    data.info = self.info
-    data.warn = self.warn
-    data.error = self.error
+    data.info = self.__info
+    data.warn = self.__warn
+    data.error = self.__error
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`
@@ -448,13 +448,13 @@ class Module(object):
 
     raise ModuleReturnException()
 
-  def info(self, *args, **kwargs):
+  def __info(self, *args, **kwargs):
     self.logger.info(*args, frame=sys._getframe().f_back, **kwargs)
 
-  def warn(self, *args, **kwargs):
+  def __warn(self, *args, **kwargs):
     self.logger.warn(*args, frame=sys._getframe().f_back, **kwargs)
 
-  def error(self, *args, **kwargs):
+  def __error(self, *args, **kwargs):
     code = kwargs.pop('code', 1)
     self.logger.error(*args, frame=sys._getframe().f_back, **kwargs)
     if code:
