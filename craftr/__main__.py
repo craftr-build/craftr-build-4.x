@@ -70,7 +70,9 @@ def main():
     if not utils.validate_ident(key):
       session.error("invalid identifier '{}'".format(key))
 
-    if value.lower() == 'true':
+    if not value:
+      value = None
+    elif value.lower() == 'true':
       value = True
     elif value.lower() == 'false':
       value = False
