@@ -136,8 +136,25 @@ def bdist_egg(pybin, package, outdir, exclude_source=True):
     os.makedirs(outdir)
   command = [pybin, 'setup.py', 'bdist_egg', '--dist-dir', outdir]
   if exclude_source:
-    command.append('--exclude-source')
+    command.append('--exclude-source-files')
   return shell(command, cwd=package)
+
+
+def bdist(pybin, package, outdir, exclude_source=True):
+  ''' Runs the bdist_egg command, but specifiy *outdir* as the
+  temporary build directory and keeps the build result. This basically
+  results in an unzipped egg at *outdir*. '''
+
+  if not os.path.isdir(outdir):
+    os.makedirs(outdir)
+  print(package)
+  command = [pybin, 'setup.py', 'bdist_egg', '-b', outdir, '-k']
+  res = shell(command, cwd=package)
+  if res != 0:
+    return res
+  # if exclude_source:
+  #   purge(outdir, '.py')
+  return 0
 
 
 def get_py_pair(filename):
@@ -154,7 +171,7 @@ def get_py_pair(filename):
   return (filename + '.py', filename + '.pyc')
 
 
-def purge(directories):
+def purge(directories, suffix='.pyc'):
   ''' Purge the specified *directories* and all its subfolders from
   byte-compile python cache folders. *directories* may also be a string
   of a single directory. '''
@@ -165,7 +182,7 @@ def purge(directories):
   def recurse(dirname):
     for item in os.listdir(dirname):
       item = os.path.join(dirname, item)
-      if item.endswith('.pyc') and os.path.isfile(item):
+      if item.endswith(suffix) and os.path.isfile(item):
         os.remove(item)
       elif os.path.isdir(item):
         recurse(item)
