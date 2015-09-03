@@ -47,7 +47,9 @@ def parse_args():
   parser.add_argument('-f', '--func', default=[], action='append',
     help='The name of functions to be run after the export.')
   parser.add_argument('-D', default=[], action='append', help='Define '
-    'options on the command-line before modules are being executed.')
+    'options on the command-line before modules are being executed. To '
+    'set a global variable, use -Dglobals.<key> or -D:<key> (note the '
+    'leading semi-colon).')
   return parser.parse_args()
 
 
@@ -65,6 +67,8 @@ def main():
   # Set the any options.
   for item in args.D:
     key, eq, value = item.partition('=')
+    if key.startswith(':'):
+      key = 'globals.' + key[1:]
     if not utils.validate_ident(key):
       session.error("invalid identifier '{}'".format(key))
 
@@ -86,6 +90,8 @@ def main():
     modname, name = utils.split_ident(key)
     mod = session.get_namespace(modname)
     setattr(mod, name, value)
+
+    session.logger.debug('setting {}.{} = {!r}'.format(modname, name, value))
 
   # Load the module.
   try:
