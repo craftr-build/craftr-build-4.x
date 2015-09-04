@@ -543,7 +543,7 @@ class InvalidModule(Exception):
     self.filename = filename
 
   def __str__(self):
-    return "'{0}' exposes no craftr_module() declaration"
+    return "'{}' exposes no craftr_module() declaration".format(self.filename)
 
 
 class ModuleError(Exception):
