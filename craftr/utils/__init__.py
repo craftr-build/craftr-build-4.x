@@ -21,6 +21,7 @@
 from . import lists
 from . import path
 from . import proxy
+from . import shell
 import re
 
 

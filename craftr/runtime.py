@@ -271,6 +271,7 @@ class Module(object):
     data = data or self.locals
     data.__name__ = '__craftr__'
     data.__file__ = self.filename
+    data.craftr = craftr
     data.G = self.session.get_namespace('globals')
     data.project_dir = os.path.dirname(self.filename)
     data.session = self.session
