@@ -155,6 +155,11 @@ class Session(object):
       raise ValueError('invalid module identifier', name)
 
     try:
+      return self.modules[name]
+    except KeyError:
+      pass
+
+    try:
       module = self._mod_idcache[name]
     except KeyError:
       pass
