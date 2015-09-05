@@ -18,12 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-default_outfile = None
+import argparse
 
 
-def export(fp, session, default_targets):
-  session.error("no backend selected, can't export")
+def parse_args():
+  parser = argparse.ArgumentParser()
+  return parser.parse_args()
 
 
-def build(target):
-  raise RuntimeError("no backend selected, can't build")
+def main(args, session, module):
+  pass

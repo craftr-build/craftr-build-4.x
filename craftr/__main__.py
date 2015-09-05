@@ -18,58 +18,165 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import utils, runtime
-import craftr
+import craftr.utils, craftr.runtime, craftr.backend
 import argparse
 import os
+import traceback
 import sys
 
 
 def parse_args():
-  parser = argparse.ArgumentParser(prog='craftr', description='Python based '
-    'software meta build system.')
-  parser.add_argument('targets', default=[], nargs='*', help='Zero or more '
-    'target names. Relative identifiers will be resolved in the active '
-    'modules namespace.')
-  parser.add_argument('-c', '--clean', action='store_true', help='Clean '
-    'the output files of the specified targets (or the output files of '
-    'all targets if no target was specified).')
-  parser.add_argument('-o', '--outfile', help='The name of the output file. '
-    'Omit to use the default output file of the backend.')
-  parser.add_argument('-m', '--module', help='Name of the main Craftr module '
-    'to use for this session. If not specified, the `Craftr` file from the '
-    'current directory is used.')
-  parser.add_argument('-b', '--backend', default='ninja', help='The backend '
-    'that will perform the export of the build rules. Currently supports '
-    'only ninja. Use the "null" backend to do a dry run.')
-  parser.add_argument('-v', '--verbose', action='store_true', help='Show '
-    'debug output.')
-  parser.add_argument('-f', '--func', default=[], action='append',
-    help='The name of functions to be run after the export.')
-  parser.add_argument('-D', default=[], action='append', help='Define '
-    'options on the command-line before modules are being executed. To '
-    'set a global variable, use -Dglobals.<key> or -D:<key> (note the '
-    'leading semi-colon).')
+  parser = argparse.ArgumentParser(
+    prog='craftr',
+    description='Python based software meta build system.')
+  parser.add_argument(
+    '-v', '--verbose',
+    action='store_true',
+    help='Enable verbose output.')
+  parser.add_argument(
+    '--version',
+    action='store_true',
+    help='Output the Craftr version and exit, regardless of other arguments.')
+  parser.add_argument(
+    '-m', '--module',
+    help='The name of the main Craftr module. If omitted, the "Craftfile" '
+      'from the current working directory is used.')
+  parser.add_argument(
+    '-D', '--define',
+    dest='defines',
+    default=[],
+    action='append',
+    help='Pre-define options on the command-line before the Craftr modules '
+      'are being loaded. Relative identifiers are automatically directed '
+      'into the main Craftr module. To set a global variable, use '
+      '"-Dglobals.<key>" or "-D:<key>". The value is converted to the best '
+      'matching datatype. (Just the key name will result it to be set to '
+      'True, booleans and integers are automatically converted and any other '
+      'value is used as a string as-is).')
+  sub_parsers = parser.add_subparsers(dest='cmd')
+
+  run_parser = sub_parsers.add_parser(
+    'run',
+    help='Call one or more Python functions from a Craftr module.')
+  run_parser.add_argument(
+    'tasks',
+    nargs='+',
+    help='One or more names of Python functions. Relative names will be '
+      'resolved in the main Craftr module specified via the -m/--module '
+      'option or the "Craftfile" file in the current directory.')
+
+  export_parser = sub_parsers.add_parser(
+    'export',
+    help='Export build definitions.')
+  export_parser.add_argument(
+    'backend',
+    nargs='?',
+    default='ninja',
+    help='The backend of the export. Any additional arguments depend on '
+      'the backend implementation. The backend is resolved into a Python '
+      'module name that is either "craftr.backend.<name>" or '
+      '"craftr_<name>_backend" and is then imported. See the "craftr.backend" '
+      'module for additional information.')
+  export_parser.add_argument(
+    'backend_args',
+    help='Additional arguments for the backend.',
+    nargs='...')
+
+
+  clean_parser = sub_parsers.add_parser(
+    'clean',
+    help='Remove the output files of the specified targets. Note that this '
+      'command does not support recursive cleaning, it will only clean the '
+      'direct outputs of the specified targets.')
+  clean_parser.add_argument(
+    'targets',
+    nargs='*',
+    help='The name of the targets. If none are specified, cleans all '
+      'output files.')
+
   return parser.parse_args()
+
+
+def main_export(args, session, module):
+  try:
+    backend = craftr.backend.load_backend(args.backend)
+  except ValueError as exc:
+    session.error('no backend "{}"'.format(args.backend))
+
+  # Hook up the arguments to the backend and let it parse the arguments.
+  old_argv = sys.argv
+  sys.argv = ['creator export ' + craftr.utils.shell.quote(args.backend)]
+  sys.argv.extend(args.backend_args)
+  try:
+    backend_args = backend.parse_args()
+  finally:
+    sys.argv = old_argv
+
+  backend.main(backend_args, session, module)
+
+
+def main_run(args, session, module):
+  # Collect a list of all Python objects to call.
+  tasks = []
+  for name in args.tasks:
+    name = craftr.utils.abs_ident(name, module.identifier)
+    modname, name = craftr.utils.split_ident(name)
+    mod = session.get_module(modname)
+
+    try:
+      func = getattr(module.locals, name)
+    except AttributeError:
+      session.error('"{}.{}" does not exist'.format(modname, name))
+    if not callable(func):
+      session.error('"{}.{}" is not callable'.format(modname, name))
+    tasks.append(func)
+
+  [task() for task in tasks]
+
+
+def main_clean(args, session, module):
+  # Collect a list of the files to be cleaned.
+  files = []
+  if not args.targets:
+    for module in session.modules.values():
+      for target in module.targets.values():
+        files.extend(target.outputs)
+  else:
+    for target in args.targets:
+      target = session.resolve_target(target, module)
+      files.extend(target.outputs)
+
+  session.info('cleaning {} files ...'.format(len(files)))
+  for filename in files:
+    if os.path.isfile(filename):
+      try:
+        os.remove(filename)
+      except OSError as exc:
+        session.warn('"{}": {}'.format(filename, exc))
+    elif os.path.exists(filename):
+      session.warn('"{}": can not be removed (not a file)'.format(filename))
 
 
 def main():
   args = parse_args()
-  session = runtime.Session(args.backend, args.outfile)
-  session.logger.level = 0 if args.verbose else craftr.logging.INFO
+  session = craftr.runtime.Session()
+  if args.verbose:
+    session.logger.level = 0
+  else:
+    session.logger.level = craftr.logging.INFO
 
-  # Use the local "Craftr" file if no module was specified.
+  # Use the local Craftfile if no explicit module was specified.
   if not args.module:
-    if not os.path.isfile('Craftr'):
-      session.error('`Craftr` file does not exist.')
-    args.module = runtime.Module(session, 'Craftr').read_identifier()
+    if not os.path.isfile('Craftfile'):
+      session.error('"Craftfile" does not exist.')
+    args.module = craftr.runtime.Module(session, 'Craftfile').read_identifier()
 
-  # Set the any options.
-  for item in args.D:
+  # Process and update the pre-definitions.
+  for item in args.defines:
     key, eq, value = item.partition('=')
     if key.startswith(':'):
       key = 'globals.' + key[1:]
-    if not utils.validate_ident(key):
+    if not craftr.utils.validate_ident(key):
       session.error("invalid identifier '{}'".format(key))
 
     if not eq:
@@ -86,88 +193,27 @@ def main():
       except ValueError:
         pass
 
-    key = utils.abs_ident(key, args.module)
-    modname, name = utils.split_ident(key)
+    key = craftr.utils.abs_ident(key, args.module)
+    modname, name = craftr.utils.split_ident(key)
     mod = session.get_namespace(modname)
     setattr(mod, name, value)
-
     session.logger.debug('setting {}.{} = {!r}'.format(modname, name, value))
 
   # Load the module.
   try:
     module = session.load_module(args.module)
-  except runtime.NoSuchModule as exc:
-    session.error(exc)
-  except runtime.ModuleError as exc:
-    session.logger.debug(
-      "error in module '{}', abort".format(exc.origin.identifier))
-    sys.exit(exc.code)
-
-  # Resolve the target names.
-  targets = []
-  for target in args.targets:
-    if not utils.validate_ident(target):
-      session.error("invalid target identifier '{}'".format(target))
-    target = utils.abs_ident(target, module.identifier)
-    modname, target = utils.split_ident(target)
-    try:
-      mod = session.get_module(modname)
-    except runtime.NoSuchModule as exc:
-      session.error("no module '{}'".format(exc.name))
-    if target not in mod.targets:
-      session.error("no target '{}' in '{}'".format(parts[0], modname))
-    targets.append(mod.targets[target])
-
-  if args.clean:
-    files = []
-    if not targets:
-      for module in session.modules.values():
-        for target in module.targets.values():
-          files.extend(target.outputs)
-    else:
-      for target in targets:
-        files.extend(target.outputs)
-    session.info('Cleaning {} files ...'.format(len(files)))
-    for filename in files:
-      if os.path.isfile(filename):
-        try:
-          os.remove(filename)
-        except OSError as exc:
-          session.warn('"{}": {}'.format(filename, exc))
-      elif os.path.exists(filename):
-        session.warn('"{}": can not be removed (not a file)'.format(filename))
-
-  functions = []
-  for name in args.func:
-    name = utils.abs_ident(name, module.identifier)
-    modname, name = utils.split_ident(name)
-    try:
-      mod = session.get_module(modname)
-    except runtime.NoSuchModule as exc:
-      session.error("no module '{}'".format(exc.name))
-
-    try:
-      func = getattr(module.locals, name)
-    except AttributeError:
-      session.error("no member '{}' in module '{}'".format(name, modname))
-    if not callable(func):
-      session.error("'{}.{}' is not callable".format(modname, name))
-    functions.append(func)
-
-  # Do we even have any targets that could be exported?
-  has_target = False
-  for module in session.modules.values():
-    if module.targets:
-      has_target = True
-      break
-
-  if session.outfile and has_target:
-    session.info('exporting to "{}"...'.format(session.outfile))
-    with open(session.outfile, 'w') as fp:
-      session.backend.export(fp, session, targets)
-
-  for func in functions:
-    func()
+    if not args.cmd:
+      return
+    # Dispatch the sub command procedure.
+    globals()['main_' + args.cmd](args, session, module)
+  except craftr.runtime.NoSuchModule as exc:
+    session.logger.debug(traceback.format_exc())
+    session.error('module "{0}" could not be found'.format(exc.name))
+  except craftr.runtime.ModuleError as exc:
+    session.logger.debug(traceback.format_exc(), code=exc.code)
+  except Exception as exc:
+    session.error(traceback.format_exc())
+    sys.exit(getattr(exc, 'code', 1))
 
 
 if __name__ == '__main__':

@@ -47,7 +47,7 @@ class Session(object):
     def _get_current(self):
       return self._session.namespaces[self._namespace]
 
-  def __init__(self, backend=None, outfile=None, logger=None):
+  def __init__(self, logger=None):
     super().__init__()
     self.path = []
     self.path.append(os.getcwd())
@@ -55,10 +55,8 @@ class Session(object):
     self.path.extend(os.getenv('CRAFTR_PATH', '').split(os.path.sep))
     self.globals = utils.DataEntity('session_globals')
     self.modules = {}
-    self.backend = craftr.backend.load_backend(backend)
-    self.outfile = outfile or self.backend.default_outfile
     self.namespaces = {}
-    self.logger = logging.Logger()
+    self.logger = logger or logging.Logger()
     self._mod_idcache = {}
     self._mod_filecache = {}
     self._init_globals()
@@ -129,11 +127,26 @@ class Session(object):
     except KeyError:
       raise NoSuchModule(name, None, 'get')
 
+  def resolve_target(self, name, parent=None):
+    ''' Resolves the *name* and returns the `Target` object for it.
+    If *name* is a relative identifier, *parent* must be a string or
+    `Module` object that represents the parent identifier to use. '''
+
+    if isinstance(parent, Module):
+      parent = parent.identifier
+    if not utils.validate_ident(name):
+      raise ValueError('invalid target identifier', name)
+    modname, target = utils.split_ident(utils.abs_ident(name, parent))
+    module = self.get_module(modname)
+    if target not in module.targets:
+      raise ValueError('no such target', target)
+    return module.targets[target]
+
   def load_module(self, name, required_by=None, allow_reload=True):
     ''' Searches for a module in the `Session.path` list and all first-
     level subdirectories of the search path. Module filenames must be
-    called `Craftr` or be suffixed with `.craftr`. A Module must contain
-    a Craftr module declaration:
+    called `Craftfile` or be suffixed with `.craftr`. A Module must
+    contain a Craftr module declaration:
 
         # craftr_module(module_name)
     '''
@@ -155,7 +168,7 @@ class Session(object):
     for path in utils.path.iter_tree(self.path, depth=2):
       if not os.path.isfile(path):
         continue
-      if os.path.basename(path) == 'Craftr' or path.endswith('.craftr'):
+      if os.path.basename(path) == 'Craftfile' or path.endswith('.craftr'):
         try:
           self.load_module_file(path, register=False)
         except InvalidModule as exc:
@@ -192,7 +205,7 @@ class Session(object):
   def module_logger(self, module):
     ''' Factory to create a logger for a module. '''
 
-    fmt = '  [{}|L{{lineno:<3}}]: '
+    fmt = '==> craftr: [{}|L{{lineno}}]: '
     prefix = utils.proxy.LocalProxy(lambda: fmt.format(module.identifier))
     level = utils.proxy.LocalProxy(lambda: self.logger.level)
     logger = logging.Logger(prefix=prefix, level=level)

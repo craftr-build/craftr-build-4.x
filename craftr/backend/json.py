@@ -18,12 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-default_outfile = 'build.json'
+import argparse
 
 
-def export(fp, session, default_targets):
-  session.error("JSON backend is not implemented.")
+def parse_args():
+  parser = argparse.ArgumentParser()
+  return parser.parse_args()
 
 
-def build(target):
-  raise RuntimeError("JSON backend can't build")
+def main(args, session, module):
+  session.error("json export not implemented.")
