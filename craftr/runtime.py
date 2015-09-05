@@ -142,14 +142,22 @@ class Session(object):
       raise ValueError('no such target', target)
     return module.targets[target]
 
-  def load_module(self, name, required_by=None, allow_reload=True):
+  def load_module(self, name, required_by=None, allow_reload=True, register=True):
     ''' Searches for a module in the `Session.path` list and all first-
     level subdirectories of the search path. Module filenames must be
     called `Craftfile` or be suffixed with `.craftr`. A Module must
     contain a Craftr module declaration:
 
         # craftr_module(module_name)
+
+    If the *register* parameter is False, the module won't be executed
+    and registered to the session as an active module. Of course, if a
+    module that was already loaded is requested, it will still be
+    loaded.
     '''
+
+    if required_by is not None and not isinstance(required_by, Module):
+      raise TypeError('expected Module for required_by', type(required_by))
 
     if not utils.validate_ident(name):
       raise ValueError('invalid module identifier', name)
@@ -164,7 +172,8 @@ class Session(object):
     except KeyError:
       pass
     else:
-      self._register_module(module)
+      if register:
+        self._register_module(module)
       return module
 
     if not allow_reload:
@@ -274,21 +283,40 @@ class Module(object):
 
   def _init_locals(self, data=None):
     data = data or self.locals
+
+    # Pythonic globals
     data.__name__ = '__craftr__'
     data.__file__ = self.filename
-    data.craftr = craftr
+
+    # General globals
     data.G = self.session.get_namespace('globals')
-    data.project_dir = os.path.dirname(self.filename)
     data.session = self.session
     data.module = self  # note: cyclic reference
-    data.self = self.locals # note: cyclic reference
+    data.self = self.locals  # note: cyclic reference
+    data.project_dir = os.path.dirname(self.filename)
+
+    # Module member functions exposed
+    data.extends = self.extends
     data.load_module = self.load_module
+    data.get_namespace = self.get_namespace
     data.defined = self.defined
     data.setdefault = self.setdefault
     data.target = self.target
+    data.return_ = self.return_
+
+    # Logging built-ins
     data.info = self.__info
     data.warn = self.__warn
     data.error = self.__error
+
+    # Utility built-ins
+    data.join = craftr.utils.path.join
+    data.dirname = craftr.utils.path.dirname
+    data.normpath = craftr.utils.path.normpath
+    data.glob = craftr.utils.path.glob
+    data.move = craftr.utils.path.move
+    data.autoexpand = craftr.utils.lists.autoexpand
+    data.Process = craftr.utils.shell.Process
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`
@@ -340,11 +368,13 @@ class Module(object):
     attribute lookups to be redirected to the dependency if it could
     not be found on the original object. '''
 
-    entity = self.load_module(name)
-    self.locals.__entity_deps__.append(entity)
-    return entity
+    if not isinstance(name, str):
+      raise TypeError('expected str', type(name))
 
-  def load_module(self, name):
+    module = self.session.load_module(name, required_by=self, register=False)
+    self.execute(module.filename)
+
+  def load_module(self, name, register=True):
     ''' Loads the module with the specicied *name* and returns it. The
     root namespace will automatically be inserted into the local
     namespace.
@@ -363,7 +393,7 @@ class Module(object):
         raise ValueError('need a namespace DataEntity')
       name = name.__entity_id__[3:]
 
-    module = self.session.load_module(name)
+    module = self.session.load_module(name, required_by=self, register=register)
     self.get_namespace(name.split('.')[0])
     return module.locals
 
@@ -477,7 +507,8 @@ class Module(object):
     code = kwargs.pop('code', 1)
     self.logger.error(*args, frame=sys._getframe().f_back, **kwargs)
     if code:
-      raise ModuleError(self, code)
+      message = craftr.logging.print_as_str(*args)
+      raise ModuleError(self, code, message)
 
 
 class Target(object):
@@ -570,12 +601,16 @@ class ModuleError(Exception):
   module script to indicate that a fatal error occured and the program
   shall not continue. '''
 
-  def __init__(self, origin, code=1):
+  def __init__(self, origin, code=1, message=None):
     self.origin = origin
     self.code = code
+    self.message = message
 
   def __str__(self):
-    return "error '{0}' ({1})".format(self.origin.identifier, self.code)
+    res = 'error in "{}": '.format(self.origin.identifier)
+    if self.message:
+      res += self.message.strip()
+    return res + ' (code:{})'.format(self.code)
 
 
 class ModuleReturnException(Exception):

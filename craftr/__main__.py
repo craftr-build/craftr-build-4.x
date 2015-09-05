@@ -210,7 +210,8 @@ def main():
     session.logger.debug(traceback.format_exc())
     session.error('module "{0}" could not be found'.format(exc.name))
   except craftr.runtime.ModuleError as exc:
-    session.logger.debug(traceback.format_exc(), code=exc.code)
+    session.logger.debug(traceback.format_exc())
+    sys.exit(exc.code)
   except Exception as exc:
     session.error(traceback.format_exc())
     sys.exit(getattr(exc, 'code', 1))
