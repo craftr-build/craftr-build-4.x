@@ -20,11 +20,13 @@
 #
 # craftr_module(compiler.gcc)
 
+from craftr.utils.lists import autoexpand
+
 # We could be on Mac in which case we'd rather use Clang.
 P = load_module('platform')
 if P.name == 'Darwin':
   extends('compiler.clang')
-  module.return_()
+  return_()
 
 name = 'GCC'
 c = 'gcc'
@@ -33,6 +35,11 @@ compile_only = '-c'
 w_all = '-Wall'
 obj_out = lambda x: ['-o', x]
 bin_out = lambda x: ['-o', x]
+
+cinc = lambda l: autoexpand((('-I', x) for x in autoexpand(l)))
+cdef = lambda l: autoexpand((('-D', x) for x in autoexpand(l)))
+
+ar = lambda out: ['ar', 'rcs', out]
 
 def std(name):
   return '-std=' + name

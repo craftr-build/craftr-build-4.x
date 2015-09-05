@@ -20,6 +20,8 @@
 #
 # craftr_module(compiler.clang)
 
+from craftr.utils.lists import autoexpand
+
 name = 'Clang'
 c = 'clang'
 cxx = 'clang++'
@@ -27,6 +29,11 @@ compile_only = '-c'
 w_all = '-Wall'
 obj_out = lambda x: ['-o', x]
 bin_out = lambda x: ['-o', x]
+
+cinc = lambda l: autoexpand((('-I', x) for x in autoexpand(l)))
+cdef = lambda l: autoexpand((('-D', x) for x in autoexpand(l)))
+
+ar = lambda out: ['ar', 'rcs', out]
 
 def std(name):
   return '-std=' + name

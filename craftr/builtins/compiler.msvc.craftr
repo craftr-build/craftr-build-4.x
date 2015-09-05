@@ -20,6 +20,8 @@
 #
 # craftr_module(compiler.msvc)
 
+from craftr.utils.lists import autoexpand
+
 name = 'MSVC'
 c = ['cl', '/nologo']
 cxx = ['cl', '/nologo']
@@ -27,6 +29,11 @@ compile_only = '/c'
 w_all = '/Wall'
 obj_out = lambda x: '/Fo' + x
 bin_out = lambda x: '/Fe' + x
+
+cinc = lambda l: autoexpand((('/I', x) for x in autoexpand(l)))
+cdef = lambda l: autoexpand((('/D', x) for x in autoexpand(l)))
+
+ar = lambda out: ['lib', '/nologo', '/OUT:' + out]
 
 def std(name):
   return None
