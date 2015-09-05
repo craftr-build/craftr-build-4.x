@@ -523,7 +523,7 @@ class Target(object):
   using the `craftr.utils.lists.autoexpand()` function. '''
 
   def __init__(self, module, name, inputs, outputs, requires=(),
-      foreach=False, **commands):
+      foreach=False, description=None, **commands):
     from craftr.utils.lists import autoexpand
 
     inputs = autoexpand(inputs)
@@ -544,6 +544,7 @@ class Target(object):
     self.outputs = outputs
     self.requires = requires
     self.foreach = foreach
+    self.description = description
     self.commands = []
 
     for key, value in sorted(commands.items(), key=lambda x: x[0]):

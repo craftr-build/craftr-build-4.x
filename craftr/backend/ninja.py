@@ -72,7 +72,10 @@ def _export(fp, session, default_targets):
       command = ' '.join(quote(x) for x in target.commands[0])
       command = command.replace(craftr.IN, '$in')
       command = command.replace(craftr.OUT, '$out')
-      writer.rule(rule, command)
+      desc = target.description or ''
+      desc = desc.replace(craftr.IN, '$in')
+      desc = desc.replace(craftr.OUT, '$out')
+      writer.rule(rule, command, description=desc)
       writer.newline()
 
       if target.foreach:
