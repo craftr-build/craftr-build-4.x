@@ -24,18 +24,24 @@ import craftr
 
 import argparse
 import re
+import sys
 
 
 def parse_args():
   parser = argparse.ArgumentParser()
-  parser.add_argument('outfile', nargs='?', default='build.ninja')
+  parser.add_argument('outfile', nargs='?', default='build.ninja',
+    help='The output file. Defaults to "build.ninja". Pass "-" to output '
+      'to stdout instead.')
   return parser.parse_args()
 
 
 def main(args, session, module):
-  session.info('ninja export ({})...'.format(quote(args.outfile)))
-  with open(args.outfile, 'w') as fp:
-    _export(fp, session, ())
+  if args.outfile == '-':
+    _export(sys.stdout, session, ())
+  else:
+    session.info('ninja export ({})...'.format(quote(args.outfile)))
+    with open(args.outfile, 'w') as fp:
+      _export(fp, session, ())
 
 
 def ident(name):
