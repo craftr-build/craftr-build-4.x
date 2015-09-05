@@ -49,7 +49,7 @@ styles = {
   DEBUG: ('YELLOW', None, None),
   INFO: ('CYAN', None, None),
   WARNING: ('MAGENTA', None, None),
-  ERROR: ('RED', None, None),
+  ERROR: ('RED', None, 'BRIGHT'),
   CRITICAL: ('WHITE', 'RED', 'BRIGHT'),
 }
 
@@ -79,6 +79,30 @@ def get_level_style(level):
   return (prefix, colorama.Style.RESET_ALL)
 
 
+def wrap_text(text, width, initial_width=None):
+  ''' Better suited text wrapping than `textwrap.TextWrapper()`, I
+  couldn't get it to do what this function will do. '''
+
+  if initial_width is None:
+    initial_width = width
+
+  lines = text.split('\n')
+  index = 0
+  while index < len(lines):
+    lines[index] = lines[index].rstrip('\n')
+    if (index == 0 and len(lines[index]) >= initial_width) or \
+        (len(lines[index]) >= width):
+      newlines = textwrap.wrap(lines[index], initial_width if index == 0 else width)
+      if len(newlines) > 2:
+        newlines[1:] = [' '.join(line for line in newlines[1:])]
+      lines[index:index+1] = newlines
+    index += 1
+
+  if lines and not lines[-1]:
+    lines.pop()
+  return lines
+
+
 def emit(prefix, message, level, fp=None, frame=None):
   ''' Emit the *message* with the specified *prefix* to the file-like
   object *fp*. If `fp.isatty()` returns True and if the `colorama`
@@ -99,17 +123,16 @@ def emit(prefix, message, level, fp=None, frame=None):
   else:
     style = ('', '')
 
-  width = terminal_size()[0] - len(prefix) - 1
-  lines = textwrap.wrap(message, width)
+  width = terminal_size()[0] - 1
+  prefix_len = len(prefix) + 1
+  lines = wrap_text(message, width, width - prefix_len)
 
   fp.write(style[0])
   fp.write(prefix)
   fp.write(lines[0])
   fp.write('\n')
   for line in lines[1:]:
-    fp.write(' ' * len(prefix))
-    fp.write(line)
-    fp.write('\n')
+    fp.write('  ' + line + '\n')
   fp.write(style[1])
 
 
@@ -151,7 +174,7 @@ class Logger(object):
 
   def __init__(self, prefix=None, level=0):
     super().__init__()
-    self.prefix = prefix or 'craftr: '
+    self.prefix = prefix or '==> craftr: '
     self.level = level
 
   def emit(self, level, *args, **kwargs):
