@@ -23,59 +23,126 @@ __all__ = (
   'prefix', 'suffix', 'move', 'glob',
 )
 
+import collections
 import os
-from os.path import join, split, dirname, basename, relpath
 from glob2 import glob
+from os.path import join, split, dirname, basename, relpath
 
 
 def normpath(path, parent_dir=None):
-  path = os.path.expanduser(path)
-  if not os.path.isabs(path):
-    if parent_dir is None:
-      parent_dir = os.getcwd()
-    path = os.path.join(parent_dir, path)
-  if os.name == 'nt':
-    path = path.lower()
-  return os.path.normpath(path)
+  ''' Normalizes a filesystem path. Also expands user variables.
+  If a *parent_dir* is specified, a relative path is considered
+  relative to that directory and converted to an absolute path.
+  The default parent directory is the current working directory.
+
+  *path* may be an iterable other than a string in which case the
+  function is applied recursively to all its items and a list is
+  returned instead of a string. '''
+
+  if isinstance(path, str):
+    path = os.path.expanduser(path)
+    if not os.path.isabs(path):
+      if parent_dir is None:
+        parent_dir = os.getcwd()
+      path = os.path.join(parent_dir, path)
+    if os.name == 'nt':
+      path = path.lower()
+    return os.path.normpath(path)
+  elif isinstance(path, collections.Iterable):
+    result = []
+    for item in path:
+      result.append(normpath(item, parent_dir))
+    return result
+  else:
+    raise TypeError('normpath() expected string or iterable')
 
 
-def prefix(filename, prefix):
-  ''' Adds the specified *prefix* to the basename of the *filename*
-  and returns the new filename. '''
+def prefix(filename, text):
+  ''' Given a filename, this function will prepend the specified prefix
+  to the base of the filename and return it. *filename* may be an iterable
+  other than a string in which case the function is applied recursively
+  and a list is being returned instead of a string. '''
 
-  dir_, base = split(filename)
-  return join(dir_, prefix + base)
+  if not text:
+    return filename
+
+  if isinstance(filename, str):
+    dir_, base = split(filename)
+    return join(dir_, text + base)
+  elif isinstance(filename, collections.Iterable):
+    result = []
+    for item in filename:
+      result.append(prefix(item, text))
+    return result
+  else:
+    raise TypeError('prefix() expected string or iterable')
 
 
-def suffix(filename, suffix):
-  ''' Change the suffix of the *filename* to *suffix*. The suffix will
-  be removed if *suffix* is an empty string or None. '''
+def suffix(filename, text, append=False):
+  ''' Given a filename, this function replaces its suffix with the
+  specified one or appends the specified suffix directly without any
+  replacements based on the value of the *append* parameter.
 
-  index = filename.rfind('.')
-  if index > filename.replace('\\', '/').rfind('/'):
-    filename = filename[:index]
-  if suffix:
-    if not suffix.startswith('.'):
-      suffix = '.' + suffix
-    filename += suffix
-  return filename
+  If the suffix is to be replaced, this function will ensure that there
+  is a dot separating the files base name and the specified new suffix.
+
+  *filename* may be an iterable other than a string in which case the
+  function will be applied recursively on all its items and a list is
+  being returned instead of a string. '''
+
+  if append and not text:
+    return filename
+
+  if isinstance(filename, str):
+    index = filename.rfind('.')
+    if append:
+      filename += text
+    else:
+      if index > filename.replace('\\', '/').rfind('/'):
+        filename = filename[:index]
+      if text:
+        if not text.startswith('.'):
+          text = '.' + text
+        filename += text
+    return filename
+  elif isinstance(filename, collections.Iterable):
+    result = []
+    for item in filename:
+      result.append(suffix(item, text, append))
+    return result
+  else:
+    raise TypeError('suffix() expected string or iterable')
 
 
-def move(files, basedir, newbase, suffix=None):
-  ''' Replaces the base directory of all filenames in the *files* list
-  with the *newbase* and returns a new list. Optionally, the suffix of
-  all files can be changed by specifying the *suffix* argument. '''
+def move(filename, basedir, newbase):
+  ''' Given a filename and two directory names, this function generates
+  a new filename which is constructed from the relative path of the
+  filename and the first directory and the joint of this relative path
+  with the second directory.
 
-  result = []
-  for filename in files:
+  This is useful to generate a new filename in a different directory
+  based on another. Craftr uses this function to generate object
+  filenames.
+
+  Example:
+
+      >>> move('src/main.c', 'src', 'build/obj')
+      build/obj/main.c
+
+  *path* may be an iterable other than a string in which case the
+  function is applied recursively to all its items and a list is
+  returned instead of a string. '''
+
+  if isinstance(filename, str):
     rel = relpath(filename, basedir)
-    if suffix is not None:
-      if callable(suffix):
-        rel = suffix(rel)
-      else:
-        rel = globals()['suffix'](rel, suffix)
-    result.append(os.path.join(newbase, rel))
-  return result
+    return join(newbase, relpath(filename, basedir))
+  elif isinstance(filename, collections.Iterable):
+    result = []
+    for item in filename:
+      result.append(move(item, basedir, newbase))
+    return result
+  else:
+    raise TypeError('move() expected string or iterable')
 
 
 def iter_tree(dirname, depth=1):

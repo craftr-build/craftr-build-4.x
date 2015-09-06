@@ -23,18 +23,6 @@ __all__ = ('lmap', 'lzip', 'autoexpand',)
 import collections
 
 
-def lmap(func, iterable):
-  ''' List-returning version of the `map()` built-in. '''
-
-  return list(map(func, iterable))
-
-
-def lzip(*args):
-  ''' List-returning version of `zip()` built-in. '''
-
-  return list(zip(*args))
-
-
 def autoexpand(lst):
   ''' Accepts a nested iterable and flattens it into a single list
   where all elements are strings. None elements are ignored, iterables

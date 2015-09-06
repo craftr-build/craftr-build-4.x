@@ -315,6 +315,8 @@ class Module(object):
     data.normpath = craftr.utils.path.normpath
     data.glob = craftr.utils.path.glob
     data.move = craftr.utils.path.move
+    data.prefix = craftr.utils.path.prefix
+    data.suffix = craftr.utils.path.suffix
     data.autoexpand = craftr.utils.lists.autoexpand
     data.Process = craftr.utils.shell.Process
 

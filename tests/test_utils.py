@@ -49,6 +49,15 @@ class PathTest(unittest.TestCase):
   def test_prefix(self):
     from craftr.utils.path import prefix
     self.assertEqual(prefix('foo/bar/baz', 'spam-'), 'foo/bar/spam-baz')
+    self.assertEqual(
+      prefix([
+        'foo/bar/baz',
+        'foo/bar/ham/cheeck',
+        '/gogodo'], 'egg_'),
+      [
+        'foo/bar/egg_baz',
+        'foo/bar/ham/egg_cheeck',
+        '/egg_gogodo'])
 
   def test_suffix(self):
     from craftr.utils.path import suffix
@@ -56,6 +65,26 @@ class PathTest(unittest.TestCase):
     self.assertEqual(suffix('foo/bar/baz.spam', 'eggs'), 'foo/bar/baz.eggs')
     self.assertEqual(suffix('foo/bar/baz.spam', None), 'foo/bar/baz')
     self.assertEqual(suffix('foo/bar/baz.spam', ''), 'foo/bar/baz')
+    self.assertEqual(suffix('foo/bar/baz.spam', 'eggs', True), 'foo/bar/baz.spameggs')
+    self.assertEqual(suffix('foo/bar/baz.spam', '.eggs', True), 'foo/bar/baz.spam.eggs')
+    self.assertEqual(
+      suffix([
+        'foo/bar/baz',
+        'foo/bar/baz.spam',
+        'foo/bar/baz.baz'], 'eggs'),
+      [
+        'foo/bar/baz.eggs',
+        'foo/bar/baz.eggs',
+        'foo/bar/baz.eggs'])
+    self.assertEqual(
+      suffix([
+        'foo/bar/baz',
+        'foo/bar/baz.spam',
+        'foo/bar/baz.baz'], 'eggs', True),
+      [
+        'foo/bar/bazeggs',
+        'foo/bar/baz.spameggs',
+        'foo/bar/baz.bazeggs'])
 
   def test_move(self):
     from craftr.utils.path import move

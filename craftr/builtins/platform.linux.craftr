@@ -1,3 +1,5 @@
+# craftr_module(platform.linux)
+#
 # Copyright (C) 2015 Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -17,12 +19,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#
-# craftr_module(platform.linux)
 
-from craftr.utils.path import prefix, suffix
-
-obj = lambda x: suffix(x, 'o')
-bin = lambda x: suffix(x, None)
-lib = lambda x: suffix(prefix(x, 'lib'), 'a')
-dll = lambda x: suffix(x, 'so')
+obj = lambda x, append=False: suffix(x, '.o', append)
+bin = lambda x, append=False: suffix(x, None, append)
+lib = lambda x, append=False: suffix(prefix(x, 'lib'), '.a', append)
+dll = lambda x, append=False: suffix(x, '.so', append)

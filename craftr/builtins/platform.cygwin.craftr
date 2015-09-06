@@ -1,3 +1,5 @@
+# craftr_module(platform.cygwin)
+#
 # Copyright (C) 2015 Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -17,12 +19,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#
-# craftr_module(platform.cygwin)
 
-from craftr.utils.path import prefix, suffix
-
-obj = lambda x: suffix(x, 'o')
-bin = lambda x: suffix(x, 'exe')
-lib = lambda x: suffix(prefix(x, 'lib'), 'lib')
-dll = lambda x: suffix(x, 'dll')
+obj = lambda x, append=False: suffix(x, '.o', append)
+bin = lambda x, append=False: suffix(x, '.exe', append)
+lib = lambda x, append=False: suffix(prefix(x, 'lib'), '.lib', append)
+dll = lambda x, append=False: suffix(x, '.dll', append)
