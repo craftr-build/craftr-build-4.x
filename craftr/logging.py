@@ -29,6 +29,9 @@ except ImportError:
 else:
   colorama.init()
 
+get_stdout = lambda: sys.stdout
+get_stderr = lambda: sys.stderr
+
 
 DEBUG = 10
 INFO = 20
@@ -110,7 +113,7 @@ def emit(prefix, message, level, fp=None, frame=None):
   contain a `{levelname}` format string which will automatically be
   substituted. '''
 
-  fp = fp or sys.stdout
+  fp = fp or get_stdout()
 
   fmtargs = {'levelname': get_level_name(level), 'lineno': None, 'fn': None}
   if frame:
