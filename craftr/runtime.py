@@ -332,7 +332,7 @@ class Module(object):
     with open(self.filename) as fp:
       had_hash = False
       for line in fp:
-        if not line.startswith('#') and had_hash:
+        if not line.startswith('#') and (had_hash or line.strip() != ''):
           break
         elif line.startswith('#'):
           had_hash = True
