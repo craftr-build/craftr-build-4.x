@@ -3,6 +3,10 @@
 
 from setuptools import setup, find_packages
 import os
+import sys
+
+if sys.version < '3.3':
+  sys.exit("Craftr requires Python 3.3 or greater.")
 
 script = 'scripts/craftr.py' if os.name == 'nt' else 'scripts/craftr'
 
