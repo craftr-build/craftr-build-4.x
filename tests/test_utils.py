@@ -46,11 +46,11 @@ class PathTest(unittest.TestCase):
     craftr.utils.path.basename = os.path.basename
     craftr.utils.path.relpath = os.path.relpath
 
-  def test_prefix(self):
-    from craftr.utils.path import prefix
-    self.assertEqual(prefix('foo/bar/baz', 'spam-'), 'foo/bar/spam-baz')
+  def test_addprefix(self):
+    from craftr.utils.path import addprefix
+    self.assertEqual(addprefix('foo/bar/baz', 'spam-'), 'foo/bar/spam-baz')
     self.assertEqual(
-      prefix([
+      addprefix([
         'foo/bar/baz',
         'foo/bar/ham/cheeck',
         '/gogodo'], 'egg_'),
@@ -59,28 +59,29 @@ class PathTest(unittest.TestCase):
         'foo/bar/ham/egg_cheeck',
         '/egg_gogodo'])
 
-  def test_suffix(self):
-    from craftr.utils.path import suffix
-    self.assertEqual(suffix('foo/bar/baz', 'eggs'), 'foo/bar/baz.eggs')
-    self.assertEqual(suffix('foo/bar/baz.spam', 'eggs'), 'foo/bar/baz.eggs')
-    self.assertEqual(suffix('foo/bar/baz.spam', None), 'foo/bar/baz')
-    self.assertEqual(suffix('foo/bar/baz.spam', ''), 'foo/bar/baz')
-    self.assertEqual(suffix('foo/bar/baz.spam', 'eggs', True), 'foo/bar/baz.spameggs')
-    self.assertEqual(suffix('foo/bar/baz.spam', '.eggs', True), 'foo/bar/baz.spam.eggs')
+  def test_addsuffix(self):
+    from craftr.utils.path import addsuffix
+    self.assertEqual(addsuffix('foo/bar/baz', '.eggs', True), 'foo/bar/baz.eggs')
+    self.assertEqual(addsuffix('foo/bar/baz.spam', '.eggs', True), 'foo/bar/baz.eggs')
+    self.assertEqual(addsuffix('foo/bar/baz.spam', None, True), 'foo/bar/baz')
+    self.assertEqual(addsuffix('foo/bar/baz.spam', '', True), 'foo/bar/baz')
     self.assertEqual(
-      suffix([
+      addsuffix([
         'foo/bar/baz',
         'foo/bar/baz.spam',
-        'foo/bar/baz.baz'], 'eggs'),
+        'foo/bar/baz.baz'], '.eggs', True),
       [
         'foo/bar/baz.eggs',
         'foo/bar/baz.eggs',
         'foo/bar/baz.eggs'])
+
+    self.assertEqual(addsuffix('foo/bar/baz.spam', 'eggs', False), 'foo/bar/baz.spameggs')
+    self.assertEqual(addsuffix('foo/bar/baz.spam', '.eggs', False), 'foo/bar/baz.spam.eggs')
     self.assertEqual(
-      suffix([
+      addsuffix([
         'foo/bar/baz',
         'foo/bar/baz.spam',
-        'foo/bar/baz.baz'], 'eggs', True),
+        'foo/bar/baz.baz'], 'eggs', False),
       [
         'foo/bar/bazeggs',
         'foo/bar/baz.spameggs',

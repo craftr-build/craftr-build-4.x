@@ -43,4 +43,4 @@ elif sys.platform.startswith('darwin'):
 else:
   error("unsupported platform '{0}'".format(sys.platform))
 
-module.extends('platform.' + name.lower())
+extends('platform.' + name.lower())

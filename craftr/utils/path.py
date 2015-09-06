@@ -57,61 +57,82 @@ def normpath(path, parent_dir=None):
     raise TypeError('normpath() expected string or iterable')
 
 
-def prefix(filename, text):
+def addprefix(subject, prefix):
   ''' Given a filename, this function will prepend the specified prefix
   to the base of the filename and return it. *filename* may be an iterable
   other than a string in which case the function is applied recursively
-  and a list is being returned instead of a string. '''
+  and a list is being returned instead of a string.
 
-  if not text:
-    return filename
+  __Important__: This is *not* the directy equivalent of `addsuffix()`
+  as it considered *subject* to be a filename and appends the *prefix*
+  only to the files base name. '''
 
-  if isinstance(filename, str):
-    dir_, base = split(filename)
-    return join(dir_, text + base)
-  elif isinstance(filename, collections.Iterable):
+  if not prefix:
+    return subject
+
+  if isinstance(subject, str):
+    dir_, base = split(subject)
+    return join(dir_, prefix + base)
+  elif isinstance(subject, collections.Iterable):
     result = []
-    for item in filename:
-      result.append(prefix(item, text))
+    for item in subject:
+      result.append(addprefix(item, prefix))
     return result
   else:
-    raise TypeError('prefix() expected string or iterable')
+    raise TypeError('addprefix() expected string or iterable')
 
 
-def suffix(filename, text, append=False):
-  ''' Given a filename, this function replaces its suffix with the
-  specified one or appends the specified suffix directly without any
-  replacements based on the value of the *append* parameter.
+def addsuffix(subject, suffix, replace=False):
+  ''' Given a string, this function appends *suffix* to the end of
+  the string and returns the new string.
 
-  If the suffix is to be replaced, this function will ensure that there
-  is a dot separating the files base name and the specified new suffix.
-
-  *filename* may be an iterable other than a string in which case the
+  *subject* may be an iterable other than a string in which case the
   function will be applied recursively on all its items and a list is
-  being returned instead of a string. '''
+  being returned instead of a string.
 
-  if append and not text:
-    return filename
+  If the *replace* argument is True, the suffix will be replaced
+  instead of being just appended. Make sure to include a period in
+  the *suffix* parameter value. '''
 
-  if isinstance(filename, str):
-    index = filename.rfind('.')
-    if append:
-      filename += text
-    else:
-      if index > filename.replace('\\', '/').rfind('/'):
-        filename = filename[:index]
-      if text:
-        if not text.startswith('.'):
-          text = '.' + text
-        filename += text
-    return filename
-  elif isinstance(filename, collections.Iterable):
+  if not suffix and not replace:
+    return subject
+
+  if isinstance(subject, str):
+    if replace:
+      subject = rmvsuffix(subject)
+    if suffix:
+      subject += suffix
+    return subject
+  elif isinstance(subject, collections.Iterable):
     result = []
-    for item in filename:
-      result.append(suffix(item, text, append))
+    for item in subject:
+      result.append(addsuffix(item, suffix, replace))
     return result
   else:
-    raise TypeError('suffix() expected string or iterable')
+    raise TypeError('addsuffix() expected string or iterable')
+
+
+def rmvsuffix(subject):
+  ''' Given a filename, this function removes the the suffix of the
+  filename and returns it. If the filename had no suffix to begin with,
+  it is returned unchanged.
+
+  *subject* may be an iterable other than a string in which case the
+  function is applied recursively to its items and a list is returned
+  instead of a string. '''
+
+  if isinstance(subject, str):
+    index = subject.rfind('.')
+    if index > subject.replace('\\', '/').rfind('/'):
+      subject = subject[:index]
+    return subject
+  elif isinstance(subject, collections.Iterable):
+    result = []
+    for item in subject:
+      result.append(rmvsuffix(item))
+    return result
+  else:
+    raise TypeError('rmvsuffix() expected string or iterable')
 
 
 def move(filename, basedir, newbase):

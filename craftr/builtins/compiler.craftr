@@ -1,3 +1,5 @@
+# craftr_module(compiler)
+#
 # Copyright (C) 2015 Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -17,8 +19,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#
-# craftr_module(compiler)
 
 P = load_module('platform')
 
@@ -32,3 +32,5 @@ elif P.name == 'Cygwin':
   module.extends('compiler.gcc')
 else:
   error("compiler can't be deduced for '{0}'".format(P.name))
+
+

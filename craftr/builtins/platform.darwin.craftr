@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-obj = lambda x, append=False: suffix(x, '.o', append)
-bin = lambda x, append=False: suffix(x, None, append)
-lib = lambda x, append=False: suffix(prefix(x, 'lib'), '.a', append)
-dll = lambda x, append=False: suffix(x, '.dylib', append)
+obj = lambda x: addsuffix(x, '.o')
+bin = lambda x: addsuffix(x, None)
+lib = lambda x: addsuffix(addprefix(x, 'lib'), '.a')
+dll = lambda x: addsuffix(x, '.dylib')
