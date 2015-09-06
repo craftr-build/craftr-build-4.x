@@ -7,6 +7,12 @@ Craftr is a Meta Build System that is written and used in pure Python
 code. It uses Python scripts to compute the build information which
 can then be exported to a backend format (eg. Make, JSON, Ninja).
 
+__Requirements__
+
+- Python 3.3 or greater
+- [glob2](pypi.python.org/pypi/glob2)
+- [colorama](pypi.python.org/pypi/colorama) (optional)
+
 ----------
 
 Copyright (C) 2015 Niklas Rosenstein
