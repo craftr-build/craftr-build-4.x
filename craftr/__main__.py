@@ -38,6 +38,11 @@ def parse_args():
     action='store_true',
     help='Output the Craftr version and exit, regardless of other arguments.')
   parser.add_argument(
+    '-c', '--cdir',
+    help='The directory from which the "Craftfile" will be used as the '
+      'main Craftr module if the -m/--module option is not specified. '
+      'Defaults to the current working directry.')
+  parser.add_argument(
     '-m', '--module',
     help='The name of the main Craftr module. If omitted, the "Craftfile" '
       'from the current working directory is used.')
@@ -159,6 +164,11 @@ def main_clean(args, session, module):
 
 def main():
   args = parse_args()
+  if args.version:
+    print('Craftr version', craftr.__version__)
+    print('https://github.com/craftr-build/craftr')
+    return
+
   session = craftr.runtime.Session()
   if args.verbose:
     session.logger.level = 0
@@ -167,9 +177,12 @@ def main():
 
   # Use the local Craftfile if no explicit module was specified.
   if not args.module:
-    if not os.path.isfile('Craftfile'):
-      session.error('"Craftfile" does not exist.')
-    args.module = craftr.runtime.Module(session, 'Craftfile').read_identifier()
+    filename = 'Craftfile'
+    if args.cdir:
+      filename = os.path.join(args.cdir, filename)
+    if not os.path.isfile(filename):
+      session.error('"{}" does not exist.'.format(filename))
+    args.module = craftr.runtime.Module(session, filename).read_identifier()
 
   # Process and update the pre-definitions.
   for item in args.defines:
