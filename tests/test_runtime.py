@@ -36,7 +36,7 @@ class ModuleBaseTest(unittest.TestCase):
     return open(tempfile.mktemp('.craftr'), 'w')
 
   def setUp(self):
-    self.session = craftr.runtime.Session()
+    self.session = craftr.runtime.Session('export')
     self.session.path = [tempfile.gettempdir()]
 
     with self._mktemp() as fp:
