@@ -18,11 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = (
-  'join', 'split', 'dirname', 'basename', 'normpath', 'relpath',
-  'prefix', 'suffix', 'move', 'glob',
-)
-
 import collections
 import os
 from glob2 import glob

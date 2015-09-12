@@ -32,5 +32,3 @@ elif P.name == 'Cygwin':
   module.extends('compiler.gcc')
 else:
   error("compiler can't be deduced for '{0}'".format(P.name))
-
-

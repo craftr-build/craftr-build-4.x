@@ -47,8 +47,9 @@ class Session(object):
     def _get_current(self):
       return self._session.namespaces[self._namespace]
 
-  def __init__(self, logger=None):
+  def __init__(self, action, logger=None):
     super().__init__()
+    self.action = action
     self.path = []
     self.path.append(os.getcwd())
     self.path.append(os.path.join(os.path.dirname(__file__), 'builtins'))

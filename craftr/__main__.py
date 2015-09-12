@@ -169,7 +169,7 @@ def main():
     print('https://github.com/craftr-build/craftr')
     return
 
-  session = craftr.runtime.Session()
+  session = craftr.runtime.Session(args.cmd)
   if args.verbose:
     session.logger.level = 0
   else:
