@@ -26,9 +26,6 @@ import tempfile
 
 from craftr.runtime import Module
 
-stdout = io.StringIO()
-craftr.logging.get_stdout = craftr.logging.get_stderr = lambda: stdout
-
 
 class ModuleBaseTest(unittest.TestCase):
 
@@ -36,6 +33,11 @@ class ModuleBaseTest(unittest.TestCase):
     return open(tempfile.mktemp('.craftr'), 'w')
 
   def setUp(self):
+    self.stdout = io.StringIO()
+    self._old_get_stdout = craftr.logging.get_stdout
+    self._old_get_stderr = craftr.logging.get_stderr
+    craftr.logging.get_stdout = craftr.logging.get_stderr = lambda: self.stdout
+
     self.session = craftr.runtime.Session('export')
     self.session.path = [tempfile.gettempdir()]
 
@@ -62,6 +64,8 @@ class ModuleBaseTest(unittest.TestCase):
         '# craftr_modulee(invalid?identifier)\n')
 
   def tearDown(self):
+    craftr.get_stdout = self._old_get_stdout
+    craftr.get_stderr = self._old_get_stderr
     os.remove(self.valid_file)
     os.remove(self.invalid_file_1)
     os.remove(self.invalid_file_2)
