@@ -378,27 +378,42 @@ class Module(object):
     module = self.session.load_module(name, required_by=self, register=False)
     self.execute(module.filename)
 
-  def load_module(self, name, register=True):
+  def load_module(self, __module_name, **preconditions):
     ''' Loads the module with the specicied *name* and returns it. The
     root namespace will automatically be inserted into the local
-    namespace.
+    namespace. The *\*\*preconditions* are inserted into the namespace
+    before the module is loaded. If the module is already loaded and any
+    preconditions are specified and they don't match with the existing value,
+    a `RuntimeError` is raised.
 
     Arguments:
-      name (str or utils.DataEntity): The name of the module to load
+      __module_name (str or utils.DataEntity): The name of the module to load
         or an `utils.DataEntity` object that represents the namespace
         of the module to load.
 
-        project = load_module('foo.project')
+        project = load_module('foo.project', debug=True)
         assert foo.project is project
     '''
 
-    if not isinstance(name, str):
-      if not name.__entity_id__.startswith('ns:'):
+    if not isinstance(__module_name, str):
+      if not __module_name.__entity_id__.startswith('ns:'):
         raise ValueError('need a namespace DataEntity')
-      name = name.__entity_id__[3:]
+      __module_name = name.__entity_id__[3:]
 
-    module = self.session.load_module(name, required_by=self, register=register)
-    self.get_namespace(name.split('.')[0])
+    module = self.session.modules.get(__module_name)
+    if module:
+      # Check if any preconditions conflict.
+      for key, value in preconditions.items():
+        if not hasattr(module.locals, key) or getattr(module.locals, key) != value:
+          raise PreconditionConflictError(module, key, value)
+    else:
+      # Assign the preconditions to the namespace.
+      ns = self.session.get_namespace(__module_name)
+      for key, value in preconditions.items():
+        setattr(ns, key, value)
+
+    module = self.session.load_module(__module_name, required_by=self)
+    self.get_namespace(__module_name.split('.')[0])
     return module.locals
 
   def get_namespace(self, name):
@@ -622,3 +637,23 @@ class ModuleReturnException(Exception):
   pass
 
 
+class PreconditionConflictError(Exception):
+  ''' This exception is raised if `Module.load_module()` defines any
+  precondition, the module was already loaded and the precondition
+  doesn't match the existing value. '''
+
+  def __init__(self, module, key, value):
+    self.module = module
+    self.key = key
+    self.value = value
+
+  def __str__(self):
+    message = 'Conflicting precondition "{0}.{1}" '
+    if not hasattr(self.module.locals, self.key):
+      message += 'has no value'
+      has_value = None
+    else:
+      message += 'has value {2!r}'
+      has_value = getattr(self.module.locals, self.key)
+    message += ', required {3!r}'
+    return message.format(self.module.identifier, self.key, has_value, self.value)
