@@ -442,12 +442,11 @@ class Module(object):
     variable will be resolved in the context of the unit, meaning that
     the variable is resolved from the local namespace. '''
 
-    value = self.locals
-    for part in varname.split('.'):
-      try:
-        value = getattr(value, part)
-      except AttributeError:
-        return False
+    try:
+      obj, key = self._resolve(varname)
+      getattr(obj, key)
+    except AttributeError:
+      return False
     return True
 
   def setdefault(self, name, default, check_globals=True):
@@ -467,19 +466,20 @@ class Module(object):
           # do other stuff
     '''
 
+    obj, key = self._resolve(name)
     try:
-      value = getattr(self.locals, name)
+      value = getattr(obj, key)
     except AttributeError:
       pass
-    if check_globals and 'value' not in locals():
+    if check_globals and obj is not self.locals.G and 'value' not in locals():
       try:
-        value = getattr(self.locals.G, name)
+        value = getattr(self.locals.G, key)
       except AttributeError:
         pass
     if 'value' not in locals():
       value = default
 
-    setattr(self.locals, name, value)
+    setattr(obj, key, value)
     return value
 
   def target(self, name, **kwargs):
@@ -515,6 +515,18 @@ class Module(object):
     an error. '''
 
     raise ModuleReturnException()
+
+  def _resolve(self, varname):
+    ''' Resolves a variable name and returns a tuple of `(obj, key)`
+    where *obj* is the object that is supposed to be accessed for
+    the attribute *key*. Raises an `AttributeError` if a variable
+    can not be resolved in the way to *obj*. '''
+
+    obj = self.locals
+    parts = varname.split('.')
+    for part in parts[:-1]:
+      obj = getattr(obj, part)
+    return (obj, parts[-1])
 
   def __info(self, *args, **kwargs):
     self.logger.info(*args, frame=sys._getframe().f_back, **kwargs)
