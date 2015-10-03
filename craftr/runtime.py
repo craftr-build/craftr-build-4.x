@@ -38,13 +38,13 @@ class Session(object):
   search path with the current working directory and the paths in the
   `CRAFTR_PATH` environment variable. '''
 
-  class NamespaceProxy(utils.proxy.ProxyBase):
-    __slots__ = ('_session', '_namespace')
+  class NamespaceProxy(utils.proxy.Proxy):
+    __slots__ = utils.proxy.Proxy.__slots__ + ('_session', '_namespace')
     def __init__(self, session, namespace):
-      super().__init__()
+      super().__init__(self.__target)
       self._session = session
       self._namespace = namespace
-    def _get_current(self):
+    def __target(self):
       return self._session.namespaces[self._namespace]
 
   def __init__(self, action, logger=None):
@@ -94,7 +94,7 @@ class Session(object):
 
   def get_namespace(self, name):
     ''' Generate and retrieve the namespace under the specified *name*.
-    Returned will be an `utils.proxy.LocalProxy` that references the
+    Returned will be an `utils.proxy.Proxy` that references the
     namespace entry. '''
 
     if not utils.validate_ident(name):
@@ -221,8 +221,8 @@ class Session(object):
     ''' Factory to create a logger for a module. '''
 
     fmt = '==> craftr: [{}|L{{lineno}}]: '
-    prefix = utils.proxy.LocalProxy(lambda: fmt.format(module.identifier))
-    level = utils.proxy.LocalProxy(lambda: self.logger.level)
+    prefix = utils.proxy.Proxy(lambda: fmt.format(module.identifier))
+    level = utils.proxy.Proxy(lambda: self.logger.level)
     logger = logging.Logger(prefix=prefix, level=level)
     return logger
 
@@ -395,10 +395,14 @@ class Module(object):
         assert foo.project is project
     '''
 
-    if not isinstance(__module_name, str):
-      if not __module_name.__entity_id__.startswith('ns:'):
-        raise ValueError('need a namespace DataEntity')
-      __module_name = name.__entity_id__[3:]
+    __module_name = utils.proxy.resolve_proxy(__module_name)
+    if isinstance(__module_name, utils.DataEntity):
+      eid = __module_name.__entity_id__
+      if not eid.startswith('ns:'):
+        raise ValueError('need a namespace entity, got {!r}'.format(eid))
+      __module_name = eid[3:]
+    elif not isinstance(__module_name, str):
+      raise TypeError('expected str or namespace DataEntity')
 
     module = self.session.modules.get(__module_name)
     if module:
