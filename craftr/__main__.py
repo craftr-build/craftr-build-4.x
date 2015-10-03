@@ -124,8 +124,8 @@ def main_run(args, session, module):
   # Collect a list of all Python objects to call.
   tasks = []
   for name in args.tasks:
-    name = craftr.utils.abs_ident(name, module.identifier)
-    modname, name = craftr.utils.split_ident(name)
+    name = craftr.utils.ident.abs(name, module.identifier)
+    modname, name = craftr.utils.ident.split(name)
     mod = session.get_module(modname)
 
     try:
@@ -189,7 +189,7 @@ def main():
     key, eq, value = item.partition('=')
     if key.startswith(':'):
       key = 'globals.' + key[1:]
-    if not craftr.utils.validate_ident(key):
+    if not craftr.utils.ident.validate(key):
       session.error("invalid identifier '{}'".format(key))
 
     if not eq:
@@ -206,8 +206,8 @@ def main():
       except ValueError:
         pass
 
-    key = craftr.utils.abs_ident(key, args.module)
-    modname, name = craftr.utils.split_ident(key)
+    key = craftr.utils.ident.abs(key, args.module)
+    modname, name = craftr.utils.ident.split(key)
     mod = session.get_namespace(modname)
     setattr(mod, name, value)
     session.logger.debug('setting {}.{} = {!r}'.format(modname, name, value))

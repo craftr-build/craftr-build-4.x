@@ -18,11 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from . import ident
 from . import lists
 from . import path
 from . import proxy
 from . import shell
-import re
+import sys
 
 
 class DataEntity(object):
@@ -43,42 +44,21 @@ def singleton(x):
   return x()
 
 
-def validate_ident(ident):
-  ''' Returns True if *ident* is a valid module or target identifier.
-  Such an identifier can be like a Python variable but allowing
-  namespace access by dots. '''
+def get_calling_module(module=None):
+  ''' Call this from a rule function to retrieve the craftr module that
+  was calling the function from the stackframe. If the module can not
+  retrieved, a `RuntimeError` is raised. '''
 
-  if not re.match('^[A-z][A-z0-9\_\.]*$', ident):
-    return False
-  return not ident.endswith('.')
+  if module is None:
+    frame = sys._getframe(2) # get_calling_module() - rule - module
+    if 'module' not in frame.f_globals:
+      raise RuntimeError('could not read "module" variable')
+    module = proxy.resolve_proxy(frame.f_globals['module'])
+  else:
+    module = proxy.resolve_proxy(module)
 
-
-def validate_var(ident):
-  ''' Returns True if *ident* is a valid variable name (without dots). '''
-
-  return bool(re.match('^[A-z][A-z0-9\_\.]*$', ident))
-
-
-def split_ident(ident):
-  ''' Splits *ident* into module and variable name. '''
-
-  if not validate_ident(ident):
-    raise ValueError('invalid identifier', ident)
-  parts = ident.split('.')
-  return '.'.join(parts[:-1]), parts[-1]
-
-
-def abs_ident(ident, parent):
-  ''' If *ident* is a relative identifier (that is only a variable name),
-  concatenates *ident* with *parent*. Returns *ident* otherwise. '''
-
-  if not validate_ident(parent):
-    raise ValueError('invalid identifier', parent)
-  if not '.' in ident:
-    if not validate_var(ident):
-      raise ValueError('invalid variable name', ident)
-    ident = parent + '.' + ident
-  elif not validate_ident(ident):
-    raise ValueError('invalid identifier', ident)
-
-  return ident
+  if not isinstance(module, DataEntity):
+    raise RuntimeError('"module" is not a DataEntity')
+  if not module.__entity_id__.startswith('module:'):
+    raise RuntimeError('"module" is not a module DataEntity')
+  return module

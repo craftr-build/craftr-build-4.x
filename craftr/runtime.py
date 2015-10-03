@@ -97,7 +97,7 @@ class Session(object):
     Returned will be an `utils.proxy.Proxy` that references the
     namespace entry. '''
 
-    if not utils.validate_ident(name):
+    if not utils.ident.validate(name):
       raise ValueError('invalid namespace identifier', name)
     parent = None
     parts = []
@@ -135,9 +135,9 @@ class Session(object):
 
     if isinstance(parent, Module):
       parent = parent.identifier
-    if not utils.validate_ident(name):
+    if not utils.ident.validate(name):
       raise ValueError('invalid target identifier', name)
-    modname, target = utils.split_ident(utils.abs_ident(name, parent))
+    modname, target = utils.ident.split(utils.ident.abs(name, parent))
     module = self.get_module(modname)
     if target not in module.targets:
       raise ValueError('no such target', target)
@@ -160,7 +160,7 @@ class Session(object):
     if required_by is not None and not isinstance(required_by, Module):
       raise TypeError('expected Module for required_by', type(required_by))
 
-    if not utils.validate_ident(name):
+    if not utils.ident.validate(name):
       raise ValueError('invalid module identifier', name)
 
     try:
@@ -343,7 +343,7 @@ class Module(object):
           match = re.match('^#\s*craftr_module\(([^\s]+)\)\s*$', line)
           if match:
             identifier = match.group(1)
-    if not identifier or not utils.validate_ident(identifier):
+    if not identifier or not utils.ident.validate(identifier):
       raise InvalidModule(self.filename)
 
     self.identifier = identifier
@@ -569,7 +569,7 @@ class Target(object):
       raise TypeError('<module> must be a Module object', type(module))
     if not isinstance(name, str):
       raise TypeError('<name> must be a string', type(name))
-    if not utils.validate_var(name):
+    if not utils.ident.validate_var(name):
       raise ValueError('invalid target name', name)
 
     super().__init__()
