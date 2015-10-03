@@ -87,6 +87,13 @@ class PathTest(unittest.TestCase):
         'foo/bar/baz.spameggs',
         'foo/bar/baz.bazeggs'])
 
+  def test_commonpath(self):
+    from craftr.utils.path import commonpath
+    self.assertEqual(commonpath(['/foo/bar', '/foo/bar/baz']), '/foo/bar')
+    self.assertEqual(commonpath(['foo/bar', 'foo/bar/baz']), 'foo/bar')
+    with self.assertRaises(ValueError):
+      commonpath(['/foo/bar', 'foo/bar/baz'])
+
   def test_move(self):
     from craftr.utils.path import move
     base = 'foo/bar'

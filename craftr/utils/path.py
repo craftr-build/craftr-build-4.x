@@ -24,6 +24,49 @@ from glob2 import glob
 from os.path import join, split, dirname, basename, relpath
 
 
+def commonpath(paths):
+  ''' Returns the longest sub-path of each pathname in the sequence
+  *paths*. Raises `ValueError` if *paths* is empty or contains both
+  relative and absolute pathnames. '''
+
+  if not paths:
+    raise ValueError('paths is empty')
+  parts = []
+  has_abs = None
+  for path in paths:
+    if not os.path.isabs(path):
+      if has_abs is None:
+        has_abs = False
+      elif has_abs:
+        raise ValueError('paths contains relative and absolute pathnames')
+    else:
+      if has_abs is None:
+        has_abs = True
+      elif not has_abs:
+        raise ValueError('paths contains relative and absolute pathnames')
+
+    path = normpath(path)
+    parts.append(path.split(os.sep))
+
+  common = parts[0]
+  for elements in parts[1:]:
+    if len(elements) < len(common):
+      common = common[:len(elements)]
+    for index, elem in enumerate(elements):
+      if index >= len(common):
+        break
+      if elem != common[index]:
+        common = common[:index]
+        break
+      if not common:
+        break
+
+  common = os.sep.join(common)
+  if not has_abs:
+    common = os.path.relpath(common)
+  return common
+
+
 def normpath(path, parent_dir=None):
   ''' Normalizes a filesystem path. Also expands user variables.
   If a *parent_dir* is specified, a relative path is considered
