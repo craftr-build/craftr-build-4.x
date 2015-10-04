@@ -555,10 +555,31 @@ class Target(object):
   during export or invokation respectively.
 
   The arguments to this function are automatically expanded to lists
-  using the `craftr.utils.lists.autoexpand()` function. '''
+  using the `craftr.utils.lists.autoexpand()` function.
+
+  Arguments:
+    module (Module): The module object that the target is created in.
+    name (str): The name of the target which must be a valid identifier.
+    inputs (list of str): A list of input files (may be nested).
+    outputs (list of str): A list of output files (may be nested).
+    requires (list of str): A list of additional requirements
+      (filenames) that need to be available before the target is
+      built.
+    foreach (bool): If True, the *command* is executed for each pair
+      of input and output files. The length of *inputs* and *outputs*
+      must be the same.
+    description (str): Description of the target.
+    command (str): The command to execute for the target.
+    commandX (str): Additional commands to execute for the target,
+      where X stands for a digit between 0 and 9. The commands are
+      executed in order, with *command* as the first.
+    meta_* (any): Specify meta data of the target which can be
+      read from the `Target.meta` dictionary. The `meta_` part
+      is stripped from the key.
+  '''
 
   def __init__(self, module, name, inputs, outputs, requires=(),
-      foreach=False, description=None, **commands):
+      foreach=False, description=None, **kwargs):
     from craftr.utils.lists import autoexpand
 
     inputs = autoexpand(inputs)
@@ -581,8 +602,16 @@ class Target(object):
     self.foreach = foreach
     self.description = description
     self.commands = []
+    self.meta = {}
 
-    for key, value in sorted(commands.items(), key=lambda x: x[0]):
+    for key, value in tuple(kwargs.items()):
+      if key.startswith('meta_'):
+        name = key[5:]
+        if name:
+          self.meta[name] = value
+          kwargs.pop(key)
+
+    for key, value in sorted(kwargs.items(), key=lambda x: x[0]):
       if not re.match('command\d?$', key):
         raise TypeError('unexpected keyword argument ' + key)
       if not isinstance(value, list):

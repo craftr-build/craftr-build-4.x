@@ -23,6 +23,7 @@ from . import lists
 from . import path
 from . import proxy
 from . import shell
+import craftr
 import sys
 
 
@@ -57,8 +58,6 @@ def get_calling_module(module=None):
   else:
     module = proxy.resolve_proxy(module)
 
-  if not isinstance(module, DataEntity):
-    raise RuntimeError('"module" is not a DataEntity')
-  if not module.__entity_id__.startswith('module:'):
-    raise RuntimeError('"module" is not a module DataEntity')
+  if not isinstance(module, craftr.runtime.Module):
+    raise RuntimeError('"module" is not a Module object')
   return module
