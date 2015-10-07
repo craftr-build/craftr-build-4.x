@@ -476,7 +476,7 @@ class Module(object):
       value = getattr(obj, key)
     except AttributeError:
       pass
-    if check_globals and obj is not self.locals.G and 'value' not in locals():
+    if check_globals and obj is self.locals and 'value' not in locals():
       try:
         value = getattr(self.locals.G, key)
       except AttributeError:
@@ -486,6 +486,25 @@ class Module(object):
 
     setattr(obj, key, value)
     return value
+
+  def get(self, name, default=NotImplemented, check_globals=True):
+    ''' Resolves the variable *name* and returns its value or the
+    *default* if specified. `AttributeError` will be raised if the
+    *default* is not specified and the lookup failed. '''
+
+    obj, key = self._resolve(name)
+    try:
+      return getattr(obj, key)
+    except AttributeError:
+      if default is NotImplemented:
+        raise
+      if check_globals and obj is self.locals:
+        try:
+          return getattr(self.locals.G, key)
+        except AttributeError:
+          if default is NotImplemented:
+            raise
+    return default
 
   def target(self, name, **kwargs):
     ''' Declares a target with the specified *name*. The target will
