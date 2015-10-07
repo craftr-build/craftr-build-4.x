@@ -27,7 +27,8 @@ from os.path import join, split, dirname, basename, relpath
 def commonpath(paths):
   ''' Returns the longest sub-path of each pathname in the sequence
   *paths*. Raises `ValueError` if *paths* is empty or contains both
-  relative and absolute pathnames. '''
+  relative and absolute pathnames. If there is only one item in *paths*,
+  the parent directory is returned.'''
 
   if not paths:
     raise ValueError('paths is empty')
@@ -48,6 +49,8 @@ def commonpath(paths):
     path = normpath(path)
     parts.append(path.split(os.sep))
 
+  if len(parts) == 1:
+    return dirname(os.sep.join(parts[0]))
   common = parts[0]
   for elements in parts[1:]:
     if len(elements) < len(common):
