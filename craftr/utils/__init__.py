@@ -24,6 +24,7 @@ from . import path
 from . import proxy
 from . import shell
 import craftr
+import collections
 import sys
 
 
@@ -45,6 +46,23 @@ def singleton(x):
   return x()
 
 
+def accept_keys(dictionary, keys, name='key'):
+  ''' This function ensures that the *dictionary* only contains the
+  specified *keys*. *keys* can be a string in which case it is split
+  by whitespace or comma. A `TypeError` is raised if an invalid key
+  is detected. '''
+
+  if isinstance(keys, str):
+    if ',' in keys:
+      keys = keys.split(',')
+    else:
+      keys = keys.split()
+  invalids = set(dictionary.keys()).difference(set(keys))
+  if invalids:
+    key = next(iter(invalids))
+    raise TypeError('unexpected {} {!r}'.format(name, key))
+
+
 def get_calling_module(module=None):
   ''' Call this from a rule function to retrieve the craftr module that
   was calling the function from the stackframe. If the module can not
@@ -61,3 +79,82 @@ def get_calling_module(module=None):
   if not isinstance(module, craftr.runtime.Module):
     raise RuntimeError('"module" is not a Module object')
   return module
+
+
+class CommandBuilder(object):
+  ''' This is a helper class to generate commands based on a set
+  of options. These options can be passed to `__call__()` to generate
+  the result list.
+
+      builder = CommandBuilder(['clang++', '-c', '-arch', 'x86_amd64'])
+      builder.switch('debug',
+        enabled=['-g', '-O0'],
+        disabled=['-O3'])
+      build.add
+      command = builder(debug=True)
+  '''
+
+  def __init__(self, base=()):
+    super().__init__()
+    self._parts = []
+    self.append(base)
+
+  def __call__(self, **options):
+    ''' Generate the list using the specified *\*\*options*. '''
+
+    result = []
+    for part in self._parts:
+      if part['type'] == 'append_args':
+        result.extend(part['args'])
+      elif part['type'] == 'append_func':
+        args = part['func'](options)
+        result.extend(lists.autoexpand(args))
+      elif part['type'] == 'switch':
+        value = options.get(part['name'], None)
+        if part['func']:
+          args = part['func'](value)
+          result.extend(lists.autoexpand(args))
+        if value:
+          result.extend(part['enabled'])
+        else:
+          result.extend(part['disabled'])
+      else:
+        raise RuntimeError('invalid part type {!r}'.format(part['type']))
+    return result
+
+  def append(self, flags):
+    ''' This function acts differently based on the type of *flags*. If
+    it is a function, it will be called with a dictionary of all options
+    as the first argument and the return value must be a list that will
+    be appended to the result. Otherwise, *flags* is assumed to be a
+    sequence that is directly appended to the result. All values are
+    expanded using `lists.autoexpand()`. '''
+
+    if callable(flags):
+      self._parts.append({
+        'type': 'append_func',
+        'func': flags})
+    elif isinstance(flags, collections.Iterable):
+      self._parts.append({
+        'type': 'append_args',
+        'args': lists.autoexpand(flags)})
+    else:
+      raise TypeError('flags must be callable or iterable')
+
+  def switch(self, option, func=None, enabled=(), disabled=()):
+    ''' If the option is enabled (ie. given and True), append the
+    *enabled* items to the result, otherwise append *disabled*. If
+    *func* is given, it is passed the values of *option* as the
+    first argument.
+
+    The *enabled* and *disabled* lists and the return value of
+    *func* are expanded using the `lists.autoexpand()` function. '''
+
+    if func and not callable(func):
+      raise TypeError('func must be callable')
+    self._parts.append({
+      'type': 'switch',
+      'name': option,
+      'func': func,
+      'enabled': lists.autoexpand(enabled),
+      'disabled': lists.autoexpand(disabled)})
