@@ -64,11 +64,11 @@ def parse_args():
     'run',
     help='Call one or more Python functions from a Craftr module.')
   run_parser.add_argument(
-    'tasks',
-    nargs='+',
-    help='One or more names of Python functions. Relative names will be '
+    'task',
+    help='The name of a Python function to run. Relative names will be '
       'resolved in the main Craftr module specified via the -m/--module '
       'option or the "Craftfile" file in the current directory.')
+  run_parser.add_argument('args', nargs='...')
 
   export_parser = sub_parsers.add_parser(
     'export',
@@ -121,22 +121,18 @@ def main_export(args, session, module):
 
 
 def main_run(args, session, module):
-  # Collect a list of all Python objects to call.
-  tasks = []
-  for name in args.tasks:
-    name = craftr.utils.ident.abs(name, module.identifier)
-    modname, name = craftr.utils.ident.split(name)
-    mod = session.get_module(modname)
+  name = craftr.utils.ident.abs(args.task, module.identifier)
+  modname, name = craftr.utils.ident.split(name)
+  mod = session.get_module(modname)
 
-    try:
-      func = getattr(module.locals, name)
-    except AttributeError:
-      session.error('"{}.{}" does not exist'.format(modname, name))
-    if not callable(func):
-      session.error('"{}.{}" is not callable'.format(modname, name))
-    tasks.append(func)
+  try:
+    func = getattr(module.locals, name)
+  except AttributeError:
+    session.error('"{}.{}" does not exist'.format(modname, name))
+  if not callable(func):
+    session.error('"{}.{}" is not callable'.format(modname, name))
 
-  [task() for task in tasks]
+  func(*args.args)
 
 
 def main_clean(args, session, module):

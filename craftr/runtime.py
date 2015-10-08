@@ -314,6 +314,7 @@ class Module(object):
     data.join = craftr.utils.path.join
     data.dirname = craftr.utils.path.dirname
     data.normpath = craftr.utils.path.normpath
+    data.basename = craftr.utils.path.basename
     data.glob = craftr.utils.path.glob
     data.move = craftr.utils.path.move
     data.addprefix = craftr.utils.path.addprefix

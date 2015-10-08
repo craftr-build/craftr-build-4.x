@@ -197,6 +197,8 @@ def move(filename, basedir, newbase):
 
   if isinstance(filename, str):
     rel = relpath(filename, basedir)
+    if rel == os.curdir or rel.startswith(os.pardir):
+      raise ValueError('pathname not a subpath of basedir', filename, basedir)
     return join(newbase, relpath(filename, basedir))
   elif isinstance(filename, collections.Iterable):
     result = []
