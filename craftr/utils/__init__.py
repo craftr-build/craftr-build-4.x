@@ -23,9 +23,11 @@ from . import lists
 from . import path
 from . import proxy
 from . import shell
+import os
+import sys
 import craftr
 import collections
-import sys
+import zipfile
 
 
 class DataEntity(object):
@@ -158,3 +160,36 @@ class CommandBuilder(object):
       'func': func,
       'enabled': lists.autoexpand(enabled),
       'disabled': lists.autoexpand(disabled)})
+
+
+
+def build_archive(filename, base_dir, include=(), exclude=(),
+    prefix=None, quiet=False):
+  ''' Build a ZIP archive at *filename* and include the specified files.
+  The *base_dir* is stripped from the absolute filenames to find the
+  arcname. '''
+
+  include = [path.normpath(x) for x in lists.autoexpand(include)]
+  exclude = [path.normpath(x) for x in lists.autoexpand(exclude)]
+  files = set(include) - set(exclude)
+
+  if not files:
+    raise ValueError('no files to build an archive from')
+
+  zf = zipfile.ZipFile(filename, 'w')
+  for fn in files:
+    arcname = path.relpath(fn, base_dir).replace('\\', '/')
+    if arcname == os.curdir or arcname.startswith(os.pardir):
+      raise ValueError('pathname not a subdir of basedir', fn, base_dir)
+    if prefix:
+      arcname = prefix + '/' + arcname
+    if not quiet:
+      craftr.logging.clear_line()
+      print('writing {!r}... '.format(arcname), end='')
+    zf.write(fn, arcname)
+    if not quiet:
+      print('done.', end='')
+  zf.close()
+  if not quiet:
+    craftr.logging.clear_line()
+    print('{} files compressed in {!r}'.format(len(files), filename))
