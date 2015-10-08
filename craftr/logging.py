@@ -172,6 +172,15 @@ def terminal_size():
     return w, h
 
 
+def clear_line():
+  ''' Clear the current line in the terminal with whitespace and reset
+  the cursor to the start of the line. '''
+
+  # XXX: Is there an ANSI escape sequence to clear the current line?
+  width = terminal_size()[0]
+  print('\r' + ' ' * (width - 1), end='\r')
+
+
 class Logger(object):
   ''' Simple logger class. '''
 
