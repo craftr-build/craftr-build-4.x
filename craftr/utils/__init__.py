@@ -136,6 +136,7 @@ class CommandBuilder(object):
       self._parts.append({
         'type': 'append_func',
         'func': flags})
+      return flags
     elif isinstance(flags, collections.Iterable):
       self._parts.append({
         'type': 'append_args',
@@ -160,7 +161,6 @@ class CommandBuilder(object):
       'func': func,
       'enabled': lists.autoexpand(enabled),
       'disabled': lists.autoexpand(disabled)})
-
 
 
 def build_archive(filename, base_dir, include=(), exclude=(),
