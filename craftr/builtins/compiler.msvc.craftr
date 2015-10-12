@@ -20,44 +20,94 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr.utils.lists import autoexpand
+import re
 
-name = 'MSVC'
-c = ['cl', '/nologo']
-cxx = ['cl', '/nologo']
-compile_only = '/c'
-w_all = '/Wall'
-obj_out = lambda x: '/Fo' + x
-bin_out = lambda x: '/Fe' + x
+P = load_module('platform')
+_base = load_module('compiler.base')
 
-cinc = lambda l: autoexpand((('/I', x) for x in autoexpand(l)))
-cdef = lambda l: autoexpand((('/D', x) for x in autoexpand(l)))
 
-ar = lambda out: ['lib', '/nologo', '/OUT:' + out]
+class Archiver(_base.BaseArchiver):
 
-def std(name):
-  return None
+  command = ['lib', '/nologo', '/OUT:%%out']
 
-detected = False
-version = None
-arch = None
 
-def detect():
-  import re
-  from craftr.utils.shell import Process
+class CCompiler(_base.BaseCompiler):
 
-  if detected:
-    return
+  name = 'MSVC'
+  command = 'cl'
+  nologo = '/nologo'
+  archiver = Archiver
 
-  try:
-    p = Process(['cl', '/?'])
-  except (Process.ExitCodeError, OSError) as exc:
-    error('MSVC Compiler could not be detected. ({0})'.format(exc))
+  def detect(self, silent=False):
+    if self.version:
+      return True  # already detected
 
-  m = re.search('compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)', p.stderr, re.I)
-  if not m:
-    error('MSVC Compiler could not be detected. (unexpected output)')
+    try:
+      p = Process([self.command, '/?'])
+    except (Process.ExitCodeError, OSError) as exc:
+      if silent:
+        return False
+      error('MSVC Compiler could not be detected. ({})'.format(exc))
 
-  self.version = m.group(1)
-  self.arch = m.group(2)
-  self.detected = True
+    m = re.search('compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)', p.stderr, re.I)
+    if not m:
+      if silent:
+        return False
+      error('MSVC Compiler could not be detected. (unexpected output)')
+
+    self.version = m.group(1)
+    self.arch = m.group(2)
+    return True
+
+  def out(self, type_):
+    if type_ == 'object':
+      return '/Fo%%out'
+    elif type_ == 'executable':
+      return '/Fe%%out'
+    elif type_ == 'shared_library':
+      # XXX: How to specify the output file name correctly?
+      if self.debug:
+        return ['/LDD', '/OUT:%%out']
+      else:
+        return ['/LD', '/OUT:%%out']
+    else:
+      raise ValueError('invalid output type {!r}'.format(type_))
+
+  def exceptions(self, enabled):
+    if enabled:
+      return '/EHsc'
+    return None
+
+  def warn(self, level):
+    if level == 'all':
+      return '/Wall'
+    elif not level or level == 'none':
+      return '/w'
+    elif 1 <= level <= 4:
+      return '/W{:d}'.format(level)
+    else:
+      raise ValueError('invalid warn level {!r}'.format(level))
+
+  def std(self, std_name):
+    warn('MSVC does not support overriding the language standard.')
+    return None
+
+  def target(self, arch):
+    if not self.arch or self.arch != arch:
+      raise ValueError('MSVC does not support changing the output architecture')
+    return None
+
+  def l(self, names):
+    return names
+
+  def L(self, paths):
+    return ['/L{}'.format(x) for x in names]
+
+  def I(self, paths):
+    return ['/I{}'.format(x) for x in paths]
+
+  def D(self, defines):
+    return ['/D{}'.format(x) for x in defines]
+
+
+CxxCompiler = CCompiler

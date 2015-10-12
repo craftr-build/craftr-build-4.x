@@ -20,47 +20,104 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr.utils.lists import autoexpand
+import re
+import craftr
 
-name = 'Clang'
-c = 'clang'
-cxx = 'clang++'
-compile_only = '-c'
-w_all = '-Wall'
-obj_out = lambda x: ['-o', x]
-bin_out = lambda x: ['-o', x]
+_base = load_module('compiler.base')
 
-cinc = lambda l: autoexpand((('-I', x) for x in autoexpand(l)))
-cdef = lambda l: autoexpand((('-D', x) for x in autoexpand(l)))
 
-ar = lambda out: ['ar', 'rcs', out]
+class Archiver(_base.BaseArchiver):
 
-def std(name):
-  return '-std=' + name
+  command = ['ar', 'rcs', '%%out']
 
-detected = False
-version = None
-arch = None
 
-def detect():
-  import re
-  from craftr.utils.shell import Process
+class CCompiler(_base.BaseCompiler):
 
-  if detected:
-    return
+  name = 'Clang'
+  command = 'clang'
+  archiver = Archiver
 
-  try:
-    p = Process([c, '--version'])
-  except (Process.ExitCodeError, OSError) as exc:
-    error('Clang could not be detected on your system. ({0})'.format(exc))
+  def detect(self, silent=False):
+    if self.version:
+      return True  # already detected
 
-  mv = re.search('version ([\d\.]+)', p.stdout)
-  mt = re.search('Target: (\w+)', p.stdout)
-  if not mv:
-    error('Clang version could not be detected.')
-  if not mt:
-    error('Clang target architecture could not be detected')
+    try:
+      p = Process([self.command, '--version'])
+    except (Process.ExitCodeError, OSError) as exc:
+      if silent:
+        return False
+      message = '{} could not be detected on your system. ({})'
+      error(message.format(self.name, exc))
 
-  self.version = mv.group(1)
-  self.arch = mt.group(1)
-  self.detected = True
+    # Clang could be a GCC synonym and the other way round.
+    # Check for the GCC version first.
+    mv = re.search('gcc version ([\d\.]+)', p.stderr)
+    mt = re.search('Target: (\w+)', p.stderr)
+    if mv and mt:
+      self.name = 'GCC'
+      self.version = mv.group(1)
+      self.arch = mt.group(1)
+      return True
+
+    # Check Clang version.
+    mv = re.search('LLVM version ([\d\.]+)', p.stdout)
+    mt = re.search('Target: (\w+)', p.stdout)
+    if mv and mt:
+      self.name = 'Clang'
+      self.version = mv.group(1)
+      self.arch = mt.group(1)
+      return True
+
+    if silent:
+      return False
+    message = '{} version and architecture could not be detected.'
+    error(message.format(self.name))
+
+  def out(self, type_):
+    if type_ == 'object':
+      return ['-c', '-o', '%%out']
+    elif type_ == 'shared_library':
+      return ['-dynamiclib', '-o', '%%out']
+    elif type_ == 'executable':
+      return ['-o', '%%out']
+    else:
+      raise ValueError('invalid output type {!r}'.format(type_))
+
+  def exceptions(self, enabled):
+    if not enabled:
+      return '-fno-exceptions'
+    return None
+
+  def warn(self, level):
+    if level == 'all':
+      return '-Wall'
+    elif not level or level == 'none':
+      return '-w'
+    elif 1 <= level <= 4:
+      return '-W{:d}'.format(level)
+    else:
+      raise ValueError('invalid warn level {!r}'.format(level))
+
+  def std(self, std_name):
+    # XXX: Raise a ValueError if an invalid std_name is passed.
+    return '-std={}'.format(std_name)
+
+  def target(self, arch):
+    return ('-arch', arch)
+
+  def l(self, names):
+    return ['-l{}'.format(x) for x in names]
+
+  def L(self, paths):
+    return ['-L{}'.format(x) for x in names]
+
+  def I(self, paths):
+    return ['-I{}'.format(x) for x in paths]
+
+  def D(self, defines):
+    return ['-D{}'.format(x) for x in defines]
+
+
+class CxxCompiler(CCompiler):
+
+  command = 'clang++'

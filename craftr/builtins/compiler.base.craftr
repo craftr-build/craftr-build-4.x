@@ -1,0 +1,226 @@
+# craftr_module(compiler.base)
+#
+# Copyright (C) 2015 Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from craftr.runtime import Target
+from craftr.utils import get_calling_module
+
+P = load_module('platform')
+
+
+class BaseCompiler(object):
+  ''' This is the base class for compilers. Subclasses must only implement
+  the functions and data attributes that are required to generate the
+  commands to build targets. The rule functions will work with this
+  information. '''
+
+  name = None
+  version = None
+  arch = None
+
+  command = None
+  nologo = None
+  archiver = None
+
+  def __init__(self, debug=False):
+    super().__init__()
+    if isinstance(self.archiver, type):
+      self.archiver = self.archiver()
+    self.debug = debug
+
+  def detect(self, silent=False):
+    ''' Override this method to detect the compiler version and target
+    architecture (if present and not overridable with a compiler option).
+    The information must be filled into the `version` and `arch`
+    attributes.
+
+    If *silent* is False, the function may raise a `ModuleError` using
+    the modules `error()` function. Otherwise, the function should return
+    True on success and False on failure. '''
+    raise NotImplementedError
+
+  def in_(self):
+    return '%%in'
+
+  def out(self, type_):
+    ''' Generate the command-line argument containing the character
+    sequence `%%out` and eventually the arguments to specify the type
+    of output file. *type_* can be `object`, `shared_library` and
+    `executable`. MSVC might yield `'/Fo%%out'` for object files where
+    GCC yields `['-o', '%%out']`. The return value can also be a list. '''
+
+    raise NotImplementedError
+
+  def exceptions(self, enabled):
+    raise NotImplementedError
+
+  def warn(self, level):
+    ''' Values that need to be handled are `'all'`, `None` and `'none'`,
+    and the numbers 0 to 4. All other values may raise a ValueError.
+    Some compilers may support additional warning levels, these must be
+    handled separately by the scripts that want to use these warning
+    levels. '''
+    raise NotImplementedError
+
+  def std(self, std_name):
+    ''' Set the C/C++ standard. Invalid values may raise a ValueError. '''
+    raise NotImplementedError
+
+  def target(self, arch):
+    ''' Generate the command to override the target output architecture.
+    If the compiler does not support overriding the target architecture,
+    and the default output architecture doesn't match with *arch*, a
+    `ValueError` may be raised. '''
+    raise NotImplementedError
+
+  def l(self, names):
+    raise NotImplementedError
+
+  def I(self, paths):
+    raise NotImplementedError
+
+  def D(self, defines):
+    raise NotImplementedError
+
+  def process_inputs(self, inputs, libs, module):
+    ''' Process a list of inputs that can consist of targets and lists
+    of object file names and returns a tuple of `(objects, libs)`. '''
+
+    libs = list(libs)
+    objects = []
+    for target in inputs:
+      if isinstance(target, Target):
+        if target.meta.get('type') == 'objects':
+          objects.extend(target.outputs)
+        elif target.meta.get('type') == 'library':
+          if len(target.outputs) != 1:
+            message = 'library target {!r} has != 1 outputs.'
+            raise ValueError(message.format(target.identifier))
+          libs.append(target.outputs[0])
+        elif target.meta.get('type') == 'shared_library':
+          if len(target.outputs) != 1:
+            message = 'shared_library target {!r} has != outputs.'
+            raise ValueError(message.format(target.identifier))
+          libs.append(target.outputs[0])
+        else:
+          message = 'what to do with target {!r}?'
+          raise ValueError(message.format(target.identifier))
+      else:
+        # XXX: Support for library and shared_library as absolute path.
+        objects.append(target)
+
+    return (objects, libs)
+
+  def build_command(self, output_type, includes=(), defines=(), link_with=(),
+      additional_flags=()):
+    ''' Build the command to build the specified *output_type*. '''
+
+    command = [self.command, self.nologo, additional_flags]
+    command.extend(self.I(includes))
+    command.extend(self.D(defines))
+    command.extend(self.l(link_with))
+    command.append(self.in_())
+    command.append(self.out(output_type))
+    return command
+
+  def objects(self, target_name, sources, objects=None, includes=(),
+      defines=(), additional_flags=(), description=None, module=None):
+    ''' Declares a target to build object files from the *sources*. The
+    target has the meta type `"objects"`. '''
+
+    module = get_calling_module(module)
+    if objects is None:
+      project_dir = module.get('project_dir')
+      objects_dir = join(module.get('build_dir'), 'obj')
+      objects = move(P.obj(rmvsuffix(sources)), project_dir, objects_dir)
+    if len(objects) != len(sources):
+      raise ValueError('len(objects) must match len(sources)')
+    if not description:
+      description = 'Building Object %%out'
+
+    command = self.build_command('object', includes=includes, defines=defines,
+      additional_flags=additional_flags)
+    return module.target(target_name, inputs=sources, outputs=objects,
+      command=command, description=description, meta_type='objects',
+      meta_includes=includes, meta_defines=defines)
+
+  def executable(self, target_name, name, inputs, libs=(), external_libs=(),
+      link_with=(), additional_flags=(), module=None):
+    ''' Declares a target to build object files from the *sources*. The
+    target has the meta type `"executable"`. '''
+
+    module = get_calling_module(module)
+    objects, libs = self.process_inputs(inputs, libs, module)
+
+    name = P.bin(name)
+    command = self.build_command('executable', link_with=link_with,
+      additional_flags=[additional_flags, external_libs])
+
+    return module.target(target_name, inputs=[objects, libs], outputs=name,
+      command=command, meta_type='executable', meta_link_with=link_with,
+      meta_libs=libs, meta_external_libs=external_libs)
+
+  def shared_library(self, target_name, name, inputs, libs=(), external_libs=(),
+      link_with=(), additional_flags=(), module=None):
+    ''' Declares a target to build object files from the *sources*. The
+    target has the meta type `"shared_library"`. '''
+
+    module = get_calling_module(module)
+    objects, libs = self.process_inputs(inputs, libs, module)
+
+    name = P.dll(name)
+    command = self.build_command('shared_library', link_with=link_with,
+      additional_flags=[additional_flags, external_libs])
+
+    return module.target(target_name, inputs=[objects, libs], outputs=name,
+      command=command, meta_type='shared_library', meta_link_with=link_with,
+      meta_libs=libs, meta_external_libs=external_libs)
+
+  def library(self, *args, **kwargs):
+    ''' Declares a target to build object files from the *sources*. The
+    target has the meta type `"library"`. '''
+
+    module = get_calling_module(kwargs.pop('module', None))
+    return self.archiver(*args, module=module, **kwargs)
+
+
+class BaseArchiver(object):
+  ''' Base class for an archiver. Can declare a library target. '''
+
+  command = None
+
+  def library(self, target_name, name, inputs, additional_flags=(), module=None):
+    ''' Declares a target to build object files from the *sources*. The
+    target has the meta type `"library"`. '''
+
+    module = get_calling_module(module)
+    files = []
+    for target in inputs:
+      if isinstance(target, Target):
+        if target.meta.get('type') != 'objects':
+          raise ValueError("{!r} is not an 'objects' target".format(target.identifier))
+        files.extend(target.outputs)
+      else:
+        files.append(target)
+
+    name = P.lib(name)
+    return module.target(target_name, inputs=files, outputs=[name],
+      command=self.command, meta_type='library')

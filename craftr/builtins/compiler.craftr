@@ -23,12 +23,17 @@
 P = load_module('platform')
 
 if P.name == 'Darwin':
-  module.extends('compiler.clang')
+  _super = load_module('compiler.clang')
 elif P.name == 'Linux':
-  module.extends('compiler.gcc')
+  _super = load_module('compiler.gcc')
 elif P.name == 'Windows':
+  _super = load_module('compiler.msvc')
   module.extends('compiler.msvc')
 elif P.name == 'Cygwin':
-  module.extends('compiler.gcc')
+  _super = load_module('compiler.gcc')
 else:
   error("compiler can't be deduced for '{0}'".format(P.name))
+
+Archiver = _super.Archiver
+CCompiler = _super.CCompiler
+CxxCompiler = _super.CxxCompiler

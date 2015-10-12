@@ -20,53 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr.utils.lists import autoexpand
+import re
+import craftr
 
-# We could be on Mac in which case we'd rather use Clang.
-P = load_module('platform')
-if P.name == 'Darwin':
-  extends('compiler.clang')
-  return_()
+_clang = load_module('compiler.clang')
 
-name = 'GCC'
-c = 'gcc'
-cxx = 'g++'
-compile_only = '-c'
-w_all = '-Wall'
-obj_out = lambda x: ['-o', x]
-bin_out = lambda x: ['-o', x]
 
-cinc = lambda l: autoexpand((('-I', x) for x in autoexpand(l)))
-cdef = lambda l: autoexpand((('-D', x) for x in autoexpand(l)))
+class CCompiler(_clang.CCompiler):
 
-ar = lambda out: ['ar', 'rcs', out]
+  name = 'GCC'
+  command = 'gcc'
 
-def std(name):
-  return '-std=' + name
 
-detected = False
-version = None
-arch = None
+class CxxCompiler(CCompiler):
 
-def detect():
-  import re
-  from craftr.utils.shell import Process
-
-  if detected:
-    return
-
-  try:
-    p = Process([c, '-v'])
-  except (Process.ExitCodeError, OSError) as exc:
-    error('GCC Compiler could not be detected. ({0})'.format(exc))
-
-  mv = re.search('gcc version ([\d\.]+)', p.stderr)
-  mt = re.search('Target: (\w+)', p.stderr)
-  if not mv:
-    error('GCC version could not be detected.')
-  if not mt:
-    error('GCC target architecture could not be detected.')
-
-  self.version = mv.group(1)
-  self.arch = mt.group(1)
-  self.detected = True
+  command = 'g++'
