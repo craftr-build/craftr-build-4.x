@@ -71,6 +71,37 @@ class CCompiler(_base.BaseCompiler):
     message = '{} version and architecture could not be detected.'
     error(message.format(self.name))
 
+  def get_file_type(self, fn):
+    if P.name == 'Darwin':
+      if fn.endswith('.o'):
+        return 'object'
+      elif fn.endswith('.a'):
+        return 'static_library'
+      elif fn.endswith('.dylib') or fn.endswith('dylib64'):
+        return 'shared_library'
+      else:
+        return 'executable'
+    elif P.name == 'Cygwin':
+      if fn.endswith('.o'):
+        return 'object'
+      elif fn.endswith('.a'):
+        return 'static_library'
+      elif fn.endswith('.dll'):
+        return 'shared_library'
+      elif fn.endswith('.exe'):
+        return 'executable'
+    else:
+      if fn.endswith('.o'):
+        return 'object'
+      elif fn.endswith('.a'):
+        return 'static_library'
+      elif fn.endswith('.so') or fn.endswith('.so64'):
+        return 'shared_library'
+      else:
+        return 'executable'
+
+    return None
+
   def flags(self, debug=None, output_type=None, exceptions=None, includes=(),
       defines=(), libs=(), link_with=(), external_libs=(), ldpaths=(),
       additional_flags=(), warning_level=None, std=None, arch=None, lang=None,
