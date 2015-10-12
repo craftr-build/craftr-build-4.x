@@ -26,24 +26,17 @@ P = load_module('platform')
 _base = load_module('compiler.base')
 
 
-class Archiver(_base.BaseArchiver):
-
-  command = ['lib', '/nologo', '/OUT:%%out']
-
-
 class CCompiler(_base.BaseCompiler):
 
   name = 'MSVC'
-  command = 'cl'
-  nologo = '/nologo'
-  archiver = Archiver
+  program = 'cl'
 
   def detect(self, silent=False):
-    if self.version:
+    if hasattr(self, 'version'):
       return True  # already detected
 
     try:
-      p = Process([self.command, '/?'])
+      p = Process(['cl', '/?'])
     except (Process.ExitCodeError, OSError) as exc:
       if silent:
         return False
@@ -59,55 +52,81 @@ class CCompiler(_base.BaseCompiler):
     self.arch = m.group(2)
     return True
 
-  def out(self, type_):
-    if type_ == 'object':
-      return '/Fo%%out'
-    elif type_ == 'executable':
-      return '/Fe%%out'
-    elif type_ == 'shared_library':
-      # XXX: How to specify the output file name correctly?
-      if self.debug:
-        return ['/LDD', '/OUT:%%out']
-      else:
-        return ['/LD', '/OUT:%%out']
+  def flags(self, output_type, debug=None, exceptions=None, includes=(),
+      defines=(), libs=(), link_with=(), external_libs=(), ldpaths=(),
+      additional_flags=(), warning_level=None, std=None, arch=None, lang=None,
+      **options):
+    ''' Generate flags based on the specfied options. '''
+
+    result = []
+
+    if arch is not None:
+      if getattr(self, 'arch', None) != arch:
+        self.invalid_option('arch', arch)
+
+    if output_type == 'object':
+      # Options that only need to be set when compiling a source file.
+
+      if exceptions is not None and exceptions:
+        result += ['/EHsc']
+
+      if warning_level is not None:
+        if warning_level == 'all':
+          result += ['/Wall']
+        elif warning_level in (0, 'none'):
+          result += ['/w']
+        elif 1 <= warning_level <= 4:
+          result += ['/W{}'.format(warning_level)]
+        else:
+          self.invalid_option('warning_level', warning_level)
+
+      if std is not None:
+        # XXX: Allow known standards of MSVC.
+        raise ValueError('MSVC has no overridable language standards')
+
+      result.extend('/I{}'.format(x) for x in includes)
+      result.extend('/D{}'.format(x) for x in defines)
+      result += ['%%in', '/c', '/Fo%%out']
+
+    elif output_type in ('executable', 'shared_library', 'static_library'):
+
+      def switch_lib(fn):
+        if fn.endswith('.dll'):
+          fn = addsuffix(rmvsuffix(fn), '.lib')
+        return fn
+
+      result.extend(map(switch_lib, libs))
+      result.extend(map(switch_lib, external_libs))
+      result.extend('/L{}'.format(x) for x in ldpaths)
+      result.extend(link_with)
+
+      if output_type == 'executable':
+        result += ['/OUT:%%out', '%%in']
+      elif output_type == 'shared_library':
+        result += ['/DLL', '/OUT:%%out', '%%in']
+      elif output_type == 'static_library':
+        result += ['/OUT:%%out', '%%in']
+
     else:
-      raise ValueError('invalid output type {!r}'.format(type_))
+      self.invalid_option('output_type', output_type)
 
-  def exceptions(self, enabled):
-    if enabled:
-      return '/EHsc'
-    return None
+    result.extend(additional_flags)
 
-  def warn(self, level):
-    if level == 'all':
-      return '/Wall'
-    elif not level or level == 'none':
-      return '/w'
-    elif 1 <= level <= 4:
-      return '/W{:d}'.format(level)
+    return result
+
+  def command(self, output_type, **options):
+    if output_type == 'object':
+      command = ['cl']
+    elif output_type in ('executable', 'shared_library'):
+      command = ['link']
+    elif output_type == 'static_library':
+      command = ['lib']
     else:
-      raise ValueError('invalid warn level {!r}'.format(level))
-
-  def std(self, std_name):
-    warn('MSVC does not support overriding the language standard.')
-    return None
-
-  def target(self, arch):
-    if not self.arch or self.arch != arch:
-      raise ValueError('MSVC does not support changing the output architecture')
-    return None
-
-  def l(self, names):
-    return names
-
-  def L(self, paths):
-    return ['/L{}'.format(x) for x in names]
-
-  def I(self, paths):
-    return ['/I{}'.format(x) for x in paths]
-
-  def D(self, defines):
-    return ['/D{}'.format(x) for x in defines]
+      self.invalid_option('output_type', output_type)
+    if options.get('nologo', True):
+      command.append('/nologo')
+    command += self.flags(output_type=output_type, **options)
+    return command
 
 
 CxxCompiler = CCompiler

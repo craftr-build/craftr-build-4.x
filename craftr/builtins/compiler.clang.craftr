@@ -26,23 +26,21 @@ import craftr
 _base = load_module('compiler.base')
 
 
-class Archiver(_base.BaseArchiver):
-
-  command = ['ar', 'rcs', '%%out']
-
-
 class CCompiler(_base.BaseCompiler):
 
   name = 'Clang'
-  command = 'clang'
-  archiver = Archiver
+  program = 'clang'
+
+  def init_default_options(self):
+    self.options.setdefault('lang', 'c')
+    super().init_default_options()
 
   def detect(self, silent=False):
-    if self.version:
+    if hasattr(self, 'version'):
       return True  # already detected
 
     try:
-      p = Process([self.command, '--version'])
+      p = Process([self.program, '--version'])
     except (Process.ExitCodeError, OSError) as exc:
       if silent:
         return False
@@ -73,51 +71,71 @@ class CCompiler(_base.BaseCompiler):
     message = '{} version and architecture could not be detected.'
     error(message.format(self.name))
 
-  def out(self, type_):
-    if type_ == 'object':
-      return ['-c', '-o', '%%out']
-    elif type_ == 'shared_library':
-      return ['-dynamiclib', '-o', '%%out']
-    elif type_ == 'executable':
-      return ['-o', '%%out']
-    else:
-      raise ValueError('invalid output type {!r}'.format(type_))
+  def flags(self, debug=None, output_type=None, exceptions=None, includes=(),
+      defines=(), libs=(), link_with=(), external_libs=(), ldpaths=(),
+      additional_flags=(), warning_level=None, std=None, arch=None, lang=None,
+      **options):
+    ''' Generate flags based on the specfied options. '''
 
-  def exceptions(self, enabled):
-    if not enabled:
-      return '-fno-exceptions'
-    return None
+    if output_type == 'static_library':
+      return ['ar', 'rcs', '%%out', '%%in']
 
-  def warn(self, level):
-    if level == 'all':
-      return '-Wall'
-    elif not level or level == 'none':
-      return '-w'
-    elif 1 <= level <= 4:
-      return '-W{:d}'.format(level)
-    else:
-      raise ValueError('invalid warn level {!r}'.format(level))
+    result = []
 
-  def std(self, std_name):
-    # XXX: Raise a ValueError if an invalid std_name is passed.
-    return '-std={}'.format(std_name)
+    if lang is not None:
+      if lang == 'c':
+        result += ['clang']
+      elif lang == 'c++':
+        result += ['clang++']
+      else:
+        self.invalid_option('lang', lang)
 
-  def target(self, arch):
-    return ('-arch', arch)
+    if arch is not None:
+      # XXX: Validate arch value.
+      result += ['-arch', arch]
 
-  def l(self, names):
-    return ['-l{}'.format(x) for x in names]
+    if exceptions is not None and not exceptions:
+      result += ['-fno-exceptions']
 
-  def L(self, paths):
-    return ['-L{}'.format(x) for x in names]
+    if warning_level is not None:
+      if warning_level == 'all':
+        result += ['-Wall']
+      elif warning_level in (0, 'none'):
+        result += ['-w']
+      elif 1 <= warning_level <= 4:
+        result += ['-W{}'.format(warning_level)]
+      else:
+        self.invalid_option('warning_level', warning_level)
 
-  def I(self, paths):
-    return ['-I{}'.format(x) for x in paths]
+    if std is not None:
+      # XXX: Validate std value.
+      result += ['-std={}'.format(std)]
 
-  def D(self, defines):
-    return ['-D{}'.format(x) for x in defines]
+    result.extend(libs)
+    result.extend(external_libs)
+    result.extend('-I{}'.format(x) for x in includes)
+    result.extend('-D{}'.format(x) for x in defines)
+    result.extend('-L{}'.format(x) for x in ldpaths)
+    result.extend('-l{}'.format(x) for x in link_with)
+    result.extend(additional_flags)
+
+    if output_type is not None:
+      if output_type == 'object':
+        result += ['%%in', '-c', '-o', '%%out']
+      elif output_type == 'executable':
+        result += ['%%in', '-o', '%%out']
+      elif output_type == 'shared_library':
+        result += ['-dynamiclib', '%%in', '-o', '%%out']
+      else:
+        self.invalid_option('output_type', output_type)
+
+    return result
+
+  command = flags
 
 
 class CxxCompiler(CCompiler):
 
-  command = 'clang++'
+  def init_default_options(self):
+    self.options.setdefault('lang', 'c++')
+    super().init_default_options()

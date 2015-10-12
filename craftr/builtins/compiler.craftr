@@ -34,6 +34,5 @@ elif P.name == 'Cygwin':
 else:
   error("compiler can't be deduced for '{0}'".format(P.name))
 
-Archiver = _super.Archiver
 CCompiler = _super.CCompiler
 CxxCompiler = _super.CxxCompiler

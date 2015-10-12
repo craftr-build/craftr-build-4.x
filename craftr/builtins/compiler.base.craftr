@@ -20,99 +20,134 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from contextlib import contextmanager
 from craftr.runtime import Target
 from craftr.utils import get_calling_module
 
 P = load_module('platform')
 
 
+def options_override(base, options, merge_func):
+  ''' Merges the values from the dictionary *options* into *base*.
+  *merge_func* must be a callable and will be called for each key
+  that is already present in *base*. The function signature is
+  `(key, base_value, new_value) -> value`. Returns *base*. '''
+
+  if not callable(merge_func):
+    raise TypeError('merge_func not callable')
+  for key, new_value in options.items():
+    try:
+      base_value = base[key]
+    except KeyError as exc:
+      pass
+    else:
+      new_value = merge_func(key, base_value, new_value)
+    base[key] = new_value
+  return base
+
+
 class BaseCompiler(object):
-  ''' This is the base class for compilers. Subclasses must only implement
-  the functions and data attributes that are required to generate the
-  commands to build targets. The rule functions will work with this
-  information. '''
+  ''' Base class for implementing a compiler interface. All compilers
+  are based on instance-local and method-local options. These options
+  can be read from the `Optionable.options` attribute.
 
-  name = None
-  version = None
-  arch = None
+  Some of these options are not useful when set on the insance-local
+  options.
 
-  command = None
-  nologo = None
-  archiver = None
+  Options:
+    debug (bool): False by default.
+    exceptions (bool): True by default.
+    warning_level (any): Not set by default.
+    std (str): Not set by default. The name of the C/C++ standard.
+    arch (str): Not set by default. The target architecture.
+    output_type (str): The output type, can be "object", "executable"
+      or "shared_library".
+    includes (list of str): A list of include paths.
+    defines (list of str): A list of defines.
+    ldpaths (list of str): A list of linker search paths.
+    link_with (list of str): A list of libraries to link against.
+    libs (list of str): A list of libraries to link against (full paths).
+    external_libs (list of str): A list of libraries to link against
+      (full paths). The difference to *libs* is that these are not listed
+      as input files to a target (handled by rule functions).
+    additional_flags (list of any): A list of additional arguments that
+      should simply be appended to the command-line argument list.
+  '''
 
-  def __init__(self, debug=False):
+  # name = None
+  # version = None
+  # arch = None
+
+  def __init__(self, **options):
     super().__init__()
-    if isinstance(self.archiver, type):
-      self.archiver = self.archiver()
-    self.debug = debug
+    self.options = options
+    self.init_default_options()
+
+  def init_default_options(self):
+    self.options.setdefault('debug', False)
+    self.options.setdefault('exceptions', True)
+
+  def invalid_option(self, option_name, value=NotImplemented, options=None):
+    if options is None and value is NotImplemented:
+      value = self.options.get(option_name)
+    elif value is NotImplemented:
+      value = options.get(option_name)
+    raise ValueError('invalid option {}={!r}'.format(option_name, value))
 
   def detect(self, silent=False):
-    ''' Override this method to detect the compiler version and target
-    architecture (if present and not overridable with a compiler option).
-    The information must be filled into the `version` and `arch`
-    attributes.
-
-    If *silent* is False, the function may raise a `ModuleError` using
-    the modules `error()` function. Otherwise, the function should return
-    True on success and False on failure. '''
-    raise NotImplementedError
-
-  def in_(self):
-    return '%%in'
-
-  def out(self, type_):
-    ''' Generate the command-line argument containing the character
-    sequence `%%out` and eventually the arguments to specify the type
-    of output file. *type_* can be `object`, `shared_library` and
-    `executable`. MSVC might yield `'/Fo%%out'` for object files where
-    GCC yields `['-o', '%%out']`. The return value can also be a list. '''
+    ''' Detect the compiler version and target architecture. If *silent*
+    is True, return True on success and False on error. Otherwise, raise
+    an error using the modules `error()` built-in. '''
 
     raise NotImplementedError
 
-  def exceptions(self, enabled):
+  def flags(self, **options):
+    ''' Generate compiler command-line arguments based on the *options*
+    dictionary and return a list of those arguments. Should not take
+    the instances `options` dictionary into account. For options that
+    have a value of None or that are not set, no arguments must be
+    generated. '''
+
     raise NotImplementedError
 
-  def warn(self, level):
-    ''' Values that need to be handled are `'all'`, `None` and `'none'`,
-    and the numbers 0 to 4. All other values may raise a ValueError.
-    Some compilers may support additional warning levels, these must be
-    handled separately by the scripts that want to use these warning
-    levels. '''
+  def command(self, kind, **options):
+    ''' Generate a compiler command-line based on the *options*
+    dictionary and return a list of the command-line arguments. Likely
+    to use `flags()` internally. '''
+
     raise NotImplementedError
 
-  def std(self, std_name):
-    ''' Set the C/C++ standard. Invalid values may raise a ValueError. '''
-    raise NotImplementedError
+  def merge_option(self, key, base_value, new_value):
+    ''' Basic option merge function. Treats all keys the same.
 
-  def target(self, arch):
-    ''' Generate the command to override the target output architecture.
-    If the compiler does not support overriding the target architecture,
-    and the default output architecture doesn't match with *arch*, a
-    `ValueError` may be raised. '''
-    raise NotImplementedError
+    - Converts all `tuple` objects to `list`s
+    - Combines *base_value* and *new_value* if both are lists
+    - Otherwise, returns just *new_value*. '''
 
-  def l(self, names):
-    raise NotImplementedError
+    if isinstance(base_value, tuple):
+      base_value = list(base_value)
+    if isinstance(new_value, tuple):
+      new_value = list(new_value)
+    if (type(base_value), type(new_value)) == (list, list):
+      return base_value + new_value
+    return new_value
 
-  def I(self, paths):
-    raise NotImplementedError
+  def merge_options(self, **options):
+    return options_override(self.options.copy(), options, self.merge_option)
 
-  def D(self, defines):
-    raise NotImplementedError
-
-  def process_inputs(self, inputs, libs, module):
+  def process_inputs(self, module, inputs, options):
     ''' Process a list of inputs that can consist of targets and lists
     of object file names and returns a tuple of `(objects, libs)`. '''
 
-    libs = list(libs)
+    libs = list(options.get('libs', []))
     objects = []
     for target in inputs:
       if isinstance(target, Target):
         if target.meta.get('type') == 'objects':
           objects.extend(target.outputs)
-        elif target.meta.get('type') == 'library':
+        elif target.meta.get('type') == 'static_library':
           if len(target.outputs) != 1:
-            message = 'library target {!r} has != 1 outputs.'
+            message = 'static_library target {!r} has != 1 outputs.'
             raise ValueError(message.format(target.identifier))
           libs.append(target.outputs[0])
         elif target.meta.get('type') == 'shared_library':
@@ -127,22 +162,11 @@ class BaseCompiler(object):
         # XXX: Support for library and shared_library as absolute path.
         objects.append(target)
 
-    return (objects, libs)
+    options['libs'] = libs
+    return objects
 
-  def build_command(self, output_type, includes=(), defines=(), link_with=(),
-      additional_flags=()):
-    ''' Build the command to build the specified *output_type*. '''
-
-    command = [self.command, self.nologo, additional_flags]
-    command.extend(self.I(includes))
-    command.extend(self.D(defines))
-    command.extend(self.l(link_with))
-    command.append(self.in_())
-    command.append(self.out(output_type))
-    return command
-
-  def objects(self, target_name, sources, objects=None, includes=(),
-      defines=(), additional_flags=(), description=None, module=None):
+  def objects(self, target_name, sources, objects=None, description=None,
+      module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"objects"`. '''
 
@@ -156,71 +180,83 @@ class BaseCompiler(object):
     if not description:
       description = 'Building Object %%out'
 
-    command = self.build_command('object', includes=includes, defines=defines,
-      additional_flags=additional_flags)
-    return module.target(target_name, inputs=sources, outputs=objects,
-      command=command, description=description, meta_type='objects',
-      meta_includes=includes, meta_defines=defines)
+    options['output_type'] = 'object'
+    options = self.merge_options(**options)
 
-  def executable(self, target_name, name, inputs, libs=(), external_libs=(),
-      link_with=(), additional_flags=(), module=None):
+    command = self.command(**options)
+    return module.target(
+      target_name,
+      inputs=sources,
+      outputs=objects,
+      command=command,
+      description='Building Object %%in',
+      meta_type='objects',
+      meta_options=options,
+    )
+
+  def executable(self, target_name, name, inputs, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"executable"`. '''
 
     module = get_calling_module(module)
-    objects, libs = self.process_inputs(inputs, libs, module)
-
     name = P.bin(name)
-    command = self.build_command('executable', link_with=link_with,
-      additional_flags=[additional_flags, external_libs])
 
-    return module.target(target_name, inputs=[objects, libs], outputs=name,
-      command=command, meta_type='executable', meta_link_with=link_with,
-      meta_libs=libs, meta_external_libs=external_libs)
+    options['output_type'] = 'executable'
+    options = self.merge_options(**options)
+    objects = self.process_inputs(module, inputs, options)
 
-  def shared_library(self, target_name, name, inputs, libs=(), external_libs=(),
-      link_with=(), additional_flags=(), module=None):
+    command = self.command(**options)
+    return module.target(
+      target_name,
+      inputs=[objects],
+      outputs=name,
+      command=command,
+      description='Building Executable %%in',
+      meta_type='executable',
+      meta_options=options,
+    )
+
+  def shared_library(self, target_name, name, inputs, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"shared_library"`. '''
 
     module = get_calling_module(module)
-    objects, libs = self.process_inputs(inputs, libs, module)
-
     name = P.dll(name)
-    command = self.build_command('shared_library', link_with=link_with,
-      additional_flags=[additional_flags, external_libs])
 
-    return module.target(target_name, inputs=[objects, libs], outputs=name,
-      command=command, meta_type='shared_library', meta_link_with=link_with,
-      meta_libs=libs, meta_external_libs=external_libs)
+    options['output_type'] = 'shared_library'
+    options = self.merge_options(**options)
+    objects = self.process_inputs(module, inputs, options)
 
-  def library(self, *args, **kwargs):
+    command = self.command(**options)
+    return module.target(
+      target_name,
+      inputs=[objects],
+      outputs=name,
+      command=command,
+      description='Building Shared Library %%in',
+      meta_type='shared_library',
+      meta_options=options,
+    )
+
+  def static_library(self, target_name, name, inputs, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
-    target has the meta type `"library"`. '''
-
-    module = get_calling_module(kwargs.pop('module', None))
-    return self.archiver(*args, module=module, **kwargs)
-
-
-class BaseArchiver(object):
-  ''' Base class for an archiver. Can declare a library target. '''
-
-  command = None
-
-  def library(self, target_name, name, inputs, additional_flags=(), module=None):
-    ''' Declares a target to build object files from the *sources*. The
-    target has the meta type `"library"`. '''
+    target has the meta type `"static_library"`. '''
 
     module = get_calling_module(module)
-    files = []
-    for target in inputs:
-      if isinstance(target, Target):
-        if target.meta.get('type') != 'objects':
-          raise ValueError("{!r} is not an 'objects' target".format(target.identifier))
-        files.extend(target.outputs)
-      else:
-        files.append(target)
-
     name = P.lib(name)
-    return module.target(target_name, inputs=files, outputs=[name],
-      command=self.command, meta_type='library')
+
+    options['output_type'] = 'static_library'
+    options = self.merge_options(**options)
+    objects = self.process_inputs(module, inputs, options)
+
+    command = self.command(**options)
+    return module.target(
+      target_name,
+      inputs=[objects],
+      outputs=name,
+      command=command,
+      description='Building Static Library %%in',
+      meta_type='static_library',
+      meta_options=options,
+    )
+

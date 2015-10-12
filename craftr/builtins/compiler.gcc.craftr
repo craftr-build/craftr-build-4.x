@@ -29,9 +29,9 @@ _clang = load_module('compiler.clang')
 class CCompiler(_clang.CCompiler):
 
   name = 'GCC'
-  command = 'gcc'
+  program = 'gcc'
 
 
 class CxxCompiler(CCompiler):
 
-  command = 'g++'
+  program = 'g++'
