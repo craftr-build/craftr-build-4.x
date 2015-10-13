@@ -297,6 +297,7 @@ class Module(object):
     data.project_dir = os.path.dirname(self.filename)
 
     # Module member functions exposed
+    data.append_search_path = self.append_search_path
     data.extends = self.extends
     data.load_module = self.load_module
     data.get_namespace = self.get_namespace
@@ -367,6 +368,13 @@ class Module(object):
       except ModuleReturnException:
         pass
     self.executed = True
+
+  def append_search_path(self, path):
+    ''' Appends *path* to the `Session.path` list. A relative pathname
+    will be considered relative to the project directory. '''
+
+    path = utils.path.normpath(path, self.locals.project_dir)
+    self.session.path.append(path)
 
   def extends(self, name):
     ''' Loads the module with the specified *name* and adds it as an
