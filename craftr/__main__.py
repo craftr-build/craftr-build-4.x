@@ -165,7 +165,7 @@ def main():
     print('https://github.com/craftr-build/craftr')
     return
 
-  session = craftr.runtime.Session(args.cmd)
+  session = craftr.runtime.Session(args.cmd, args.cdir)
   if args.verbose:
     session.logger.level = 0
   else:

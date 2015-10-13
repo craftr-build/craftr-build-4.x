@@ -176,15 +176,19 @@ class BaseCompiler(object):
     options['libs'] = libs
     return objects
 
-  def objects(self, target_name, sources, objects=None, description=None,
-      module=None, **options):
+  def objects(self, target_name, sources, build_dir=None, objects=None,
+      description=None, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
-    target has the meta type `"objects"`. '''
+    target has the meta type `"objects"`. The calling modules `build_dir`
+    variable is used if *name* is a relative path. If the build directory
+    is not specified, the current working directory is used. '''
 
     module = get_calling_module(module)
+    build_dir = module.get('build_dir', '.')
+
     if objects is None:
       project_dir = module.get('project_dir')
-      objects_dir = join(module.get('build_dir'), 'obj')
+      objects_dir = join(build_dir, 'obj')
       objects = move(P.obj(rmvsuffix(sources)), project_dir, objects_dir)
     if len(objects) != len(sources):
       raise ValueError('len(objects) must match len(sources)')
@@ -207,10 +211,12 @@ class BaseCompiler(object):
 
   def executable(self, target_name, name, inputs, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
-    target has the meta type `"executable"`. '''
+    target has the meta type `"executable"`. The calling modules
+    `build_dir` variable is used if *name* is a relative path. '''
 
     module = get_calling_module(module)
-    name = P.bin(name)
+    build_dir = module.get('build_dir', None)
+    name = P.bin(normpath(name, build_dir))
 
     options['output_type'] = 'executable'
     options = self.merge_options(**options)
@@ -229,10 +235,12 @@ class BaseCompiler(object):
 
   def shared_library(self, target_name, name, inputs, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
-    target has the meta type `"shared_library"`. '''
+    target has the meta type `"shared_library"`. The calling modules
+    `build_dir` variable is used if *name* is a relative path.  '''
 
     module = get_calling_module(module)
-    name = P.dll(name)
+    build_dir = module.get('build_dir', None)
+    name = P.bin(normpath(name, build_dir))
 
     options['output_type'] = 'shared_library'
     options = self.merge_options(**options)

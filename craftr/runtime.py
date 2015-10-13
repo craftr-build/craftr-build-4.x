@@ -47,11 +47,11 @@ class Session(object):
     def __target(self):
       return self._session.namespaces[self._namespace]
 
-  def __init__(self, action, logger=None):
+  def __init__(self, action, cwd=None, logger=None):
     super().__init__()
     self.action = action
     self.path = []
-    self.path.append(os.getcwd())
+    self.path.append(cwd or os.getcwd())
     self.path.append(os.path.join(os.path.dirname(__file__), 'builtins'))
     self.path.extend(os.getenv('CRAFTR_PATH', '').split(os.path.sep))
     self.globals = utils.DataEntity('session_globals')
