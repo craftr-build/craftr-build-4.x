@@ -29,6 +29,8 @@ To build, run
     mkdir build && cd build
     craftr -c.. export && ninja
 
+Check out the [Wiki][] for additional information and examples!
+
 ## Installation
 
 Grab the latest release from this repository and install using Pip.
@@ -42,6 +44,7 @@ and update by pulling the latest changes into the repository.
 
 __Requirements__
 
+- [ninja](https://github.com/martine/ninja)
 - Python 3.3 or greater
 - [glob2](pypi.python.org/pypi/glob2)
 - [colorama](pypi.python.org/pypi/colorama) (optional)
@@ -49,3 +52,5 @@ __Requirements__
 ----------
 
 Copyright (C) 2015 Niklas Rosenstein
+
+  [Wiki]: https://github.com/craftr-build/craftr/wiki
