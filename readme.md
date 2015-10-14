@@ -8,51 +8,37 @@ using Python scripts.
 __The simplest possible example__
 
 ```python
-# craftr_module(simple)
+# craftr_module(hello_world)
 
-sources = ['src/main.c', 'src/utils.c']
-include_dirs = ['include']
+Cxx = load_module('compiler').CxxCompiler()
 
-target(
+Cxx.objects(
   'Objects',
-  inputs = sources,
-  outputs = move(sources, 'src', 'build/obj', suffix='o'),
-  foreach = True,
-  command = ['ccache', 'gcc', '-Wall', '-c', '%%in', '-o', '%%out'],
-  description = 'Building Object %%out')
+  sources = glob(join(project_dir, 'source/**/*.cpp')),
+)
 
-target(
-  'Executable',
-  inputs = Objects.outputs,
-  outputs = executable,
-  command = ['ccache', 'gcc', '%%in', '-o', '%%out'],
-  description = 'Buikding Executable %%out')
+Cxx.executable(
+  'Program',
+  name = 'main',
+  inputs = [Objects],
+)
 ```
 
 To build, run
 
-    craftr export
-    ninja
+    mkdir build && cd build
+    craftr -c.. export && ninja
 
+## Installation
 
-__Installation__
-
-Grab the stable release from this repository and install using Pip.
+Grab the latest release from this repository and install using Pip.
 You might want to do so in a virtualenv. To always use the latest
-version of Craftr, consider using an editable Pip installation (`-e`)
+version of Craftr, consider using an editable installation (`-e`)
 and update by pulling the latest changes into the repository.
 
     git clone git@github.com:craftr-build/craftr.git && cd craftr
     virtualenv .env && source .env/bin/activate
     pip install -e .
-
-__Todo__
-
-- [ ] Built-in Craftr modules with a common interface to modern
-      compilers like GCC, Clang and MSVC
-- [ ] Find ways to simplify build definitions for projects with
-      standard structures
-- [ ] Support for auto dependencies
 
 __Requirements__
 
