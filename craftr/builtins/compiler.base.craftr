@@ -176,12 +176,17 @@ class BaseCompiler(object):
     options['libs'] = libs
     return objects
 
-  def objects(self, target_name, sources, build_dir=None, objects=None,
-      description=None, module=None, **options):
+  def objects(self, target_name=None, sources=None, build_dir=None,
+      objects=None, description=None, module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"objects"`. The calling modules `build_dir`
     variable is used if *name* is a relative path. If the build directory
     is not specified, the current working directory is used. '''
+
+    if sources is None:
+      raise TypeError('sources argument must be specified')
+    if not sources:
+      raise ValueError('sources must not be empty')
 
     module = get_calling_module(module)
     build_dir = module.get('build_dir', '.')
@@ -209,10 +214,20 @@ class BaseCompiler(object):
       meta_options=options,
     )
 
-  def executable(self, target_name, name, inputs, module=None, **options):
+  def executable(self, target_name=None, name=None, inputs=None,
+      module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"executable"`. The calling modules
     `build_dir` variable is used if *name* is a relative path. '''
+
+    if name is None:
+      raise TypeError('name argument must be specified')
+    if inputs is None:
+      raise TypeError('inputs argument must be specified')
+    if not name:
+      raise ValueError('name must not be empty')
+    if not inputs:
+      raise ValueError('inputs must not be empty')
 
     module = get_calling_module(module)
     build_dir = module.get('build_dir', None)
@@ -233,10 +248,20 @@ class BaseCompiler(object):
       meta_options=options,
     )
 
-  def shared_library(self, target_name, name, inputs, module=None, **options):
+  def shared_library(self, target_name=None, name=None, inputs=None,
+      module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"shared_library"`. The calling modules
     `build_dir` variable is used if *name* is a relative path.  '''
+
+    if name is None:
+      raise TypeError('name argument must be specified')
+    if inputs is None:
+      raise TypeError('inputs argument must be specified')
+    if not name:
+      raise ValueError('name must not be empty')
+    if not inputs:
+      raise ValueError('inputs must not be empty')
 
     module = get_calling_module(module)
     build_dir = module.get('build_dir', None)
@@ -257,9 +282,19 @@ class BaseCompiler(object):
       meta_options=options,
     )
 
-  def static_library(self, target_name, name, inputs, module=None, **options):
+  def static_library(self, target_name=None, name=None, inputs=None,
+      module=None, **options):
     ''' Declares a target to build object files from the *sources*. The
     target has the meta type `"static_library"`. '''
+
+    if name is None:
+      raise TypeError('name argument must be specified')
+    if inputs is None:
+      raise TypeError('inputs argument must be specified')
+    if not name:
+      raise ValueError('name must not be empty')
+    if not inputs:
+      raise ValueError('inputs must not be empty')
 
     module = get_calling_module(module)
     name = P.lib(name)

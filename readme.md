@@ -12,13 +12,11 @@ __The simplest possible example__
 
 Cxx = load_module('compiler').CxxCompiler()
 
-Cxx.objects(
-  'Objects',
+Objects = Cxx.objects(
   sources = glob(join(project_dir, 'source/**/*.cpp')),
 )
 
-Cxx.executable(
-  'Program',
+Program = Cxx.executable(
   name = 'main',
   inputs = [Objects],
 )

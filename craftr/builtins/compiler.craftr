@@ -26,7 +26,7 @@ if platform.name == 'Darwin':
   extends('compiler.clang')
 elif platform.name in ('Linux', 'Cygwin'):
   extends('compiler.gcc')
-elif platform.name == 'Windows':
+elif platform.name == 'Windows NT':
   extends('compiler.msvc')
 else:
   error("compiler can't be deduced for '{0}'".format(platform.name))

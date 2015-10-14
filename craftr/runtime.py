@@ -516,12 +516,18 @@ class Module(object):
             raise
     return default
 
-  def target(self, name, **kwargs):
+  def target(self, name=None, _parent_frame=None, **kwargs):
     ''' Declares a target with the specified *name*. The target will
     automatically be inserted into the modules scope by the *name*.
 
     Arguments:
-      name (str): The name of the target.
+      name (str): The name of the target. If None, it will automatically
+        be derived from the variable name that the result of this function
+        is assigned to. This is the preferred way to declare targets.
+      _parent_frame (frame): If *name* is not specified and this function
+        is called from a rule function (ie. not directly in the actual
+        module), this parameter should be passed the frame that called
+        rule function to be able to derive the assigned variable name.
       inputs (list): A list of input filenames.
       outputs (list): A list of output filenames.
       foreach (bool): True if the command should be executed for
@@ -533,6 +539,23 @@ class Module(object):
       target_class (Target subclass): Optional target class to use
         instead of the default class.
     '''
+
+    if not name:
+      if not _parent_frame:
+        # Find the frame that is executed for this module.
+        _parent_frame = sys._getframe(1)
+        while _parent_frame:
+          if _parent_frame.f_globals is vars(self.locals):
+            break
+          _parent_frame = _parent_frame.f_back
+        if not _parent_frame:
+          raise RuntimeError('module frame could not be found')
+      try:
+        name = utils.dis.get_assigned_name(_parent_frame)
+      except ValueError as exc:
+        raise RuntimeError('assigned name could not be derived', exc)
+      if '.' in name:
+        raise RuntimeError('target name can not be dotted', name)
 
     if hasattr(self.locals, name):
       raise ValueError('target definition would override local variable', name)
