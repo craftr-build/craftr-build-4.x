@@ -22,8 +22,8 @@ __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
 __version__ = '0.0.9'
 
 import sys
-if sys.version < '3.3':
-  raise EnvironmentError('Craftr requires Python 3.3 or greater')
+if sys.version < '3.4':
+  raise EnvironmentError('Craftr requires Python 3.4 or greater')
 
 # The placeholder for the input and output file in the command
 # list of a target.

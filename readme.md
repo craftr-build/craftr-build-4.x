@@ -45,7 +45,7 @@ and update by pulling the latest changes into the repository.
 __Requirements__
 
 - [ninja](https://github.com/martine/ninja)
-- Python 3.3 or greater
+- Python 3.4 or greater
 - [glob2](pypi.python.org/pypi/glob2)
 - [colorama](pypi.python.org/pypi/colorama) (optional)
 
