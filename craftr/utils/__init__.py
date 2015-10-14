@@ -169,8 +169,8 @@ def build_archive(filename, base_dir, include=(), exclude=(),
   The *base_dir* is stripped from the absolute filenames to find the
   arcname. '''
 
-  include = [path.normpath(x) for x in lists.autoexpand(include)]
-  exclude = [path.normpath(x) for x in lists.autoexpand(exclude)]
+  include = [path.normpath(x, base_dir) for x in lists.autoexpand(include)]
+  exclude = [path.normpath(x, base_dir) for x in lists.autoexpand(exclude)]
   files = set(include) - set(exclude)
 
   if not files:
