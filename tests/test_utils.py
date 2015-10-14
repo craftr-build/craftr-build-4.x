@@ -20,6 +20,7 @@
 
 import craftr.utils
 import os
+import sys
 import posixpath
 import unittest
 
@@ -118,3 +119,19 @@ class ListsTest(unittest.TestCase):
     self.assertEqual(a(('spam',)), ['spam'])
     self.assertEqual(a(['spam', ['eggs', ('and', set(['trails'])), 'ham']]),
                       ['spam', 'eggs', 'and', 'trails', 'ham'])
+
+
+
+class DisTest(unittest.TestCase):
+
+  def test_get_assigned_name(self):
+    from craftr.utils.dis import get_assigned_name
+    var = get_assigned_name(sys._getframe())
+    self.assertEqual(var, 'var')
+    obj = type('', (), {})()
+    obj.bar = get_assigned_name(sys._getframe())
+    self.assertEqual(obj.bar, 'obj.bar')
+    with self.assertRaises(ValueError):
+      (x, y) = get_assigned_name(sys._getframe())
+    with self.assertRaises(ValueError):
+      get_assigned_name(sys._getframe())
