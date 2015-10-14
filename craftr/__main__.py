@@ -32,7 +32,12 @@ def parse_args():
   parser.add_argument(
     '-v', '--verbose',
     action='store_true',
-    help='Enable verbose output.')
+    help='Enable verbose output and tracebacks for module errors. '
+         'Overrides -q/--quiet.')
+  parser.add_argument(
+    '-q', '--quiet',
+    action='store_true',
+    help='Do not show info output.')
   parser.add_argument(
     '--version',
     action='store_true',
@@ -168,6 +173,8 @@ def main():
   session = craftr.runtime.Session(args.cmd, args.cdir)
   if args.verbose:
     session.logger.level = 0
+  elif args.quiet:
+    session.logger.level = craftr.logging.INFO + 1
   else:
     session.logger.level = craftr.logging.INFO
 

@@ -220,9 +220,10 @@ class Session(object):
   def module_logger(self, module):
     ''' Factory to create a logger for a module. '''
 
-    fmt = '==> craftr: [{}|L{{lineno}}]: '
-    prefix = utils.proxy.Proxy(lambda: fmt.format(module.identifier))
-    level = utils.proxy.Proxy(lambda: self.logger.level)
+    from .utils.proxy import Proxy
+
+    prefix = Proxy(lambda: '[{}] '.format(module.identifier))
+    level = Proxy(lambda: self.logger.level)
     logger = logging.Logger(prefix=prefix, level=level)
     return logger
 

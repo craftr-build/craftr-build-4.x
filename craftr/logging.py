@@ -186,7 +186,7 @@ class Logger(object):
 
   def __init__(self, prefix=None, level=0):
     super().__init__()
-    self.prefix = prefix or '==> craftr: '
+    self.prefix = prefix or ''
     self.level = level
 
   def emit(self, level, *args, **kwargs):
