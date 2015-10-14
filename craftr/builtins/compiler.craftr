@@ -20,19 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-P = load_module('platform')
+load_module('platform')
 
-if P.name == 'Darwin':
-  _super = load_module('compiler.clang')
-elif P.name == 'Linux':
-  _super = load_module('compiler.gcc')
-elif P.name == 'Windows':
-  _super = load_module('compiler.msvc')
-  module.extends('compiler.msvc')
-elif P.name == 'Cygwin':
-  _super = load_module('compiler.gcc')
+if platform.name == 'Darwin':
+  extends('compiler.clang')
+elif platform.name in ('Linux', 'Cygwin'):
+  extends('compiler.gcc')
+elif platform.name == 'Windows':
+  extends('compiler.msvc')
 else:
-  error("compiler can't be deduced for '{0}'".format(P.name))
-
-CCompiler = _super.CCompiler
-CxxCompiler = _super.CxxCompiler
+  error("compiler can't be deduced for '{0}'".format(platform.name))
