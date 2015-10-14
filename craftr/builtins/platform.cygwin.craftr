@@ -20,6 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+std = 'Posix'
+name = 'Cygwin'
+common_name = 'Cygwin'
+
 obj = lambda x: addsuffix(x, '.o')
 bin = lambda x: addsuffix(x, '.exe')
 lib = lambda x: addsuffix(addprefix(x, 'lib'), '.a')

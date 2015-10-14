@@ -20,6 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+std = 'NT'
+name = 'Windows NT'
+common_name = 'Windows'
+
 obj = lambda x: addsuffix(x, '.obj')
 bin = lambda x: addsuffix(x, '.exe')
 lib = lambda x: addsuffix(x, '.lib')
