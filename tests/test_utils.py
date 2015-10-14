@@ -21,92 +21,79 @@
 import craftr.utils
 import os
 import sys
-import posixpath
 import unittest
+
+
+def _(path):
+  if os.name == 'nt':
+    path = path.replace('/', '\\')
+    if path.startswith('\\'):
+      path = 'c:' + path
+  return path
 
 
 class PathTest(unittest.TestCase):
 
-  def setUp(self):
-    # Mock posixpath into os.path and the craftr.utils.path module.
-    # This is VERY hacky, but it makes the tests work on Windows as well.
-    self._old_path = os.path
-    os.path = posixpath
-    craftr.utils.path.join = posixpath.join
-    craftr.utils.path.split = posixpath.split
-    craftr.utils.path.dirname = posixpath.dirname
-    craftr.utils.path.basename = posixpath.basename
-    craftr.utils.path.relpath = posixpath.relpath
-
-  def tearDown(self):
-    os.path = self._old_path
-    del self._old_path
-    craftr.utils.path.join = os.path.join
-    craftr.utils.path.split = os.path.split
-    craftr.utils.path.dirname = os.path.dirname
-    craftr.utils.path.basename = os.path.basename
-    craftr.utils.path.relpath = os.path.relpath
-
   def test_addprefix(self):
     from craftr.utils.path import addprefix
-    self.assertEqual(addprefix('foo/bar/baz', 'spam-'), 'foo/bar/spam-baz')
+    self.assertEqual(addprefix(_('foo/bar/baz'), _('spam-')), _('foo/bar/spam-baz'))
     self.assertEqual(
       addprefix([
-        'foo/bar/baz',
-        'foo/bar/ham/cheeck',
-        '/gogodo'], 'egg_'),
+        _('foo/bar/baz'),
+        _('foo/bar/ham/cheeck'),
+        _('/gogodo')], _('egg_')),
       [
-        'foo/bar/egg_baz',
-        'foo/bar/ham/egg_cheeck',
-        '/egg_gogodo'])
+        _('foo/bar/egg_baz'),
+        _('foo/bar/ham/egg_cheeck'),
+        _('/egg_gogodo')])
 
   def test_addsuffix(self):
     from craftr.utils.path import addsuffix
-    self.assertEqual(addsuffix('foo/bar/baz', '.eggs', True), 'foo/bar/baz.eggs')
-    self.assertEqual(addsuffix('foo/bar/baz.spam', '.eggs', True), 'foo/bar/baz.eggs')
-    self.assertEqual(addsuffix('foo/bar/baz.spam', None, True), 'foo/bar/baz')
-    self.assertEqual(addsuffix('foo/bar/baz.spam', '', True), 'foo/bar/baz')
+    self.assertEqual(addsuffix(_('foo/bar/baz'), _('.eggs'), True), _('foo/bar/baz.eggs'))
+    self.assertEqual(addsuffix(_('foo/bar/baz.spam'), _('.eggs'), True), _('foo/bar/baz.eggs'))
+    self.assertEqual(addsuffix(_('foo/bar/baz.spam'), None, True), _('foo/bar/baz'))
+    self.assertEqual(addsuffix(_('foo/bar/baz.spam'), _(''), True), _('foo/bar/baz'))
     self.assertEqual(
       addsuffix([
-        'foo/bar/baz',
-        'foo/bar/baz.spam',
-        'foo/bar/baz.baz'], '.eggs', True),
+        _('foo/bar/baz'),
+        _('foo/bar/baz.spam'),
+        _('foo/bar/baz.baz')], _('.eggs'), True),
       [
-        'foo/bar/baz.eggs',
-        'foo/bar/baz.eggs',
-        'foo/bar/baz.eggs'])
+        _('foo/bar/baz.eggs'),
+        _('foo/bar/baz.eggs'),
+        _('foo/bar/baz.eggs')])
 
-    self.assertEqual(addsuffix('foo/bar/baz.spam', 'eggs', False), 'foo/bar/baz.spameggs')
-    self.assertEqual(addsuffix('foo/bar/baz.spam', '.eggs', False), 'foo/bar/baz.spam.eggs')
+    self.assertEqual(addsuffix(_('foo/bar/baz.spam'), _('eggs'), False), _('foo/bar/baz.spameggs'))
+    self.assertEqual(addsuffix(_('foo/bar/baz.spam'), _('.eggs'), False), _('foo/bar/baz.spam.eggs'))
     self.assertEqual(
       addsuffix([
-        'foo/bar/baz',
-        'foo/bar/baz.spam',
-        'foo/bar/baz.baz'], 'eggs', False),
+        _('foo/bar/baz'),
+        _('foo/bar/baz.spam'),
+        _('foo/bar/baz.baz')], _('eggs'), False),
       [
-        'foo/bar/bazeggs',
-        'foo/bar/baz.spameggs',
-        'foo/bar/baz.bazeggs'])
+        _('foo/bar/bazeggs'),
+        _('foo/bar/baz.spameggs'),
+        _('foo/bar/baz.bazeggs')])
 
   def test_commonpath(self):
     from craftr.utils.path import commonpath
-    self.assertEqual(commonpath(['/foo/bar', '/foo/bar/baz']), '/foo/bar')
-    self.assertEqual(commonpath(['foo/bar', 'foo/bar/baz']), 'foo/bar')
+    self.assertEqual(commonpath([_('/foo/bar'), _('/foo/bar/baz')]), _('/foo/bar'))
+    self.assertEqual(commonpath([_('foo/bar'), _('foo/bar/baz')]), _('foo/bar'))
     with self.assertRaises(ValueError):
-      commonpath(['/foo/bar', 'foo/bar/baz'])
+      commonpath([_('/foo/bar'), _('foo/bar/baz')])
 
   def test_move(self):
     from craftr.utils.path import move
-    base = 'foo/bar'
-    new_base = 'eggs/ham'
+    base = _('foo/bar')
+    new_base = _('eggs/ham')
     files = [
-      'foo/bar/main.c',
-      'foo/bar/spam.c',
-      'foo/bar/utils/eggs.c']
+      _('foo/bar/main.c'),
+      _('foo/bar/spam.c'),
+      _('foo/bar/utils/eggs.c')]
     expected = [
-      'eggs/ham/main.c',
-      'eggs/ham/spam.c',
-      'eggs/ham/utils/eggs.c']
+      _('eggs/ham/main.c'),
+      _('eggs/ham/spam.c'),
+      _('eggs/ham/utils/eggs.c')]
     self.assertEqual(move(files, base, new_base), expected)
 
 
