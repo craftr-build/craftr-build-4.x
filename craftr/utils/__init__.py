@@ -26,6 +26,7 @@ from . import proxy
 from . import shell
 import os
 import sys
+import errno
 import craftr
 import collections
 import zipfile
@@ -176,6 +177,10 @@ def build_archive(filename, base_dir, include=(), exclude=(),
 
   if not files:
     raise ValueError('no files to build an archive from')
+
+  for fn in files:
+    if not os.path.isfile(fn):
+      raise OSError(errno.ENOENT, 'No such file or directory: {!r}'.format(fn))
 
   zf = zipfile.ZipFile(filename, 'w')
   for fn in files:
