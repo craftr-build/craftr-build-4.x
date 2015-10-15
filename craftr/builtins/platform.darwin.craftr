@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 std = 'Posix'
+id = 'mac'
 name = 'Darwin'
 common_name = 'Mac OS'
 

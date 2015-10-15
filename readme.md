@@ -9,15 +9,15 @@ __The simplest possible example__
 
 ```python
 # craftr_module(hello_world)
+load_module('compiler')
+cxx = compiler.CxxCompiler()
 
-Cxx = load_module('compiler').CxxCompiler()
-
-Objects = Cxx.objects(
+Objects = cxx.objects(
   sources = glob(join(project_dir, 'source/**/*.cpp')),
 )
 
-Program = Cxx.executable(
-  name = 'main',
+Program = cxx.executable(
+  filename = 'main',
   inputs = [Objects],
 )
 ```

@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 std = 'Posix'
+id = 'linux'
 name = 'Linux'
 common_name = 'Linux'
 

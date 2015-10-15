@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 std = 'NT'
+id = 'win'
 name = 'Windows NT'
 common_name = 'Windows'
 
