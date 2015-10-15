@@ -545,7 +545,7 @@ class Module(object):
         # Find the frame that is executed for this module.
         _parent_frame = sys._getframe(1)
         while _parent_frame:
-          if _parent_frame.f_globals is vars(self.locals):
+          if _parent_frame.f_locals is vars(self.locals):
             break
           _parent_frame = _parent_frame.f_back
         if not _parent_frame:
