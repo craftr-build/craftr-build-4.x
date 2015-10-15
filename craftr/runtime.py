@@ -464,7 +464,7 @@ class Module(object):
       return False
     return True
 
-  def setdefault(self, name, default, check_globals=True):
+  def setdefault(self, name, default, check_globals=True, set_global=False):
     ''' This function makes sure that the variable with the specified
     *name* is available in the scope of the module. If there is not
     already a value assigned to this name, *default* will be used. If
@@ -495,6 +495,8 @@ class Module(object):
       value = default
 
     setattr(obj, key, value)
+    if set_global:
+      setattr(self.locals.G, key, value)
     return value
 
   def get(self, name, default=NotImplemented, check_globals=True):
