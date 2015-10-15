@@ -179,7 +179,7 @@ def build_archive(filename, base_dir, include=(), exclude=(),
     raise ValueError('no files to build an archive from')
 
   for fn in files:
-    if not os.path.isfile(fn):
+    if not os.path.exists(fn):
       raise OSError(errno.ENOENT, 'No such file or directory: {!r}'.format(fn))
 
   zf = zipfile.ZipFile(filename, 'w')
