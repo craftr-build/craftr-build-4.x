@@ -36,7 +36,7 @@ class CCompiler(_base.BaseCompiler):
     super().init_default_options()
 
   def detect(self, silent=False):
-    if hasattr(self, 'version'):
+    if self.version:
       return True  # already detected
 
     try:
