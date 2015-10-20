@@ -165,7 +165,7 @@ class CommandBuilder(object):
       'disabled': lists.autoexpand(disabled)})
 
 
-def build_archive(filename, base_dir, include=(), exclude=(),
+def build_archive(filename, base_dir, include=(), exclude=(), optional=(),
     prefix=None, quiet=False):
   ''' Build a ZIP archive at *filename* and include the specified files.
   The *base_dir* is stripped from the absolute filenames to find the
@@ -173,7 +173,9 @@ def build_archive(filename, base_dir, include=(), exclude=(),
 
   include = [path.normpath(x, base_dir) for x in lists.autoexpand(include)]
   exclude = [path.normpath(x, base_dir) for x in lists.autoexpand(exclude)]
+  optional = [path.normpath(x, base_dir) for x in lists.autoexpand(optional)]
   files = set(include) - set(exclude)
+  optional = set(optional) - files
 
   if not files:
     raise ValueError('no files to build an archive from')
@@ -181,6 +183,9 @@ def build_archive(filename, base_dir, include=(), exclude=(),
   for fn in files:
     if not os.path.exists(fn):
       raise OSError(errno.ENOENT, 'No such file or directory: {!r}'.format(fn))
+  for fn in optional:
+    if os.path.exists(fn):
+      files.add(fn)
 
   zf = zipfile.ZipFile(filename, 'w')
   for fn in files:
