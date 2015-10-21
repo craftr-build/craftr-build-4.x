@@ -655,11 +655,15 @@ class Target(object):
     self.outputs = outputs
     self.requires = requires
     self.foreach = foreach
+    self.pool = None
     self.description = description
     self.commands = []
     self.meta = {}
 
     for key, value in tuple(kwargs.items()):
+      if key == 'pool':
+        self.pool = value
+        kwargs.pop(key)
       if key.startswith('meta_'):
         name = key[5:]
         if name:

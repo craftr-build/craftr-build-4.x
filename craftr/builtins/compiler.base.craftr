@@ -296,3 +296,62 @@ class BaseCompiler(object):
       meta_type='static_library',
       meta_options=options,
     )
+
+  def obj_copy(self, filename, input, module=None, target_name=None, **options):
+    ''' Declares a target to transate the input to the output'''
+
+    if not filename:
+      raise ValueError('filename must not be empty')
+    if not input:
+      raise ValueError('inputs must not be empty')
+
+    module = get_calling_module(module)
+
+    options = self.merge_options(**options)
+
+    if not isinstance(input, Target):
+      raise ValueError('input needs to be a Target', type(input))
+    if len(input.outputs) != 1:
+      raise ValueError('input target should have one output, it has ', len(input.outputs))
+
+    input =  input.outputs[0]
+
+    command = [options['prog'], options['additional_flags'], input, filename]
+    return module.target(
+      target_name,
+      inputs=[input],
+      outputs=filename,
+      command=command,
+      description='Do an objcopy %%in',
+      meta_type='obj_copy',
+      meta_options=options,
+    )
+
+  def run_target(self, runname, input, module=None, target_name=None, **options):
+    ''' Declares a target to run, there is not output'''
+
+    if not input:
+      raise ValueError('inputs must not be empty')
+
+    module = get_calling_module(module)
+
+    options = self.merge_options(**options)
+
+    if not isinstance(input, Target):
+      raise ValueError('input needs to be a Target', type(input))
+    if len(input.outputs) != 1:
+      raise ValueError('input target should have one output, it has ', len(input.outputs))
+
+    input =  input.outputs[0]
+
+    command = [options['prog'], options['additional_flags'], input]
+    return module.target(
+      target_name,
+      inputs=[input],
+      outputs=runname,
+      command=command,
+      pool='console',
+      description='Do an objcopy %%in',
+      meta_type='obj_copy',
+      meta_options=options,
+    )

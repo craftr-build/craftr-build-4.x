@@ -75,7 +75,7 @@ def _export(fp, session, default_targets):
       desc = target.description or ''
       desc = desc.replace(craftr.IN, '$in')
       desc = desc.replace(craftr.OUT, '$out')
-      writer.rule(rule, command, description=desc)
+      writer.rule(rule, command, pool=target.pool, description=desc)
       writer.newline()
 
       if target.foreach:
