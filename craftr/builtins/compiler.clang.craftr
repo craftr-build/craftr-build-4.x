@@ -105,7 +105,7 @@ class CCompiler(_base.BaseCompiler):
   def flags(self, debug=None, output_type=None, exceptions=None, includes=(),
       defines=(), libs=(), link_with=(), external_libs=(), ldpaths=(),
       additional_flags=(), warning_level=None, std=None, arch=None, lang=None,
-      **options):
+      prog=None, **options):
     ''' Generate flags based on the specfied options. '''
 
     if output_type == 'static_library':
@@ -113,13 +113,16 @@ class CCompiler(_base.BaseCompiler):
 
     result = []
 
-    if lang is not None:
-      if lang == 'c':
-        result += ['clang']
-      elif lang == 'c++':
-        result += ['clang++']
-      else:
-        self.invalid_option('lang', lang)
+    if prog is not None:
+      result += [prog]
+    else:
+      if lang is not None:
+        if lang == 'c':
+          result += ['clang']
+        elif lang == 'c++':
+          result += ['clang++']
+        else:
+          self.invalid_option('lang', lang)
 
     if arch is not None:
       # XXX: Validate arch value.
