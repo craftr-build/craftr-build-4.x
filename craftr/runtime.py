@@ -276,6 +276,7 @@ class Module(object):
     self.locals = None
     self.executed = False
     self.targets = {}
+    self.pools = {}
 
   def __repr__(self):
     if self.identifier:
@@ -305,6 +306,7 @@ class Module(object):
     data.defined = self.defined
     data.setdefault = self.setdefault
     data.target = self.target
+    data.pool = self.pool
     data.return_ = self.return_
 
     # Logging built-ins
@@ -518,6 +520,26 @@ class Module(object):
             raise
     return default
 
+  def pool(self, name=None,_parent_frame=None, **kwargs):
+    ''' Declare a job pool with the specified *name*. If *name* is
+    omitted, the name is deduced from the variable that the result of
+    this function is assigned to. The keyword arguments are passed to
+    the `Pool` constructor. '''
+
+    if not name:
+      if not _parent_frame:
+        _parent_frame = self._get_global_frame()
+      try:
+        name = utils.dis.get_assigned_name(_parent_frame)
+      except ValueError as exc:
+        raise RuntimeError('assigned name could not be derived', exc)
+      if '.' in name:
+        raise RuntimeError('target name can not be dotted', name)
+
+    self.pools[name] = Pool(self, name, **kwargs)
+    setattr(self.locals, name, self.pools[name])
+    return self.pools[name]
+
   def target(self, name=None, _parent_frame=None, **kwargs):
     ''' Declares a target with the specified *name*. The target will
     automatically be inserted into the modules scope by the *name*.
@@ -544,14 +566,7 @@ class Module(object):
 
     if not name:
       if not _parent_frame:
-        # Find the frame that is executed for this module.
-        _parent_frame = sys._getframe(1)
-        while _parent_frame:
-          if _parent_frame.f_locals is vars(self.locals):
-            break
-          _parent_frame = _parent_frame.f_back
-        if not _parent_frame:
-          raise RuntimeError('module frame could not be found')
+        _parent_frame = self._get_global_frame()
       try:
         name = utils.dis.get_assigned_name(_parent_frame)
       except ValueError as exc:
@@ -587,6 +602,21 @@ class Module(object):
       obj = getattr(obj, part)
     return (obj, parts[-1])
 
+  def _get_global_frame(self):
+    ''' Returns the closest stack frame that is executed in this modules
+    local scope as global variables. To say it in different words, this is
+    the frame of the global scope of the module's script. '''
+
+    # Find the frame that is executed for this module.
+    frame = sys._getframe(1)
+    while frame:
+      if frame.f_locals is vars(self.locals):
+        break
+      frame = frame.f_back
+    if not frame:
+      raise RuntimeError('module frame could not be found')
+    return frame
+
   def __info(self, *args, **kwargs):
     self.logger.info(*args, frame=sys._getframe().f_back, **kwargs)
 
@@ -601,7 +631,23 @@ class Module(object):
       raise ModuleError(self, code, message)
 
 
-class Target(object):
+class _ModuleObject(object):
+  ''' Represents an object that is part of a Craftr module. '''
+
+  def __init__(self, module, name):
+    super(_ModuleObject, self).__init__()
+    self.module = module
+    self.name = name
+
+  def __repr__(self):
+    return '<{} {!r}>'.format(type(self).__name__, self.name)
+
+  @property
+  def identifier(self):
+    return '{}.{}'.format(self.module.identifier, self.name)
+
+
+class Target(_ModuleObject):
   ''' This class represents a target that produces output files from a
   number of input files by using one or more commands. A command must be
   a list of arguments (with the first being the name of the program to
@@ -624,6 +670,10 @@ class Target(object):
       of input and output files. The length of *inputs* and *outputs*
       must be the same.
     description (str): Description of the target.
+    pool (str or Pool): If a string is passed, it must be the absolute
+      name of a pool. A special case is the "console" pool (see the ninja
+      documentation for more information). Otherwise, it must be a `Pool`
+      object.
     command (str): The command to execute for the target.
     commandX (str): Additional commands to execute for the target,
       where X stands for a digit between 0 and 9. The commands are
@@ -634,7 +684,8 @@ class Target(object):
   '''
 
   def __init__(self, module, name, inputs, outputs, requires=(),
-      foreach=False, description=None, **kwargs):
+      foreach=False, description=None, pool=None, **kwargs):
+    super().__init__(module, name)
     from craftr.utils.lists import autoexpand
 
     inputs = autoexpand(inputs)
@@ -647,15 +698,15 @@ class Target(object):
       raise TypeError('<name> must be a string', type(name))
     if not utils.ident.validate_var(name):
       raise ValueError('invalid target name', name)
+    if pool is not None and pool != 'console' and not isinstance(pool, Pool):
+      raise TypeError('pool must be Pool instance or "console"')
 
-    super().__init__()
-    self.module = module
-    self.name = name
     self.inputs = inputs
     self.outputs = outputs
     self.requires = requires
     self.foreach = foreach
     self.description = description
+    self.pool = pool
     self.commands = []
     self.meta = {}
 
@@ -673,15 +724,18 @@ class Target(object):
         raise TypeError('<' + key + '> must be a list', type(value))
       self.commands.append(autoexpand(value))
 
-  def __repr__(self):
-    return "<Target '{0}'>".format(self.identifier)
-
   def __iter__(self):
     return iter(self.outputs)
 
-  @property
-  def identifier(self):
-    return self.module.identifier + '.' + self.name
+
+class Pool(_ModuleObject):
+  ''' Represents a pool in which jobs are executed. '''
+
+  def __init__(self, module, name, depth=None):
+    super(Pool, self).__init__(module, name)
+    if depth is not None and not isinstance(depth, int):
+      raise TypeError('depth must be None or int')
+    self.depth = depth
 
 
 class NoSuchModule(Exception):
