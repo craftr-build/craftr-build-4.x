@@ -676,6 +676,9 @@ class Target(object):
   def __repr__(self):
     return "<Target '{0}'>".format(self.identifier)
 
+  def __iter__(self):
+    return iter(self.outputs)
+
   @property
   def identifier(self):
     return self.module.identifier + '.' + self.name
