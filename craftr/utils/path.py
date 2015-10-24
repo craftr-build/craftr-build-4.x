@@ -24,6 +24,17 @@ from glob2 import glob
 from os.path import join, split, dirname, basename, relpath
 
 
+def autoglob(path):
+  ''' Returns `glob(path)` if *path* is actually a glob-style pattern.
+  If it is not, it will return `[path]` as is, not checking wether it
+  exists or not. '''
+
+  if any(x in path for x in '*?'):
+    return glob(path)
+  else:
+    return [path]
+
+
 def commonpath(paths):
   ''' Returns the longest sub-path of each pathname in the sequence
   *paths*. Raises `ValueError` if *paths* is empty or contains both

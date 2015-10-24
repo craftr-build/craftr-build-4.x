@@ -171,14 +171,19 @@ def build_archive(filename, base_dir, include=(), exclude=(), optional=(),
   The *base_dir* is stripped from the absolute filenames to find the
   arcname. '''
 
-  include = [path.normpath(x, base_dir) for x in lists.autoexpand(include)]
-  exclude = [path.normpath(x, base_dir) for x in lists.autoexpand(exclude)]
-  optional = [path.normpath(x, base_dir) for x in lists.autoexpand(optional)]
-  files = set(include) - set(exclude)
-  optional = set(optional) - files
+  def expand(filelist):
+    result = set()
+    for item in lists.autoexpand(filelist):
+      if not os.path.isabs(item):
+        item = path.normpath(os.path.join(base_dir, item))
+      if os.path.isdir(item):
+        result |= set(path.glob(path.join(item, '**')))
+      else:
+        result |= set(path.autoglob(item))
+    return set(map(path.normpath, result))
 
-  if not files:
-    raise ValueError('no files to build an archive from')
+  files = expand(include) - expand(exclude)
+  optional = expand(optional) - files
 
   for fn in files:
     if not os.path.exists(fn):
@@ -186,6 +191,9 @@ def build_archive(filename, base_dir, include=(), exclude=(), optional=(),
   for fn in optional:
     if os.path.exists(fn):
       files.add(fn)
+
+  if not files:
+    raise ValueError('no files to build an archive from')
 
   zf = zipfile.ZipFile(filename, 'w')
   for fn in files:
