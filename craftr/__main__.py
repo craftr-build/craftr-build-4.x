@@ -220,6 +220,7 @@ def main():
     module = session.load_module(args.module)
     if not args.cmd:
       return
+    session.main_module = module
     # Dispatch the sub command procedure.
     globals()['main_' + args.cmd](args, session, module)
   except craftr.runtime.NoSuchModule as exc:

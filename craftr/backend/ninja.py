@@ -108,6 +108,9 @@ def _export(fp, session, default_targets):
       writer.build(rule, 'phony', target.outputs)
       writer.newline()
 
+    if module == session.main_module and module.default_target:
+      writer.default(module.default_target.identifier)
+
   if default_targets:
     defaults = set()
     for target in default_targets:

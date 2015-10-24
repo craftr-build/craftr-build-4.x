@@ -58,6 +58,7 @@ class Session(object):
     self.modules = {}
     self.namespaces = {}
     self.logger = logger or logging.Logger()
+    self.main_module = None
     self._mod_idcache = {}
     self._mod_filecache = {}
     self._init_globals()
@@ -275,6 +276,7 @@ class Module(object):
     self.logger = session.module_logger(self)
     self.locals = None
     self.executed = False
+    self.default_target = None
     self.targets = {}
     self.pools = {}
 
@@ -540,7 +542,7 @@ class Module(object):
     setattr(self.locals, name, self.pools[name])
     return self.pools[name]
 
-  def target(self, name=None, _parent_frame=None, **kwargs):
+  def target(self, name=None, _parent_frame=None, default=False, **kwargs):
     ''' Declares a target with the specified *name*. The target will
     automatically be inserted into the modules scope by the *name*.
 
@@ -552,6 +554,10 @@ class Module(object):
         is called from a rule function (ie. not directly in the actual
         module), this parameter should be passed the frame that called
         rule function to be able to derive the assigned variable name.
+      default (bool): True if this target should be declared the
+        default target that is to be built. Only the default target of
+        the current main Craftr module is used, not the default targets
+        of all loaded modules.
       inputs (list): A list of input filenames.
       outputs (list): A list of output filenames.
       foreach (bool): True if the command should be executed for
@@ -560,8 +566,6 @@ class Module(object):
       command (list of str): A list of arguments to build the outputs.
       commandX (list of str): Optional additional command to execute.
         X can be any number between 0 and 9.
-      target_class (Target subclass): Optional target class to use
-        instead of the default class.
     '''
 
     if not name:
@@ -577,10 +581,11 @@ class Module(object):
     if hasattr(self.locals, name):
       raise ValueError('target definition would override local variable', name)
 
-    target_class = kwargs.pop('target_class', Target)
-    target = target_class(self, name, **kwargs)
+    target = Target(self, name, **kwargs)
     self.targets[name] = target
     setattr(self.locals, name, target)
+    if default:
+      self.default_target = target
     return target
 
   def return_(self):
