@@ -47,7 +47,7 @@ class CCompiler(_base.BaseCompiler):
       fp.write(b'#include <stddef.h>\n')
       fp.close()
       try:
-        p = Process([self.program, '/showIncludes', fp.name])
+        p = Process([self.program, '/Zs', '/showIncludes', fp.name])
       except Process.ExitCodeError as exc:
         p = exc.process
       except OSError as exc:

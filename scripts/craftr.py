@@ -18,6 +18,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+''' Script to run Craftr on Windows. Since the suffix is `.py`, it would
+import itself on `import craftr`, therefore the script removes all paths
+from `sys.path` that contain a `craftr.py` file. '''
 
 import os
 import sys

@@ -9,16 +9,23 @@ __The simplest possible example__
 
 ```python
 # craftr_module(hello_world)
+
 load_module('compiler')
 cxx = compiler.CxxCompiler()
+cxx.detect()
 
-Objects = cxx.objects(
+objects = cxx.objects(
   sources = glob(join(project_dir, 'source/**/*.cpp')),
 )
 
-Program = cxx.executable(
+main = cxx.executable(
   filename = 'main',
-  inputs = [Objects],
+  inputs = [objects],
+)
+
+run = load_module('rules').run(
+  executable = main,
+  unique_name = 'run',
 )
 ```
 

@@ -328,7 +328,6 @@ class Module(object):
     data.rmvsuffix = craftr.utils.path.rmvsuffix
     data.autoexpand = craftr.utils.lists.autoexpand
     data.Process = craftr.utils.shell.Process
-    data.CommandBuilder = craftr.utils.CommandBuilder
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`
