@@ -686,6 +686,19 @@ class Target(_ModuleObject):
     meta_* (any): Specify meta data of the target which can be
       read from the `Target.meta` dictionary. The `meta_` part
       is stripped from the key.
+
+
+  Meta Values:
+    type (str): The type the target produces, eg. `'objects'`, `'executable'`,
+      `'shared_library'` or `'static_library'`.
+    includes (list of str): Eg. for a `'static_library'` or `'shared_library'`,
+      this can be a list of include directories that are required to use the
+      library. That should automatically be handled by rule functions.
+    defines (list of str): Same as for *includes*, a list of preprocessor
+      definitions that are used for a static or shared library.
+    deps (str): If set, can be `gcc` or `msvc`. Handled by the Ninja backend.
+    depfile (str): A dependency file, handled by the Ninja backend. Usually,
+      you want to set it to `'%%out.d'`.
   '''
 
   def __init__(self, module, name, inputs, outputs, requires=(),

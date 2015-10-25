@@ -146,5 +146,9 @@ class CCompiler(_base.BaseCompiler):
     command += self.flags(output_type=output_type, **options)
     return command
 
+  def autodeps(self, autodeps=True, depfile=None):
+    return {'deps': 'msvc', 'flags': ['/showIncludes']}
+
+
 
 CxxCompiler = CCompiler

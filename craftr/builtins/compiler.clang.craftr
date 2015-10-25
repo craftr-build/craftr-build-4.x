@@ -164,6 +164,10 @@ class CCompiler(_base.BaseCompiler):
 
   command = flags
 
+  def autodeps(self, autodeps=True, depfile=None):
+    depfile = depfile or '%%out.d'
+    return {'deps': 'gcc', 'depfile': depfile, 'flags': ['-MMD', '-MF', depfile]}
+
 
 class CxxCompiler(CCompiler):
 

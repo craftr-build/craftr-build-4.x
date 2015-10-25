@@ -58,6 +58,23 @@ def _export(fp, session, default_targets):
   writer.comment('visit https://github.com/craftr-build/craftr for more information.')
   writer.newline()
 
+  ninja = session.load_module('ninja').locals
+  ninja_vars = []
+  for key, value in vars(ninja).items():
+    if key.startswith('__') or key == 'project_dir':
+      continue
+    if isinstance(value, tuple):
+      value = list(value)
+    if isinstance(value, (str, list)):
+      ninja_vars.append((key, value))
+  if ninja_vars:
+    ninja_vars.sort(key=lambda x: x[0])
+    writer.comment('Global Variables')
+    writer.newline()
+    for key, value in ninja_vars:
+      writer.variable(key, value)
+    writer.newline()
+
   for module in sorted(session.modules.values(), key=lambda x: x.identifier):
     if not module.targets:
       continue
@@ -93,7 +110,15 @@ def _export(fp, session, default_targets):
       else:
         pool = ident(target.pool.identifier)
 
-      writer.rule(rule, command, pool=pool, description=desc)
+      deps = target.meta.get('deps', None)
+      if deps not in (None, 'gcc', 'msvc'):
+        raise ValueError('invalid meta value "deps = {!r}" on {}'.format(deps, target))
+      depfile = target.meta.get('depfile', None)
+      if depfile:
+        depfile = depfile.replace(craftr.OUT, '$out')
+
+      writer.rule(rule, command, pool=pool, deps=deps,
+        depfile=depfile, description=desc)
       writer.newline()
 
       if target.foreach:

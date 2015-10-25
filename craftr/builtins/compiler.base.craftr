@@ -117,6 +117,17 @@ class BaseCompiler(object):
 
     raise NotImplementedError
 
+  def autodeps(self, autodeps=True, depsfile=None):
+    ''' Return a dictionary like this:
+
+        {'deps': 'gcc', 'depfile': '%%out.d', 'flags': ['-MMD', '-MF', '%%out.d']}
+
+    The *flags* will be appended to the *additional_flags* parameter
+    passed to `command()` or `flags()`. Any empty dictionary will disable
+    autodeps support. '''
+
+    return {}
+
   def merge_option(self, key, base_value, new_value):
     ''' Basic option merge function. Treats all keys the same.
 
@@ -198,8 +209,13 @@ class BaseCompiler(object):
     if not description:
       description = 'Building Object %%out'
 
+    autodeps = self.autodeps(
+      options.get('autodeps', True), options.get('depsfile', None))
+
     options['output_type'] = 'object'
     options = self.merge_options(**options)
+    options['additional_flags'] = list(options.get('additional_flags', ()))
+    options['additional_flags'] += list(autodeps.get('flags', ()))
 
     command = self.command(**options)
     return module.target(
@@ -209,6 +225,8 @@ class BaseCompiler(object):
       command=command,
       description='Building Object %%in',
       meta_type='objects',
+      meta_deps=autodeps.get('deps'),
+      meta_depfile=autodeps.get('depfile'),
       meta_options=options,
     )
 
