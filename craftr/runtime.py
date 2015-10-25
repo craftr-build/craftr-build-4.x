@@ -696,9 +696,14 @@ class Target(_ModuleObject):
       library. That should automatically be handled by rule functions.
     defines (list of str): Same as for *includes*, a list of preprocessor
       definitions that are used for a static or shared library.
+
+  Meta Values handled by the Ninja backend:
     deps (str): If set, can be `gcc` or `msvc`. Handled by the Ninja backend.
     depfile (str): A dependency file, handled by the Ninja backend. Usually,
       you want to set it to `'%%out.d'`.
+    no_phony (bool): If True, no phony build target will be declared for
+      the target outputs (ie. the `Target.identifier` can not be passed to
+      Ninja to instruct it to build all the output files of that target).
   '''
 
   def __init__(self, module, name, inputs, outputs, requires=(),
