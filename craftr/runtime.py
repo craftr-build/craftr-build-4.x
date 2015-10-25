@@ -530,7 +530,7 @@ class Module(object):
 
     if not name:
       if not _parent_frame:
-        _parent_frame = self._get_global_frame()
+        _parent_frame = self.get_global_frame()
       try:
         name = utils.dis.get_assigned_name(_parent_frame)
       except ValueError as exc:
@@ -570,7 +570,7 @@ class Module(object):
 
     if not name:
       if not _parent_frame:
-        _parent_frame = self._get_global_frame()
+        _parent_frame = self.get_global_frame()
       try:
         name = utils.dis.get_assigned_name(_parent_frame)
       except ValueError as exc:
@@ -607,7 +607,7 @@ class Module(object):
       obj = getattr(obj, part)
     return (obj, parts[-1])
 
-  def _get_global_frame(self):
+  def get_global_frame(self):
     ''' Returns the closest stack frame that is executed in this modules
     local scope as global variables. To say it in different words, this is
     the frame of the global scope of the module's script. '''

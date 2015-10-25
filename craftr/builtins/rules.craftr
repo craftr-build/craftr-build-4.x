@@ -44,7 +44,7 @@ def run(executable, additional_flags=(), pool='console',
   executable = autoexpand(executable)
   if len(executable) != 1:
     raise ValueError('expected exactly one item for *executable*')
-  target_name = get_assigned_name(module._get_global_frame())
+  target_name = get_assigned_name(module.get_global_frame())
   if unique_name is None:
     # The name without _ appended is arleady taken by the actual target
     # name. We need that name since the target *outputs* define the
