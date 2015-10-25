@@ -22,8 +22,3 @@
 ''' The variables in this module will be translated to variables in the
 Ninja build file. By default, this file is empty. It can be modified from
 other modules (eg. `compiler.msvc`). '''
-
-# If a rule specifies "deps = msvc", this variable is used to determine
-# the prefix of include files for a compilation unit. For non-english
-# versions of MSVC, this might need to be adjusted.
-msvc_deps_prefix = 'Note: including file:'

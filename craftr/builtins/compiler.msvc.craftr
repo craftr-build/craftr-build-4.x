@@ -20,8 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import os
 import re
+import tempfile
 
+load_module('ninja')
 P = load_module('platform')
 _base = load_module('compiler.base')
 
@@ -35,21 +38,57 @@ class CCompiler(_base.BaseCompiler):
     if self.version:
       return True  # already detected
 
-    try:
-      p = Process(['cl', '/?'])
-    except (Process.ExitCodeError, OSError) as exc:
-      if silent:
-        return False
-      error('MSVC Compiler could not be detected. ({})'.format(exc))
+    arch = None
+    version = None
+    msvc_deps_prefix = None
+    with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
+      # Determine the msvc_deps_prefix by making a small test. The
+      # compilation will not succeed since no entry point is defined.
+      fp.write(b'#include <stddef.h>\n')
+      fp.close()
+      try:
+        p = Process([self.program, '/showIncludes', fp.name])
+      except Process.ExitCodeError as exc:
+        p = exc.process
+      except OSError as exc:
+        if silent:
+          return False
+        error('MSVC could not be detected ({})'.format(exc))
+      finally:
+        os.remove(fp.name)
 
-    m = re.search('compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)', p.stderr, re.I)
-    if not m:
-      if silent:
-        return False
-      error('MSVC Compiler could not be detected. (unexpected output)')
+      # Extract the compiler version and architecture from stdout.
+      expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+      match = re.search(expr, p.stderr, re.I)
+      if not match:
+        if silent:
+          return False
+        warn(p.stdout)
+        error('MSVC version and architecture could not be detected (see above)')
 
-    self.version = m.group(1)
-    self.arch = m.group(2)
+      arch = match.group(2)
+      version = match.group(1)
+
+      # Find the "Note: including file:" in the current language. We
+      # assume that the structure is the same, only the words different.
+      # First line is the name of the file, second line starts the include
+      # notices.
+      lines = p.stdout.split('\n', 2)
+      if len(lines) >= 2:
+        match = re.search('[\w\s]+:[\w\s]+:', lines[1])
+        if match:
+          msvc_deps_prefix = match.group(0)
+
+    # XXX: Ideally, the msvc_deps_prefix could be set on a per-rule basis
+    # instead of globally.
+    if not msvc_deps_prefix:
+      warn('msvc_deps_prefix could not be determined, fallback on english version')
+      ninja.msvc_deps_prefix = 'Note: including file:'
+    else:
+      ninja.msvc_deps_prefix = msvc_deps_prefix
+
+    self.arch = arch
+    self.version = version
     return True
 
   def get_file_type(self, fn):
