@@ -130,7 +130,8 @@ def _export(fp, session, default_targets):
       elif target.inputs:
         writer.build(target.outputs, rule, target.inputs, implicit=target.requires)
 
-      writer.build(rule, 'phony', target.outputs)
+      if not target.meta.get('no_phony', False):
+        writer.build(rule, 'phony', target.outputs)
       writer.newline()
 
     if module == session.main_module and module.default_target:
