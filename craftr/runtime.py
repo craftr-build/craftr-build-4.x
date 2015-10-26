@@ -321,13 +321,19 @@ class Module(object):
     data.dirname = craftr.utils.path.dirname
     data.normpath = craftr.utils.path.normpath
     data.basename = craftr.utils.path.basename
-    data.glob = craftr.utils.path.glob
+    data.glob = self.__glob
+    data.local = self.__local
     data.move = craftr.utils.path.move
     data.addprefix = craftr.utils.path.addprefix
     data.addsuffix = craftr.utils.path.addsuffix
     data.rmvsuffix = craftr.utils.path.rmvsuffix
     data.autoexpand = craftr.utils.lists.autoexpand
     data.Process = craftr.utils.shell.Process
+    data.Translator = craftr.utils.Translator
+    data.get_calling_module = craftr.utils.get_calling_module
+    data.get_assigned_name = craftr.utils.get_assigned_name
+    data.get_module_frame = craftr.utils.get_module_frame
+    data.Target = Target
 
   def read_identifier(self):
     ''' Reads the identifier from the file with the name the `Module`
@@ -619,6 +625,16 @@ class Module(object):
       message = craftr.logging.print_as_str(*args)
       raise ModuleError(self, code, message)
 
+  def __local(self, path):
+    if isinstance(path, str):
+      return craftr.utils.path.normpath(path, self.locals.project_dir)
+    else:
+      return [self.__local(x) for x in path]
+
+  def __glob(self, *paths):
+    paths = (self.__local(p) for p in paths)
+    return craftr.utils.path.glob(*paths)
+
 
 class _ModuleObject(object):
   ''' Represents an object that is part of a Craftr module. '''
@@ -727,8 +743,7 @@ class Target(_ModuleObject):
     for key, value in sorted(kwargs.items(), key=lambda x: x[0]):
       if not re.match('command\d?$', key):
         raise TypeError('unexpected keyword argument ' + key)
-      if not isinstance(value, list):
-        raise TypeError('<' + key + '> must be a list', type(value))
+      value = autoexpand(value)
       self.commands.append(autoexpand(value))
 
   def __iter__(self):

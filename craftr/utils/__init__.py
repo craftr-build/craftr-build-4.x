@@ -30,6 +30,76 @@ import craftr
 import collections
 
 
+class Translator(object):
+  ''' The `Translator` is a base class for all classes that aim to
+  implement building command-line arguments based on a set of options.
+  Subclasses must implement methods that start with `_handle...()`
+  that will be called for each key in the specified options dictionary.
+
+  All `_handle...()` function will be invoked with all options. However,
+  it usually makes sense to filter the options using function arguments
+  and consume the rest with `**kwargs`. Example:
+
+      def _handle_autodeps(self, autodeps=True, depfile='%%out.d', **kwargs):
+        if autodeps and depfile:
+          self.result.command += ['-MMD', '-MF', depfile]
+          self.result.meta['depfile'] = depfile
+
+  Only while the `_handle...()` functions are being called,
+  `Translator.result` is set to a `Translator.Result` object. Handler
+  methods are invoked sorted by name.
+
+  Attributes:
+    options (dict): A dictionary of options that will be merged with
+      the options specified to `translate()`. Existing keys will simply
+      be shadowed by the `translate()` options.
+    result (Translator.Result): Only set inside the `translate()` call.
+  '''
+
+  class Result(object):
+    __slots__ = ('program', 'command', 'meta', 'requires')
+    def __init__(self):
+      super().__init__()
+      self.program = None
+      self.command = []
+      self.meta = {}
+      self.requires = []
+    def __iter__(self):
+      assert self.program is not None, 'translation result has no "program"'
+      yield self.program
+      yield from self.command
+
+  def __init__(self, **options):
+    super().__init__()
+    self.options = options
+
+  def translate(self, __prefix='', **options):
+    ''' Calls the handler methods with the specified `**options`,
+    merged with the instance-level options. If *__prefix* is specified,
+    it will call only the handler methods that are followed by the
+    *__prefix* after the `_handle` string. '''
+
+    new_options = self.options.copy()
+    new_options.update(options)
+    self.result = Translator.Result()
+    try:
+      attrs = dir(self)
+      attrs.sort()
+      for key in attrs:
+        if not key.startswith('_handle'):
+          continue
+        if __prefix and not key[7:].startswith(__prefix):
+          continue
+        value = getattr(self, key)
+        if callable(value):
+          value(**new_options)
+      if not self.result.program:
+        raise RuntimeError('translation result has no "program"')
+      return self.result
+    finally:
+      del self.result
+
+
 class DataEntity(object):
   ''' Container for data of a module or a script. '''
 
