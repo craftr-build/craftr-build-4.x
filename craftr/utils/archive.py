@@ -19,10 +19,12 @@
 # THE SOFTWARE.
 ''' Utilities for working with archive files. '''
 
+from . import lists, path
+from ..logging import clear_line
+
 import os
 import errno
 import zipfile
-from craftr.logging import clear_line
 
 
 def build(filename, base_dir, include=(), exclude=(), optional=(),

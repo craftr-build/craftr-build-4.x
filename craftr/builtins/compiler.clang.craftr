@@ -171,6 +171,8 @@ class CCompiler(_base.BaseCompiler):
 
 class CxxCompiler(CCompiler):
 
+  program = 'clang++'
+
   def init_default_options(self):
     self.options.setdefault('lang', 'c++')
     super().init_default_options()
