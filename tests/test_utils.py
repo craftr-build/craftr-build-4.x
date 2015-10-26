@@ -112,7 +112,7 @@ class ListsTest(unittest.TestCase):
 class DisTest(unittest.TestCase):
 
   def test_get_assigned_name(self):
-    from craftr.utils.dis import get_assigned_name
+    from craftr.utils import get_assigned_name
     var = get_assigned_name(sys._getframe())
     self.assertEqual(var, 'var')
     obj = type('', (), {})()
