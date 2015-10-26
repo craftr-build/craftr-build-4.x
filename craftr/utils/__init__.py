@@ -18,18 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import dis
 from . import ident
 from . import lists
 from . import path
 from . import proxy
 from . import shell
-import os
+
 import sys
-import errno
+import dis
 import craftr
 import collections
-import zipfile
 
 
 class DataEntity(object):
@@ -50,23 +48,6 @@ def singleton(x):
   return x()
 
 
-def accept_keys(dictionary, keys, name='key'):
-  ''' This function ensures that the *dictionary* only contains the
-  specified *keys*. *keys* can be a string in which case it is split
-  by whitespace or comma. A `TypeError` is raised if an invalid key
-  is detected. '''
-
-  if isinstance(keys, str):
-    if ',' in keys:
-      keys = keys.split(',')
-    else:
-      keys = keys.split()
-  invalids = set(dictionary.keys()).difference(set(keys))
-  if invalids:
-    key = next(iter(invalids))
-    raise TypeError('unexpected {} {!r}'.format(name, key))
-
-
 def get_calling_module(module=None):
   ''' Call this from a rule function to retrieve the craftr module that
   was calling the function from the stackframe. If the module can not
@@ -85,50 +66,58 @@ def get_calling_module(module=None):
   return module
 
 
-def build_archive(filename, base_dir, include=(), exclude=(), optional=(),
-    prefix=None, quiet=False):
-  ''' Build a ZIP archive at *filename* and include the specified files.
-  The *base_dir* is stripped from the absolute filenames to find the
-  arcname. '''
+def get_module_frame(module):
+  ''' Returns the global scope (stack frame) at which *module* is being
+  evaluated. This is usually used with `get_assigned_name()` to deduce
+  the name of a target or pool declaration. '''
 
-  def expand(filelist):
-    result = set()
-    for item in lists.autoexpand(filelist):
-      if not os.path.isabs(item):
-        item = path.normpath(os.path.join(base_dir, item))
-      if os.path.isdir(item):
-        result |= set(path.glob(path.join(item, '**')))
+  # Find the frame that is executed for this module.
+  frame = sys._getframe(1)
+  while frame:
+    if frame.f_locals is vars(module.locals):
+      break
+    frame = frame.f_back
+  if not frame:
+    raise RuntimeError('module frame could not be found')
+  return frame
+
+
+def get_assigned_name(frame):
+  ''' Checks the bytecode of *frame* to find the name of the variable
+  a result is being assigned to and returns that name. Returns the full
+  left operand of the assignment. Raises a `ValueError` if the variable
+  name could not be retrieved from the bytecode (eg. if an unpack sequence
+  is on the left side of the assignment).
+
+      >>> var = get_assigned_frame(sys._getframe())
+      >>> assert var == 'var'
+  '''
+
+  SEARCHING, MATCHED = 1, 2
+  state = SEARCHING
+  result = ''
+  for op in dis.get_instructions(frame.f_code):
+    if state == SEARCHING and op.offset == frame.f_lasti:
+      state = MATCHED
+    elif state == MATCHED:
+      if result:
+        if op.opname == 'LOAD_ATTR':
+          result += op.argval + '.'
+        elif op.opname == 'STORE_ATTR':
+          result += op.argval
+          break
+        else:
+          raise ValueError('expected {LOAD_ATTR, STORE_ATTR}', op.opname)
       else:
-        result |= set(path.autoglob(item))
-    return set(map(path.normpath, result))
+        if op.opname in ('LOAD_NAME', 'LOAD_FAST'):
+          result += op.argval + '.'
+        elif op.opname in ('STORE_NAME', 'STORE_FAST'):
+          result = op.argval
+          break
+        else:
+          message = 'expected {LOAD_NAME, LOAD_FAST, STORE_NAME, STORE_FAST}'
+          raise ValueError(message, op.opname)
 
-  files = expand(include) - expand(exclude)
-  optional = expand(optional) - files
-
-  for fn in files:
-    if not os.path.exists(fn):
-      raise OSError(errno.ENOENT, 'No such file or directory: {!r}'.format(fn))
-  for fn in optional:
-    if os.path.exists(fn):
-      files.add(fn)
-
-  if not files:
-    raise ValueError('no files to build an archive from')
-
-  zf = zipfile.ZipFile(filename, 'w')
-  for fn in files:
-    arcname = path.relpath(fn, base_dir).replace('\\', '/')
-    if arcname == os.curdir or arcname.startswith(os.pardir):
-      raise ValueError('pathname not a subdir of basedir', fn, base_dir)
-    if prefix:
-      arcname = prefix + '/' + arcname
-    if not quiet:
-      craftr.logging.clear_line()
-      print('writing {!r}... '.format(arcname), end='')
-    zf.write(fn, arcname)
-    if not quiet:
-      print('done.', end='')
-  zf.close()
-  if not quiet:
-    craftr.logging.clear_line()
-    print('{} files compressed in {!r}'.format(len(files), filename))
+  if not result:
+    raise RuntimeError('last frame instruction not found')
+  return result

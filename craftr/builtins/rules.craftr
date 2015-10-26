@@ -24,8 +24,7 @@ not categorized for a specific language and can be useful in any kind
 of environment. '''
 
 from craftr.runtime import Target
-from craftr.utils import get_calling_module
-from craftr.utils.dis import get_assigned_name
+from craftr import utils
 
 
 def run(executable, additional_flags=(), pool='console',
@@ -40,11 +39,11 @@ def run(executable, additional_flags=(), pool='console',
   with the *unique_name*. This name should not collide with any
   other output file or unique name in other modules. '''
 
-  module = module or get_calling_module()
+  module = utils.get_calling_module(module)
   executable = autoexpand(executable)
   if len(executable) != 1:
     raise ValueError('expected exactly one item for *executable*')
-  target_name = get_assigned_name(module.get_global_frame())
+  target_name = utils.get_assigned_name(utils.get_module_frame(module))
   if unique_name is None:
     # The name without _ appended is arleady taken by the actual target
     # name. We need that name since the target *outputs* define the

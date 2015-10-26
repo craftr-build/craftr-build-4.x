@@ -529,9 +529,9 @@ class Module(object):
 
     if not name:
       if not _parent_frame:
-        _parent_frame = self.get_global_frame()
+        _parent_frame = craftr.utils.get_module_frame(self)
       try:
-        name = utils.dis.get_assigned_name(_parent_frame)
+        name = utils.get_assigned_name(_parent_frame)
       except ValueError as exc:
         raise RuntimeError('assigned name could not be derived', exc)
       if '.' in name:
@@ -569,9 +569,9 @@ class Module(object):
 
     if not name:
       if not _parent_frame:
-        _parent_frame = self.get_global_frame()
+        _parent_frame = craftr.utils.get_module_frame(self)
       try:
-        name = utils.dis.get_assigned_name(_parent_frame)
+        name = utils.get_assigned_name(_parent_frame)
       except ValueError as exc:
         raise RuntimeError('assigned name could not be derived', exc)
       if '.' in name:
@@ -605,21 +605,6 @@ class Module(object):
     for part in parts[:-1]:
       obj = getattr(obj, part)
     return (obj, parts[-1])
-
-  def get_global_frame(self):
-    ''' Returns the closest stack frame that is executed in this modules
-    local scope as global variables. To say it in different words, this is
-    the frame of the global scope of the module's script. '''
-
-    # Find the frame that is executed for this module.
-    frame = sys._getframe(1)
-    while frame:
-      if frame.f_locals is vars(self.locals):
-        break
-      frame = frame.f_back
-    if not frame:
-      raise RuntimeError('module frame could not be found')
-    return frame
 
   def __info(self, *args, **kwargs):
     self.logger.info(*args, frame=sys._getframe().f_back, **kwargs)

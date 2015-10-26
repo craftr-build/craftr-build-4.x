@@ -32,3 +32,4 @@ OUT = '%%out'
 
 from . import backend
 from . import runtime
+from . import utils
