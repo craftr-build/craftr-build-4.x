@@ -93,7 +93,7 @@ def _export(fp, session, default_targets):
 
     for target in sorted(module.targets.values(), key=lambda x: x.name):
       if len(target.commands) != 1:
-        session.error('Ninja export currently supports only one command')
+        raise RuntimeError('Ninja export currently supports only one command ({!r})'.format(target.identifier))
 
       rule = ident(target.identifier)
 

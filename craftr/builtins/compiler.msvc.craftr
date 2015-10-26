@@ -89,6 +89,7 @@ class CCompiler(_base.BaseCompiler):
 
     self.arch = arch
     self.version = version
+    self.msvc_deps_prefix = msvc_deps_prefix
     return True
 
   def get_file_type(self, fn):

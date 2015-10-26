@@ -31,10 +31,10 @@ def get_class_names(filenames, base_dir):
 
 class JavaC(Translator):
 
-  def _handle_classes_100program(self, program='javac', **kwargs):
+  def _translate_classes_100program(self, program='javac', **kwargs):
     self.result.program = program
 
-  def _handle_classes_500trivial(self, debug=False, nowarn=False,
+  def _translate_classes_500trivial(self, debug=False, nowarn=False,
       verbose=False, deprecation=False, classpath=(), encoding=None,
       Werror=False, options_file=None, Xlint=None, Xdoclint=False,
       obj_dir=None, **kwargs):
@@ -66,7 +66,7 @@ class JavaC(Translator):
     if obj_dir:
       self.result.command += ['-d', obj_dir]
 
-  def _handle_classes_900infiles(self, **kwargs):
+  def _translate_classes_900infiles(self, **kwargs):
     self.result.command += ['%%in']
 
   def classes(self, sources, src_dir, obj_dir=None, module=None, **kwargs):
@@ -82,7 +82,7 @@ class JavaC(Translator):
       meta_java_classes=get_class_names(sources, src_dir),
     )
 
-  def _handle_jar_100program(self, obj_dir, classes, program='jar',
+  def _translate_jar_100program(self, obj_dir, classes, program='jar',
       manifest=None, no_manifest=False, normalise_pack200=False,
       no_compression=False, entry_point=None, additional_flags='', **kwargs):
     self.result.program = program

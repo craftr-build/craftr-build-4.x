@@ -321,6 +321,7 @@ class Module(object):
     data.dirname = craftr.utils.path.dirname
     data.normpath = craftr.utils.path.normpath
     data.basename = craftr.utils.path.basename
+    data.commonpath = craftr.utils.path.commonpath
     data.glob = self.__glob
     data.local = self.__local
     data.move = craftr.utils.path.move
