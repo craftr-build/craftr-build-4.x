@@ -82,9 +82,9 @@ class JavaC(Translator):
       meta_java_classes=get_class_names(sources, src_dir),
     )
 
-  def _handle_jar_100program(self, program='jar', manifest=None,
-      normalise_pack200=False, no_compression=False, no_manifest=False,
-      entry_point=None, additional_flags='', **kwargs):
+  def _handle_jar_100program(self, obj_dir, classes, program='jar',
+      manifest=None, no_manifest=False, normalise_pack200=False,
+      no_compression=False, entry_point=None, additional_flags='', **kwargs):
     self.result.program = program
     if manifest:
       additional_flags += 'm'
@@ -102,11 +102,12 @@ class JavaC(Translator):
       self.result.command += [manifest]
     if entry_point:
       self.result.command += [entry_point]
-    self.result.command += ['%%in']
+    self.result.command += ['-C', obj_dir]
+    self.result.command += move(classes, obj_dir, '')
 
-  def jar(self, filename, classes, module=None, **kwargs):
+  def jar(self, obj_dir, classes, filename, module=None, **kwargs):
     module = get_calling_module(module)
-    result = self.translate('_jar', **kwargs)
+    result = self.translate('_jar', obj_dir=obj_dir, classes=classes, **kwargs)
 
     return module.target(
       inputs=classes,
