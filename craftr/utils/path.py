@@ -20,7 +20,8 @@
 
 import collections
 import os
-from glob2 import glob
+import glob2
+
 from os.path import join, split, dirname, basename, relpath
 
 
@@ -33,6 +34,16 @@ def autoglob(path):
     return glob(path)
   else:
     return [path]
+
+
+def glob(*patterns):
+  ''' Wrapper for `glob2.glob()` that accepts an arbitrary number of
+  patterns and matches them. The paths are normalized with `normpath()`. '''
+
+  result = []
+  for pattern in patterns:
+    result += [normpath(x) for x in glob2.glob(normpath(pattern))]
+  return result
 
 
 def commonpath(paths):

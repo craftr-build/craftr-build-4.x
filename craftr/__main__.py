@@ -48,6 +48,10 @@ def parse_args():
       'main Craftr module if the -m/--module option is not specified. '
       'Defaults to the current working directry.')
   parser.add_argument(
+    '-b', '--builddir',
+    help='Switch to this directory and use the original directory for '
+      '-c/--cdir. Can be combined with -c/--cdir.')
+  parser.add_argument(
     '-m', '--module',
     help='The name of the main Craftr module. If omitted, the "Craftfile" '
       'from the current working directory is used.')
@@ -177,6 +181,13 @@ def main():
     session.logger.level = craftr.logging.INFO + 1
   else:
     session.logger.level = craftr.logging.INFO
+
+  if args.builddir:
+    if not args.cdir:
+      args.cdir = os.getcwd()
+    else:
+      args.cdir = os.path.abspath(args.cdir)
+    os.chdir(args.builddir)
 
   # Use the local Craftfile if no explicit module was specified.
   if not args.module:
