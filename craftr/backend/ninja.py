@@ -127,7 +127,7 @@ def _export(fp, session, default_targets):
             "the number of output files".format(target.identifier))
         for infile, outfile in zip(target.inputs, target.outputs):
           writer.build([outfile], rule, [infile], implicit=target.requires)
-      elif target.inputs:
+      else:
         writer.build(target.outputs, rule, target.inputs, implicit=target.requires)
 
       if not target.meta.get('no_phony', False):
