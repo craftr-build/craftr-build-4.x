@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.0.10'
+__version__ = '0.0.10-dev'
 
 import sys
 if sys.version < '3.4':

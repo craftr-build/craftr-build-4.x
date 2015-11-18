@@ -192,6 +192,7 @@ def pre_main_build(args, session):
   if not os.path.exists(args.builddir):
     os.makedirs(args.builddir)
 
+
 def main_build(args, session, module):
   if not os.path.exists('build.ninja') or args.export:
     args.backend = 'ninja'
