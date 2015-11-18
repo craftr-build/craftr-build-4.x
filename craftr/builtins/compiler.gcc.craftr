@@ -29,9 +29,13 @@ _clang = load_module('compiler.clang')
 class CCompiler(_clang.CCompiler):
 
   name = 'GCC'
-  program = 'gcc'
 
+  def init_default_options(self):
+    self.options.setdefault('program', 'gcc')
+    super().init_default_options()
 
 class CxxCompiler(CCompiler):
 
-  program = 'g++'
+  def init_default_options(self):
+    self.options.setdefault('program', 'g++')
+    super().init_default_options()

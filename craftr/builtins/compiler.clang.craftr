@@ -23,16 +23,16 @@
 import re
 import craftr
 
+P = load_module('platform')
 _base = load_module('compiler.base')
 
 
 class CCompiler(_base.BaseCompiler):
 
   name = 'Clang'
-  program = 'clang'
 
   def init_default_options(self):
-    self.options.setdefault('lang', 'c')
+    self.options.setdefault('program', 'clang')
     super().init_default_options()
 
   def detect(self, silent=False):
@@ -102,24 +102,16 @@ class CCompiler(_base.BaseCompiler):
 
     return None
 
-  def flags(self, debug=None, output_type=None, exceptions=None, includes=(),
-      defines=(), libs=(), link_with=(), external_libs=(), ldpaths=(),
-      additional_flags=(), warning_level=None, std=None, arch=None, lang=None,
-      **options):
+  def flags(self, program, debug=None, output_type=None, exceptions=None,
+      includes=(), defines=(), libs=(), link_with=(), external_libs=(),
+      ldpaths=(), additional_flags=(), warning_level=None, std=None,
+      arch=None, **options):
     ''' Generate flags based on the specfied options. '''
 
     if output_type == 'static_library':
       return ['ar', 'rcs', '%%out', '%%in']
 
-    result = []
-
-    if lang is not None:
-      if lang == 'c':
-        result += ['clang']
-      elif lang == 'c++':
-        result += ['clang++']
-      else:
-        self.invalid_option('lang', lang)
+    result = [program]
 
     if arch is not None:
       # XXX: Validate arch value.
@@ -171,8 +163,6 @@ class CCompiler(_base.BaseCompiler):
 
 class CxxCompiler(CCompiler):
 
-  program = 'clang++'
-
   def init_default_options(self):
-    self.options.setdefault('lang', 'c++')
+    self.options.setdefault('program', 'clang++')
     super().init_default_options()
