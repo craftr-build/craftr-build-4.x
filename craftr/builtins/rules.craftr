@@ -27,7 +27,7 @@ from craftr.runtime import Target
 from craftr import utils
 
 
-def run(executable, additional_flags=(), pool='console',
+def run(executable, additional_flags=(), prepend_command=(), pool='console',
     no_dependency=False, target_name=None, module=None,
     unique_name=None, **kwargs):
   ''' Create a target that invokes the *executable* with the
@@ -53,7 +53,7 @@ def run(executable, additional_flags=(), pool='console',
     name = target_name,
     inputs = [] if no_dependency else executable,
     outputs = [unique_name],
-    command = autoexpand([executable, additional_flags]),
+    command = autoexpand([prepend_command, executable, additional_flags]),
     pool = pool,
     meta_no_phony = True,
     **kwargs
