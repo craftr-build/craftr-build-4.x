@@ -27,15 +27,15 @@ def load_backend(backend_name):
   `craftr_<x>_backend` and then `craftr.backend.<x>` where `<x>` is
   to be replaced with the actual backend name. '''
 
-  if backend_name is None:
-    return craftr.backend.null
+  if not isinstance(backend_name, str):
+    raise TypeError('expected str, got {} instead'.format(type(backend_name).__name__))
 
   try:
-    return importlib.import_module('craftr_%s_backend')
+    return importlib.import_module('craftr_{}_backend'.format(backend_name))
   except ImportError:
     pass
   try:
     return importlib.import_module('craftr.backend.' + backend_name)
   except ImportError:
     pass
-  raise ValueError("no backend named '{0}'".format(backend_name))
+  raise ValueError("no backend named '{}'".format(backend_name))

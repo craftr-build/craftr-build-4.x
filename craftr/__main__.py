@@ -108,6 +108,20 @@ def parse_args():
     help='The name of the targets. If none are specified, cleans all '
       'output files.')
 
+  build_parser = sub_parsers.add_parser(
+    'build',
+    help='Combine the export subcommand and the invokation of ninja. If '
+      'the build.ninja file already exists and --export is not specified, '
+      'it will not be exported again.')
+  build_parser.add_argument(
+    'build_dir',
+    nargs='?',
+    help='The build directory. Same as passing -b.')
+  build_parser.add_argument(
+    '-e', '--export',
+    action='store_true',
+    help='Export the build.ninja file even if it already exists.')
+
   return parser.parse_args()
 
 
@@ -167,6 +181,25 @@ def main_clean(args, session, module):
       session.warn('"{}": can not be removed (not a file)'.format(filename))
 
 
+def pre_main_build(args, session):
+  if args.build_dir:
+    if args.builddir:
+      session.error("conflicting options build_dir and -b/--builddir")
+    if not os.path.exists(args.build_dir):
+      os.makedirs(args.build_dir)
+    args.builddir = args.build_dir
+  elif not args.builddir:
+    args.builddir = 'build'
+
+
+def main_build(args, session, module):
+  if not os.path.exists('build.ninja') or args.export:
+    args.backend = 'ninja'
+    args.backend_args = []
+    main_export(args, session, module)
+  os.system('ninja')
+
+
 def main():
   args = parse_args()
   if args.version:
@@ -181,6 +214,9 @@ def main():
     session.logger.level = craftr.logging.INFO + 1
   else:
     session.logger.level = craftr.logging.INFO
+
+  if 'pre_main_' + args.cmd in globals():
+    globals()['pre_main_' + args.cmd](args, session)
 
   if args.builddir:
     if not args.cdir:
