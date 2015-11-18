@@ -215,7 +215,7 @@ def main():
   else:
     session.logger.level = craftr.logging.INFO
 
-  if 'pre_main_' + args.cmd in globals():
+  if args.cmd and 'pre_main_' + args.cmd in globals():
     globals()['pre_main_' + args.cmd](args, session)
 
   if args.builddir:
@@ -265,11 +265,10 @@ def main():
   # Load the module.
   try:
     module = session.load_module(args.module)
-    if not args.cmd:
-      return
-    session.main_module = module
-    # Dispatch the sub command procedure.
-    globals()['main_' + args.cmd](args, session, module)
+    if args.cmd:
+      session.main_module = module
+      # Dispatch the sub command procedure.
+      globals()['main_' + args.cmd](args, session, module)
   except craftr.runtime.NoSuchModule as exc:
     session.logger.debug(traceback.format_exc())
     session.error('module "{0}" could not be found'.format(exc.name))
