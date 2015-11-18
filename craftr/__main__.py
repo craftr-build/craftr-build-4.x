@@ -185,12 +185,12 @@ def pre_main_build(args, session):
   if args.build_dir:
     if args.builddir:
       session.error("conflicting options build_dir and -b/--builddir")
-    if not os.path.exists(args.build_dir):
-      os.makedirs(args.build_dir)
     args.builddir = args.build_dir
   elif not args.builddir:
     args.builddir = 'build'
 
+  if not os.path.exists(args.builddir):
+    os.makedirs(args.builddir)
 
 def main_build(args, session, module):
   if not os.path.exists('build.ninja') or args.export:
