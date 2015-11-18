@@ -32,6 +32,13 @@ for path in sys.path[:]:
   if os.path.isfile(ref_file):
     sys.path.remove(path)
 
+# If this script is run from the Craftr repositories' script/ folder,
+# we will add the repository to the search path.
+dirname = os.path.dirname(__file__)
+repo_path = os.path.dirname(dirname)
+if os.path.exists(os.path.join(repo_path, 'craftr', '__init__.py')):
+  sys.path.append(repo_path)
+
 import craftr.__main__
 if __name__ == "__main__":
   sys.exit(craftr.__main__.main())
