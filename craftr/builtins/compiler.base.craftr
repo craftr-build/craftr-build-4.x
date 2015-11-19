@@ -223,6 +223,7 @@ class BaseCompiler(object):
       inputs=sources,
       outputs=objects,
       command=command,
+      foreach=True,
       description='Building Object %%in',
       meta_type='objects',
       meta_deps=autodeps.get('deps'),
