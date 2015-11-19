@@ -197,7 +197,7 @@ def main_build(args, session, module):
     args.backend = 'ninja'
     args.backend_args = []
     main_export(args, session, module)
-  os.system('ninja')
+  return os.system('ninja')
 
 
 def main():
@@ -263,12 +263,13 @@ def main():
     session.logger.debug('setting {}.{} = {!r}'.format(modname, name, value))
 
   # Load the module.
+  ret_code = 0
   try:
     module = session.load_module(args.module)
     if args.cmd:
       session.main_module = module
       # Dispatch the sub command procedure.
-      globals()['main_' + args.cmd](args, session, module)
+      ret_code = globals()['main_' + args.cmd](args, session, module)
   except craftr.runtime.NoSuchModule as exc:
     session.logger.debug(traceback.format_exc())
     session.error('module "{0}" could not be found'.format(exc.name))
@@ -278,7 +279,7 @@ def main():
   except Exception as exc:
     session.error(traceback.format_exc())
     sys.exit(getattr(exc, 'code', 1))
-
+  sys.exit(ret_code)
 
 if __name__ == '__main__':
   main()
