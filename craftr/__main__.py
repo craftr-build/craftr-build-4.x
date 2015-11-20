@@ -18,10 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import craftr.utils, craftr.runtime, craftr.backend
+import craftr.utils, craftr.runtime, craftr.backend.ninja
 import argparse
 import os
 import traceback
+import subprocess
 import sys
 
 
@@ -121,6 +122,14 @@ def parse_args():
     '-e', '--export',
     action='store_true',
     help='Export the build.ninja file even if it already exists.')
+  build_parser.add_argument(
+    '-t', '--target',
+    help='Build only the specified target.')
+  build_parser.add_argument(
+    '-r', '--rebuild',
+    action='store_true',
+    help='If specified, first cleans the specified target or the complete '
+      'solution and then runs the build.')
 
   return parser.parse_args()
 
@@ -194,11 +203,28 @@ def pre_main_build(args, session):
 
 
 def main_build(args, session, module):
-  if not os.path.exists('build.ninja') or args.export:
-    args.backend = 'ninja'
-    args.backend_args = []
-    main_export(args, session, module)
-  return os.system('ninja')
+  def do_export():
+    if not os.path.exists('build.ninja') or args.export:
+      args.export = False
+      args.backend = 'ninja'
+      args.backend_args = []
+      main_export(args, session, module)
+  do_export()
+
+  cmd = ['ninja']
+  if args.target:
+    target = session.resolve_target(args.target, module)
+    cmd.append(craftr.backend.ninja.ident(target.identifier))
+  if args.rebuild:
+    clean_cmd = cmd[:]
+    clean_cmd.insert(1, '-t')
+    clean_cmd.insert(2, 'clean')
+    res = subprocess.call(clean_cmd, shell=True)
+    if res:
+      return res
+
+  do_export()
+  return subprocess.call(cmd, shell=True)
 
 
 def main():
