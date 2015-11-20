@@ -127,7 +127,7 @@ class CCompiler(_base.BaseCompiler):
 
       if warning_level is not None:
         if warning_level == 'all':
-          result += ['/Wall']
+          result += ['/W4']  # /Wall *really* shows a lot of warnings, including no-ops in the standard library
         elif warning_level in (0, 'none'):
           result += ['/w']
         elif 1 <= warning_level <= 4:
