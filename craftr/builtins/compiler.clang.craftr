@@ -40,7 +40,7 @@ class CCompiler(_base.BaseCompiler):
       return True  # already detected
 
     try:
-      p = Process([self.program, '--version'])
+      p = Process([self.options['program'], '--version'])
     except (Process.ExitCodeError, OSError) as exc:
       if silent:
         return False
