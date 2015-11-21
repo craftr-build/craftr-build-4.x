@@ -32,7 +32,10 @@ _base = load_module('compiler.base')
 class CCompiler(_base.BaseCompiler):
 
   name = 'MSVC'
-  program = 'cl'
+
+  def init_default_options(self):
+    self.options.setdefault('program', 'cl')
+    super().init_default_options()
 
   def detect(self, silent=False):
     if self.version:
@@ -47,7 +50,7 @@ class CCompiler(_base.BaseCompiler):
       fp.write(b'#include <stddef.h>\n')
       fp.close()
       try:
-        p = Process([self.program, '/Zs', '/showIncludes', fp.name])
+        p = Process([self.options['program'], '/Zs', '/showIncludes', fp.name])
       except Process.ExitCodeError as exc:
         p = exc.process
       except OSError as exc:

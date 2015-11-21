@@ -115,16 +115,13 @@ def parse_args():
       'the build.ninja file already exists and --export is not specified, '
       'it will not be exported again.')
   build_parser.add_argument(
-    'build_dir',
-    nargs='?',
-    help='The build directory. Same as passing -b.')
+    'targets',
+    nargs='*',
+    help='One or more targets. Default selection is targeted when none is passed.')
   build_parser.add_argument(
     '-e', '--export',
     action='store_true',
     help='Export the build.ninja file even if it already exists.')
-  build_parser.add_argument(
-    '-t', '--target',
-    help='Build only the specified target.')
   build_parser.add_argument(
     '-r', '--rebuild',
     action='store_true',
@@ -191,39 +188,30 @@ def main_clean(args, session, module):
 
 
 def pre_main_build(args, session):
-  if args.build_dir:
-    if args.builddir:
-      session.error("conflicting options build_dir and -b/--builddir")
-    args.builddir = args.build_dir
-  elif not args.builddir:
+  if not args.builddir:
     args.builddir = 'build'
-
   if not os.path.exists(args.builddir):
     os.makedirs(args.builddir)
 
 
 def main_build(args, session, module):
-  def do_export():
-    if not os.path.exists('build.ninja') or args.export:
-      args.export = False
-      args.backend = 'ninja'
-      args.backend_args = []
-      main_export(args, session, module)
-  do_export()
+  from craftr.backend.ninja import ident
 
-  cmd = ['ninja']
-  if args.target:
-    target = session.resolve_target(args.target, module)
-    cmd.append(craftr.backend.ninja.ident(target.identifier))
+  targets = [session.resolve_target(t, module) for t in args.targets]
+  if not os.path.exists('build.ninja') or args.export:
+    args.export = False
+    args.backend = 'ninja'
+    args.backend_args = []
+    main_export(args, session, module)
+
   if args.rebuild:
-    clean_cmd = cmd[:]
-    clean_cmd.insert(1, '-t')
-    clean_cmd.insert(2, 'clean')
+    clean_cmd = ['ninja', '-t', 'clean']
+    clean_cmd += [ident(t.identifier) for t in targets]
     res = subprocess.call(clean_cmd, shell=True)
     if res:
       return res
 
-  do_export()
+  cmd = ['ninja'] + [ident(t.identifier) for t in targets]
   return subprocess.call(cmd, shell=True)
 
 
