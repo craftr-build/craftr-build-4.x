@@ -126,9 +126,11 @@ def _export(fp, session, default_targets):
           session.error("target '{}': number of input files must match "
             "the number of output files".format(target.identifier))
         for infile, outfile in zip(target.inputs, target.outputs):
-          writer.build([outfile], rule, [infile], implicit=target.requires)
+          writer.build([outfile], rule, [infile], implicit=target.implicit_deps,
+            order_only=target.order_only_deps)
       else:
-        writer.build(target.outputs, rule, target.inputs, implicit=target.requires)
+        writer.build(target.outputs, rule, target.inputs,
+          implicit=target.implicit_deps, order_only=target.order_only_deps)
 
       if not target.meta.get('no_phony', False):
         writer.build(rule, 'phony', target.outputs)

@@ -669,9 +669,15 @@ class Target(_ModuleObject):
     name (str): The name of the target which must be a valid identifier.
     inputs (list of str): A list of input files (may be nested).
     outputs (list of str): A list of output files (may be nested).
-    requires (list of str): A list of additional requirements
+    requires (list of str): *Deprecated* Use `implicit_deps` instead.
+      Alias for *implicit_deps*.
+    implicit_deps (list of str): A list of additional requirements
       (filenames) that need to be available before the target is
       built.
+    order_only_deps (list of str): A list of additional requirements
+      (filenames) that are required to be built in order before the
+      actual target is built. For more information, visit
+      https://ninja-build.org/manual.html#ref_dependencies.
     foreach (bool): If True, the *command* is executed for each pair
       of input and output files. The length of *inputs* and *outputs*
       must be the same.
@@ -708,13 +714,23 @@ class Target(_ModuleObject):
   '''
 
   def __init__(self, module, name, inputs, outputs, requires=(),
-      foreach=False, description=None, pool=None, **kwargs):
+      implicit_deps=(), order_only_deps=(), foreach=False, description=None,
+      pool=None, **kwargs):
     super().__init__(module, name)
     from craftr.utils.lists import autoexpand
 
     inputs = autoexpand(inputs)
     outputs = autoexpand(outputs)
     requires = autoexpand(requires)
+    implicit_deps = autoexpand(implicit_deps)
+    order_only_deps = autoexpand(order_only_deps)
+
+    if requires and implicit_deps:
+      raise TypeError("can't use requires and implicit_deps at the same time")
+    if requires:
+      warnings.warn("Target.__init__(requires) is deprecated, use "
+        "implicit_deps instead", DeprecationWarning)
+      implicit_deps = requires
 
     if not isinstance(module, Module):
       raise TypeError('<module> must be a Module object', type(module))
@@ -727,7 +743,8 @@ class Target(_ModuleObject):
 
     self.inputs = inputs
     self.outputs = outputs
-    self.requires = requires
+    self.implicit_deps = implicit_deps
+    self.order_only_deps = order_only_deps
     self.foreach = foreach
     self.description = description
     self.pool = pool
@@ -749,6 +766,16 @@ class Target(_ModuleObject):
 
   def __iter__(self):
     return iter(self.outputs)
+
+  @property
+  def requires(self):
+    ''' *Deprecated*. Use `Target.implicit_deps` instead. '''
+
+    return self.implicit_deps
+
+  @requires.setter
+  def requires(self, value):
+    self.implicit_deps = value
 
 
 class Pool(_ModuleObject):

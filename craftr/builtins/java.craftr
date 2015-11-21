@@ -98,7 +98,7 @@ class JavaC(Translator):
       additional_flags += 'M'
     self.result.command += ['cvf' + additional_flags, '%%out']
     if manifest:
-      self.result.requires += [manifest]
+      self.result.implicit_deps += [manifest]
       self.result.command += [manifest]
     if entry_point:
       self.result.command += [entry_point]
@@ -112,7 +112,7 @@ class JavaC(Translator):
     return module.target(
       inputs=classes,
       outputs=filename,
-      requires=result.requires,
+      requires=result.implicit_deps,
       command=result,
     )
 

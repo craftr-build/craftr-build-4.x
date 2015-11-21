@@ -58,13 +58,13 @@ class Translator(object):
   '''
 
   class Result(object):
-    __slots__ = ('program', 'command', 'meta', 'requires', 'options')
+    __slots__ = ('program', 'command', 'meta', 'implicit_deps', 'options')
     def __init__(self, options):
       super().__init__()
       self.program = None
       self.command = []
       self.meta = {}
-      self.requires = []
+      self.implicit_deps = []
       self.options = options
     def __iter__(self):
       assert self.program is not None, 'translation result has no "program"'
