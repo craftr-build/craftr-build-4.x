@@ -21,19 +21,15 @@ objects = cxx.objects(
 main = cxx.executable(
   filename = 'main',
   inputs = [objects],
+  default = True,
 )
 
 run = load_module('rules').run(
   executable = main,
-  unique_name = 'run',
 )
 ```
 
-To build, run
-
-    mkdir build && cd build
-    craftr -c.. export && ninja
-
+Now simply run `craftr build` and the `main` target will be built.
 Check out the [Wiki][] for additional information and examples!
 
 ## Installation
