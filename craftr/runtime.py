@@ -290,7 +290,7 @@ class Module(object):
     data = data or self.locals
 
     # Pythonic globals
-    data.__name__ = '__craftr__'
+    data.__name__ = self.identifier
     data.__file__ = self.filename
 
     # General globals
