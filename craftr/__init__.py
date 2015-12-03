@@ -125,6 +125,14 @@ class Target(object):
       raise ValueError('command can not be empty')
     if not inputs:
       raise ValueError('target must have at least one input')
+    if not isinstance(inputs, list):
+      raise TypeError('inputs must be a list of strings')
+    if not isinstance(outputs, list):
+      raise TypeError('outputs must be a list of strings')
+    if implicit_deps is not None and not isinstance(implicit_deps, list):
+      raise TypeError('implicit_deps must be a list of strings')
+    if order_only_deps is not None and not isinstance(order_only_deps, list):
+      raise TypeError('order_only_deps must be a list of strings')
 
     self.module = module
     self.name = name
