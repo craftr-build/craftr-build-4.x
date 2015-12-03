@@ -29,6 +29,8 @@ import os
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-m', help='The name of a Craftr module to run.')
+  parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
+  parser.add_argument('-b', nargs='*', help='Build all or the specified targets.')
   args = parser.parse_args()
 
   if not args.m:
@@ -43,7 +45,12 @@ def main():
   craftr.ext.install()
   with craftr.magic.enter_context(craftr.session, craftr.Session()):
     module = importlib.import_module('craftr.ext.' + args.m)
-
+    if args.e:
+      with open('build.ninja', 'w') as fp:
+        craftr.ninja.export(fp)
+    if args.b:
+      # xxx: todo
+      pass
 
 if __name__ == '__main__':
   main()

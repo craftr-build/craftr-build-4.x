@@ -31,7 +31,7 @@ from craftr import magic
 session = magic.new_context('session')
 module = magic.new_context('module')
 
-from craftr import ext, path
+from craftr import ext, path, ninja
 from craftr.env import Environment
 
 
@@ -104,13 +104,16 @@ class Target(object):
       executed implicitly when running Ninja.  # xxx: todo!
     vars: A dictionary of additional variables that are available for
       expansion in the target's rule.
+    deps: The mode for automatic dependency detection for C/C++ targets.
+      See the "C/C++ Header Depenencies" section in the [Ninja Manual][].
+    depfile: A filename that contains additional dependencies.
 
   [Ninja Manual]: https://ninja-build.org/manual.html
   '''
 
   def __init__(self, command, inputs, outputs, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
-      vars=None, module=None, name=None):
+      vars=None, deps=None, depfile=None, module=None, name=None):
 
     if not module:
       module = globals()['module']()
@@ -120,11 +123,13 @@ class Target(object):
       raise ValueError('number of input files must match number of output files')
     if not command:
       raise ValueError('command can not be empty')
+    if not inputs:
+      raise ValueError('target must have at least one input')
 
     self.module = module
     self.name = name
     self.command = command
-    self.input = inputs
+    self.inputs = inputs
     self.outputs = outputs
     self.implicit_deps = implicit_deps
     self.order_only_deps = order_only_deps
@@ -134,6 +139,8 @@ class Target(object):
     self.vars = {}
     if vars:
       self.vars.update(vars)
+    self.deps = deps
+    self.depfile = depfile
 
     if self.fullname in module.__session__.targets:
       raise ValueError('target {0!r} already exists'.format(self.fullname))
