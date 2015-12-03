@@ -20,10 +20,8 @@
 
 __all__ = ['Session']
 
-from . import ext
-from .env import Environment
-
 import sys
+import craftr
 
 
 class Session(object):
@@ -34,7 +32,7 @@ class Session(object):
 
   def __init__(self):
     super().__init__()
-    self.env = Environment()
+    self.env = craftr.env.Environment()
     self.modules = {}
 
   def on_context_enter(self, prev):
@@ -53,7 +51,13 @@ class Session(object):
         del sys.modules[key]
         try:
           # Remove the module from the `craftr.ext` modules contents, too.
-          delattr(ext, name.split('.')[0])
+          delattr(craftr.ext, name.split('.')[0])
         except AttributeError:
           pass
 
+
+def init_module(module):
+  ''' Called when a craftr module is being imported before it is
+  executed to initialize its contents. '''
+
+  module.project_dir = craftr.path.dirname(module.__file__)

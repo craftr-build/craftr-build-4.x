@@ -18,9 +18,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['session', 'module']
+from craftr import module
+from os.path import join, split, dirname, basename, isabs, isfile, isdir, exists
 
-import craftr.magic
+import os
+import glob2
 
-session = craftr.magic.new_context('session')
-module = craftr.magic.new_context('module')
+
+def glob(*patterns):
+  ''' Wrapper for `glob2.glob()` that accepts an arbitrary number of
+  patterns and matches them. The paths are normalized with `normpath()`.
+  If called from within a module, relative patterns are assumed relative
+  to the modules parent directory. '''
+
+  result = []
+  for pattern in patterns:
+    if module and not isabs(pattern):
+      pattern = join(module.project_dir, pattern)
+    result += [normpath(x) for x in glob2.glob(normpath(pattern))]
+  return result
+
+
+def normpath(path):
+  ''' Normalize a filesystem path. This implementation is more
+  consistent than `os.path.normpath()`. '''
+
+  path = os.path.normpath(os.path.abspath(path))
+  if os.name == 'nt':
+    path = path.lower()
+  return path
+
+
+def listdir(path):
+  ''' This version of `os.listdir` yields absolute paths. '''
+
+  return (os.path.join(path, x) for x in os.listdir(path))

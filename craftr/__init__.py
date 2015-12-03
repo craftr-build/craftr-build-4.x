@@ -25,3 +25,16 @@ __version__ = '2.0.0-dev'
 import sys
 if sys.version < '3.4':
   raise EnvironmentError('craftr requires Python3.4')
+
+from craftr import magic
+
+session = magic.new_context('session')
+module = magic.new_context('module')
+
+from craftr import runtime, ext
+from craftr import path
+
+from craftr.env import Environment
+from craftr.runtime import Session
+
+ext.install()
