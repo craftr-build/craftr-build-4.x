@@ -18,9 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['Environment']
-
-
 class Environment(object):
   ''' This class is a container for configuration values. An instance
   of this class can inherit values from another. Values can be set,

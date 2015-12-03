@@ -18,8 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['CraftrImporter']
-
 from craftr import magic, runtime, path
 
 import craftr
@@ -34,6 +32,24 @@ import warnings
 __path__ = []
 
 
+def get_module_ident(filename):
+  ''' Extracts the module identifier from file at the specified
+  *filename* and returns it, or None if the file does not contain
+  a `craftr_module(...)` declaration in the first comment-block. '''
+
+  expr = re.compile('#\s*craftr_module\((\w+)\)')
+  with open(filename, "r") as fp:
+    in_comment_block = False
+    for line in map(str.rstrip, fp):
+      if line.startswith('#'):
+        in_comment_block = True
+        match = expr.match(line)
+        if match:
+          return match.group(1)
+      elif in_comment_block:
+        return False
+
+
 class CraftrImporter(object):
   ''' Meta-path import hook for importing Craftr modules from the
   `craftr.ext` parent namespace. Only functions inside a session
@@ -43,27 +59,12 @@ class CraftrImporter(object):
     super().__init__()
     self._cache = {}
 
-  def _get_module_ident(self, filename):
-    ''' Extracts the module identifier from file at the specified
-    *filename* and returns it, or None if the file does not contain
-    a `craftr_module(...)` declaration in the first comment-block. '''
 
-    expr = re.compile('#\s*craftr_module\((\w+)\)')
-    with open(filename, "r") as fp:
-      in_comment_block = False
-      for line in map(str.rstrip, fp):
-        if line.startswith('#'):
-          in_comment_block = True
-          match = expr.match(line)
-          if match:
-            return match.group(1)
-        elif in_comment_block:
-          return False
 
   def _check_file(self, filename):
     if not path.isfile(filename):
       return False
-    ident = self._get_module_ident(filename)
+    ident = get_module_ident(filename)
     if not ident:
       message = 'no craftr_module() declaration in "{0}"'.format(filename)
       warnings.warn(message, ImportWarning)
@@ -151,7 +152,7 @@ class CraftrLoader(object):
           with open(self.filename, 'r') as fp:
             exec(compile(fp.read(), self.filename, 'exec'), vars(module))
       module.__path__ = []
-      module.__session__ = magic.deref(craftr.session)
+      module.__session__ = craftr.session()
       craftr.session.modules[name] = module
       sys.modules[fullname] = module
     return module

@@ -19,21 +19,25 @@
 # THE SOFTWARE.
 ''' This module is where all the magic comes from. '''
 
-__all__ = [
-  'new_context', 'test_context', 'enter_context', 'deref',
-  'get_frame', 'get_assigned_name']
-
 from contextlib import contextmanager
-from werkzeug import LocalStack, LocalProxy
 from sys import _getframe as get_frame
 
 import dis
+import werkzeug
+
+
+class Proxy(werkzeug.LocalProxy):
+  ''' This `werkzeug.LocalProxy` subclass returns the current object
+  when called instead of forwarding the call to the current object. '''
+
+  def __call__(self):
+    return self._get_current_object()
 
 
 def new_context(context_name):
   ''' Create a new context with the specified *context_name* and
-  return a `LocalProxy` that represents the top-most object of the
-  context stack. '''
+  return a `Proxy` that represents the top-most object of the context
+  stack. '''
 
   def _lookup():
     top = object.__getattribute__(proxy, '_proxy_localstack').top
@@ -41,20 +45,10 @@ def new_context(context_name):
       raise RuntimeError('outside of {0!r} context'.format(context_name))
     return top
 
-  proxy = LocalProxy(_lookup)
-  stack = LocalStack()
+  proxy = Proxy(_lookup)
+  stack = werkzeug.LocalStack()
   object.__setattr__(proxy, '_proxy_localstack', stack)
   return proxy
-
-
-def test_context(context_proxy):
-  ''' Test if there is a context for the specified proxy and return True
-  in that case, False otherwise. This can be used to check if accessing
-  the proxy would raise a RuntimeError. '''
-
-  assert isinstance(context_proxy, LocalProxy)
-  stack = object.__getattribute__(context_proxy, '_proxy_localstack')
-  return stack.top is not None
 
 
 @contextmanager
@@ -64,7 +58,7 @@ def enter_context(context_proxy, context_obj):
   object supports it, the methods `context_obj.on_context_enter()` and
   `context_obj.on_context_leave()` will be called. '''
 
-  assert isinstance(context_proxy, LocalProxy)
+  assert isinstance(context_proxy, Proxy)
   stack = object.__getattribute__(context_proxy, '_proxy_localstack')
   if hasattr(context_obj, 'on_context_enter'):
     context_obj.on_context_enter(stack.top)
@@ -77,13 +71,6 @@ def enter_context(context_proxy, context_obj):
     finally:
       if hasattr(context_obj, 'on_context_leave'):
         context_obj.on_context_leave()
-
-
-def deref(proxy):
-  ''' Dereference a `LocalProxy`. '''
-
-  assert isinstance(proxy, LocalProxy)
-  return proxy._LocalProxy__local()
 
 
 def get_assigned_name(frame):
