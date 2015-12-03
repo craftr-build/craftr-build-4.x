@@ -45,6 +45,7 @@ class Session(object):
     super().__init__()
     self.env = Environment()
     self.modules = {}
+    self.targets = {}
 
   def on_context_enter(self, prev):
     if prev is not None:
@@ -134,6 +135,10 @@ class Target(object):
     if vars:
       self.vars.update(vars)
 
+    if self.fullname in module.__session__.targets:
+      raise ValueError('target {0!r} already exists'.format(self.fullname))
+    module.__session__.targets[self.fullname] = self
+
   def __repr__(self):
     pool = ' in "{0}"'.format(self.pool) if self.pool else ''
     command = ' running "{0}"'.format(self.command[0])
@@ -141,7 +146,7 @@ class Target(object):
 
   @property
   def fullname(self):
-    return self.module.__craftr_ident__ + '.' + self.name
+    return self.module.__ident__ + '.' + self.name
 
 
 def init_module(module):
@@ -149,5 +154,6 @@ def init_module(module):
   executed to initialize its contents. '''
 
   assert module.__name__.startswith('craftr.ext.')
-  module.__craftr_ident__ = module.__name__[11:]
+  module.__ident__ = module.__name__[11:]
+  module.__session__ = session()
   module.project_dir = path.dirname(module.__file__)

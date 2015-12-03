@@ -145,14 +145,13 @@ class CraftrLoader(object):
     else:
       assert self.kind and self.kind in ('namespace', 'module')
       module = imp.new_module(fullname)
+      module.__path__ = []
       if self.kind == 'module':
         module.__file__ = self.filename
         craftr.init_module(module)
         with craftr.magic.enter_context(craftr.module, module):
           with open(self.filename, 'r') as fp:
             exec(compile(fp.read(), self.filename, 'exec'), vars(module))
-      module.__path__ = []
-      module.__session__ = craftr.session()
       craftr.session.modules[name] = module
       sys.modules[fullname] = module
     return module
