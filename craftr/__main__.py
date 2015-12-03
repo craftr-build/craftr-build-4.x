@@ -40,6 +40,7 @@ def main():
       print('error: "Craftfile" has no craftr_module(...) declaration')
       return errno.ENOENT
 
+  craftr.ext.install()
   with craftr.magic.enter_context(craftr.session, craftr.Session()):
     module = importlib.import_module('craftr.ext.' + args.m)
 

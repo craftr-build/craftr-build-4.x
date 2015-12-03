@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import magic, runtime, path
+from craftr import path
 
 import craftr
 import imp
@@ -147,8 +147,8 @@ class CraftrLoader(object):
       module = imp.new_module(fullname)
       if self.kind == 'module':
         module.__file__ = self.filename
-        runtime.init_module(module)
-        with magic.enter_context(craftr.module, module):
+        craftr.init_module(module)
+        with craftr.magic.enter_context(craftr.module, module):
           with open(self.filename, 'r') as fp:
             exec(compile(fp.read(), self.filename, 'exec'), vars(module))
       module.__path__ = []

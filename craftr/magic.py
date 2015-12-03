@@ -112,3 +112,15 @@ def get_assigned_name(frame):
   if not result:
     raise RuntimeError('last frame instruction not found')
   return result
+
+
+def get_module_frame(module):
+  ''' Returns the stack frame that *module* is being executed in. If
+  the stack frame can not be found, a `RuntimeError` is raised. '''
+
+  frame = get_frame(1)
+  while frame:
+    if frame.f_globals is vars(module) and frame.f_locals is vars(module):
+      return frame
+    frame = frame.f_back
+  raise RuntimeError('module frame can not be found')
