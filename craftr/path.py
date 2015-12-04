@@ -187,6 +187,13 @@ def addsuffix(subject, suffix, replace=False):
     raise TypeError('addsuffix() expected string or iterable')
 
 
+def setsuffix(subject, suffix):
+  ''' Remove the existing suffix from *subject* and add *suffix*
+  instead. The *suffix* must contain the dot at the beginning. '''
+
+  return addsuffix(subject, suffix, replace=True)
+
+
 def rmvsuffix(subject):
   ''' Given a filename, this function removes the the suffix of the
   filename and returns it. If the filename had no suffix to begin with,
