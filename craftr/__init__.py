@@ -39,13 +39,29 @@ class Session(object):
   ''' The `Session` object is the overseer for the process of loading
   and executing craftr modules. It manages the module loading process,
   a global configuration `Environment` and some global scope tasks such
-  as resolving identifiers to concrete objects. '''
+  as resolving identifiers to concrete objects.
+
+  Attributes:
+    path: A list of additional search paths for Craftr modules.
+    env: An `Environment` object from which you should create a subenv
+      if you want to use the `Environment` class for setting options.
+      You can also set options globally on this object.
+    modules: A dictionary of craftr extension modules, without the
+      `craftr.ext.` prefix.
+    targets: A dictionary mapping full target names to actual `Target`
+      objects that have been created. The `Target` constructors adds
+      the object to this dictionary automatically.
+    var: A dictionary of variables that will be exported to the Ninja
+      build definitions file.
+    '''
 
   def __init__(self):
     super().__init__()
+    self.path = [path.join(path.dirname(__file__), 'lib')]
     self.env = Environment()
     self.modules = {}
     self.targets = {}
+    self.var = {}
 
   def on_context_enter(self, prev):
     if prev is not None:
@@ -102,7 +118,7 @@ class Target(object):
       for "targets" that don't actually build files but run a program.
       Craftr ensures that targets in the "console" pool are never
       executed implicitly when running Ninja.  # xxx: todo!
-    vars: A dictionary of additional variables that are available for
+    var: A dictionary of additional variables that are available for
       expansion in the target's rule.
     deps: The mode for automatic dependency detection for C/C++ targets.
       See the "C/C++ Header Depenencies" section in the [Ninja Manual][].
@@ -113,7 +129,7 @@ class Target(object):
 
   def __init__(self, command, inputs, outputs, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
-      vars=None, deps=None, depfile=None, module=None, name=None):
+      var=None, deps=None, depfile=None, module=None, name=None):
 
     if not module:
       module = globals()['module']()
@@ -144,9 +160,9 @@ class Target(object):
     self.foreach = foreach
     self.description = description
     self.pool = pool
-    self.vars = {}
-    if vars:
-      self.vars.update(vars)
+    self.var = {}
+    if var:
+      self.var.update(var)
     self.deps = deps
     self.depfile = depfile
 

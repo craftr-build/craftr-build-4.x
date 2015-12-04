@@ -9,7 +9,7 @@ from craftr import *
 from craftr.path import glob
 from craftr.shell import split
 
-sources = glob('src/*.cpp')
+sources = glob('src/*.c')
 
 foo = Target(
   command=split('gcc $in -o $out'),

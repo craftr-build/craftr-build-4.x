@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from craftr import path
+from itertools import chain
 
 import craftr
 import imp
@@ -37,7 +38,10 @@ def get_module_ident(filename):
   *filename* and returns it, or None if the file does not contain
   a `craftr_module(...)` declaration in the first comment-block. '''
 
-  expr = re.compile('#\s*craftr_module\((\w+)\)')
+  if filename.endswith('.craftr'):
+    return path.basename(filename)[:-7]
+
+  expr = re.compile('#\s*craftr_module\(([\w\.]+)\)')
   with open(filename, "r") as fp:
     in_comment_block = False
     for line in map(str.rstrip, fp):
@@ -86,7 +90,7 @@ class CraftrImporter(object):
           self._check_file(filename)
 
     self._cache.clear()
-    for dirname in map(path.normpath, sys.path):
+    for dirname in map(path.normpath, chain(craftr.session.path, sys.path)):
       if not path.isdir(dirname):
         continue
       check_dir(dirname)
