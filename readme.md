@@ -2,7 +2,13 @@
 
 Prototype for the next-level, more pythonic meta build system.
 
-## Example: C/C++ (the simple method)
+# Examples
+
+    python -m craftr -eb
+
+> __Information__: `-e` for "export" and `-b` for "build".
+
+## Example: C/C++ (the plain method)
 
 ```python
 # craftr_module(project)
