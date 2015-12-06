@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import ninja_syntax, session
+from craftr import session, ninja_syntax, path
 from craftr.shell import quote, Process
 
 import craftr
@@ -69,15 +69,23 @@ def export(fp):
       indent = 1 if version > '1.6.0' else 0
       writer.variable('msvc_deps_prefix', target.msvc_deps_prefix, indent)
 
-    outputs = target.outputs or [target.fullname]
+    outputs = path.normpath(target.outputs) or [target.fullname]
     if target.foreach:
       assert len(target.inputs) == len(target.outputs)
       for infile, outfile in zip(target.inputs, target.outputs):
-        writer.build([outfile], target.fullname, [infile],
-          implicit=target.implicit_deps, order_only=target.order_only_deps)
+        writer.build(
+          [path.normpath(outfile)],
+          target.fullname,
+          [path.normpath(infile)],
+          implicit=path.normpath(target.implicit_deps),
+          order_only=path.normpath(target.order_only_deps))
     else:
-      writer.build(outputs, target.fullname, target.inputs,
-        implicit=target.implicit_deps, order_only=target.order_only_deps)
+      writer.build(
+        outputs,
+        target.fullname,
+        path.normpath(target.inputs),
+        implicit=path.normpath(target.implicit_deps),
+        order_only=path.normpath(target.order_only_deps))
 
     if target.outputs and target.fullname not in target.outputs:
       writer.build(target.fullname, 'phony', target.outputs)

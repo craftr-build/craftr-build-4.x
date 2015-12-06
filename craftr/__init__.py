@@ -58,6 +58,7 @@ class Session(object):
     self.modules = {}
     self.targets = {}
     self.var = {}
+    self.normpath_relative = True
 
   def on_context_enter(self, prev):
     if prev is not None:
@@ -156,8 +157,8 @@ class Target(object):
     self.command = command
     self.inputs = inputs
     self.outputs = outputs
-    self.implicit_deps = implicit_deps
-    self.order_only_deps = order_only_deps
+    self.implicit_deps = implicit_deps or []
+    self.order_only_deps = order_only_deps or []
     self.foreach = foreach
     self.pool = pool
     self.description = description

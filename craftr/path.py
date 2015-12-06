@@ -18,8 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import module
+from craftr import module, session
 from os.path import *
+from os import sep, pathsep, curdir, pardir
 
 import collections
 import glob2
@@ -121,7 +122,17 @@ def normpath(path, parent_dir=None):
       path = os.path.join(parent_dir, path)
     if os.name == 'nt':
       path = path.lower()
-    return os.path.normpath(path)
+    path = os.path.normpath(path)
+    if session and session.normpath_relative:
+      try:
+        relp = relpath(path)
+      except ValueError:
+        # happens on Windows with differing drive letters
+        pass
+      else:
+        if relp != curdir and not relp.startswith(pardir + sep + pardir):
+          path = relp
+    return path
   elif isinstance(path, collections.Iterable):
     result = []
     for item in path:
