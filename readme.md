@@ -2,18 +2,50 @@
 
 Prototype for the next-level, more pythonic meta build system.
 
-```python
-# craftr_module(test)
+## Example: C/C++ (the simple method)
 
-from craftr import *
-from craftr.path import glob
-from craftr.shell import split
+```python
+# craftr_module(project)
+
+from os import environ
+from craftr import path, Target
 
 sources = glob('src/*.c')
 
-foo = Target(
-  command=split('gcc $in -o $out'),
-  inputs=sources,
-  outputs=['build/main'],
+objects = Target(
+  command = [environ['CC'], '$in', '-c', '-o$out', '-I' + path.local('include')],
+  inputs = sources,
+  objects = path.setsuffix(path.move(sources, path.commonpath(sources), 'obj'), '.o'),
+  foreach = True,
 )
 ```
+
+## Example: C/C++
+
+> __Todo__: A *good* interface for compiling C/C++ projects with proper
+> implementations for GCC, Clang and MSVC (eventually also MinGW, Borland
+> and Intel).
+
+## Example: C#
+
+```python
+# craftr_module(project)
+
+from craftr import path
+from craftr.ext.compiler.csc import CSCompiler
+
+csc = CSCompiler()
+program = csc.compile(
+  filename = 'main',
+  sources = path.glob('src/**/*.cs'),
+  optimize = True,
+)
+```
+
+## Example: Java
+
+> __Todo__: Java compiler interface.
+
+## Example: Vala
+
+> __Todo__: Vala compiler interface.
