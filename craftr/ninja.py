@@ -74,9 +74,10 @@ def export(fp):
         writer.build([outfile], target.fullname, [infile],
           implicit=target.implicit_deps, order_only=target.order_only_deps)
     else:
-      writer.build(target.outputs, target.fullname, target.inputs,
+      outputs = target.outputs or [target.fullname]
+      writer.build(outputs, target.fullname, target.inputs,
         implicit=target.implicit_deps, order_only=target.order_only_deps)
 
-    if target.fullname not in target.outputs:
+    if target.outputs and target.fullname not in target.outputs:
       writer.build(target.fullname, 'phony', target.outputs)
     writer.newline()
