@@ -250,6 +250,13 @@ def move(filename, basedir, newbase):
     raise TypeError('move() expected string or iterable')
 
 
+def local(path):
+  ''' Can only be called from a module context. Returns *path* normalized,
+  assumed relative to the current modules project directory. '''
+
+  return normpath(path, module.project_dir)
+
+
 def iter_tree(dirname, depth=1):
   ''' Iterates over all files in *dirname* and its sub-directories up
   to the specified *depth*. If *dirname* is a list, this scheme will be

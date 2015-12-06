@@ -19,18 +19,24 @@
 # THE SOFTWARE.
 ''' That's what happens when you run Craftr. '''
 
+from craftr import session
+
 import argparse
 import craftr
 import errno
 import importlib
 import os
+import subprocess
 
 
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
-  parser.add_argument('-b', nargs='*', help='Build all or the specified targets.')
+  parser.add_argument('-b', action='store_true', help='Build all or the specified targets.')
+  parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
+  parser.add_argument('-d', default='build', help='The build directory')
+  parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
   if not args.m:
@@ -42,15 +48,61 @@ def main():
       print('error: "Craftfile" has no craftr_module(...) declaration')
       return errno.ENOENT
 
+  if not os.path.exists(args.d):
+    os.makedirs(args.d)
+  elif not os.path.isdir(args.d):
+    print('error: "{0}" is not a directory'.format(args.d))
+    return errno.ENOTDIR
+
+  try:
+    craftr.ninja.get_ninja_version()
+  except OSError as exc:
+    print('error: ninja is not installed on the system')
+    return errno.ENOENT
+
+  old_path = os.getcwd()
+  os.chdir(args.d)
   craftr.ext.install()
-  with craftr.magic.enter_context(craftr.session, craftr.Session()):
+
+  with craftr.magic.enter_context(session, craftr.Session()):
+    session.path.append(old_path)
     module = importlib.import_module('craftr.ext.' + args.m)
+
+    try:
+      targets = [session.targets[x] for x in args.targets]
+    except KeyError as key:
+      print('error: Target "{0}" does not exist'.format(key))
+      return errno.ENOENT
+
     if args.e:
       with open('build.ninja', 'w') as fp:
         craftr.ninja.export(fp)
+
+    if args.c == 1:
+      files = set()
+      for target in (targets or session.targets.values()):
+        for fn in target.outputs:
+          if os.path.isfile(fn):
+            files.add(craftr.path.normpath(fn))
+      print('cleaning {0} files...'.format(len(files)))
+      for fn in files:
+        try:
+          os.remove(fn)
+        except OSError:
+          print('  error: could not remove "{0}"'.format(fn))
+    elif args.c > 2:
+      cmd = ['ninja', '-t', 'clean'] + [t.fullname for t in targets]
+      ret = subprocess.call(cmd, shell=True)
+      if ret != 0:
+        return ret
+
+    # Execute the build.
     if args.b:
-      # xxx: todo
-      pass
+      cmd = ['ninja'] + [t.fullname for t in targets]
+      return subprocess.call(cmd, shell=True)
+
+    return 0
+
 
 if __name__ == '__main__':
   main()

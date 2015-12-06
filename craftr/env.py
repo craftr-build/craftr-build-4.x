@@ -223,3 +223,10 @@ class Environment(object):
   def items(self):
     for key in self.keys():
       yield (key, self[key])
+
+
+  def get(self, key, default=None):
+    try:
+      return self[key]
+    except KeyError:
+      return default
