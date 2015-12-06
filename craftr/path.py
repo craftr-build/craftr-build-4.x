@@ -19,8 +19,7 @@
 # THE SOFTWARE.
 
 from craftr import module
-from os.path import (join, split, dirname, basename, relpath, isabs,
-  isfile, isdir, exists)
+from os.path import *
 
 import collections
 import glob2
@@ -48,7 +47,7 @@ def glob(*patterns):
   for pattern in patterns:
     if module and not isabs(pattern):
       pattern = join(module.project_dir, pattern)
-    result += [normpath(x) for x in glob2.glob(normpath(pattern))]
+    result += glob2.glob(normpath(pattern))
   return result
 
 

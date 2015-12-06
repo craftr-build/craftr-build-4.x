@@ -85,4 +85,5 @@ def export(fp):
       default.append(target.fullname)
     writer.newline()
 
-  writer.default(default)
+  if default:
+    writer.default(default)

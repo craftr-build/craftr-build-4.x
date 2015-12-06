@@ -41,6 +41,7 @@ from craftr import path
 from craftr.ext.compiler.csc import CSCompiler
 
 csc = CSCompiler()
+
 program = csc.compile(
   filename = 'main',
   sources = path.glob('src/**/*.cs'),
@@ -50,7 +51,24 @@ program = csc.compile(
 
 ## Example: Java
 
-> __Todo__: Java compiler interface.
+```python
+# craftr_module(project)
+
+from craftr import path
+from craftr.ext.compiler.java import JavaCompiler
+
+javac = JavaCompiler()
+
+classes = javac.compile(
+  source_dir = path.local('src'),
+)
+
+jar = javac.make_jar(
+  filename = 'my-jar-v1.0.0',
+  classes = classes,
+  entry_point = 'Main',
+)
+```
 
 ## Example: Vala
 
