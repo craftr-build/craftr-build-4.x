@@ -251,6 +251,8 @@ def expand_inputs(inputs):
   are used. Returns a list of strings. '''
 
   result = []
+  if isinstance(inputs, (str, Target)):
+    inputs = [inputs]
   for item in inputs:
     if isinstance(item, Target):
       result += item.outputs
