@@ -120,7 +120,7 @@ class Target(object):
   [Ninja Manual]: https://ninja-build.org/manual.html
   '''
 
-  def __init__(self, command, inputs, outputs, implicit_deps=None,
+  def __init__(self, command, inputs, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
       var=None, deps=None, depfile=None, msvc_deps_prefix=None,
       module=None, name=None):
@@ -140,11 +140,7 @@ class Target(object):
     if not inputs:
       raise ValueError('inputs: can not be empty')
 
-    if callable(outputs):
-      outputs = outputs(inputs)
-      assert not isinstance(outputs, str)
-      outputs = list(outputs)
-    if not isinstance(outputs, list):
+    if outputs is not None and not isinstance(outputs, list):
       raise TypeError('outputs: expected list of str')
 
     if foreach and len(inputs) != len(outputs):

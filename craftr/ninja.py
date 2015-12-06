@@ -51,6 +51,7 @@ def export(fp):
     writer.variable(key, value)
   writer.newline()
 
+  default = []
   for target in sorted(session.targets.values(), key=lambda t: t.fullname):
     validate_ident(target.fullname)
     if target.pool:
@@ -68,16 +69,20 @@ def export(fp):
       indent = 1 if version > '1.6.0' else 0
       writer.variable('msvc_deps_prefix', target.msvc_deps_prefix, indent)
 
+    outputs = target.outputs or [target.fullname]
     if target.foreach:
       assert len(target.inputs) == len(target.outputs)
       for infile, outfile in zip(target.inputs, target.outputs):
         writer.build([outfile], target.fullname, [infile],
           implicit=target.implicit_deps, order_only=target.order_only_deps)
     else:
-      outputs = target.outputs or [target.fullname]
       writer.build(outputs, target.fullname, target.inputs,
         implicit=target.implicit_deps, order_only=target.order_only_deps)
 
     if target.outputs and target.fullname not in target.outputs:
       writer.build(target.fullname, 'phony', target.outputs)
+    if target.pool != 'console':
+      default.append(target.fullname)
     writer.newline()
+
+  writer.default(default)
