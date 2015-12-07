@@ -31,9 +31,10 @@ from craftr import magic
 session = magic.new_context('session')
 module = magic.new_context('module')
 
-from craftr import ext, path, ninja
+from craftr import ext, path, platform, ninja, warn
 
 import craftr
+import collections
 import types
 
 
@@ -121,36 +122,90 @@ class Target(object):
   [Ninja Manual]: https://ninja-build.org/manual.html
   '''
 
+  class Builder(object):
+    ''' Helper class to build a target, used in rule functions. '''
+
+    @staticmethod
+    def get_module(ref_module):
+      if not ref_module:
+        ref_module = module()
+      assert isinstance(ref_module, types.ModuleType)
+      assert ref_module.__name__.startswith('craftr.ext.')
+      return ref_module
+
+    @staticmethod
+    def get_name(ref_module, name):
+      if not name:
+        name = magic.get_assigned_name(magic.get_module_frame(ref_module))
+      return name
+
+    def __init__(self, **kwargs):
+      super().__init__()
+      module = self.get_module(kwargs.pop('module', None))
+      name = self.get_name(module, kwargs.pop('name', None))
+      self.data = {
+        'module': module,
+        'name': name,
+        # 'command': [],
+        # 'inputs': [],
+        # 'outputs': [],
+        'implicit_deps': [],
+        'order_only_deps': [],
+        'foreach': False,
+        'pool': None,
+        'description': None,
+        'deps': None,
+        'depfile': None,
+        'msvc_deps_prefix': None,
+      }
+      self.data.update(**kwargs)
+
+    def __call__(self, *args, **kwargs):
+      self.data.update(**kwargs)
+      return Target(*args, **self.data)
+
+    def __getattr__(self, key):
+      return self.data[key]
+
+    def __setattr__(self, key, value):
+      if key == 'data' or key not in self.data:
+        super().__setattr__(key, value)
+      else:
+        self.data[key] = value
+
+    @property
+    def fullname(self):
+      return self.module.__ident__ + '.' + self.name
+
   def __init__(self, command, inputs, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
       var=None, deps=None, depfile=None, msvc_deps_prefix=None,
       module=None, name=None):
 
-    module = TargetBuilder.get_module(module)
-    name = TargetBuilder.get_name(module, name)
+    module = Target.Builder.get_module(module)
+    name = Target.Builder.get_name(module, name)
 
     if isinstance(command, str):
       command = shell.split(command)
-    elif not isinstance(command, list):
-      raise TypeError('command: expected {str, list of str}')
+    else:
+      command = self._check_list_of_str('command', command)
     if not command:
-      raise ValueError('command: can not be empty')
+      raise ValueError('command can not be empty')
 
-    if not isinstance(inputs, list):
-      raise TypeError('inputs: expected list of str')
+    inputs = self._check_list_of_str('inputs', inputs)
     if not inputs:
-      raise ValueError('inputs: can not be empty')
+      raise ValueError('inputs can not be empty')
 
-    if outputs is not None and not isinstance(outputs, list):
-      raise TypeError('outputs: expected list of str')
+    if outputs is not None:
+      outputs = self._check_list_of_str('outputs', outputs)
 
     if foreach and len(inputs) != len(outputs):
       raise ValueError('len(inputs) must match len(outputs) in foreach Target')
 
-    if implicit_deps is not None and not isinstance(implicit_deps, list):
-      raise TypeError('implicit_deps: expected list of str')
-    if order_only_deps is not None and not isinstance(order_only_deps, list):
-      raise TypeError('order_only_deps: expected list of str')
+    if implicit_deps is not None:
+      implicit_deps = self._check_list_of_str('implicit_deps', implicit_deps)
+    if order_only_deps is not None:
+      order_only_deps = self._check_list_of_str('order_only_deps', order_only_deps)
 
     self.module = module
     self.name = name
@@ -180,60 +235,19 @@ class Target(object):
   def fullname(self):
     return self.module.__ident__ + '.' + self.name
 
-
-class TargetBuilder(object):
-  ''' Helper class to build a target, used in rule functions. '''
-
   @staticmethod
-  def get_module(ref_module):
-    if not ref_module:
-      ref_module = module()
-    assert isinstance(ref_module, types.ModuleType)
-    assert ref_module.__name__.startswith('craftr.ext.')
-    return ref_module
-
-  @staticmethod
-  def get_name(ref_module, name):
-    if not name:
-      name = magic.get_assigned_name(magic.get_module_frame(ref_module))
-    return name
-
-  def __init__(self, **kwargs):
-    super().__init__()
-    module = TargetBuilder.get_module(kwargs.pop('module', None))
-    name = TargetBuilder.get_name(module, kwargs.pop('name', None))
-    self.data = {
-      'module': module,
-      'name': name,
-      'command': [],
-      'inputs': [],
-      'outputs': [],
-      'implicit_deps': [],
-      'order_only_deps': [],
-      'foreach': False,
-      'pool': None,
-      'description': None,
-      'deps': None,
-      'depfile': None,
-      'msvc_deps_prefix': None,
-    }
-    self.data.update(**kwargs)
-
-  def __call__(self, **kwargs):
-    self.data.update(**kwargs)
-    return Target(**self.data)
-
-  def __getattr__(self, key):
-    return self.data[key]
-
-  def __setattr__(self, key, value):
-    if key == 'data' or key not in self.data:
-      super().__setattr__(key, value)
-    else:
-      self.data[key] = value
-
-  def warn(self, *args, **kwargs):
-    warn("'{0}':".format(self.fullname), *args, **kwargs)
+  def _check_list_of_str(name, value):
+    def error():
+      raise TypeError('expected list of str for {0}, got {1}'.format(
+        name, type(value).__name__))
+    if not isinstance(value, str) and isinstance(value, collections.Iterable):
+      value = list(value)
+    if not isinstance(value, list):
+      error()
+    for item in value:
+      if not isinstance(item, str):
+        error()
+    return value
 
 
 def init_module(module):
@@ -264,8 +278,4 @@ def expand_inputs(inputs):
   return result
 
 
-def warn(*args, **kwargs):
-  print('craftr: warn:', *args, **kwargs)
-
-
-__all__ = ['craftr', 'session', 'module', 'path', 'Target', 'TargetBuilder']
+__all__ = ['craftr', 'expand_inputs', 'session', 'module', 'path', 'platform', 'warn', 'Target']

@@ -1,0 +1,153 @@
+# Copyright (C) 2015  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from craftr import path, warn as _warn, platform, expand_inputs, Target
+from craftr.ext.compiler import gen_output, gen_objects
+
+
+class MsvcCompiler(object):
+  ''' Interface for the MSVC compiler. '''
+
+  def __init__(self, program='cl', detect=False, language='c', **kwargs):
+    super().__init__()
+    if language not in ('c', 'cpp'):
+      raise ValueError('unsupported language: {0}'.format(language))
+    self.language = language
+    self.program = program
+    self.deps_prefix = 'Note: including file:'
+    self.version = None
+    self.arch = None
+    if detect:
+      # xxx: detect the compiler version and target arch, etc.
+      pass
+    _warn.unused_kwargs(kwargs, 'MsvcCompiler')
+
+  def compile(self, sources, defines=(), includes=(), debug=False,
+      warn='all', optimize=None, exceptions=None, autodeps=True,
+      additional_flags=(), **kwargs):
+    target = Target.Builder()
+    _warn_prefix = target.fullname
+    _warn.unused_kwargs(kwargs)
+
+    sources = expand_inputs(sources)
+    objects = gen_objects(sources, suffix=platform.obj)
+
+    command = [self.program, '/nologo', '/c', '$in', '/Fo$out']
+    command += ['/D{0}'.format(x) for x in defines]
+    command += ['/I{0}'.format(x) for x in includes]
+    if debug:
+      # xxx: A newer version of MSVC requires th /FS option for parallel builds.
+      command += ['/Od', '/Zi']
+
+    if exceptions:
+      if self.language != 'cpp':
+        _warn.invalid_option('exception', True, detail='only supported for C++')
+      command += ['/EHsc']
+    elif exceptions is None and self.language == 'cpp':
+      # Enable exceptions by default.
+      command += ['/EHsc']
+
+    if warn == 'all':
+      # /Wall really shows too many warnings, /W4 is pretty good.
+      command += ['/W4']
+    elif warn in ('none', None):
+      command += ['/w']
+    else:
+      _warn.invalid_option('warn', warn)
+
+    if debug:
+      if optimize and optimize != 'debug':
+        _warn.invalid_option('optimize', optimize, detail='no optimize with debug enabled')
+    elif optimize == 'speed':
+      command += ['/Ox']
+    elif optimize == 'size':
+      command += ['/Os']
+    elif optimize in ('debug', 'none', None):
+      command += ['/Od']
+    else:
+      _warn.invalid_option('optimize', optimize)
+
+    if autodeps:
+      target.deps = 'msvc'
+      target.msvc_deps_prefix = self.deps_prefix
+      command += ['/showIncludes']
+    command += additional_flags
+
+    return target(command, sources, objects)
+
+
+class MsvcLinker(object):
+  ''' Interface for the MSVC linker. '''
+
+  def __init__(self, program='link', **kwargs):
+    super().__init__()
+    self.program = program
+    _warn.unused_kwargs(kwargs, 'MsvcLinker')
+
+  def link(self, output, inputs, output_type='bin', libpath=(), libs=(),
+      debug=False, external_libs=(), additional_flags=(), **kwargs):
+    target = Target.Builder()
+    _warn_prefix = target.fullname
+    _warn.unused_kwargs(kwargs)
+
+    if output_type not in ('bin', 'dll'):
+      raise ValueError('unsupported output_type: {0}'.format(kind))
+    inputs = expand_inputs(inputs)
+    output = gen_output(output, suffix=getattr(platform, output_type))
+
+    command = [self.program, '/nologo', '$in', '/OUT:$out']
+    command += ['/debug'] if debug else []
+    command += ['/DLL'] if output_type == 'dll' else []
+    command += ['/L{0}'.format(x) for x in libpath]
+    command += [x + '.lib' for x in libs]
+    command += external_libs
+    command += additional_flags
+
+    return target(command, inputs, [output], implicit_deps=external_libs,
+      description='Linking {0}: $in'.format(output_type))
+
+
+class MsvcAr(object):
+  ''' Interface for the MSVC lib tool. '''
+
+  def __init__(self, program='lib', **kwargs):
+    super().__init__()
+    self.program = program
+    _warn.unused_kwargs(kwargs, 'MsvcAr')
+
+  def staticlib(self, output, inputs, export=(), additional_flags=(), **kwargs):
+    target = Target.Builder()
+    _warn_prefix = target.fullname
+    _warn.unused_kwargs(kwargs)
+
+    inputs = expand_inputs(inputs)
+    output = gen_output(output, suffix=platform.lib)
+
+    command = [self.program, '/nologo']
+    command += ['/export:' + x for x in export]
+    command += additional_flags
+    command += ['$in', '/OUT:$out']
+    return target(command, inputs, [output])
+
+
+CCompiler = MsvcCompiler
+CxxCompiler = lambda *a, **k: MsvcCompiler(*a, language='cpp', **k)
+Linker = MsvcLinker
+Ar = MsvcAr

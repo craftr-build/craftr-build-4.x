@@ -18,7 +18,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import module, path
+from craftr import module, path, platform
+import collections
+
+
+def get_platform_toolset():
+  if platform.name == 'Windows':
+    from . import msvc as toolset
+  else:
+    raise EnvironmentError('platform "{0}" not supported'.format(platform.name))
+  return toolset
+
+
+def gen_output(output, subdir=None, suffix=None):
+  if isinstance(output, str):
+    if not path.isabs(output):
+      pdir = path.join(module.__ident__, subdir) if subdir else module.__ident__
+      output = path.join(pdir, output)
+    if suffix is not None:
+      if callable(suffix):
+        output = suffix(path.rmvsuffix(output))
+      else:
+        output = path.setsuffix(output, suffix)
+    return output
+  elif isinstance(output, collections.Iterable):
+    return [gen_objects(x, subdir, suffix) for x in output]
+  else:
+    raise TypeError('expected str or Iterable')
 
 
 def gen_objects(sources, subdir='obj', suffix=None):
