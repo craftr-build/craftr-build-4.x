@@ -41,14 +41,15 @@ class NvccCompiler(object):
       if platform.name == 'Windows':
         self.program = path.addsuffix(self.program, '.exe')
 
-  def compile(self, sources, machine=64):
+  def compile(self, sources, machine=64, static=True):
     if machine not in (32, 64):
       raise ValueError('invalid machine value: {0}'.format(machine))
     sources = expand_inputs(sources)
     objects = gen_objects(sources, suffix=platform.obj)
     command = [self.program, '-c', '$in', '-o', '$out', '--machine', str(machine)]
 
-    meta = {'libpath': [], 'libs': ['cuda', 'cudart', 'cudadevrt', 'nvcuvid', 'OpenCL']}
+    meta = {'libpath': [], 'libs': ['cuda', 'cudadevrt', 'nvcuvid', 'OpenCL']}
+    meta['libs'] += ['cudart_static'] if static else ['cudart']
     if self.toolkit_path:
       if platform.name == 'Windows':
         libdir = 'Win32' if machine == 32 else 'x64'
