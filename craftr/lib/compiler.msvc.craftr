@@ -42,7 +42,7 @@ class MsvcCompiler(object):
   def compile(self, sources, defines=(), includes=(), debug=False,
       warn='all', optimize=None, exceptions=None, autodeps=True,
       additional_flags=(), **kwargs):
-    target = Target.Builder()
+    target = Target.Builder(foreach=True)
     _warn_prefix = target.fullname
     _warn.unused_kwargs(kwargs)
 
