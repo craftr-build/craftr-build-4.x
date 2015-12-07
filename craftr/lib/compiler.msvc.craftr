@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from craftr import path, warn as _warn, platform, expand_inputs, Target
+from craftr.utils import fw_merge
 from craftr.shell import Process
 from craftr.ext.compiler import gen_output, gen_objects
 import tempfile, os, re
@@ -92,13 +93,16 @@ class MsvcCompiler(object):
 
   def compile(self, sources, defines=(), includes=(), debug=False,
       warn='all', optimize=None, exceptions=None, autodeps=True,
-      additional_flags=(), description=None, **kwargs):
+      additional_flags=(), description=None, frameworks=(), **kwargs):
     target = Target.Builder(foreach=True)
     _warn_prefix = target.fullname
     _warn.unused_kwargs(kwargs)
 
     sources = expand_inputs(sources)
     objects = gen_objects(sources, suffix=platform.obj)
+
+    includes = fw_merge(frameworks, 'includes', includes)
+    defines = fw_merge(frameworks, 'defines', defines)
 
     command = [self.program, '/nologo', '/c', '$in', '/Fo$out']
     command += ['/D{0}'.format(x) for x in defines]
@@ -137,8 +141,6 @@ class MsvcCompiler(object):
       command += ['/Od']
     else:
       _warn.invalid_option('optimize', optimize)
-    if not debug and optimize != 'debug':
-      command += ['/Og'] # global optimization
 
     if autodeps:
       target.deps = 'msvc'
@@ -161,10 +163,14 @@ class MsvcLinker(object):
     _warn.unused_kwargs(kwargs, 'MsvcLinker')
 
   def link(self, output, inputs, output_type='bin', libpath=(), libs=(),
-      debug=False, external_libs=(), additional_flags=(), description=None, **kwargs):
+      debug=False, external_libs=(), additional_flags=(), description=None,
+      frameworks=(), **kwargs):
     target = Target.Builder()
     _warn_prefix = target.fullname
     _warn.unused_kwargs(kwargs)
+
+    libpath = fw_merge(frameworks, 'libpath', libpath)
+    libs = fw_merge(frameworks, 'libs', libs)
 
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
