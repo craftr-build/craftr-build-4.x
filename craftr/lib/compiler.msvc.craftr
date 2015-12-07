@@ -118,7 +118,7 @@ class MsvcLinker(object):
     command = [self.program, '/nologo', '$in', '/OUT:$out']
     command += ['/debug'] if debug else []
     command += ['/DLL'] if output_type == 'dll' else []
-    command += ['/L{0}'.format(x) for x in libpath]
+    command += ['/LIBPATH:{0}'.format(x) for x in libpath]
     command += [x + '.lib' for x in libs]
     command += external_libs
     command += additional_flags

@@ -157,6 +157,7 @@ class Target(object):
         'deps': None,
         'depfile': None,
         'msvc_deps_prefix': None,
+        'meta': {},
       }
       self.data.update(**kwargs)
 
@@ -179,7 +180,7 @@ class Target(object):
 
   def __init__(self, command, inputs, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
-      var=None, deps=None, depfile=None, msvc_deps_prefix=None,
+      var=None, deps=None, depfile=None, msvc_deps_prefix=None, meta=None,
       module=None, name=None):
 
     module = Target.Builder.get_module(module)
@@ -220,6 +221,7 @@ class Target(object):
     self.deps = deps
     self.depfile = depfile
     self.msvc_deps_prefix = msvc_deps_prefix
+    self.meta = meta or {}
 
     targets = module.__session__.targets
     if self.fullname in targets:
@@ -237,16 +239,15 @@ class Target(object):
 
   @staticmethod
   def _check_list_of_str(name, value):
-    def error():
-      raise TypeError('expected list of str for {0}, got {1}'.format(
-        name, type(value).__name__))
     if not isinstance(value, str) and isinstance(value, collections.Iterable):
       value = list(value)
     if not isinstance(value, list):
-      error()
+      raise TypeError('expected list of str for {0}, got {1}'.format(
+        name, type(value).__name__))
     for item in value:
       if not isinstance(item, str):
-        error()
+        raise TypeError('expected list of str for {0}, found {1} inside'.format(
+          name, type(item).__name__))
     return value
 
 
