@@ -32,6 +32,7 @@ session = magic.new_context('session')
 module = magic.new_context('module')
 
 from craftr import ext, path, platform, ninja, warn
+from craftr.env import Environment
 
 import craftr
 import collections
@@ -55,6 +56,7 @@ class Session(object):
 
   def __init__(self):
     super().__init__()
+    self.env = Environment()
     self.path = [path.join(path.dirname(__file__), 'lib')]
     self.modules = {}
     self.targets = {}
