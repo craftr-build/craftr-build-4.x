@@ -26,7 +26,7 @@ def gen_objects(sources, subdir='obj', suffix=None):
   objects = path.move(sources, basedir, path.join(module.__ident__, subdir))
   if suffix is not None:
     if callable(suffix):
-      objects = [suffix(x) for x in objects]
+      objects = [suffix(path.rmvsuffix(x)) for x in objects]
     else:
       objects = path.setsuffix(objects, suffix)
   return objects

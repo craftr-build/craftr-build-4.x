@@ -14,16 +14,17 @@ Prototype for the next-level, more pythonic meta build system.
 # craftr_module(project)
 
 from os import environ
-from craftr import path, Target
+from craftr import path, Target, platform
+from craftr.ext.compiler import gen_objects
 
-sources = glob('src/*.c')
+sources = path.glob('src/*.c')
 
 objects = Target(
-  command = [environ['CC'], '$in', '-c', '-o$out', '-I' + path.local('include')],
+  command = [environ['CC']] + '-c -Wall $in -o $out'.split(),
   inputs = sources,
-  objects = path.setsuffix(path.move(sources, path.commonpath(sources), 'obj'), '.o'),
-  foreach = True,
+  outputs = gen_objects(sources, suffix=platform.obj),
 )
+
 ```
 
 ## Example: C/C++
@@ -32,7 +33,7 @@ objects = Target(
 > implementations for GCC, Clang and MSVC (eventually also MinGW, Borland
 > and Intel).
 
-## Example: C#
+## Example: C# ##
 
 ```python
 # craftr_module(project)
