@@ -29,9 +29,33 @@ objects = Target(
 
 ## Example: C/C++
 
-> __Todo__: A *good* interface for compiling C/C++ projects with proper
-> implementations for GCC, Clang and MSVC (eventually also MinGW, Borland
-> and Intel).
+```python
+# craftr_module(nr.test)
+
+from craftr import path
+from craftr.ext.compiler import get_platform_toolset
+
+tools = get_platform_toolset()
+cc = tools.CCompiler()
+ld = tools.Linker()
+
+objects = cc.compile(
+  sources = path.glob('src/*.c'),
+)
+
+lib = ld.link(
+  inputs = objects,
+  output = 'main',
+  output_type = 'bin',
+)
+```
+
+> ### Todo
+> 
+> - [ ] GCC compiler interface
+> - [ ] Clang compiler interface
+> - [ ] `get_platform_toolset()` must detect the right compiler for the
+>   platform and the environment (eg. based on the `CC` and `CXX` variables)
 
 ## Example: C# ##
 
