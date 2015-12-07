@@ -1,0 +1,60 @@
+# Copyright (C) 2015  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from os import environ
+from craftr import path, platform, expand_inputs, Target
+from craftr import warn as _warn
+from craftr.ext.compiler import gen_objects
+
+class NvccCompiler(object):
+  ''' Interface for the NVIDIA CUDA compiler. '''
+
+  def __init__(self):
+    super().__init__()
+    # xxx: is this cross platform compatible or does it work only on Windows?
+    if 'CUDA_PATH' not in environ:
+      _warn.warn('CUDA_PATH not in environment')
+      self.toolkit_path = None
+      self.includes = []
+      self.program = 'nvcc'
+    else:
+      self.toolkit_path = environ['CUDA_PATH']
+      self.includes = [path.join(self.toolkit_path, 'include')]
+      self.program = path.join(self.toolkit_path, 'bin', 'nvcc')
+      if platform.name == 'Windows':
+        self.program = path.addsuffix(self.program, '.exe')
+
+  def compile(self, sources, machine=64):
+    if machine not in (32, 64):
+      raise ValueError('invalid machine value: {0}'.format(machine))
+    sources = expand_inputs(sources)
+    objects = gen_objects(sources, suffix=platform.obj)
+    command = [self.program, '-c', '$in', '-o', '$out', '--machine', str(machine)]
+
+    meta = {'libpath': [], 'libs': ['cuda', 'cudart', 'cudadevrt', 'nvcuvid', 'OpenCL']}
+    if self.toolkit_path:
+      if platform.name == 'Windows':
+        libdir = 'Win32' if machine == 32 else 'x64'
+      else:
+        # xxx: determine the CUDA library path on other platforms
+        raise NotImplementedError("can't figure nvcc toolkit library dir")
+      meta['libpath'].append(path.join(self.toolkit_path, 'lib', libdir))
+
+    return Target(command, sources, objects, meta=meta)
