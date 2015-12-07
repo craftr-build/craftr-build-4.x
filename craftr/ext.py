@@ -154,8 +154,11 @@ class CraftrLoader(object):
         module.__file__ = self.filename
         craftr.init_module(module)
         with craftr.magic.enter_context(craftr.module, module):
-          with open(self.filename, 'r') as fp:
-            exec(compile(fp.read(), self.filename, 'exec'), vars(module))
+          try:
+            with open(self.filename, 'r') as fp:
+              exec(compile(fp.read(), self.filename, 'exec'), vars(module))
+          finally:
+            craftr.finish_module(module)
       craftr.session.modules[name] = module
       sys.modules[fullname] = module
     return module

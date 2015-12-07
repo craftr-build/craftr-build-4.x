@@ -264,6 +264,21 @@ def init_module(module):
   module.project_dir = path.dirname(module.__file__)
 
 
+def finish_module(module):
+  ''' Called when a craftr extension module was imported. This function
+  makes sure that there is a `__all__` member on the module that excludes
+  all the built-in names and that are not module objects. '''
+
+  if not hasattr(module, '__all__'):
+    module.__all__ = []
+    for key in dir(module):
+      if key.startswith('_') or key in ('env', 'project_dir'):
+        continue
+      if isinstance(getattr(module, key), types.ModuleType):
+        continue
+      module.__all__.append(key)
+
+
 def expand_inputs(inputs):
   ''' Expands a list of inputs into a list of filenames. An input is a
   string (filename) or a `Target` object from which the `Target.outputs`
