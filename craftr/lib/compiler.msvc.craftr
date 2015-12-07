@@ -41,7 +41,7 @@ class MsvcCompiler(object):
 
   def compile(self, sources, defines=(), includes=(), debug=False,
       warn='all', optimize=None, exceptions=None, autodeps=True,
-      additional_flags=(), **kwargs):
+      additional_flags=(), description=None, **kwargs):
     target = Target.Builder(foreach=True)
     _warn_prefix = target.fullname
     _warn.unused_kwargs(kwargs)
@@ -90,7 +90,10 @@ class MsvcCompiler(object):
       command += ['/showIncludes']
     command += additional_flags
 
-    return target(command, sources, objects)
+    if not description:
+      description = 'Compiling object $out'
+
+    return target(command, sources, objects, description=description)
 
 
 class MsvcLinker(object):
@@ -102,7 +105,7 @@ class MsvcLinker(object):
     _warn.unused_kwargs(kwargs, 'MsvcLinker')
 
   def link(self, output, inputs, output_type='bin', libpath=(), libs=(),
-      debug=False, external_libs=(), additional_flags=(), **kwargs):
+      debug=False, external_libs=(), additional_flags=(), description=None, **kwargs):
     target = Target.Builder()
     _warn_prefix = target.fullname
     _warn.unused_kwargs(kwargs)
@@ -120,8 +123,11 @@ class MsvcLinker(object):
     command += external_libs
     command += additional_flags
 
+    if not description:
+      description = 'Linking {0} $out'.format(output_type)
+
     return target(command, inputs, [output], implicit_deps=external_libs,
-      description='Linking {0}: $in'.format(output_type))
+      description=description)
 
 
 class MsvcAr(object):
@@ -132,7 +138,8 @@ class MsvcAr(object):
     self.program = program
     _warn.unused_kwargs(kwargs, 'MsvcAr')
 
-  def staticlib(self, output, inputs, export=(), additional_flags=(), **kwargs):
+  def staticlib(self, output, inputs, export=(), additional_flags=(),
+      description=None, **kwargs):
     target = Target.Builder()
     _warn_prefix = target.fullname
     _warn.unused_kwargs(kwargs)
@@ -144,7 +151,10 @@ class MsvcAr(object):
     command += ['/export:' + x for x in export]
     command += additional_flags
     command += ['$in', '/OUT:$out']
-    return target(command, inputs, [output])
+
+    if not description:
+      description = 'Creating static library $out'
+    return target(command, inputs, [output], description=description)
 
 
 CCompiler = MsvcCompiler
