@@ -194,9 +194,6 @@ class Target(object):
       raise ValueError('command can not be empty')
 
     inputs = self._check_list_of_str('inputs', inputs)
-    if not inputs:
-      raise ValueError('inputs can not be empty')
-
     if outputs is not None:
       outputs = self._check_list_of_str('outputs', outputs)
 

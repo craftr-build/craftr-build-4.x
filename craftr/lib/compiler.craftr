@@ -71,6 +71,8 @@ def gen_output(output, subdir=None, suffix=None):
 
 
 def gen_objects(sources, subdir='obj', suffix=None):
+  if not sources:
+    return []
   basedir = path.commonpath(sources)
   objects = path.move(sources, basedir, path.join(module.__ident__, subdir))
   if suffix is not None:
