@@ -19,13 +19,15 @@
 # THE SOFTWARE.
 
 from craftr import path, warn as _warn, platform, expand_inputs, Target
+from craftr.shell import Process
 from craftr.ext.compiler import gen_output, gen_objects
+import tempfile, os, re
 
 
 class MsvcCompiler(object):
   ''' Interface for the MSVC compiler. '''
 
-  def __init__(self, program='cl', detect=False, language='c', **kwargs):
+  def __init__(self, program='cl', detect=True, language='c', **kwargs):
     super().__init__()
     if language not in ('c', 'cpp'):
       raise ValueError('unsupported language: {0}'.format(language))
@@ -35,9 +37,58 @@ class MsvcCompiler(object):
     self.version = None
     self.arch = None
     if detect:
-      # xxx: detect the compiler version and target arch, etc.
-      pass
+      # xxx: Eventually add support for using VSXXXCOMNTOOLS env vars.
+      self._detect_compiler_info()
     _warn.unused_kwargs(kwargs, 'MsvcCompiler')
+
+  def __repr__(self):
+    res = '<MsvcCompiler language={0!r} deps_prefix={1!r}'.format(
+      self.language, self.deps_prefix)
+    if self.version:
+      res += ' version={0!r} arch={1!r}'.format(self.version, self.arch)
+    else:
+      res += ' (undetermined)'
+    return res + '>'
+
+  def _detect_compiler_info(self):
+    # Determine the msvc_deps_prefix by making a small test. The
+    # compilation will not succeed since no entry point is defined.
+    deps_prefix = None
+    with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
+      fp.write(b'#include <stddef.h>\n')
+      fp.close()
+      try:
+        p = Process([self.program, '/Zs', '/showIncludes', fp.name])
+      except Process.ExitCodeError as exc:
+        p = exc.process
+      finally:
+        os.remove(fp.name)
+
+      # Extract the compiler version and architecture from stdout.
+      expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+      match = re.search(expr, p.stderr, re.I)
+      if not match:
+        raise ValueError('MSVC version and architecture could not be detected\n\n' + p.stdout)
+
+      self.arch = match.group(2)
+      self.version = match.group(1)
+
+      # Find the "Note: including file:" in the current language. We
+      # assume that the structure is the same, only the words different.
+      # First line is the name of the file, second line starts the include
+      # notices.
+      lines = p.stdout.split('\n', 2)
+      if len(lines) >= 2:
+        match = re.search('[\w\s]+:[\w\s]+:', lines[1])
+        if match:
+          deps_prefix = match.group(0)
+
+    if not deps_prefix:
+      _warn.warn('msvc_deps_prefix could not be determined, fallback on english string')
+    else:
+      self.deps_prefix = deps_prefix
+
+    return True
 
   def compile(self, sources, defines=(), includes=(), debug=False,
       warn='all', optimize=None, exceptions=None, autodeps=True,
@@ -53,8 +104,11 @@ class MsvcCompiler(object):
     command += ['/D{0}'.format(x) for x in defines]
     command += ['/I{0}'.format(x) for x in includes]
     if debug:
-      # xxx: A newer version of MSVC requires th /FS option for parallel builds.
-      command += ['/Od', '/Zi']
+      command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
+      if not self.version or self.version >= 'v18':
+        # Enable parallel writes to .pdb files. We also assume that this
+        # option is necessary by default.
+        command += ['/FS']
 
     if exceptions:
       if self.language != 'cpp':
@@ -76,13 +130,15 @@ class MsvcCompiler(object):
       if optimize and optimize != 'debug':
         _warn.invalid_option('optimize', optimize, detail='no optimize with debug enabled')
     elif optimize == 'speed':
-      command += ['/Ox']
+      command += ['/O2']
     elif optimize == 'size':
-      command += ['/Os']
+      command += ['/O1', '/Os']
     elif optimize in ('debug', 'none', None):
       command += ['/Od']
     else:
       _warn.invalid_option('optimize', optimize)
+    if not debug and optimize != 'debug':
+      command += ['/Og'] # global optimization
 
     if autodeps:
       target.deps = 'msvc'
