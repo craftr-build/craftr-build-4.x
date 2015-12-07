@@ -178,7 +178,7 @@ class Target(object):
     def fullname(self):
       return self.module.__ident__ + '.' + self.name
 
-  def __init__(self, command, inputs, outputs=None, implicit_deps=None,
+  def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
       var=None, deps=None, depfile=None, msvc_deps_prefix=None, meta=None,
       module=None, name=None):
@@ -193,8 +193,12 @@ class Target(object):
     if not command:
       raise ValueError('command can not be empty')
 
-    inputs = self._check_list_of_str('inputs', inputs)
+    if inputs is not None:
+      inputs = expand_inputs(inputs)
+      inputs = self._check_list_of_str('inputs', inputs)
     if outputs is not None:
+      if callable(outputs):
+        outputs = outputs(inputs)
       outputs = self._check_list_of_str('outputs', outputs)
 
     if foreach and len(inputs) != len(outputs):
