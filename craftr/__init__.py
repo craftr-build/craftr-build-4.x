@@ -20,7 +20,7 @@
 ''' Craftr is a meta build system for Ninja. '''
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '2.0.0-dev'
+__version__ = '0.20.0-dev'
 
 import sys
 if sys.version < '3.4':

@@ -1,4 +1,4 @@
-# Craftr 2.0.0-dev
+# Craftr 0.20.0-dev
 
 Prototype for the next-level, more pythonic meta build system.
 
