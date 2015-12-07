@@ -47,8 +47,20 @@ class Process(object):
       self.process = process
 
     def __str__(self):
-      return "Process '{0}' exited with exit-code {1}".format(
+      if self.process.stderr:
+        message = self.process.stderr[:200]
+      elif self.process.stdout:
+        message = self.process.stdout[:200]
+      else:
+        message = None
+
+      string = "Process '{0}' exited with exit-code {1}".format(
         self.process.program, self.process.returncode)
+      if message:
+        if isinstance(message, bytes):
+          message = message.decode()
+        string += '\n\n' + '\n'.join('  ' + x for x in message.split('\n'))
+      return string
 
   def __init__(self, command, input_=None, encoding=sys.getdefaultencoding(),
       pipe=True, merge=False, shell=False, cwd=None):
