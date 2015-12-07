@@ -88,7 +88,7 @@ def export(fp):
         order_only=path.normpath(target.order_only_deps))
 
     if target.outputs and target.fullname not in target.outputs:
-      writer.build(target.fullname, 'phony', target.outputs)
+      writer.build(target.fullname, 'phony', outputs)
     if target.pool != 'console':
       default.append(target.fullname)
     writer.newline()
