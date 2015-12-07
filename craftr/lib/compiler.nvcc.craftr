@@ -41,6 +41,24 @@ class NvccCompiler(object):
       if platform.name == 'Windows':
         self.program = path.addsuffix(self.program, '.exe')
 
+  def _get_libpath(self, arch):
+    # xxx: can the arch be anything else then 32 and 64 bit? (amd64, x86_amd64, i386 etc. ?)
+    assert arch in (32, 64)
+    if not self.toolkit_path:
+      return []
+    if platform.name == 'Windows':
+      dirname = 'Win32' if arch == 32 else 'x64'
+      return [path.join(self.toolkit_path, 'lib', dirname)]
+    else:
+      raise NotImplementedError("can't figure nvcc toolkit library dir")
+
+  def get_opencl_context(self, arch=64):
+    return {
+      'libpath': self._get_libpath(arch),
+      'includes': self.includes,
+      'libs': ['OpenCl'],
+    }
+
   def compile(self, sources, machine=64, static=True):
     if machine not in (32, 64):
       raise ValueError('invalid machine value: {0}'.format(machine))
@@ -48,14 +66,9 @@ class NvccCompiler(object):
     objects = gen_objects(sources, suffix=platform.obj)
     command = [self.program, '-c', '$in', '-o', '$out', '--machine', str(machine)]
 
-    meta = {'libpath': [], 'libs': ['cuda', 'cudadevrt', 'nvcuvid', 'OpenCL']}
-    meta['libs'] += ['cudart_static'] if static else ['cudart']
-    if self.toolkit_path:
-      if platform.name == 'Windows':
-        libdir = 'Win32' if machine == 32 else 'x64'
-      else:
-        # xxx: determine the CUDA library path on other platforms
-        raise NotImplementedError("can't figure nvcc toolkit library dir")
-      meta['libpath'].append(path.join(self.toolkit_path, 'lib', libdir))
-
+    meta = {
+      'libpath': self._get_libpath(machine),
+      'libs': ['cuda', 'cudadevrt', 'nvcuvid', 'OpenCL',
+          'cudart' + ('_static' if static else '')],
+    }
     return Target(command, sources, objects, meta=meta)
