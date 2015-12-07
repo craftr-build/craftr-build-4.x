@@ -21,56 +21,41 @@
 from craftr import craftr, path, Target
 
 
-class FlexCompiler(object):
-  ''' Interface for the lex compiler. '''
+class YaccCompiler(object):
+  ''' Interface for yacc. '''
 
-  def __init__(self, program='flex'):
+  def __init__(self, program='yacc'):
     super().__init__()
     self.program = program
 
-  def compile(self, sources, output=None, debug=False, fast=False, case_insensitive=False,
-      max_compatibility=False, performance_report=False, no_warn=False,
-      interactive=False, bits=None, cpp=False, compress=None, prefix=None):
+  def compile(self, infile, output=None, prefix=None, backtracing=False,
+      write_defs=False, write_interface=False, write_graphic=False,
+      symbol_prefix=None, reentrant=False, debug=False):
 
-    compress_modes = {
-      'align': 'a', 'equivalence': 'e', 'full': 'f', 'fast': 'F',
-      'meta-equivalence': 'm', 'bypass': 'r'}
-
-    if bits not in (None, 7, 8):
-      raise ValueError('bits must be None, 7 or 8')
-    if compress and not all(x in compress_modes for x in compress):
-      raise ValueError('invalid compress flags')
     if not output:
-      output = 'lex.yy.cc' if cpp else 'lex.yy.c'
+      output = 'y.tab.c'
 
     flags = ''
+    if backtracing:
+      flags += 'B'
+    if write_defs:
+      flags += 'd'
+    if write_interface:
+      flags += 'i'
+    if write_graphic:
+      flags += 'g'
+    if reentrant:
+      flags += 'r'
     if debug:
       flags += 'd'
-    if fast:
-      flags += 'f'
-    if case_insensitive:
-      flags += 'i'
-    if max_compatibility:
-      flags += 'l'
-    if performance_report:
-      flags += 'p'
-    if no_warn:
-      flags += 'w'
-    if interactive:
-      flags += 'I'
-    if bits:
-      flags += str(bits)
-    if cpp:
-      flags += '+'
 
     command = [self.program]
     if flags:
       command += ['-' + flags]
-    if compress:
-      command += '-C' + ''.join(compress_modes[x] for x in compress)
     if prefix:
-      command += ['-P' + prefix]
-    command += ['-o' + output]
-    command += ['$in']
+      command += ['-b', prefix]
+    if symbol_prefix:
+      command += ['-p', symbol_prefix]
+    command += ['-o', output, '$in']
 
-    return Target(command, craftr.expand_inputs(sources), [output])
+    return Target(command, [infile], [output])
