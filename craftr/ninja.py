@@ -72,7 +72,7 @@ def export(fp):
       indent = 1 if version > '1.6.0' else 0
       writer.variable('msvc_deps_prefix', target.msvc_deps_prefix, indent)
 
-    outputs = path.normpath(target.outputs) or [target.fullname]
+    outputs = path.normpath(target.outputs) if target.outputs else [target.fullname]
     if target.foreach:
       assert len(target.inputs) == len(target.outputs)
       for infile, outfile in zip(target.inputs, target.outputs):
