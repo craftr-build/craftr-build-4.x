@@ -61,7 +61,6 @@ class Session(object):
     self.modules = {}
     self.targets = {}
     self.var = {}
-    self.normpath_relative = True
 
   def on_context_enter(self, prev):
     if prev is not None:

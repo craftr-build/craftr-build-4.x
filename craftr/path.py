@@ -122,17 +122,7 @@ def normpath(path, parent_dir=None):
       path = os.path.join(parent_dir, path)
     if os.name == 'nt':
       path = path.lower()
-    path = os.path.normpath(path)
-    if session and session.normpath_relative:
-      try:
-        relp = relpath(path)
-      except ValueError:
-        # happens on Windows with differing drive letters
-        pass
-      else:
-        if relp != curdir and not relp.startswith(pardir + sep + pardir):
-          path = relp
-    return path
+    return os.path.normpath(path)
   elif isinstance(path, collections.Iterable):
     result = []
     for item in path:
