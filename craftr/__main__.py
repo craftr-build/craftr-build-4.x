@@ -27,6 +27,7 @@ import errno
 import importlib
 import os
 import subprocess
+import sys
 
 
 def _closest_conv(x):
@@ -51,14 +52,42 @@ def _set_session_defs(defs):
     session.env[key] = value
 
 
+def _run_func(main_module, name, args):
+  if '.' not in name:
+    name = main_module + '.' + name
+  module_name, func_name = name.rsplit('.', 1)
+  if module_name not in session.modules:
+    print('error: no module "{0}" was loaded'.format(module_name))
+    return errno.ENOENT
+  module = session.modules[module_name]
+  if not hasattr(module, func_name):
+    print('error: module "{0}" has no member "{1}"'.format(module_name, func_name))
+    return errno.ENOENT
+  func = getattr(module, func_name)
+  if not callable(func):
+    print('error: "{0}" is not callable'.format(name))
+    return errno.ENOENT
+  old_argv = sys.argv
+  sys.argv = ['craftr -f {0}'.format(name)] + args
+  try:
+    func()
+  except SystemExit as exc:
+    return exc.errno
+  finally:
+    sys.argv = old_argv
+  return 0
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
-  parser.add_argument('-b', action='store_true', help='Build all or the specified targets.')
+  parser.add_argument('-b', action='count', help='Build all or the specified targets. If specified twice, no craftr scripts are executed.')
   parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
   parser.add_argument('-d', default='build', help='The build directory')
   parser.add_argument('-D', default=[], action='append', help='Set an option, is automatically converted to the closest applicable datatype')
+  parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
+  parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -92,6 +121,10 @@ def main():
     _set_session_defs(args.D)
     module = importlib.import_module('craftr.ext.' + args.m)
 
+    if args.f:
+      with craftr.magic.enter_context(craftr.module, module):
+        _run_func(args.m, args.f[0], args.f[1:])
+
     try:
       targets = [session.targets[x] for x in args.targets]
     except KeyError as key:
@@ -123,7 +156,13 @@ def main():
     # Execute the build.
     if args.b:
       cmd = ['ninja'] + [t.fullname for t in targets]
-      return subprocess.call(cmd, shell=True)
+      ret = subprocess.call(cmd, shell=True)
+      if ret != 0:
+        return ret
+
+    if args.F:
+      with craftr.magic.enter_context(craftr.module, module):
+        _run_func(args.m, args.F[0], args.F[1:])
 
     return 0
 
