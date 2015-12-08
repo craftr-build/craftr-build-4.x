@@ -18,10 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import session, ninja_syntax, path
+from craftr import session, path
 from craftr.shell import quote, Process
 
 import craftr
+import ninja_syntax
 import re
 
 
