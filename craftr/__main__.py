@@ -29,6 +29,28 @@ import os
 import subprocess
 
 
+def _closest_conv(x):
+  try: return int(x)
+  except ValueError: pass
+  try: return float(x)
+  except ValueError: pass
+  if x.lower() in ('true', 'yes'):
+    return True
+  elif x.lower() in ('false', 'no'):
+    return False
+  return x
+
+
+def _set_session_defs(defs):
+  for item in defs:
+    key, assign, value = item.partition('=')
+    if assign and not value:
+      value = ''
+    elif not assign:
+      value = True
+    session.env[key] = value
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-m', help='The name of a Craftr module to run.')
@@ -36,6 +58,7 @@ def main():
   parser.add_argument('-b', action='store_true', help='Build all or the specified targets.')
   parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
   parser.add_argument('-d', default='build', help='The build directory')
+  parser.add_argument('-D', default=[], action='append', help='Set an option, is automatically converted to the closest applicable datatype')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -66,6 +89,7 @@ def main():
 
   with craftr.magic.enter_context(session, craftr.Session()):
     session.path.append(old_path)
+    _set_session_defs(args.D)
     module = importlib.import_module('craftr.ext.' + args.m)
 
     try:
