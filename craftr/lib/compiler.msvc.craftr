@@ -28,6 +28,8 @@ import tempfile, os, re
 class MsvcCompiler(object):
   ''' Interface for the MSVC compiler. '''
 
+  name = 'MSVC'
+
   def __init__(self, program='cl', detect=True, language='c', **kwargs):
     super().__init__()
     if language not in ('c', 'cpp'):
@@ -157,6 +159,8 @@ class MsvcCompiler(object):
 class MsvcLinker(object):
   ''' Interface for the MSVC linker. '''
 
+  name = 'MSVC-LINK'
+
   def __init__(self, program='link', **kwargs):
     super().__init__()
     self.program = program
@@ -194,6 +198,8 @@ class MsvcLinker(object):
 
 class MsvcAr(object):
   ''' Interface for the MSVC lib tool. '''
+
+  name = 'MSVC-LIB'
 
   def __init__(self, program='lib', **kwargs):
     super().__init__()
