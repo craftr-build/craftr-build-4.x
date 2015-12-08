@@ -59,3 +59,19 @@ class Git(object):
     if all:
       command.append('--all')
     return self._popen(command).stdout.strip()
+
+  def branches(self):
+    command = ['git', 'branch']
+    for line in self._popen(command).stdout.split('\n'):
+      parts = line.split()
+      if len(parts) == 2:
+        yield parts
+      else:
+        yield ['', parts[0]]
+
+  def branch(self):
+    command = ['git', 'symbolic-ref', '--short', 'HEAD']
+    try:
+      return self._popen(command).stdout.strip()
+    except Process.ExitCodeError as exc:
+      raise ValueError(exc.process.stderr.strip())
