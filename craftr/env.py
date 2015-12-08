@@ -230,3 +230,11 @@ class Environment(object):
       return self[key]
     except KeyError:
       return default
+
+  def get_first(self, *keys, default=None):
+    for key in keys:
+      try:
+        return self[key]
+      except KeyError:
+        pass
+    return default
