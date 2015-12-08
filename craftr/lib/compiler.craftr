@@ -60,12 +60,12 @@ def gen_output(output, subdir=None, suffix=None):
       output = path.join(pdir, output)
     if suffix is not None:
       if callable(suffix):
-        output = suffix(path.rmvsuffix(output))
+        output = suffix(output)
       else:
-        output = path.setsuffix(output, suffix)
+        output = path.addsuffix(output, suffix)
     return output
   elif isinstance(output, collections.Iterable):
-    return [gen_objects(x, subdir, suffix) for x in output]
+    return [gen_output(x, subdir, suffix) for x in output]
   else:
     raise TypeError('expected str or Iterable')
 
