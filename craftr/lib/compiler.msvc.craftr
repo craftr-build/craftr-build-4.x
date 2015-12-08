@@ -94,7 +94,7 @@ class MsvcCompiler(object):
 
     return True
 
-  def compile(self, sources, defines=(), includes=(), debug=False,
+  def compile(self, sources, defines=(), include=(), debug=False,
       warn='all', optimize=None, exceptions=None, autodeps=True,
       additional_flags=(), description=None, frameworks=(), **kwargs):
     target = Target.Builder(foreach=True)
@@ -104,12 +104,12 @@ class MsvcCompiler(object):
     sources = expand_inputs(sources)
     objects = gen_objects(sources, suffix=platform.obj)
 
-    includes = fw_merge(frameworks, 'includes', includes)
+    include = fw_merge(frameworks, 'include', include)
     defines = fw_merge(frameworks, 'defines', defines)
 
     command = [self.program, '/nologo', '/c', '$in', '/Fo$out']
     command += ['/D{0}'.format(x) for x in defines]
-    command += ['/I{0}'.format(x) for x in includes]
+    command += ['/I{0}'.format(x) for x in include]
     if debug:
       command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
       if not self.version or self.version >= 'v18':
