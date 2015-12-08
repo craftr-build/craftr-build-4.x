@@ -1,14 +1,26 @@
-# Craftr 0.20.0-dev
+# Craftr: Meta build system for humans <img align="right" height="100" src="http://i.imgur.com/i3hYFZ3.png">
 
-Prototype for the next-level, more pythonic meta build system.
+Craftr is a meta build system that targets [Ninja][] that uses Python to describe the build settings.
 
-# Examples
+__Install__
 
-    python -m craftr -eb
+Clone this repository and use `pip` to install Craftr, preferrably in a virtualenv and using
+and editable installation. `pip -e .` does the trick.
 
-> __Information__: `-e` for "export" and `-b` for "build".
+__Requirements__
 
-## Example: C/C++ (the plain method)
+- [Ninja][]
+- Python 3.4
+- see [requirements.txt](requirements.txt)
+
+__Examples__
+
+To export a Ninja build manifest, use the `-e` option. The `-b` option automatically switches
+into the build directory and runs ninja.
+
+    craftr -eb
+
+__C/C++__ (the plain method)
 
 ```python
 # craftr_module(project)
@@ -27,7 +39,7 @@ objects = Target(
 
 ```
 
-## Example: C/C++
+__C/C++__
 
 ```python
 # craftr_module(nr.test)
@@ -57,7 +69,7 @@ lib = ld.link(
 > - [ ] `get_platform_toolset()` must detect the right compiler for the
 >   platform and the environment (eg. based on the `CC` and `CXX` variables)
 
-## Example: C# ##
+__C#__
 
 ```python
 # craftr_module(project)
@@ -74,7 +86,7 @@ program = csc.compile(
 )
 ```
 
-## Example: Java
+__Java__
 
 ```python
 # craftr_module(project)
@@ -95,6 +107,9 @@ jar = javac.make_jar(
 )
 ```
 
-## Example: Vala
+__Vala__
 
 > __Todo__: Vala compiler interface.
+
+
+  [Ninja]: https://github.com/ninja-build/ninja
