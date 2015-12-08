@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 ''' That's what happens when you run Craftr. '''
 
-from craftr import session
+from craftr import session, shell
 
 import argparse
 import craftr
@@ -149,14 +149,14 @@ def main():
           print('  error: could not remove "{0}"'.format(fn))
     elif args.c > 2:
       cmd = ['ninja', '-t', 'clean'] + [t.fullname for t in targets]
-      ret = subprocess.call(cmd, shell=True)
+      ret = shell.call(cmd, shell=True)
       if ret != 0:
         return ret
 
     # Execute the build.
     if args.b:
       cmd = ['ninja'] + [t.fullname for t in targets]
-      ret = subprocess.call(cmd, shell=True)
+      ret = shell.call(cmd, shell=True)
       if ret != 0:
         return ret
 

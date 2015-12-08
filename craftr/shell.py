@@ -63,7 +63,7 @@ class Process(object):
       return string
 
   def __init__(self, command, input_=None, encoding=sys.getdefaultencoding(),
-      pipe=True, merge=False, shell=False, cwd=None):
+      pipe=True, merge=False, shell=False, cwd=None, raise_=True):
 
     super().__init__()
 
@@ -91,7 +91,7 @@ class Process(object):
       if self.stderr is not None:
         self.stderr = self.stderr.decode(encoding)
 
-    if self.returncode != 0:
+    if raise_ and self.returncode != 0:
       raise Process.ExitCodeError(self)
 
   @property
@@ -113,5 +113,5 @@ def quote(s):
     return shlex.quote(s)
 
 
-def call(command, shell=False, cwd=None):
-  Process(command, shell=shell, cwd=cwd, pipe=False)
+def call(command, pipe=False, raise_=False, **kwargs):
+  return Process(command, pipe=pipe, raise_=raise_, **kwargs).returncode
