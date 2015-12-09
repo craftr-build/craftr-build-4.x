@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import module, path, platform
+from craftr import module, path, platform, magic, warn, Framework
 import collections
 
 
@@ -82,3 +82,27 @@ def gen_objects(sources, subdir='obj', suffix=None):
     else:
       objects = path.setsuffix(objects, suffix)
   return objects
+
+
+class _BaseCompiler(object):
+  ''' Base class for compilers that contains a `Framework` object in
+  the `settings` member and can be used by subclasses to easily generate
+  a `Framework.Join` object to read the settings. '''
+
+  def __init__(self, **kwargs):
+    super().__init__()
+    self.settings = Framework(type(self).__name__, **kwargs)
+
+  def _settings(self, frameworks, kwargs):
+    caller = magic.get_frame(1).f_code.co_name
+    fwname = type(self).__name__ + '.' + caller
+    frameworks = list(frameworks)
+    frameworks.append(Framework(fwname, **kwargs))
+    return Framework.Join(self.settings, *frameworks)
+
+  def _warn_unused(self, join, kwargs, prefix):
+    result = {}
+    for key in kwargs:
+      if key not in join.used_keys:
+        result[key] = kwargs[key]
+    warn.unused_kwargs(result, prefix)
