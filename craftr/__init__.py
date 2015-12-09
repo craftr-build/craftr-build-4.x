@@ -126,6 +126,8 @@ class Target(object):
   class Builder(object):
     ''' Helper class to build a target, used in rule functions. '''
 
+    _unnamed_idx = 0
+
     @staticmethod
     def get_module(ref_module):
       if not ref_module:
@@ -134,16 +136,22 @@ class Target(object):
       assert ref_module.__name__.startswith('craftr.ext.')
       return ref_module
 
-    @staticmethod
-    def get_name(ref_module, name):
+    @classmethod
+    def get_name(cls, ref_module, name, generator=None):
       if not name:
-        name = magic.get_assigned_name(magic.get_module_frame(ref_module))
+        try:
+          name = magic.get_assigned_name(magic.get_module_frame(ref_module))
+        except ValueError:
+          if not generator:
+            raise
+          name = '_{0}_{1}'.format(generator, cls._unnamed_idx)
+          cls._unnamed_idx += 1
       return name
 
-    def __init__(self, **kwargs):
+    def __init__(self, generator=None, **kwargs):
       super().__init__()
       module = self.get_module(kwargs.pop('module', None))
-      name = self.get_name(module, kwargs.pop('name', None))
+      name = self.get_name(module, kwargs.pop('name', None), generator)
       self.data = {
         'module': module,
         'name': name,
