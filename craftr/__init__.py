@@ -144,7 +144,7 @@ class Target(object):
         except ValueError:
           if not generator:
             raise
-          name = '_{0}_{1}'.format(generator, cls._unnamed_idx)
+          name = '{0}_{1}'.format(generator, cls._unnamed_idx)
           cls._unnamed_idx += 1
       return name
 
@@ -167,6 +167,7 @@ class Target(object):
         'depfile': None,
         'msvc_deps_prefix': None,
         'meta': {},
+        'frameworks': [],
       }
       self.data.update(**kwargs)
 
@@ -190,7 +191,7 @@ class Target(object):
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
       var=None, deps=None, depfile=None, msvc_deps_prefix=None, meta=None,
-      module=None, name=None):
+      module=None, frameworks=None, name=None):
 
     module = Target.Builder.get_module(module)
     name = Target.Builder.get_name(module, name)
@@ -232,6 +233,7 @@ class Target(object):
     self.depfile = depfile
     self.msvc_deps_prefix = msvc_deps_prefix
     self.meta = meta or {}
+    self.frameworks = frameworks or []
 
     targets = module.__session__.targets
     if self.fullname in targets:
@@ -261,6 +263,78 @@ class Target(object):
     return value
 
 
+class Framework(dict):
+  ''' A framework rerpresentation a set of options that are to be taken
+  into account by compiler classes. Eg. you might create a framework
+  that contains the additional information and options required to
+  compile code using OpenCL and pass that to the compiler interface.
+
+  Compiler interfaces may also add items to `Target.frameworks`
+  that can be taken into account by other target rules. `expand_inputs()`
+  returns a list of frameworks that are being used in the inputs.
+
+  Use the `Framework.Join` class to create an object to process the
+  data from multiple frameworks. '''
+
+  class Join(object):
+    ''' Helper to process a collection of `Framework`s. '''
+
+    def __init__(self, *frameworks):
+      super().__init__()
+      self.used_keys = set()
+      self.frameworks = []
+      for fw in frameworks:
+        if isinstance(fw, (list, tuple)):
+          self.frameworks.extend(fw)
+        else:
+          self.frameworks.append(fw)
+      for fw in self.frameworks:
+        if not isinstance(fw, Framework):
+          raise TypeError('expected Framework, got {0}'.format(type(fw).__name__))
+
+    def __getitem__(self, key):
+      self.used_keys.add(key)
+      for fw in self.frameworks:
+        try:
+          return fw[key]
+        except KeyError:
+          pass
+      raise KeyError(key)
+
+    def get(self, key, default=None):
+      ''' Get the first available value of *key* from the frameworks. '''
+
+      try:
+        return self[key]
+      except KeyError:
+        return default
+
+    def get_merge(self, key):
+      ''' Merge all values of *key* in the frameworks into one list,
+      assuming that every key is a non-string sequence and can be
+      appended to a list. '''
+
+      self.used_keys.add(key)
+      result = []
+      for fw in self.frameworks:
+        try:
+          value = fw[key]
+        except KeyError:
+          continue
+        if not isinstance(value, collections.Sequence) or isinstance(value, str):
+          raise TypeError('expected a non-string sequence for {0!r} '
+            'in framework {1!r}, got {0}'.format(key, fw.name, type(value).__name__))
+        result += value
+      return result
+
+  def __init__(self, name, **kwargs):
+    super().__init__(kwargs)
+    self.name = name
+
+  def __repr__(self):
+    return 'Framework(name={0!r}, {1})'.format(self.name, super().__repr__())
+
+
 def init_module(module):
   ''' Called when a craftr module is being imported before it is
   executed to initialize its contents. '''
@@ -286,16 +360,22 @@ def finish_module(module):
       module.__all__.append(key)
 
 
-def expand_inputs(inputs):
+def expand_inputs(inputs, join=None):
   ''' Expands a list of inputs into a list of filenames. An input is a
   string (filename) or a `Target` object from which the `Target.outputs`
-  are used. Returns a list of strings. '''
+  are used. Returns a list of strings.
+
+  If *join* is specified, it must be a `Framework.Join` object that
+  will be appended the frameworks used in the Targets that were
+  passed in *inputs*. '''
 
   result = []
   if isinstance(inputs, (str, Target)):
     inputs = [inputs]
   for item in inputs:
     if isinstance(item, Target):
+      if join:
+        join.frameworks += item.frameworks
       result += item.outputs
     elif isinstance(item, str):
       result.append(item)
@@ -304,4 +384,4 @@ def expand_inputs(inputs):
   return result
 
 
-__all__ = ['craftr', 'expand_inputs', 'session', 'module', 'path', 'platform', 'warn', 'Target']
+__all__ = ['craftr', 'expand_inputs', 'session', 'module', 'path', 'platform', 'warn', 'Target', 'Framework']
