@@ -158,16 +158,16 @@ class Target(object):
         # 'command': [],
         # 'inputs': [],
         # 'outputs': [],
-        'implicit_deps': [],
-        'order_only_deps': [],
+        'implicit_deps': list(kwargs.pop('implicit_deps', ())),
+        'order_only_deps': list(kwargs.pop('order_only_deps', ())),
         'foreach': False,
         'pool': None,
         'description': None,
         'deps': None,
         'depfile': None,
         'msvc_deps_prefix': None,
-        'meta': {},
-        'frameworks': [],
+        'meta': dict(kwargs.pop('meta', ())),
+        'frameworks': list(kwargs.pop('frameworks', ())),
       }
       self.data.update(**kwargs)
 
