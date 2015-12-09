@@ -19,35 +19,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import path, warn as _warn, platform, expand_inputs, Target
-from craftr.utils import fw_merge
+from craftr import path, platform, expand_inputs, Target, Framework
+from craftr.warn import invalid_option
 from craftr.shell import Process
-from craftr.ext.compiler import gen_output, gen_objects
+from craftr.ext.compiler import gen_output, gen_objects, _BaseCompiler
+import craftr
 import tempfile, os, re
 
 
-class MsvcCompiler(object):
+class MsvcCompiler(_BaseCompiler):
   ''' Interface for the MSVC compiler. '''
 
   name = 'MSVC'
 
   def __init__(self, program='cl', detect=True, language='c', **kwargs):
-    super().__init__()
-    if language not in ('c', 'cpp'):
+    super().__init__(program=program, language=language, **kwargs)
+    if language not in ('c', 'c++'):
       raise ValueError('unsupported language: {0}'.format(language))
-    self.language = language
-    self.program = program
     self.deps_prefix = 'Note: including file:'
     self.version = None
     self.arch = None
     if detect:
       # xxx: Eventually add support for using VSXXXCOMNTOOLS env vars.
       self._detect_compiler_info()
-    _warn.unused_kwargs(kwargs, 'MsvcCompiler')
 
   def __repr__(self):
     res = '<MsvcCompiler language={0!r} deps_prefix={1!r}'.format(
-      self.language, self.deps_prefix)
+      self.settings['language'], self.deps_prefix)
     if self.version:
       res += ' version={0!r} arch={1!r}'.format(self.version, self.arch)
     else:
@@ -62,7 +60,7 @@ class MsvcCompiler(object):
       fp.write(b'#include <stddef.h>\n')
       fp.close()
       try:
-        p = Process([self.program, '/Zs', '/showIncludes', fp.name])
+        p = Process([self.settings['program'], '/Zs', '/showIncludes', fp.name])
       except Process.ExitCodeError as exc:
         p = exc.process
       finally:
@@ -94,22 +92,29 @@ class MsvcCompiler(object):
 
     return True
 
-  def compile(self, sources, defines=(), include=(), debug=False,
-      warn='all', optimize=None, exceptions=None, autodeps=True,
-      additional_flags=(), description=None, frameworks=(), **kwargs):
-    target = Target.Builder(foreach=True)
+  def compile(self, sources, frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = Target.Builder('msvc.compile', name=target_name, foreach=True,
+      frameworks=frameworks)
     _warn_prefix = target.fullname
-    _warn.unused_kwargs(kwargs)
-
-    sources = expand_inputs(sources)
     objects = gen_objects(sources, suffix=platform.obj)
 
-    include = fw_merge(frameworks, 'include', include)
-    defines = fw_merge(frameworks, 'defines', defines)
+    include = set(join.get_merge('include'))
+    defines = set(join.get_merge('defines'))
+    language = join['language']
+    debug = join.get('debug', False)
+    warn = join.get('warn', 'all')
+    optimize = join.get('optimize', None)
+    exceptions = join.get('exceptions', None)
+    autodeps = join.get('autodeps', True)
+    description = join.get('description', 'MSVC Compile Object ($out)')
 
-    command = [self.program, '/nologo', '/c', '$in', '/Fo$out']
-    command += ['/D{0}'.format(x) for x in defines]
-    command += ['/I{0}'.format(x) for x in include]
+    if language not in ('c', 'c++'):
+      raise ValueError('invalid language: {0!r}'.format(language))
+
+    command = [join['program'], '/nologo', '/c', '$in', '/Fo$out']
+    command += ['/I' + x for x in include]
+    command += ['/D' + x for x in defines]
     if debug:
       command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
       if not self.version or self.version >= 'v18':
@@ -118,10 +123,10 @@ class MsvcCompiler(object):
         command += ['/FS']
 
     if exceptions:
-      if self.language != 'cpp':
-        _warn.invalid_option('exception', True, detail='only supported for C++')
+      if language != 'cpp':
+        invalid_option('exception', True, detail='not supported in {0!r}'.format(language))
       command += ['/EHsc']
-    elif exceptions is None and self.language == 'cpp':
+    elif exceptions is None and language == 'cpp':
       # Enable exceptions by default.
       command += ['/EHsc']
 
@@ -131,11 +136,11 @@ class MsvcCompiler(object):
     elif warn in ('none', None):
       command += ['/w']
     else:
-      _warn.invalid_option('warn', warn)
+      invalid_option('warn', warn)
 
     if debug:
       if optimize and optimize != 'debug':
-        _warn.invalid_option('optimize', optimize, detail='no optimize with debug enabled')
+        invalid_option('optimize', optimize, detail='no optimize with debug enabled')
     elif optimize == 'speed':
       command += ['/O2']
     elif optimize == 'size':
@@ -143,90 +148,78 @@ class MsvcCompiler(object):
     elif optimize in ('debug', 'none', None):
       command += ['/Od']
     else:
-      _warn.invalid_option('optimize', optimize)
+      invalid_option('optimize', optimize)
 
     if autodeps:
       target.deps = 'msvc'
       target.msvc_deps_prefix = self.deps_prefix
       command += ['/showIncludes']
-    command += additional_flags
-
-    if not description:
-      description = 'Compiling object $out'
+    command += join.get_merge('additional_flags')
 
     return target(command, sources, objects, description=description)
 
 
-class MsvcLinker(object):
+class MsvcLinker(_BaseCompiler):
   ''' Interface for the MSVC linker. '''
 
   name = 'MSVC-LINK'
 
   def __init__(self, program='link', **kwargs):
-    super().__init__()
-    self.program = program
-    _warn.unused_kwargs(kwargs, 'MsvcLinker')
+    super().__init__(program=program, **kwargs)
 
-  def link(self, output, inputs, output_type='bin', libpath=(), libs=(),
-      debug=False, external_libs=(), additional_flags=(), description=None,
-      frameworks=(), **kwargs):
-    target = Target.Builder()
+  def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = Target.Builder('msvc.link', name=target_name, frameworks=frameworks)
     _warn_prefix = target.fullname
-    _warn.unused_kwargs(kwargs)
-
-    libpath = fw_merge(frameworks, 'libpath', libpath)
-    libs = fw_merge(frameworks, 'libs', libs)
+    inputs = expand_inputs(inputs, join)
 
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
-    inputs = expand_inputs(inputs)
     output = gen_output(output, suffix=getattr(platform, output_type))
 
-    command = [self.program, '/nologo', '$in', '/OUT:$out']
+    libpath = join.get_merge('libpath')
+    libs = join.get_merge('libs')
+    external_libs = join.get_merge('external_libs')
+    debug = join.get('debug', False)
+    description = join.get('description', 'MSVC Link {0!r} ($out)'.format(output_type))
+
+    command = [join['program'], '/nologo', '$in', '/OUT:$out']
     command += ['/debug'] if debug else []
     command += ['/DLL'] if output_type == 'dll' else []
     command += ['/LIBPATH:{0}'.format(x) for x in libpath]
     command += [x + '.lib' for x in libs]
     command += external_libs
-    command += additional_flags
-
-    if not description:
-      description = 'Linking {0} $out'.format(output_type)
+    command += join.get_merge('additional_flags')
 
     return target(command, inputs, [output], implicit_deps=external_libs,
       description=description)
 
 
-class MsvcAr(object):
+class MsvcAr(_BaseCompiler):
   ''' Interface for the MSVC lib tool. '''
 
   name = 'MSVC-LIB'
 
   def __init__(self, program='lib', **kwargs):
-    super().__init__()
-    self.program = program
-    _warn.unused_kwargs(kwargs, 'MsvcAr')
+    super().__init__(program=program, **kwargs)
 
-  def staticlib(self, output, inputs, export=(), additional_flags=(),
-      description=None, **kwargs):
-    target = Target.Builder()
+  def staticlib(self, output, inputs, export=(), frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = Target.Builder('msvc.lib', name=target_name, frameworks=frameworks)
     _warn_prefix = target.fullname
-    _warn.unused_kwargs(kwargs)
-
-    inputs = expand_inputs(inputs)
+    inputs = expand_inputs(inputs, join)
     output = gen_output(output, suffix=platform.lib)
 
-    command = [self.program, '/nologo']
+    command = [join['program'], '/nologo']
     command += ['/export:' + x for x in export]
-    command += additional_flags
+    command += join.get_merge('additional_flags')
     command += ['$in', '/OUT:$out']
 
-    if not description:
-      description = 'Creating static library $out'
+    description = join.get('description', 'MSVC lib ($out)')
     return target(command, inputs, [output], description=description)
 
 
 CCompiler = MsvcCompiler
-CxxCompiler = lambda *a, **k: MsvcCompiler(*a, language='cpp', **k)
+CxxCompiler = lambda *a, **k: MsvcCompiler(*a, language='c++', **k)
 Linker = MsvcLinker
 Ar = MsvcAr
