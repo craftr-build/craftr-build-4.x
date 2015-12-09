@@ -26,6 +26,8 @@ from craftr.ext.compiler import _BaseCompiler, gen_output
 class Ar(_BaseCompiler):
   ''' Interface for the Unix `ar` archiver. '''
 
+  name = 'Unix AR'
+
   def __init__(self, program='ar', **kwargs):
     super().__init__(program=program, **kwargs)
 

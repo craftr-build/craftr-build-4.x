@@ -29,12 +29,15 @@ from functools import partial
 class LlvmCompiler(_BaseCompiler):
   ''' Interface for the LLVM compiler. '''
 
+  name = 'LLVM'
+
   def __init__(self, program, language, **kwargs):
     super().__init__(program=program, language=language, **kwargs)
 
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
     join = self._settings(frameworks, kwargs)
-    target = Target.Builder('llvm.compile', name=target_name, foreach=True)
+    target = Target.Builder('llvm.compile', name=target_name, foreach=True,
+      frameworks=frameworks)
 
     include = set(join.get_merge('include'))
     defines = set(join.get_merge('defines'))
@@ -66,11 +69,12 @@ class LlvmCompiler(_BaseCompiler):
     # xxx: handle optimize
 
     self._warn_unused(join, kwargs, target.fullname)
-    return target(command, sources, objects, frameworks=[fw] + frameworks)
+    target.frameworks.append(fw)
+    return target(command, sources, objects)
 
   def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
     join = self._settings(frameworks, kwargs)
-    target = Target.Builder('llvm.link', name=target_name)
+    target = Target.Builder('llvm.link', name=target_name, frameworks=frameworks)
     inputs = expand_inputs(inputs, join)
 
     if output_type not in ('bin', 'dll'):
@@ -94,6 +98,5 @@ class LlvmCompiler(_BaseCompiler):
 
 CCompiler = partial(LlvmCompiler, program='clang', language='c')
 CxxCompiler = partial(LlvmCompiler, program='clang++', language='c++')
-Ld = CCompiler
-
-from craftr.ext.unix import Ar
+Linker = CCompiler
+from craftr.ext.unix import Ar as Archiver
