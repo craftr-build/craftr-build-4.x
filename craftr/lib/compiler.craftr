@@ -108,3 +108,11 @@ class _BaseCompiler(object):
       if key not in join.used_keys:
         result[key] = kwargs[key]
     warn.unused_kwargs(result, prefix)
+
+
+
+try:
+  toolset = get_platform_toolset()
+except EnvironmentError:
+  # Toolset can not be derived for the current platform.
+  pass
