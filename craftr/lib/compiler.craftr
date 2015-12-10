@@ -51,6 +51,8 @@ def get_platform_toolset():
     from . import msvc as toolset
   elif platform.name == 'Darwin':
     from . import llvm as toolset
+  elif platform.name == 'Linux':
+    from . import gcc as toolset
   else:
     raise EnvironmentError('platform "{0}" not supported'.format(platform.name))
   return toolset
