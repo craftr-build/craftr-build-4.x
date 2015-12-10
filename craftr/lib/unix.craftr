@@ -121,3 +121,13 @@ class Objcopy(_BaseCompiler):
       outputs = gen_objects(inputs, suffix=output_suffix)
 
     return target(command, inputs, outputs, description=description)
+
+
+def pkg_config(*flags):
+  ''' Calls `pkg-config` with the specified flags and returns a list of
+  the returned flags. '''
+
+  command = ['pkg-config']
+  command += flags
+  stdout = craftr.shell.Process(command, shell=True).stdout
+  return craftr.shell.split(stdout)
