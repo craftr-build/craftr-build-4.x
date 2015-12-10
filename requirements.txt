@@ -1,0 +1,3 @@
+glob2==0.4.1
+Werkzeug==0.11.2
+ninja-syntax==1.6.0

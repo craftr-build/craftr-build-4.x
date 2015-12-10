@@ -1,0 +1,123 @@
+# -*- mode: python -*-
+# Copyright (C) 2015  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from craftr import path
+from craftr.ext.compiler import _BaseCompiler, gen_output, gen_objects
+import craftr
+import re
+
+
+class Ar(_BaseCompiler):
+  ''' Interface for the Unix `ar` archiver. '''
+
+  name = 'Unix AR'
+
+  def __init__(self, program='ar', **kwargs):
+    super().__init__(program=program, **kwargs)
+
+  def staticlib(self, output, inputs, target_name=None, **kwargs):
+    join = self._settings([], kwargs)
+    target = craftr.Target.Builder(self.name, name=target_name)
+
+    inputs = craftr.expand_inputs(inputs, join)
+    output = gen_output(output, suffix=craftr.platform.lib)
+    command = [join['program'], 'rcs', '$out', '$in']
+
+    self._warn_unused(join, kwargs, target.fullname)
+    return target(command, inputs, [output])
+
+
+class Ld(_BaseCompiler):
+  ''' Interface for the Unix `ld` command. '''
+
+  name = 'Unix LD'
+
+  def __init__(self, program='ld', **kwargs):
+    super().__init__(program=program, **kwargs)
+
+  def link(self, output, inputs, frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = craftr.Target.Builder(self.name, name=target_name)
+
+    inputs = craftr.expand_inputs(inputs, join)
+    if not path.isabs(output):
+      output = gen_output(output)  # xxx: suffix?
+
+    linker_script = join.get('linker_script', None)
+
+    command = [join['program'], '$in', '-o', '$out']
+    command += ['-T', linker_script] if linker_script else []
+    return target(command, inputs, [output])
+
+
+class Objcopy(_BaseCompiler):
+  ''' Interface for the `objcopy` tool. '''
+
+  name = 'Unix Objcopy'
+
+  def __init__(self, program='objcopy', detect=True, **kwargs):
+    super().__init__(program=program, **kwargs)
+    if detect:
+      self.supported_targets = []
+      stdout = craftr.shell.Process([program, '--help']).stdout
+      match = re.search(r'supported\s+targets:(.*)$', stdout, re.M)
+      if match:
+        self.supported_targets = match.group(1).split()
+    else:
+      self.supported_targets = None
+
+  def objcopy(self, output_format, inputs, outputs=None, target_name=None, **kwargs):
+    ''' Performs an objcopy task with an output file (no append!) given the
+    specified *inputs* generating *outputs* with the specified *output_format*.
+    If *outputs* is omitted, it will be automatically generated from *inputs*.
+
+    Additional options:
+    - program
+    - output_suffix
+    - input_format
+    - binary_architecture
+    - description '''
+
+    join = self._settings([], kwargs)
+    target = craftr.Target.Builder(self.name, name=target_name, foreach=True)
+
+    # xxx: I don't think that [:3] is the correct way to derive the suffix. :)
+    output_suffix = join.get('output_suffix', output_format[:3])
+    description = join.get('description', None)
+    input_format = join.get('input_format', None)
+    binary_architecture = join.get('binary_architecture', None)
+
+    if self.supported_targets is not None:
+      if output_format not in self.supported_targets:
+        raise ValueError('unsupported output_format: {0}'.format(output_format))
+      if input_format is not None and input_format not in self.supported_targets:
+        raise ValueError('unsupported input format: {0}'.format(input_format))
+
+    command = [join['program']]
+    command += ['-I', input_format] if input_format else []
+    command += ['-B', binary_architecture] if binary_architecture else []
+    command += ['-O', output_format, '$in', '$out']
+
+    inputs = craftr.expand_inputs(inputs, join)
+    if outputs is None:
+      outputs = gen_objects(inputs, suffix=output_suffix)
+
+    return target(command, inputs, outputs, description=description)

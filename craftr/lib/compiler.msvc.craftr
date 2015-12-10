@@ -1,0 +1,225 @@
+# -*- mode: python -*-
+# Copyright (C) 2015  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from craftr import path, platform, expand_inputs, Target, Framework
+from craftr.warn import invalid_option
+from craftr.shell import Process
+from craftr.ext.compiler import gen_output, gen_objects, _BaseCompiler
+import craftr
+import tempfile, os, re
+
+
+class MsvcCompiler(_BaseCompiler):
+  ''' Interface for the MSVC compiler. '''
+
+  name = 'MSVC'
+
+  def __init__(self, program='cl', detect=True, language='c', **kwargs):
+    super().__init__(program=program, language=language, **kwargs)
+    if language not in ('c', 'c++'):
+      raise ValueError('unsupported language: {0}'.format(language))
+    self.deps_prefix = 'Note: including file:'
+    self.version = None
+    self.arch = None
+    if detect:
+      # xxx: Eventually add support for using VSXXXCOMNTOOLS env vars.
+      self._detect_compiler_info()
+
+  def __repr__(self):
+    res = '<MsvcCompiler language={0!r} deps_prefix={1!r}'.format(
+      self.settings['language'], self.deps_prefix)
+    if self.version:
+      res += ' version={0!r} arch={1!r}'.format(self.version, self.arch)
+    else:
+      res += ' (undetermined)'
+    return res + '>'
+
+  def _detect_compiler_info(self):
+    # Determine the msvc_deps_prefix by making a small test. The
+    # compilation will not succeed since no entry point is defined.
+    deps_prefix = None
+    with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
+      fp.write(b'#include <stddef.h>\n')
+      fp.close()
+      try:
+        p = Process([self.settings['program'], '/Zs', '/showIncludes', fp.name])
+      except Process.ExitCodeError as exc:
+        p = exc.process
+      finally:
+        os.remove(fp.name)
+
+      # Extract the compiler version and architecture from stdout.
+      expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+      match = re.search(expr, p.stderr, re.I)
+      if not match:
+        raise ValueError('MSVC version and architecture could not be detected\n\n' + p.stdout)
+
+      self.arch = match.group(2)
+      self.version = match.group(1)
+
+      # Find the "Note: including file:" in the current language. We
+      # assume that the structure is the same, only the words different.
+      # First line is the name of the file, second line starts the include
+      # notices.
+      lines = p.stdout.split('\n', 2)
+      if len(lines) >= 2:
+        match = re.search('[\w\s]+:[\w\s]+:', lines[1])
+        if match:
+          deps_prefix = match.group(0)
+
+    if not deps_prefix:
+      _warn.warn('msvc_deps_prefix could not be determined, fallback on english string')
+    else:
+      self.deps_prefix = deps_prefix
+
+    return True
+
+  def compile(self, sources, frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = Target.Builder('msvc.compile', name=target_name, foreach=True,
+      frameworks=frameworks)
+    _warn_prefix = target.fullname
+    objects = gen_objects(sources, suffix=platform.obj)
+
+    include = set(join.get_merge('include'))
+    defines = set(join.get_merge('defines'))
+    language = join['language']
+    debug = join.get('debug', False)
+    warn = join.get('warn', 'all')
+    optimize = join.get('optimize', None)
+    exceptions = join.get('exceptions', None)
+    autodeps = join.get('autodeps', True)
+    description = join.get('description', 'MSVC Compile Object ($out)')
+
+    if language not in ('c', 'c++'):
+      raise ValueError('invalid language: {0!r}'.format(language))
+
+    command = [join['program'], '/nologo', '/c', '$in', '/Fo$out']
+    command += ['/I' + x for x in include]
+    command += ['/D' + x for x in defines]
+    if debug:
+      command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
+      if not self.version or self.version >= 'v18':
+        # Enable parallel writes to .pdb files. We also assume that this
+        # option is necessary by default.
+        command += ['/FS']
+
+    if exceptions:
+      if language != 'cpp':
+        invalid_option('exception', True, detail='not supported in {0!r}'.format(language))
+      command += ['/EHsc']
+    elif exceptions is None and language == 'cpp':
+      # Enable exceptions by default.
+      command += ['/EHsc']
+
+    if warn == 'all':
+      # /Wall really shows too many warnings, /W4 is pretty good.
+      command += ['/W4']
+    elif warn in ('none', None):
+      command += ['/w']
+    else:
+      invalid_option('warn', warn)
+
+    if debug:
+      if optimize and optimize != 'debug':
+        invalid_option('optimize', optimize, detail='no optimize with debug enabled')
+    elif optimize == 'speed':
+      command += ['/O2']
+    elif optimize == 'size':
+      command += ['/O1', '/Os']
+    elif optimize in ('debug', 'none', None):
+      command += ['/Od']
+    else:
+      invalid_option('optimize', optimize)
+
+    if autodeps:
+      target.deps = 'msvc'
+      target.msvc_deps_prefix = self.deps_prefix
+      command += ['/showIncludes']
+    command += join.get_merge('additional_flags')
+
+    return target(command, sources, objects, description=description)
+
+
+class MsvcLinker(_BaseCompiler):
+  ''' Interface for the MSVC linker. '''
+
+  name = 'MSVC-LINK'
+
+  def __init__(self, program='link', **kwargs):
+    super().__init__(program=program, **kwargs)
+
+  def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = Target.Builder('msvc.link', name=target_name, frameworks=frameworks)
+    _warn_prefix = target.fullname
+    inputs = expand_inputs(inputs, join)
+
+    if output_type not in ('bin', 'dll'):
+      raise ValueError('unsupported output_type: {0}'.format(kind))
+    output = gen_output(output, suffix=getattr(platform, output_type))
+
+    libpath = join.get_merge('libpath')
+    libs = join.get_merge('libs')
+    external_libs = join.get_merge('external_libs')
+    debug = join.get('debug', False)
+    description = join.get('description', 'MSVC Link {0!r} ($out)'.format(output_type))
+
+    command = [join['program'], '/nologo', '$in', '/OUT:$out']
+    command += ['/debug'] if debug else []
+    command += ['/DLL'] if output_type == 'dll' else []
+    command += ['/LIBPATH:{0}'.format(x) for x in libpath]
+    command += [x + '.lib' for x in libs]
+    command += external_libs
+    command += join.get_merge('additional_flags')
+
+    return target(command, inputs, [output], implicit_deps=external_libs,
+      description=description)
+
+
+class MsvcAr(_BaseCompiler):
+  ''' Interface for the MSVC lib tool. '''
+
+  name = 'MSVC-LIB'
+
+  def __init__(self, program='lib', **kwargs):
+    super().__init__(program=program, **kwargs)
+
+  def staticlib(self, output, inputs, export=(), frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = Target.Builder('msvc.lib', name=target_name, frameworks=frameworks)
+    _warn_prefix = target.fullname
+    inputs = expand_inputs(inputs, join)
+    output = gen_output(output, suffix=platform.lib)
+
+    command = [join['program'], '/nologo']
+    command += ['/export:' + x for x in export]
+    command += join.get_merge('additional_flags')
+    command += ['$in', '/OUT:$out']
+
+    description = join.get('description', 'MSVC lib ($out)')
+    return target(command, inputs, [output], description=description)
+
+
+CCompiler = MsvcCompiler
+CxxCompiler = lambda *a, **k: MsvcCompiler(*a, language='c++', **k)
+Linker = MsvcLinker
+Ar = MsvcAr
