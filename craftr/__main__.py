@@ -80,6 +80,7 @@ def _run_func(main_module, name, args):
 
 def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument('-V', action='store_true', help='Print version and exit.')
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
   parser.add_argument('-b', action='count', help='Build all or the specified targets. If specified twice, no craftr scripts are executed.')
@@ -91,6 +92,10 @@ def main():
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
+
+  if args.V:
+    print('Craftr {0}'.format(craftr.__version__))
+    return 0
 
   if not args.m:
     if not os.path.isfile('Craftfile'):
@@ -169,4 +174,4 @@ def main():
 
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())
