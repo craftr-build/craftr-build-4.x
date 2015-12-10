@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 from os import environ
-from craftr import path, platform, expand_inputs, Target
+from craftr import path, platform, expand_inputs, Target, Framework
 from craftr import warn as _warn
 from craftr.ext.compiler import gen_objects
 
@@ -53,12 +53,14 @@ class NvccCompiler(object):
     else:
       raise NotImplementedError("can't figure nvcc toolkit library dir")
 
-  def get_opencl_context(self, arch=64):
-    return {
+  def get_opencl_framework(self, arch=64):
+    return Framework('nvidia.opencl_{0}'.format(arch), {
       'libpath': self._get_libpath(arch),
       'include': self.include,
       'libs': ['OpenCl'],
-    }
+    })
+
+  get_opencl_context = get_opencl_framework  # backwards compat
 
   def compile(self, sources, machine=64, static=True):
     if machine not in (32, 64):

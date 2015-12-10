@@ -327,9 +327,12 @@ class Framework(dict):
         result += value
       return result
 
-  def __init__(self, name, **kwargs):
-    super().__init__(kwargs)
-    self.name = name
+  def __init__(self, __fw_name, __init_dict=None, **kwargs):
+    super().__init__()
+    if __init_dict is not None:
+      self.update(__init_dict)
+    self.update(kwargs)
+    self.name = __fw_name
 
   def __repr__(self):
     return 'Framework(name={0!r}, {1})'.format(self.name, super().__repr__())
