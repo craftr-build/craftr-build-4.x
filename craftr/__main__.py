@@ -88,6 +88,7 @@ def main():
   parser.add_argument('-D', default=[], action='append', help='Set an option, is automatically converted to the closest applicable datatype')
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
+  parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -155,7 +156,7 @@ def main():
 
     # Execute the build.
     if args.b:
-      cmd = ['ninja'] + [t.fullname for t in targets]
+      cmd = ['ninja'] + [t.fullname for t in targets] + args.N
       ret = shell.call(cmd, shell=True)
       if ret != 0:
         return ret
