@@ -95,6 +95,9 @@ class _BaseCompiler(object):
     super().__init__()
     self.settings = Framework(type(self).__name__, **kwargs)
 
+  def __getitem__(self, key):
+    return self.settings[key]
+
   def _settings(self, frameworks, kwargs):
     caller = magic.get_frame(1).f_code.co_name
     fwname = type(self).__name__ + '.' + caller
