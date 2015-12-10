@@ -25,6 +25,14 @@
 from ..llvm import LlvmCompiler as _LlvmCompiler, Archiver
 from functools import partial
 
-CCompiler = partial(_LlvmCompiler, program='gcc', language='c')
-CxxCompiler = partial(_LlvmCompiler, program='g++', language='c++')
+class GccCompiler(_LlvmCompiler):
+
+  name = 'GCC (LLVM)'
+
+  def __init__(self, program='gcc', language='c', **kwargs):
+    super().__init__(program=program, language=language, **kwargs)
+
+
+CCompiler = partial(GccCompiler, program='gcc', language='c')
+CxxCompiler = partial(GccCompiler, program='g++', language='c++')
 Linker = CCompiler

@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from craftr import path
 from craftr.ext.compiler import _BaseCompiler, gen_output, gen_objects
 import craftr
 import re
@@ -34,7 +35,7 @@ class Ar(_BaseCompiler):
 
   def staticlib(self, output, inputs, target_name=None, **kwargs):
     join = self._settings([], kwargs)
-    target = craftr.Target.Builder('unix.ar', name=target_name)
+    target = craftr.Target.Builder(self.name, name=target_name)
 
     inputs = craftr.expand_inputs(inputs, join)
     output = gen_output(output, suffix=craftr.platform.lib)
@@ -44,8 +45,33 @@ class Ar(_BaseCompiler):
     return target(command, inputs, [output])
 
 
+class Ld(_BaseCompiler):
+  ''' Interface for the Unix `ld` command. '''
+
+  name = 'Unix LD'
+
+  def __init__(self, program='ld', **kwargs):
+    super().__init__(program=program, **kwargs)
+
+  def link(self, output, inputs, frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = craftr.Target.Builder(self.name, name=target_name)
+
+    inputs = craftr.expand_inputs(inputs, join)
+    if not path.isabs(output):
+      output = gen_output(output)  # xxx: suffix?
+
+    linker_script = join.get('linker_script', None)
+
+    command = [join['program'], '$in', '-o', '$out']
+    command += ['-T', linker_script] if linker_script else []
+    return target(command, inputs, [output])
+
+
 class Objcopy(_BaseCompiler):
   ''' Interface for the `objcopy` tool. '''
+
+  name = 'Unix Objcopy'
 
   def __init__(self, program='objcopy', detect=True, **kwargs):
     super().__init__(program=program, **kwargs)
@@ -71,7 +97,7 @@ class Objcopy(_BaseCompiler):
     - description '''
 
     join = self._settings([], kwargs)
-    target = craftr.Target.Builder('unix.objcopy', name=target_name, foreach=True)
+    target = craftr.Target.Builder(self.name, name=target_name, foreach=True)
 
     # xxx: I don't think that [:3] is the correct way to derive the suffix. :)
     output_suffix = join.get('output_suffix', output_format[:3])
