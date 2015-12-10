@@ -204,10 +204,14 @@ class Target(object):
       raise ValueError('command can not be empty')
 
     if inputs is not None:
+      if isinstance(inputs, str):
+        inputs = [inputs]
       inputs = expand_inputs(inputs)
       inputs = self._check_list_of_str('inputs', inputs)
     if outputs is not None:
-      if callable(outputs):
+      if isinstance(outputs, str):
+        outputs = [outputs]
+      elif callable(outputs):
         outputs = outputs(inputs)
       outputs = self._check_list_of_str('outputs', outputs)
 
