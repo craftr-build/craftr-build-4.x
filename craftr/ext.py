@@ -23,6 +23,7 @@ from itertools import chain
 
 import craftr
 import imp
+import importlib
 import re
 import sys
 import warnings
@@ -59,11 +60,10 @@ class CraftrImporter(object):
   `craftr.ext` parent namespace. Only functions inside a session
   context. '''
 
-  def __init__(self):
+  def __init__(self, session):
     super().__init__()
     self._cache = {}
-
-
+    self.session = session
 
   def _check_file(self, filename):
     if not path.isfile(filename):
@@ -90,7 +90,7 @@ class CraftrImporter(object):
           self._check_file(filename)
 
     self._cache.clear()
-    for dirname in map(path.normpath, chain(craftr.session.path, sys.path)):
+    for dirname in map(path.normpath, chain(self.session.path, sys.path)):
       if not path.isdir(dirname):
         continue
       check_dir(dirname)
@@ -111,7 +111,6 @@ class CraftrImporter(object):
       tuple: `(type, filename)`
     '''
 
-    self._rebuild_cache()  # xxx: do this only when syspath has changed!
     if fullname in self._cache:
       return ('module', self._cache[fullname])
     fullname += '.'
@@ -120,56 +119,73 @@ class CraftrImporter(object):
         return ('namespace', None)
     return (None, None)
 
+  def update(self):
+    ''' Should be called if `sys.path` or `Session.path` has been
+    changed to rebuild the module cache and delay-load virtual modules
+    if a physical was found. '''
+
+    assert craftr.session == self.session
+
+    self._rebuild_cache()
+    for key, module in list(self.session.modules.items()):
+      # Virtual modules have no __file__ member.
+      if not hasattr(module, '__file__'):
+        kind = self._get_module_info(key)[0]
+        assert kind in (None, 'namespace', 'module'), kind
+        if kind == 'module':
+          # xxx: I feel like this is a very dirty solution. Maybe
+          # we should only need to reload the module but use proxies
+          # everywhere so you don't have a virtual and physical copy
+          # of the module floating around.
+          module = importlib.reload(module)
+          parent, _, name = key.rpartition('.')
+          if parent:
+            setattr(self.session.modules[parent], name, module)
+
   def find_module(self, fullname, path=None):
+    assert craftr.session == self.session
     if not fullname.startswith('craftr.ext.'):
       return None
-    name = fullname[11:]
-    if name in craftr.session.modules:
-      # xxx: what if the existing module is a namespace module but we found a real one?
-      return CraftrLoader(None, None)
+
     # xxx: take the *path* argument into account?
+    name = fullname[11:]
     kind, filename = self._get_module_info(name)
     if kind:
-      return CraftrLoader(kind, filename)
+      return CraftrLoader(kind, filename, self.session)
     return None
 
 
 class CraftrLoader(object):
 
-  def __init__(self, kind, filename):
+  def __init__(self, kind, filename, session):
     super().__init__()
     self.kind = kind
     self.filename = filename
+    self.session = session
 
   def load_module(self, fullname):
     assert fullname.startswith('craftr.ext.')
+    assert craftr.session == self.session
     name = fullname[11:]
-    if name in craftr.session.modules:
-      sys.modules[fullname] = module = craftr.session.modules[name]
-    else:
-      assert self.kind and self.kind in ('namespace', 'module')
-      module = imp.new_module(fullname)
-      module.__path__ = []
-      sys.modules[fullname] = module
-      craftr.session.modules[name] = module
+
+    assert self.kind and self.kind in ('namespace', 'module')
+    module = imp.new_module(fullname)
+    module.__path__ = []
+    sys.modules[fullname] = module
+    self.session.modules[name] = module
+    if self.kind == 'module':
+      module.__file__ = self.filename
       try:
-        if self.kind == 'module':
-          module.__file__ = self.filename
-          craftr.init_module(module)
-          with craftr.magic.enter_context(craftr.module, module):
-            try:
-              with open(self.filename, 'r') as fp:
-                exec(compile(fp.read(), self.filename, 'exec'), vars(module))
-            finally:
-              craftr.finish_module(module)
+        craftr.init_module(module)
+        with craftr.magic.enter_context(craftr.module, module):
+          try:
+            with open(self.filename, 'r') as fp:
+              exec(compile(fp.read(), self.filename, 'exec'), vars(module))
+          finally:
+            craftr.finish_module(module)
       except Exception:
         del sys.modules[fullname]
-        del craftr.session.modules[name]
+        del self.session.modules[name]
         raise
+
     return module
-
-
-def install():
-  if not getattr(install, '_installed', False):
-    sys.meta_path.append(CraftrImporter())
-    install._installed = True

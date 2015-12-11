@@ -120,7 +120,6 @@ def main():
 
   old_path = os.getcwd()
   os.chdir(args.d)
-  craftr.ext.install()
 
   with craftr.magic.enter_context(session, craftr.Session()):
     session.path.append(old_path)
