@@ -97,6 +97,8 @@ class MsvcCompiler(_BaseCompiler):
     target = Target.Builder('msvc.compile', name=target_name, foreach=True,
       frameworks=frameworks)
     _warn_prefix = target.fullname
+
+    sources = expand_inputs(sources, join)
     objects = gen_objects(sources, suffix=platform.obj)
 
     include = set(join.get_merge('include'))
