@@ -142,7 +142,7 @@ def main():
     if args.c == 1:
       files = set()
       for target in (targets or session.targets.values()):
-        for fn in target.outputs:
+        for fn in (target.outputs or []):
           if os.path.isfile(fn):
             files.add(craftr.path.normpath(fn))
       print('cleaning {0} files...'.format(len(files)))
