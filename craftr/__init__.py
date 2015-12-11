@@ -72,6 +72,7 @@ class Session(object):
     if prev is not None:
       raise RuntimeError('session context can not be nested')
     sys.meta_path.append(self.extension_importer)
+    self.update()
 
   def on_context_leave(self):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make

@@ -118,11 +118,10 @@ def main():
     print('error: ninja is not installed on the system')
     return errno.ENOENT
 
-  old_path = os.getcwd()
+  sys.path.append(os.getcwd())
   os.chdir(args.d)
 
   with craftr.magic.enter_context(session, craftr.Session()):
-    session.path.append(old_path)
     _set_session_defs(args.D)
     module = importlib.import_module('craftr.ext.' + args.m)
 

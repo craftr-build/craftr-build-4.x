@@ -60,17 +60,18 @@ def enter_context(context_proxy, context_obj):
 
   assert isinstance(context_proxy, Proxy)
   stack = object.__getattribute__(context_proxy, '_proxy_localstack')
-  if hasattr(context_obj, 'on_context_enter'):
-    context_obj.on_context_enter(stack.top)
+  prev = stack.top
   stack.push(context_obj)
   try:
+    if hasattr(context_obj, 'on_context_enter'):
+      context_obj.on_context_enter(prev)
     yield
   finally:
     try:
-      assert stack.pop() is context_obj
-    finally:
       if hasattr(context_obj, 'on_context_leave'):
         context_obj.on_context_leave()
+    finally:
+      assert stack.pop() is context_obj
 
 
 def get_assigned_name(frame):
