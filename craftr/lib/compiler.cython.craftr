@@ -1,0 +1,63 @@
+# -*- mode: python -*-
+# Copyright (C) 2015  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from craftr.ext.compiler import gen_objects, _BaseCompiler
+import craftr
+import re
+
+
+class CythonCompiler(_BaseCompiler):
+  ''' Interface for Cython. '''
+
+  name = 'Cython'
+
+  def __init__(self, program='cython', detect=True, **kwargs):
+    super().__init__(program=program, **kwargs)
+    self.version = None
+    if detect:
+      stdout = craftr.shell.Process([program, '-V']).stderr
+      match = re.match(r'cython\s+version\s+([\d\.]+)', stdout, re.I)
+      if match:
+        self.version = match.group(1)
+
+  def compile(self, py_sources, outputs=None, frameworks=(), target_name=None, **kwargs):
+    join = self._settings(frameworks, kwargs)
+    target = craftr.Target.Builder(self.name, name=target_name, foreach=True)
+
+    cpp = join.get('cpp')
+    python_version = join.get('python_version', 3)
+    fast_fail = join.get('fast_fail')
+
+    if outputs is None:
+      outputs = gen_objects(py_sources, 'cython', suffix='.cpp' if cpp else '.c')
+    if python_version not in (2, 3):
+      raise ValueError('invalid python_version: {0!r}'.format(python_version))
+
+    include = set(join.get_merge('include'))
+    command = [join['program'], '$in', '-o', '$out', '-' + str(python_version)]
+    command += ['-I' + x for x in include]
+    command += ['--fast-fail'] if fast_fail else []
+    command += ['--cplus'] if cpp else []
+    command += join.get_merge('additional_flags')
+
+    # xxx: Determine the Python Framework and add it to the target!
+
+    return target(command, py_sources, outputs)
