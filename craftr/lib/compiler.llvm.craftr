@@ -26,6 +26,11 @@ from craftr.ext.compiler import gen_objects, gen_output, _BaseCompiler
 from functools import partial
 
 
+def flatten(iterable):
+    for item in iterable:
+        yield from item
+
+
 class LlvmCompiler(_BaseCompiler):
   ''' Interface for the LLVM compiler. '''
 
@@ -48,6 +53,13 @@ class LlvmCompiler(_BaseCompiler):
     warn = join.get('warn', 'all')
     optimize = join.get('optimize', None)
 
+    if platform.name == 'Darwin':
+        osx_fwpath = join.get_merge('osx_fwpath')
+        osx_frameworks = join.get_merge('osx_frameworks')
+    else:
+        osx_fwpath = []
+        osx_frameworks = []
+
     sources = expand_inputs(sources)
     objects = gen_objects(sources, suffix=platform.obj)
     fw = Framework(target.fullname)
@@ -63,6 +75,8 @@ class LlvmCompiler(_BaseCompiler):
     command += ['-I' + x for x in include]
     command += ['-D' + x for x in defines]
     command += ['-fPIC'] if pic else []
+    command += ['-F' + x for x in osx_fwpath]
+    command += flatten(['-framework', x] for x in osx_frameworks)
     command += join.get_merge('additional_flags')
 
     # xxx: handle warn
@@ -85,11 +99,20 @@ class LlvmCompiler(_BaseCompiler):
     libpath = set(join.get_merge('libpath'))
     external_libs = set(join.get_merge('external_libs'))
 
+    if platform.name == 'Darwin':
+        osx_fwpath = join.get_merge('osx_fwpath')
+        osx_frameworks = join.get_merge('osx_frameworks')
+    else:
+        osx_fwpath = []
+        osx_frameworks = []
+
     command = [join['program'], '$in']
     command += ['-l' + x for x in libs]
     command += ['-L' + x for x in libpath]
     command += external_libs
     command += ['-dynamic'] if output_type == 'dll' else []
+    command += ['-F' + x for x in osx_fwpath]
+    command += flatten(['-framework', x] for x in osx_frameworks)
     command += join.get_merge('additional_flags')
     command += ['-o', '$out']
 
