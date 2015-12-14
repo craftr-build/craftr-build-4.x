@@ -58,6 +58,7 @@ class Session(object):
 
   def __init__(self, path=None):
     super().__init__()
+    self.env = os.environ.copy()
     self.extension_importer = ext.CraftrImporter(self)
     self.path = [_path.join(_path.dirname(__file__), 'lib')]
     self.modules = {}
@@ -75,6 +76,14 @@ class Session(object):
   def on_context_enter(self, prev):
     if prev is not None:
       raise RuntimeError('session context can not be nested')
+
+    # We can not change os.environ effectively, we must update the
+    # dictionary instead.
+    self._old_environ = os.environ.copy()
+    os.environ.clear()
+    os.environ.update(self.env)
+    self.env = os.environ
+
     sys.meta_path.append(self.extension_importer)
     self.update()
 
@@ -82,6 +91,12 @@ class Session(object):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make
     sure they're all in `Session.modules` (the modules are expected
     to be put there by the `craftr.ext.CraftrImporter`). '''
+
+    # Restore the original values of os.environ.
+    self.env = os.environ.copy()
+    os.environ.clear()
+    os.environ.update(self._old_environ)
+    del self._old_environ
 
     sys.meta_path.remove(self.extension_importer)
     for key, module in list(sys.modules.items()):
