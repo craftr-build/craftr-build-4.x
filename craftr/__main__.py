@@ -52,6 +52,19 @@ def _set_session_defs(defs):
     session.env[key] = value
 
 
+def _abs_env():
+  def mk_abs(item):
+    if not path.isabs(item) and path.exists(item):
+      return path.abspath(item)
+    return item
+  for key, value in list(os.environ.items()):
+    if key == 'PATH':
+      value = path.sep.join(map(mk_abs, value.split(path.sep)))
+    else:
+      value = mk_abs(value)
+    os.environ[key] = value
+
+
 def _run_func(main_module, name, args):
   if '.' not in name:
     name = main_module + '.' + name
@@ -98,7 +111,7 @@ def main():
     return 0
 
   if not args.m:
-    if not os.path.isfile('Craftfile'):
+    if not path.isfile('Craftfile'):
       print('error: "Craftfile" does not exist')
       return errno.ENOENT
     args.m = craftr.ext.get_module_ident('Craftfile')
@@ -106,9 +119,9 @@ def main():
       print('error: "Craftfile" has no craftr_module(...) declaration')
       return errno.ENOENT
 
-  if not os.path.exists(args.d):
+  if not path.exists(args.d):
     os.makedirs(args.d)
-  elif not os.path.isdir(args.d):
+  elif not path.isdir(args.d):
     print('error: "{0}" is not a directory'.format(args.d))
     return errno.ENOTDIR
 
@@ -118,7 +131,8 @@ def main():
     print('error: ninja is not installed on the system')
     return errno.ENOENT
 
-  sys.path.append(os.getcwd())
+  _abs_env()
+  old_cwd = os.getcwd()
   os.chdir(args.d)
 
   with craftr.magic.enter_context(session, craftr.Session()):
@@ -143,7 +157,7 @@ def main():
       files = set()
       for target in (targets or session.targets.values()):
         for fn in (target.outputs or []):
-          if os.path.isfile(fn):
+          if path.isfile(fn):
             files.add(craftr.path.normpath(fn))
       print('cleaning {0} files...'.format(len(files)))
       for fn in files:
