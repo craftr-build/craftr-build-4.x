@@ -90,7 +90,7 @@ class CraftrImporter(object):
           self._check_file(filename)
 
     self._cache.clear()
-    for dirname in map(path.normpath, chain(self.session.path, sys.path)):
+    for dirname in map(path.normpath, self.session.path):
       if not path.isdir(dirname):
         continue
       check_dir(dirname)

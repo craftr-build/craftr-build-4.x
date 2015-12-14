@@ -32,11 +32,13 @@ session = magic.new_context('session')
 module = magic.new_context('module')
 
 from craftr import ext, path, platform, ninja, warn
-from craftr.env import Environment
 
 import craftr
 import collections
+import os
 import types
+
+_path = path
 
 
 class Session(object):
@@ -54,14 +56,16 @@ class Session(object):
       build definitions file.
     '''
 
-  def __init__(self):
+  def __init__(self, path=None):
     super().__init__()
     self.extension_importer = ext.CraftrImporter(self)
-    self.env = Environment()
-    self.path = [path.join(path.dirname(__file__), 'lib')]
+    self.path = [_path.join(_path.dirname(__file__), 'lib')]
     self.modules = {}
     self.targets = {}
     self.var = {}
+
+    if path is not None:
+      self.path.extend(path)
 
   def update(self):
     ''' See `extr.CraftrImporter.update()`. '''

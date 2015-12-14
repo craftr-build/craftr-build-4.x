@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 ''' That's what happens when you run Craftr. '''
 
-from craftr import session, shell
+from craftr import session, shell, path
 
 import argparse
 import craftr
@@ -42,14 +42,14 @@ def _closest_conv(x):
   return x
 
 
-def _set_session_defs(defs):
+def _set_env(defs):
   for item in defs:
     key, assign, value = item.partition('=')
     if assign and not value:
       value = ''
     elif not assign:
       value = True
-    session.env[key] = value
+    os.environ[key] = value
 
 
 def _abs_env():
@@ -131,12 +131,12 @@ def main():
     print('error: ninja is not installed on the system')
     return errno.ENOENT
 
+  _set_env(args.D)
   _abs_env()
   old_cwd = os.getcwd()
   os.chdir(args.d)
 
-  with craftr.magic.enter_context(session, craftr.Session()):
-    _set_session_defs(args.D)
+  with craftr.magic.enter_context(session, craftr.Session(path=[old_cwd])):
     module = importlib.import_module('craftr.ext.' + args.m)
 
     if args.f:
@@ -151,7 +151,7 @@ def main():
 
     if args.e:
       with open('build.ninja', 'w') as fp:
-        craftr.ninja.export(fp)
+        craftr.ninja.export(fp, module)
 
     if args.c == 1:
       files = set()
