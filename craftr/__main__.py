@@ -30,18 +30,6 @@ import subprocess
 import sys
 
 
-def _closest_conv(x):
-  try: return int(x)
-  except ValueError: pass
-  try: return float(x)
-  except ValueError: pass
-  if x.lower() in ('true', 'yes'):
-    return True
-  elif x.lower() in ('false', 'no'):
-    return False
-  return x
-
-
 def _set_env(defs):
   for item in defs:
     key, assign, value = item.partition('=')
