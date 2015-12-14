@@ -131,6 +131,10 @@ def main():
     print('error: ninja is not installed on the system')
     return errno.ENOENT
 
+  # Convert relative to absolute target names.
+  args.targets = [
+    (args.m + '.' + t) if ('.' not in t) else t for t in args.targets]
+
   _set_env(args.D)
   _abs_env()
   old_cwd = os.getcwd()
