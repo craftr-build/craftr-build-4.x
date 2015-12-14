@@ -92,6 +92,8 @@ def main():
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
+  parser.add_argument('--no-env', action='store_true', help='Do not run Craftr environment files.')
+  parser.add_argument('--env', help='Execute the specified Craftr environment file. CAN be paired with --no-env')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -129,7 +131,18 @@ def main():
   old_cwd = os.getcwd()
   os.chdir(args.d)
 
-  with craftr.magic.enter_context(session, craftr.Session(path=[old_cwd])):
+  session_obj = craftr.Session(cwd=old_cwd, path=[old_cwd])
+  with craftr.magic.enter_context(session, session_obj):
+    # Run the environment files.
+    if not args.no_env:
+      session.exec_if_exists(path.normpath('~/Craftenv'))
+      session.exec_if_exists(path.join(old_cwd, 'Craftenv'))
+    if args.env:
+      env_file = path.normpath(args.env, old_cwd)
+      if not session.exec_if_exists(env_file):
+        print('error: --env {0!r} does not exist'.format(args.env))
+        return errno.ENOENT
+
     module = importlib.import_module('craftr.ext.' + args.m)
 
     if args.f:

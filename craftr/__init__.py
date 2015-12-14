@@ -56,8 +56,9 @@ class Session(object):
       build definitions file.
     '''
 
-  def __init__(self, path=None):
+  def __init__(self, cwd=None, path=None):
     super().__init__()
+    self.cwd = cwd or os.getcwd()
     self.env = os.environ.copy()
     self.extension_importer = ext.CraftrImporter(self)
     self.path = [_path.join(_path.dirname(__file__), 'lib')]
@@ -67,6 +68,18 @@ class Session(object):
 
     if path is not None:
       self.path.extend(path)
+
+  def exec_if_exists(self, filename):
+    ''' Executes *filename* if it exists. Used for running the Craftr
+    environment files before the modules are loaded. '''
+
+    if not os.path.isfile(filename):
+      return False
+    with open(filename, 'r') as fp:
+      code = compile(fp.read(), filename, 'exec')
+    scope = {'__file__': filename, '__name__': '__craftr__'}
+    exec(code, scope)
+    return True
 
   def update(self):
     ''' See `extr.CraftrImporter.update()`. '''
