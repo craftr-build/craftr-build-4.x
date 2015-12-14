@@ -1,4 +1,4 @@
-# -*- mode: python -*-
+# -*- mode: python; tab-width: 2 -*-
 # Copyright (C) 2015  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 from craftr import path, platform, expand_inputs, Target, Framework
-from craftr import warn as _warn
+from craftr.warn import invalid_option
 from craftr.utils import fw_merge
 from craftr.ext.compiler import gen_objects, gen_output, _BaseCompiler
 from functools import partial
@@ -43,22 +43,26 @@ class LlvmCompiler(_BaseCompiler):
     join = self._settings(frameworks, kwargs)
     target = Target.Builder('llvm.compile', name=target_name, foreach=True,
       frameworks=frameworks)
+    _warn_prefix = target.fullname
 
     include = set(join.get_merge('include'))
     defines = set(join.get_merge('defines'))
     language = join['language']
+    debug = join.get('debug', False)
     std = join.get('std')
     pedantic = join.get('pedantic', False)
     pic = join.get('pic', False)
     warn = join.get('warn', 'all')
     optimize = join.get('optimize', None)
+    autodeps = join.get('autodeps', True)
+    description = join.get('description', 'LLVM Compile Object($out)')
 
     if platform.name == 'Darwin':
-        osx_fwpath = join.get_merge('osx_fwpath')
-        osx_frameworks = join.get_merge('osx_frameworks')
+      osx_fwpath = join.get_merge('osx_fwpath')
+      osx_frameworks = join.get_merge('osx_frameworks')
     else:
-        osx_fwpath = []
-        osx_frameworks = []
+      osx_fwpath = []
+      osx_frameworks = []
 
     sources = expand_inputs(sources)
     objects = gen_objects(sources, suffix=platform.obj)
@@ -70,6 +74,7 @@ class LlvmCompiler(_BaseCompiler):
       fw['libs'] = ['c++']
 
     command = [join['program'], '-x', language, '-c', '$in', '-o', '$out']
+    command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
     command += ['-pedantic'] if pedantic else []
     command += ['-I' + x for x in include]
@@ -77,14 +82,38 @@ class LlvmCompiler(_BaseCompiler):
     command += ['-fPIC'] if pic else []
     command += ['-F' + x for x in osx_fwpath]
     command += flatten(['-framework', x] for x in osx_frameworks)
-    command += join.get_merge('additional_flags')
 
-    # xxx: handle warn
-    # xxx: handle optimize
+    if warn == 'all':
+      command += ['-Wall']
+    elif warn == 'none':
+      command += ['-w']
+    elif warn is None:
+      pass
+    else:
+      invalid_option('warn', warn)
+
+    if debug:
+      if optimize and optimize != 'debug':
+        invalid_option('optimize', optimize, detail='no optimize with debug enabled')
+    elif optimize == 'speed':
+      command += ['-O4']
+    elif optimize == 'size':
+      commandm += ['-Os']
+    elif optimize in ('debug', 'none', None):
+      command += ['-O0']
+    else:
+      invalid_option('optimize', optimize)
+
+    if autodeps:
+      target.depfile = '$out.d'
+      target.deps = 'gcc'
+      command += ['-MMD', '-MF', '$depfile']
+
+    command += join.get_merge('additional_flags')
 
     self._warn_unused(join, kwargs, target.fullname)
     target.frameworks.append(fw)
-    return target(command, sources, objects)
+    return target(command, sources, objects, description=description)
 
   def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
     join = self._settings(frameworks, kwargs)
@@ -100,11 +129,11 @@ class LlvmCompiler(_BaseCompiler):
     external_libs = set(join.get_merge('external_libs'))
 
     if platform.name == 'Darwin':
-        osx_fwpath = join.get_merge('osx_fwpath')
-        osx_frameworks = join.get_merge('osx_frameworks')
+      osx_fwpath = join.get_merge('osx_fwpath')
+      osx_frameworks = join.get_merge('osx_frameworks')
     else:
-        osx_fwpath = []
-        osx_frameworks = []
+      osx_fwpath = []
+      osx_frameworks = []
 
     command = [join['program'], '$in']
     command += ['-l' + x for x in libs]

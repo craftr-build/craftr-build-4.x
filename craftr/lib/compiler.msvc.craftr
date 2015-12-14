@@ -135,8 +135,10 @@ class MsvcCompiler(_BaseCompiler):
     if warn == 'all':
       # /Wall really shows too many warnings, /W4 is pretty good.
       command += ['/W4']
-    elif warn in ('none', None):
+    elif warn == 'none':
       command += ['/w']
+    elif warn is None:
+      pass
     else:
       invalid_option('warn', warn)
 
