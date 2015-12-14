@@ -34,9 +34,10 @@ def _set_env(defs):
   for item in defs:
     key, assign, value = item.partition('=')
     if assign and not value:
-      value = ''
+      os.environ.pop(key, None)
+      continue
     elif not assign:
-      value = True
+      value = 'true'
     os.environ[key] = value
 
 
