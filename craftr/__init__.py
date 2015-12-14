@@ -71,15 +71,26 @@ class Session(object):
 
   def exec_if_exists(self, filename):
     ''' Executes *filename* if it exists. Used for running the Craftr
-    environment files before the modules are loaded. '''
+    environment files before the modules are loaded. Returns None if the
+    file does not exist, a `types.ModuleType` object if it was executed. '''
 
     if not os.path.isfile(filename):
-      return False
+      return None
+
+    # Create a fake module so we can enter a module context
+    # for the environment script.
+    temp_mod = types.ModuleType('craftr.ext.__temp__:' + filename)
+    temp_mod.__file__ = filename
+    init_module(temp_mod)
+    temp_mod.__name__ = '__craftenv__'
+    del temp_mod.__ident__
+
     with open(filename, 'r') as fp:
       code = compile(fp.read(), filename, 'exec')
-    scope = {'__file__': filename, '__name__': '__craftr__'}
-    exec(code, scope)
-    return True
+    with magic.enter_context(module, temp_mod):
+      exec(code, vars(module))
+
+    return temp_mod
 
   def update(self):
     ''' See `extr.CraftrImporter.update()`. '''
