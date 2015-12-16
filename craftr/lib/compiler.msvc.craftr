@@ -126,10 +126,10 @@ class MsvcCompiler(_BaseCompiler):
         command += ['/FS']
 
     if exceptions:
-      if language != 'cpp':
+      if language != 'c++':
         invalid_option('exception', True, detail='not supported in {0!r}'.format(language))
       command += ['/EHsc']
-    elif exceptions is None and language == 'cpp':
+    elif exceptions is None and language == 'c++':
       # Enable exceptions by default.
       command += ['/EHsc']
 
@@ -184,7 +184,9 @@ class MsvcLinker(_BaseCompiler):
 
     libpath = join.get_merge('libpath')
     libs = join.get_merge('libs')
+    libs += join.get_merge('msvc_libs')
     external_libs = join.get_merge('external_libs')
+    external_libs += join.get_merge('msvc_external_libs')
     debug = join.get('debug', False)
     description = join.get('description', 'MSVC Link {0!r} ($out)'.format(output_type))
 
