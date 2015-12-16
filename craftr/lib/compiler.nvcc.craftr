@@ -20,8 +20,9 @@
 # THE SOFTWARE.
 
 from os import environ
-from craftr import path, platform, expand_inputs, Target, Framework
+from craftr import path, expand_inputs, Target, Framework
 from craftr import warn as _warn
+from craftr.ext import platform
 from craftr.ext.compiler import gen_objects
 
 class NvccCompiler(object):

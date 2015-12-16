@@ -19,43 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import module, path, platform, magic, warn, Framework
+from craftr import module, path, magic, warn, Framework
 import collections
-
-
-def get_platform_toolset():
-  ''' Based on the platform and environment variables, this function
-  will return an object that may or may not have the following factory
-  functions as attributes:
-
-  - `AsmCompiler()`
-  - `CCompiler()`
-  - `CxxCompiler()`
-  - `Linker()`
-  - `Ar()`
-
-  The factory functions take common option parameters into account,
-  but the actual available options depend on the underlying implementation.
-  Commonly, the following options are usually supported:
-
-  - `program` (override the program to invoke, rather than the default)
-  - `detect` (if True and supported, the implementation will detect the
-    compiler programs version and eventually target architecture and raise
-    an exception if that could not be done)
-
-  Options that are not supported are usually accepted but a warning will
-  be displayed in the console.
-  '''
-
-  if platform.name == 'Windows':
-    from . import msvc as toolset
-  elif platform.name == 'Darwin':
-    from . import llvm as toolset
-  elif platform.name == 'Linux':
-    from . import gcc as toolset
-  else:
-    raise EnvironmentError('platform "{0}" not supported'.format(platform.name))
-  return toolset
 
 
 def gen_output(output, subdir=None, suffix=None):
@@ -113,11 +78,3 @@ class _BaseCompiler(object):
       if key not in join.used_keys:
         result[key] = kwargs[key]
     warn.unused_kwargs(result, prefix)
-
-
-
-try:
-  toolset = get_platform_toolset()
-except EnvironmentError:
-  # Toolset can not be derived for the current platform.
-  pass

@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from craftr import path
+import craftr
 import sys
 
 if sys.platform.startswith('linux'):
@@ -30,6 +31,8 @@ if sys.platform.startswith('linux'):
   bin = lambda x: x
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.so')
+
+  from craftr.ext.compiler import gcc as toolset
 elif sys.platform.startswith('win32'):
   std = 'NT'
   ident = 'win'
@@ -39,6 +42,8 @@ elif sys.platform.startswith('win32'):
   bin = lambda x: path.addsuffix(x, '.exe')
   lib = lambda x: path.addsuffix(x, '.lib')
   dll = lambda x: path.addsuffix(x, '.dll')
+
+  from craftr.ext.compiler import msvc as toolset
 elif sys.platform.startswith('cygwin'):
   std = 'Posix'
   ident = 'cygwin'
@@ -48,6 +53,8 @@ elif sys.platform.startswith('cygwin'):
   bin = lambda x: path.addsuffix(x, '.exe')
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.dll')
+
+  from craftr.ext.compiler import gcc as toolset
 elif sys.platform.startswith('darwin'):
   std = 'Posix'
   ident = 'mac'
@@ -57,5 +64,10 @@ elif sys.platform.startswith('darwin'):
   bin = lambda x: x
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.dylib')
+
+  from craftr.ext.compiler import llvm as toolset
 else:
   error('unsupported platform "{0}"'.format(sys.platform))
+
+# Backwards compatibility
+craftr.ext.compiler.toolset = toolset

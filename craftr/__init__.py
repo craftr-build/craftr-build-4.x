@@ -31,7 +31,7 @@ from craftr import magic
 session = magic.new_context('session')
 module = magic.new_context('module')
 
-from craftr import ext, path, platform, ninja, warn
+from craftr import ext, path, ninja, warn
 
 import craftr
 import collections
@@ -447,4 +447,4 @@ def expand_inputs(inputs, join=None):
   return result
 
 
-__all__ = ['craftr', 'expand_inputs', 'session', 'module', 'path', 'platform', 'warn', 'Target', 'Framework']
+__all__ = ['craftr', 'expand_inputs', 'session', 'module', 'path', 'warn', 'Target', 'Framework']
