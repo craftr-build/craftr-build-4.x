@@ -34,7 +34,7 @@ class CSCompiler(object):
       checked=False, debug=False, main=None, platform=None, unsafe=False,
       win32icon=None, win32manifest=None, win32res=None, additional_flags=()):
 
-    filename = path.normpath(filename, module.__ident__)
+    filename = path.normpath(filename, module.project_name)
     if target in ('appcontainerexe', 'exe', 'winexe'):
       filename = path.addsuffix(filename, '.exe')
     elif target == 'library':

@@ -403,9 +403,12 @@ def init_module(module):
   executed to initialize its contents. '''
 
   assert module.__name__.startswith('craftr.ext.')
-  module.__ident__ = module.__name__[11:]
   module.__session__ = session()
   module.project_dir = path.dirname(module.__file__)
+  module.project_name = module.__name__[11:]
+
+  # Backwards compatibility
+  module.__ident__ = module.project_name
 
 
 def finish_module(module):
@@ -416,7 +419,7 @@ def finish_module(module):
   if not hasattr(module, '__all__'):
     module.__all__ = []
     for key in dir(module):
-      if key.startswith('_') or key in ('env', 'project_dir'):
+      if key.startswith('_') or key in ('project_dir', 'project_name'):
         continue
       if isinstance(getattr(module, key), types.ModuleType):
         continue

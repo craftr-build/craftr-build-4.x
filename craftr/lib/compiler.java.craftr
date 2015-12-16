@@ -64,7 +64,7 @@ class JavaCompiler(object):
     return Target(command, sources, outputs)
 
   def make_jar(self, filename, classes, entry_point=None):
-    filename = path.normpath(filename, module.__ident__)
+    filename = path.normpath(filename, module.project_name)
     filename = path.addsuffix(filename, '.jar')
     flags = '-cf'
     if entry_point:
