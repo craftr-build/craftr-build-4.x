@@ -27,27 +27,30 @@ import glob2
 import os
 
 
-def autoglob(path):
+def autoglob(path, parent=None):
   ''' Returns `glob(path)` if *path* is actually a glob-style pattern.
   If it is not, it will return `[path]` as is, not checking wether it
   exists or not. '''
 
   if any(x in path for x in '*?'):
-    return glob(path)
+    return glob(path, parent)
   else:
     return [path]
 
 
-def glob(*patterns):
+def glob(*patterns, parent=None):
   ''' Wrapper for `glob2.glob()` that accepts an arbitrary number of
   patterns and matches them. The paths are normalized with `normpath()`.
   If called from within a module, relative patterns are assumed relative
   to the modules parent directory. '''
 
+  if not parent and module:
+    parent = module.project_dir
+
   result = []
   for pattern in patterns:
-    if module and not isabs(pattern):
-      pattern = join(module.project_dir, pattern)
+    if isabs(pattern):
+      pattern = join(parent, pattern)
     result += glob2.glob(normpath(pattern))
   return result
 
