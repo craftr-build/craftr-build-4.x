@@ -19,11 +19,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import craftr, Target
+from os import environ
+from craftr import path, expand_inputs, Target
+from craftr.ext import platform
 
 
-def run_program(program, *args):
-  program = craftr.expand_inputs(program)
-  if len(program) != 1:
-    raise ValueError('expected 1 file as input')
-  return Target(program + list(args), program, pool='console')
+def run(program, *args, cwd=None, target_name=None):
+  program = path.normpath(expand_inputs(program)[0])
+  command = [program] + list(args)
+  if cwd:
+    if platform.name == 'Windows':
+      command = ['cmd', '/c', 'cd', cwd, '&&'] + command
+    else:
+      shell = environ['SHELL']
+      command = [shell, '-c', 'cd', cwd, '&&'] + command
+  return Target(command, program, pool='console', name=target_name)
+
+
+# Backwards compatibility
+run_program = run
