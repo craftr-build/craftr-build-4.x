@@ -49,7 +49,7 @@ def glob(*patterns, parent=None):
 
   result = []
   for pattern in patterns:
-    if isabs(pattern):
+    if not isabs(pattern):
       pattern = join(parent, pattern)
     result += glob2.glob(normpath(pattern))
   return result
