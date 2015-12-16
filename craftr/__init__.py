@@ -171,6 +171,9 @@ class Target(object):
       See the "C/C++ Header Depenencies" section in the [Ninja Manual][].
     depfile: A filename that contains additional dependencies.
     msvc_deps_prefix: The MSVC dependencies prefix to be used for the rule.
+    explicit: If True, the target will only be built by Ninja if it is
+      explicitly targeted from the command-line or required by another
+      target. Defaults to False.
 
   [Ninja Manual]: https://ninja-build.org/manual.html
   '''
@@ -243,7 +246,7 @@ class Target(object):
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
       var=None, deps=None, depfile=None, msvc_deps_prefix=None, meta=None,
-      module=None, frameworks=None, name=None):
+      explicit=False,frameworks=None, module=None, name=None):
 
     module = Target.Builder.get_module(module)
     name = Target.Builder.get_name(module, name)
@@ -290,6 +293,7 @@ class Target(object):
     self.msvc_deps_prefix = msvc_deps_prefix
     self.meta = meta or {}
     self.frameworks = frameworks or []
+    self.explicit = explicit
 
     targets = module.__session__.targets
     if self.fullname in targets:
