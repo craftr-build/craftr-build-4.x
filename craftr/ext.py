@@ -167,12 +167,21 @@ class CraftrLoader(object):
     assert fullname.startswith('craftr.ext.')
     assert craftr.session == self.session
     name = fullname[11:]
+    module_name = fullname.rpartition('.')[2]
 
     assert self.kind and self.kind in ('namespace', 'module')
     module = imp.new_module(fullname)
     module.__path__ = []
+
     sys.modules[fullname] = module
     self.session.modules[name] = module
+    parent = sys.modules[fullname.rpartition('.')[0]]
+
+    # Also insert the module as an attribute in the parent module.
+    # This allows recursive `from` imports, see craftr-build/craftr#40 .
+    old_module = getattr(parent, module_name, None)
+    setattr(parent, module_name, module)
+
     if self.kind == 'module':
       module.__file__ = self.filename
       try:
@@ -186,6 +195,10 @@ class CraftrLoader(object):
       except Exception:
         del sys.modules[fullname]
         del self.session.modules[name]
+        if old_module:
+          setattr(parent, module_name, old_module)
+        else:
+          delattr(parent, module_name)
         raise
 
     return module
