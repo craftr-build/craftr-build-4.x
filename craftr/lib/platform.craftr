@@ -33,7 +33,8 @@ if sys.platform.startswith('linux'):
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.so')
 
-  from craftr.ext.compiler import gcc as toolset
+  from craftr.ext.unix import Ar as Archiver
+  from craftr.ext.compiler.gcc import CCompiler, CxxCompiler, Linker
 elif sys.platform.startswith('win32'):
   std = 'NT'
   ident = 'win'
@@ -44,7 +45,7 @@ elif sys.platform.startswith('win32'):
   lib = lambda x: path.addsuffix(x, '.lib')
   dll = lambda x: path.addsuffix(x, '.dll')
 
-  from craftr.ext.compiler import msvc as toolset
+  from craftr.ext.compiler.msvc import CCompiler, CxxCompiler, Archiver, Linker
 elif sys.platform.startswith('cygwin'):
   std = 'Posix'
   ident = 'cygwin'
@@ -55,7 +56,8 @@ elif sys.platform.startswith('cygwin'):
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.dll')
 
-  from craftr.ext.compiler import gcc as toolset
+  from craftr.ext.unix import Archiver as Ar
+  from craftr.ext.compiler.gcc import CCompiler, CxxCompiler, Linker
 elif sys.platform.startswith('darwin'):
   std = 'Posix'
   ident = 'mac'
@@ -66,9 +68,7 @@ elif sys.platform.startswith('darwin'):
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.dylib')
 
-  from craftr.ext.compiler import llvm as toolset
+  from craftr.ext.unix import Archiver as Ar
+  from craftr.ext.compiler.llvm import CCompiler, CxxCompiler, Archiver
 else:
   error('unsupported platform "{0}"'.format(sys.platform))
-
-# Backwards compatibility
-craftr.ext.compiler.toolset = toolset
