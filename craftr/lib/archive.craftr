@@ -22,9 +22,25 @@
 from craftr import path
 from craftr.tty import clear_line
 
+import ctypes
 import errno
 import sys
 import zipfile
+
+if sys.platform.startswith('win32'):
+  _is_win32 = True
+  def _win32_get_long_path_name(path):
+    # Thanks to http://stackoverflow.com/a/3694799/791713
+    assert sys.platform.startswith('win32')
+    buf = ctypes.create_unicode_buffer(len(path) + 1)
+    GetLongPathNameW = ctypes.windll.kernel32.GetLongPathNameW
+    res = GetLongPathNameW(path, buf, len(path) + 1)
+    if res == 0 or res > 260:
+      return path
+    else:
+      return buf.value
+else:
+  _is_win32 = False
 
 
 def build(filename, base_dir, include=(), exclude=(), optional=(),
@@ -64,6 +80,8 @@ def build(filename, base_dir, include=(), exclude=(), optional=(),
   filename = path.abspath(filename)
   zf = zipfile.ZipFile(filename, 'w')
   for fn in files:
+    if _is_win32:
+      fn = _win32_get_long_path_name(fn)
     arcname = path.relpath(fn, base_dir).replace('\\', '/')
     if arcname == path.curdir or arcname.startswith(path.pardir):
       raise ValueError('pathname not a subdir of basedir', fn, base_dir)
