@@ -33,7 +33,7 @@ def autoglob(path, parent=None):
   exists or not. '''
 
   if any(x in path for x in '*?'):
-    return glob(path, parent)
+    return glob(path, parent=parent)
   else:
     return [path]
 
