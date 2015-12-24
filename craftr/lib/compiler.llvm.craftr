@@ -149,7 +149,7 @@ class LlvmCompiler(_BaseCompiler):
     return target(command, inputs, [output], implicit_deps=external_libs)
 
 
-CCompiler = partial(LlvmCompiler, program='clang', language='c')
-CxxCompiler = partial(LlvmCompiler, program='clang++', language='c++')
-Linker = CCompiler
+CCompiler = LlvmCompiler(program='clang', language='c')
+CxxCompiler = LlvmCompiler(program='clang++', language='c++')
+Linker = CCompiler()
 from craftr.ext.unix import Ar as Archiver

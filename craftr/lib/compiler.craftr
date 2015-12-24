@@ -21,6 +21,7 @@
 
 from craftr import module, path, magic, warn, Framework
 import collections
+import copy
 
 
 def gen_output(output, subdir=None, suffix=None):
@@ -60,17 +61,34 @@ class _BaseCompiler(object):
 
   def __init__(self, **kwargs):
     super().__init__()
+    self.parent = None
     self.settings = Framework(type(self).__name__, **kwargs)
 
+  def __call__(self, **kwargs):
+    ''' Create a copy of the compiler object that inherits the settings
+    from this compiler. '''
+
+    obj = copy.copy(self)
+    obj.settings = Framework(type(self).__name__, **kwargs)
+    obj.parent = self
+    return obj
+
   def __getitem__(self, key):
-    return self.settings[key]
+    return self._settings((), None)[key]
 
   def _settings(self, frameworks, kwargs):
-    caller = magic.get_frame(1).f_code.co_name
-    fwname = type(self).__name__ + '.' + caller
     frameworks = list(frameworks)
-    frameworks.append(Framework(fwname, **kwargs))
-    return Framework.Join(self.settings, *frameworks)
+    if kwargs:
+      caller = magic.get_frame(1).f_code.co_name
+      fwname = type(self).__name__ + '.' + caller
+      frameworks.append(Framework(fwname, **kwargs))
+
+    curr = self
+    while curr:
+      frameworks.insert(0, curr.settings)
+      curr = curr.parent
+
+    return Framework.Join(*frameworks)
 
   def _warn_unused(self, join, kwargs, prefix):
     result = {}

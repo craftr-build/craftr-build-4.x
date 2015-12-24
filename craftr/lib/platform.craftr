@@ -19,7 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import path
+from craftr import path, shell
+from os import environ
 import craftr
 import sys
 
@@ -56,8 +57,7 @@ elif sys.platform.startswith('cygwin'):
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.dll')
 
-  from craftr.ext.unix import Archiver as Ar
-  from craftr.ext.compiler.gcc import CCompiler, CxxCompiler, Linker
+  from craftr.ext.compiler.gcc import CCompiler, CxxCompiler, Linker, Archiver
 elif sys.platform.startswith('darwin'):
   std = 'Posix'
   ident = 'mac'
@@ -68,7 +68,25 @@ elif sys.platform.startswith('darwin'):
   lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
   dll = lambda x: path.addsuffix(x, '.dylib')
 
-  from craftr.ext.unix import Archiver as Ar
-  from craftr.ext.compiler.llvm import CCompiler, CxxCompiler, Archiver
+  from craftr.ext.compiler.llvm import CCompiler, CxxCompiler, Linker, Archiver
 else:
-  error('unsupported platform "{0}"'.format(sys.platform))
+  raise EnvironmentError('unsupported platform "{0}"'.format(sys.platform))
+
+
+# Determine the compiler for the current platform based on the
+# environment variables. This is used for all compilers but MSVC.
+def _check_compiler(envvar, language):
+  program = environ[envvar]
+  output = shell.Process([program, '--version'], merge=True).stdout.lower()
+  if 'llvm' in output:
+    from craftr.ext.compiler.llvm import LlvmCompiler as _class
+  elif 'gcc' in output:
+    from craftr.ext.compiler.gcc import GccCompiler as _class
+  else:
+    raise EnvironmentError('could not determne compiler from {0}={1!r}'.format(envvar, program))
+  return _class(program=program, language=language)
+
+if 'CC' in environ:
+  CCompiler = _check_compiler('CC', 'c')
+if 'CXX' in environ:
+  CxxCompiler = _check_compiler('CXX', 'c++')

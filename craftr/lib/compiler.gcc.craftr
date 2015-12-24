@@ -22,10 +22,10 @@
 # xxx: GCC is currently implemented as a synonym for LLVM. It should
 #      probably get its own implementation.
 
-from ..llvm import LlvmCompiler as _LlvmCompiler, Archiver
+from .. import llvm
 from functools import partial
 
-class GccCompiler(_LlvmCompiler):
+class GccCompiler(llvm.LlvmCompiler):
 
   name = 'GCC (LLVM)'
 
@@ -33,6 +33,7 @@ class GccCompiler(_LlvmCompiler):
     super().__init__(program=program, language=language, **kwargs)
 
 
-CCompiler = partial(GccCompiler, program='gcc', language='c')
-CxxCompiler = partial(GccCompiler, program='g++', language='c++')
-Linker = CCompiler
+CCompiler = GccCompiler(program='gcc', language='c')
+CxxCompiler = GccCompiler(program='g++', language='c++')
+Linker = CCompiler()
+from ..llvm import Archiver
