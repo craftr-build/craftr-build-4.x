@@ -131,3 +131,6 @@ def pkg_config(*flags):
   command += flags
   stdout = craftr.shell.Process(command, shell=True).stdout
   return craftr.shell.split(stdout)
+
+
+ar = Ar()

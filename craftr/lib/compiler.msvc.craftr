@@ -226,7 +226,7 @@ class MsvcAr(_BaseCompiler):
     return target(command, inputs, [output], description=description)
 
 
-CCompiler = MsvcCompiler
-CxxCompiler = lambda *a, **k: MsvcCompiler(*a, language='c++', **k)
-Linker = MsvcLinker
-Archiver = MsvcAr
+cc = MsvcCompiler
+cxx = lambda *a, **k: MsvcCompiler(*a, language='c++', **k)
+ld = MsvcLinker
+ar = MsvcAr

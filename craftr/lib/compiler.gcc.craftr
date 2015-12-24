@@ -33,7 +33,7 @@ class GccCompiler(llvm.LlvmCompiler):
     super().__init__(program=program, language=language, **kwargs)
 
 
-CCompiler = GccCompiler(program='gcc', language='c')
-CxxCompiler = GccCompiler(program='g++', language='c++')
-Linker = CCompiler()
-from ..llvm import Archiver
+cc = GccCompiler(program='gcc', language='c')
+cxx = GccCompiler(program='g++', language='c++')
+ld = CCompiler()
+from ..llvm import ar
