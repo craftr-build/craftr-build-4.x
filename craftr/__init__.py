@@ -33,6 +33,7 @@ module = magic.new_context('module')
 
 from craftr import ext, path, ninja, warn
 
+import builtins
 import craftr
 import collections
 import os
@@ -54,9 +55,12 @@ class Session(object):
       the object to this dictionary automatically.
     var: A dictionary of variables that will be exported to the Ninja
       build definitions file.
+    extend_builtins: If this is True, the `builtins` module will be
+      update when the Session's context is entered to contain the
+      current session and module proxy and the `craftr.path` module.
     '''
 
-  def __init__(self, cwd=None, path=None):
+  def __init__(self, cwd=None, path=None, extend_builtins=True):
     super().__init__()
     self.cwd = cwd or os.getcwd()
     self.env = os.environ.copy()
@@ -65,6 +69,7 @@ class Session(object):
     self.modules = {}
     self.targets = {}
     self.var = {}
+    self.extend_builtins = extend_builtins
 
     if path is not None:
       self.path.extend(path)
@@ -101,6 +106,11 @@ class Session(object):
     if prev is not None:
       raise RuntimeError('session context can not be nested')
 
+    if self.extend_builtins:
+      builtins.session = craftr.session
+      builtins.module = craftr.module
+      builtins.path = craftr.path
+
     # We can not change os.environ effectively, we must update the
     # dictionary instead.
     self._old_environ = os.environ.copy()
@@ -115,6 +125,11 @@ class Session(object):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make
     sure they're all in `Session.modules` (the modules are expected
     to be put there by the `craftr.ext.CraftrImporter`). '''
+
+    if self.extend_builtins:
+      del builtins.session
+      del builtins.module
+      del builtins.path
 
     # Restore the original values of os.environ.
     self.env = os.environ.copy()
