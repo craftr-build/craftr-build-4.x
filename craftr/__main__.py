@@ -59,15 +59,15 @@ def _run_func(main_module, name, args):
     name = main_module + '.' + name
   module_name, func_name = name.rsplit('.', 1)
   if module_name not in session.modules:
-    print('error: no module "{0}" was loaded'.format(module_name))
+    print('craftr: error: no module "{0}" was loaded'.format(module_name))
     return errno.ENOENT
   module = session.modules[module_name]
   if not hasattr(module, func_name):
-    print('error: module "{0}" has no member "{1}"'.format(module_name, func_name))
+    print('craftr: error: module "{0}" has no member "{1}"'.format(module_name, func_name))
     return errno.ENOENT
   func = getattr(module, func_name)
   if not callable(func):
-    print('error: "{0}" is not callable'.format(name))
+    print('craftr: error: "{0}" is not callable'.format(name))
     return errno.ENOENT
   old_argv = sys.argv
   sys.argv = ['craftr -f {0}'.format(name)] + args
@@ -85,7 +85,7 @@ def main():
   parser.add_argument('-V', action='store_true', help='Print version and exit.')
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
-  parser.add_argument('-b', action='count', help='Build all or the specified targets. If specified twice, no craftr scripts are executed.')
+  parser.add_argument('-b', action='store_true', help='Build all or the specified targets. Note that no Craftr modules are executed, if that is not required by other options.')
   parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
   parser.add_argument('-d', default='build', help='The build directory')
   parser.add_argument('-D', default=[], action='append', help='Set an option, is automatically converted to the closest applicable datatype')
@@ -103,23 +103,23 @@ def main():
 
   if not args.m:
     if not path.isfile('Craftfile'):
-      print('error: "Craftfile" does not exist')
+      print('craftr: error: "Craftfile" does not exist')
       return errno.ENOENT
     args.m = craftr.ext.get_module_ident('Craftfile')
     if not args.m:
-      print('error: "Craftfile" has no craftr_module(...) declaration')
+      print('craftr: error: "Craftfile" has no craftr_module(...) declaration')
       return errno.ENOENT
 
   if not path.exists(args.d):
     os.makedirs(args.d)
   elif not path.isdir(args.d):
-    print('error: "{0}" is not a directory'.format(args.d))
+    print('craftr: error: "{0}" is not a directory'.format(args.d))
     return errno.ENOTDIR
 
   try:
     craftr.ninja.get_ninja_version()
   except OSError as exc:
-    print('error: ninja is not installed on the system')
+    print('craftr: error: ninja is not installed on the system')
     return errno.ENOENT
 
   # Convert relative to absolute target names.
@@ -131,60 +131,65 @@ def main():
   old_cwd = os.getcwd()
   os.chdir(args.d)
 
+  # Check if we should omit the execution step. This is possile when
+  # we the -b option is specified and NOT -c == 1, -e, -f or -F.
+  do_run = not args.b or any([args.c == 1, args.e, args.f, args.F])
+  if not do_run:
+    print("craftr: skipping execution phase.")
+
   session_obj = craftr.Session(cwd=old_cwd, path=[old_cwd])
   with craftr.magic.enter_context(session, session_obj):
-    # Run the environment files.
-    if not args.no_env:
-      session.exec_if_exists(path.normpath('~/Craftenv'))
-      session.exec_if_exists(path.join(old_cwd, 'Craftenv'))
-    if args.env:
-      env_file = path.normpath(args.env, old_cwd)
-      if not session.exec_if_exists(env_file):
-        print('error: --env {0!r} does not exist'.format(args.env))
+    if do_run:
+      # Run the environment files.
+      if not args.no_env:
+        session.exec_if_exists(path.normpath('~/Craftenv'))
+        session.exec_if_exists(path.join(old_cwd, 'Craftenv'))
+      if args.env:
+        env_file = path.normpath(args.env, old_cwd)
+        if not session.exec_if_exists(env_file):
+          print('craftr: error: --env {0!r} does not exist'.format(args.env))
+          return errno.ENOENT
+
+      # Load the main craftr module specified via the -m option
+      # or the "Craftfile" of the original cwd.
+      module = importlib.import_module('craftr.ext.' + args.m)
+
+      if args.f:
+        # Pre-build function.
+        with craftr.magic.enter_context(craftr.module, module):
+          _run_func(args.m, args.f[0], args.f[1:])
+
+      try:
+        targets = [session.targets[x] for x in args.targets]
+      except KeyError as key:
+        print('craftr: error: Target "{0}" does not exist'.format(key))
         return errno.ENOENT
 
-    module = importlib.import_module('craftr.ext.' + args.m)
+      if args.e:
+        # Export a ninja manifest.
+        with open('build.ninja', 'w') as fp:
+          craftr.ninja.export(fp, module)
 
-    if args.f:
-      with craftr.magic.enter_context(craftr.module, module):
-        _run_func(args.m, args.f[0], args.f[1:])
-
-    try:
-      targets = [session.targets[x] for x in args.targets]
-    except KeyError as key:
-      print('error: Target "{0}" does not exist'.format(key))
-      return errno.ENOENT
-
-    if args.e:
-      with open('build.ninja', 'w') as fp:
-        craftr.ninja.export(fp, module)
-
-    if args.c == 1:
-      files = set()
-      for target in (targets or session.targets.values()):
-        for fn in (target.outputs or []):
-          if path.isfile(fn):
-            files.add(craftr.path.normpath(fn))
-      print('cleaning {0} files...'.format(len(files)))
-      for fn in files:
-        try:
-          os.remove(fn)
-        except OSError:
-          print('  error: could not remove "{0}"'.format(fn))
-    elif args.c > 2:
-      cmd = ['ninja', '-t', 'clean'] + [t.fullname for t in targets]
+    if args.c:
+      cmd = ['ninja', '-t', 'clean']
+      if args.c == 1:
+        # Non-recursive clean.
+        cmd.append('-r')
+      cmd += (t for t in args.targets)
       ret = shell.call(cmd, shell=True)
       if ret != 0:
         return ret
 
     # Execute the build.
     if args.b:
-      cmd = ['ninja'] + [t.fullname for t in targets] + args.N
+      cmd = ['ninja'] + [t for t in args.targets] + args.N
       ret = shell.call(cmd, shell=True)
       if ret != 0:
         return ret
 
     if args.F:
+      # Post-build function.
+      assert do_run
       with craftr.magic.enter_context(craftr.module, module):
         _run_func(args.m, args.F[0], args.F[1:])
 
