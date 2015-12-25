@@ -92,8 +92,8 @@ def main():
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
-  parser.add_argument('--no-env', action='store_true', help='Do not run Craftr environment files.')
-  parser.add_argument('--env', help='Execute the specified Craftr environment file. CAN be paired with --no-env')
+  parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
+  parser.add_argument('--rc', help='Execute the specified Craftr startup file. CAN be paired with --no-rc')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -107,7 +107,7 @@ def main():
       return errno.ENOENT
     args.m = craftr.ext.get_module_ident('Craftfile')
     if not args.m:
-      print('craftr: error: "Craftfile" has no craftr_module(...) declaration')
+      print('craftr: error: "Craftfile" has no or an invalid craftr_module(...) declaration')
       return errno.ENOENT
 
   if not path.exists(args.d):
@@ -123,8 +123,8 @@ def main():
     return errno.ENOENT
 
   # Convert relative to absolute target names.
-  args.targets = [
-    (args.m + '.' + t) if ('.' not in t) else t for t in args.targets]
+  mkabst = lambda x: (args.m + '.' + x) if ('.' not in x) else x
+  args.targets = [mkabst(x) for x in args.targets]
 
   _set_env(args.D)
   _abs_env()
@@ -141,18 +141,22 @@ def main():
   with craftr.magic.enter_context(session, session_obj):
     if do_run:
       # Run the environment files.
-      if not args.no_env:
-        session.exec_if_exists(path.normpath('~/Craftenv'))
-        session.exec_if_exists(path.join(old_cwd, 'Craftenv'))
-      if args.env:
-        env_file = path.normpath(args.env, old_cwd)
-        if not session.exec_if_exists(env_file):
-          print('craftr: error: --env {0!r} does not exist'.format(args.env))
+      if not args.no_rc:
+        session.exec_if_exists(path.normpath('~/.craftrc'))
+        session.exec_if_exists(path.join(old_cwd, '.craftrc'))
+      if args.rc:
+        rc_file = path.normpath(args.rc, old_cwd)
+        if not session.exec_if_exists(rc_file):
+          print('craftr: error: --rc {0!r} does not exist'.format(args.env))
           return errno.ENOENT
 
       # Load the main craftr module specified via the -m option
       # or the "Craftfile" of the original cwd.
-      module = importlib.import_module('craftr.ext.' + args.m)
+      try:
+        module = importlib.import_module('craftr.ext.' + args.m)
+      except craftr.ModuleError as exc:
+        print(str(exc))
+        return 1
 
       if args.f:
         # Pre-build function.

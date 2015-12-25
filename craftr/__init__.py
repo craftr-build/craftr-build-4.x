@@ -107,9 +107,11 @@ class Session(object):
       raise RuntimeError('session context can not be nested')
 
     if self.extend_builtins:
-      builtins.session = craftr.session
-      builtins.module = craftr.module
-      builtins.path = craftr.path
+      builtins.session = session
+      builtins.module = module
+      builtins.path = path
+      builtins.info = info
+      builtins.error = error
 
     # We can not change os.environ effectively, we must update the
     # dictionary instead.
@@ -130,6 +132,8 @@ class Session(object):
       del builtins.session
       del builtins.module
       del builtins.path
+      del builtins.info
+      del builtins.error
 
     # Restore the original values of os.environ.
     self.env = os.environ.copy()
@@ -411,6 +415,32 @@ class Framework(dict):
 
   def __repr__(self):
     return 'Framework(name={0!r}, {1})'.format(self.name, super().__repr__())
+
+
+class ModuleError(RuntimeError):
+  ''' This function is raised with `error()`. It will cause Craftr to
+  exit with the supplied message. '''
+
+  def __init__(self, message, module):
+    self.message = message
+    self.module = module
+
+  def __str__(self):
+    return 'craftr: error: [{0}] {1}'.format(self.module.project_name, self.message)
+
+
+def info(*args, **kwargs):
+  prefix = 'craftr: info: [{0}]'.format(module.project_name)
+  print(prefix, *args, **kwargs)
+
+
+def error(*objects, sep=' ', module=None):
+  ''' Raise `ModuleError` with the specified message. '''
+
+  message = sep.join(map(str, objects))
+  if not module:
+    module = globals()['module']()
+  raise ModuleError(message, module)
 
 
 def init_module(module):
