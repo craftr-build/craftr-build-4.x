@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import craftr, path, Target
+from craftr import expand_inputs, Target
 
 
 class FlexCompiler(object):
@@ -74,4 +74,4 @@ class FlexCompiler(object):
     command += ['-o' + output]
     command += ['$in']
 
-    return Target(command, craftr.expand_inputs(sources), [output])
+    return Target(command, expand_inputs(sources), [output])

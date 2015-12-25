@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import module, path, magic, warn, Framework
+from craftr import module, magic, warn, Framework
 import collections
 import copy
 

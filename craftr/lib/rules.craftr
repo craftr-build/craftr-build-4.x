@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 from os import environ
-from craftr import path, expand_inputs, Target
+from craftr import expand_inputs, Target
 from craftr.ext import platform
 
 

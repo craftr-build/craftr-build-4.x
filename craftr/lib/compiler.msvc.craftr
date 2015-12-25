@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import path, expand_inputs, Target, Framework
+from craftr import expand_inputs, Target, Framework
 from craftr.warn import invalid_option
 from craftr.shell import Process
 from craftr.ext import platform

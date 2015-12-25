@@ -19,9 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import path
+from craftr import shell, expand_inputs, Target
+from craftr.ext import platform
 from craftr.ext.compiler import _BaseCompiler, gen_output, gen_objects
-import craftr
 import re
 
 
@@ -35,10 +35,10 @@ class Ar(_BaseCompiler):
 
   def staticlib(self, output, inputs, target_name=None, **kwargs):
     join = self._settings([], kwargs)
-    target = craftr.Target.Builder(self.name, name=target_name)
+    target = Target.Builder(self.name, name=target_name)
 
-    inputs = craftr.expand_inputs(inputs, join)
-    output = gen_output(output, suffix=craftr.platform.lib)
+    inputs = expand_inputs(inputs, join)
+    output = gen_output(output, suffix=platform.lib)
     command = [join['program'], 'rcs', '$out', '$in']
 
     self._warn_unused(join, kwargs, target.fullname)
@@ -55,9 +55,9 @@ class Ld(_BaseCompiler):
 
   def link(self, output, inputs, frameworks=(), target_name=None, **kwargs):
     join = self._settings(frameworks, kwargs)
-    target = craftr.Target.Builder(self.name, name=target_name)
+    target = Target.Builder(self.name, name=target_name)
 
-    inputs = craftr.expand_inputs(inputs, join)
+    inputs = expand_inputs(inputs, join)
     if not path.isabs(output):
       output = gen_output(output)  # xxx: suffix?
 
@@ -77,7 +77,7 @@ class Objcopy(_BaseCompiler):
     super().__init__(program=program, **kwargs)
     if detect:
       self.supported_targets = []
-      stdout = craftr.shell.Process([program, '--help']).stdout
+      stdout = shell.Process([program, '--help']).stdout
       match = re.search(r'supported\s+targets:(.*)$', stdout, re.M)
       if match:
         self.supported_targets = match.group(1).split()
@@ -97,7 +97,7 @@ class Objcopy(_BaseCompiler):
     - description '''
 
     join = self._settings([], kwargs)
-    target = craftr.Target.Builder(self.name, name=target_name, foreach=True)
+    target = Target.Builder(self.name, name=target_name, foreach=True)
 
     # xxx: I don't think that [:3] is the correct way to derive the suffix. :)
     output_suffix = join.get('output_suffix', output_format[:3])
@@ -116,7 +116,7 @@ class Objcopy(_BaseCompiler):
     command += ['-B', binary_architecture] if binary_architecture else []
     command += ['-O', output_format, '$in', '$out']
 
-    inputs = craftr.expand_inputs(inputs, join)
+    inputs = expand_inputs(inputs, join)
     if outputs is None:
       outputs = gen_objects(inputs, suffix=output_suffix)
 
@@ -129,8 +129,8 @@ def pkg_config(*flags):
 
   command = ['pkg-config']
   command += flags
-  stdout = craftr.shell.Process(command, shell=True).stdout
-  return craftr.shell.split(stdout)
+  stdout = shell.Process(command, shell=True).stdout
+  return shell.split(stdout)
 
 
 ar = Ar()

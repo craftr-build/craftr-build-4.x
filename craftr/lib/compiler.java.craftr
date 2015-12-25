@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import craftr, module, path, Target
+from craftr import expand_inputs, Target
 from craftr.shell import Process
 import re
 
@@ -57,7 +57,7 @@ class JavaCompiler(object):
     command = [self.javac, '-d', build_dir, '$in']
     command += ['-g'] if debug else []
     command += [] if warn else ['-nowarn']
-    for fn in craftr.expand_inputs(classpath):
+    for fn in expand_inputs(classpath):
       command += ['-cp', fn]
     command += additional_flags
 
@@ -73,6 +73,6 @@ class JavaCompiler(object):
     if entry_point:
       command += [entry_point]
     command += ['-C', build_dir]
-    classes = craftr.expand_inputs(classes)
+    classes = expand_inputs(classes)
     command += path.move(classes, build_dir, '')
     return Target(command, classes, [filename])
