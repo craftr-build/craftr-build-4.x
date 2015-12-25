@@ -21,7 +21,6 @@
 
 from craftr import expand_inputs, Target, Framework
 from craftr.warn import invalid_option
-from craftr.utils import fw_merge
 from craftr.ext import platform
 from craftr.ext.compiler import gen_objects, gen_output, _BaseCompiler
 from functools import partial
