@@ -1,9 +1,10 @@
-<h1>Craftr: The better meta build system
+<h1>Craftr: Powerful meta build system for Ninja
 <img align="right" height="100" src="http://i.imgur.com/i3hYFZ3.png"></h1>
 
 Craftr is a meta build system for [Ninja][] that uses Python to as its
-build process description language. With that powerful programming language
-at hand, your builds have never been so flexible and easy at the same time.
+build process description language. With a powerful programming language
+at hand, custom software builds have never been so flexible and easy to
+set up.
 
 Please check out the [wiki][]!
 
