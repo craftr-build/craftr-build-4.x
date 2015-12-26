@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-''' Craftr is a meta build system for Ninja. '''
+''' Craftr is a powerful meta build system for Ninja. '''
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
 __version__ = '0.20.0-dev'
@@ -31,15 +31,17 @@ from craftr import magic
 session = magic.new_context('session')
 module = magic.new_context('module')
 
-from craftr import ext, path, ninja, warn
-
-import builtins
 import craftr
 import collections
 import os
 import types
+import warnings
 
-_path = path
+from craftr import ext, path, shell, ninja
+
+# This object is used to indicate a state where a parameter was
+# not specified. This is used when None would be an accepted value.
+_sentinel = object()
 
 
 class Session(object):
@@ -55,21 +57,17 @@ class Session(object):
       the object to this dictionary automatically.
     var: A dictionary of variables that will be exported to the Ninja
       build definitions file.
-    extend_builtins: If this is True, the `builtins` module will be
-      update when the Session's context is entered to contain the
-      current session and module proxy and the `craftr.path` module.
     '''
 
-  def __init__(self, cwd=None, path=None, extend_builtins=True):
+  def __init__(self, cwd=None, path=None):
     super().__init__()
     self.cwd = cwd or os.getcwd()
     self.env = os.environ.copy()
     self.extension_importer = ext.CraftrImporter(self)
-    self.path = [_path.join(_path.dirname(__file__), 'lib')]
+    self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
     self.modules = {}
     self.targets = {}
     self.var = {}
-    self.extend_builtins = extend_builtins
 
     if path is not None:
       self.path.extend(path)
@@ -106,13 +104,6 @@ class Session(object):
     if prev is not None:
       raise RuntimeError('session context can not be nested')
 
-    if self.extend_builtins:
-      builtins.session = session
-      builtins.module = module
-      builtins.path = path
-      builtins.info = info
-      builtins.error = error
-
     # We can not change os.environ effectively, we must update the
     # dictionary instead.
     self._old_environ = os.environ.copy()
@@ -127,13 +118,6 @@ class Session(object):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make
     sure they're all in `Session.modules` (the modules are expected
     to be put there by the `craftr.ext.CraftrImporter`). '''
-
-    if self.extend_builtins:
-      del builtins.session
-      del builtins.module
-      del builtins.path
-      del builtins.info
-      del builtins.error
 
     # Restore the original values of os.environ.
     self.env = os.environ.copy()
@@ -197,83 +181,20 @@ class Target(object):
   [Ninja Manual]: https://ninja-build.org/manual.html
   '''
 
-  class Builder(object):
-    ''' Helper class to build a target, used in rule functions. '''
-
-    _unnamed_idx = 0
-
-    @staticmethod
-    def get_module(ref_module):
-      if not ref_module:
-        ref_module = module()
-      assert isinstance(ref_module, types.ModuleType)
-      assert ref_module.__name__.startswith('craftr.ext.')
-      return ref_module
-
-    @classmethod
-    def get_name(cls, ref_module, name, generator=None):
-      if not name:
-        try:
-          name = magic.get_assigned_name(magic.get_module_frame(ref_module))
-        except ValueError:
-          if not generator:
-            raise
-          name = '{0}_{1}'.format(generator, cls._unnamed_idx)
-          cls._unnamed_idx += 1
-      return name
-
-    def __init__(self, generator=None, **kwargs):
-      super().__init__()
-      module = self.get_module(kwargs.pop('module', None))
-      name = self.get_name(module, kwargs.pop('name', None), generator)
-      self.data = {
-        'module': module,
-        'name': name,
-        # 'command': [],
-        # 'inputs': [],
-        # 'outputs': [],
-        'implicit_deps': list(kwargs.pop('implicit_deps', ())),
-        'order_only_deps': list(kwargs.pop('order_only_deps', ())),
-        'foreach': False,
-        'pool': None,
-        'description': None,
-        'deps': None,
-        'depfile': None,
-        'msvc_deps_prefix': None,
-        'meta': dict(kwargs.pop('meta', ())),
-        'frameworks': list(kwargs.pop('frameworks', ())),
-      }
-      self.data.update(**kwargs)
-
-    def __call__(self, *args, **kwargs):
-      self.data.update(**kwargs)
-      return Target(*args, **self.data)
-
-    def __getattr__(self, key):
-      return self.data[key]
-
-    def __setattr__(self, key, value):
-      if key == 'data' or key not in self.data:
-        super().__setattr__(key, value)
-      else:
-        self.data[key] = value
-
-    @property
-    def fullname(self):
-      return self.module.__ident__ + '.' + self.name
-
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
-      var=None, deps=None, depfile=None, msvc_deps_prefix=None, meta=None,
-      explicit=False,frameworks=None, module=None, name=None):
+      var=None, deps=None, depfile=None, msvc_deps_prefix=None,
+      explicit=False, frameworks=None, module=None, name=None):
 
-    module = Target.Builder.get_module(module)
-    name = Target.Builder.get_name(module, name)
+    if not module:
+      module = craftr.module()
+    if not name:
+      name = Target._get_name(module)
 
     if isinstance(command, str):
       command = shell.split(command)
     else:
-      command = self._check_list_of_str('command', command)
+      command = _check_list_of_str('command', command)
     if not command:
       raise ValueError('command can not be empty')
 
@@ -281,21 +202,21 @@ class Target(object):
       if isinstance(inputs, str):
         inputs = [inputs]
       inputs = expand_inputs(inputs)
-      inputs = self._check_list_of_str('inputs', inputs)
+      inputs = _check_list_of_str('inputs', inputs)
     if outputs is not None:
       if isinstance(outputs, str):
         outputs = [outputs]
       elif callable(outputs):
         outputs = outputs(inputs)
-      outputs = self._check_list_of_str('outputs', outputs)
+      outputs = _check_list_of_str('outputs', outputs)
 
     if foreach and len(inputs) != len(outputs):
       raise ValueError('len(inputs) must match len(outputs) in foreach Target')
 
     if implicit_deps is not None:
-      implicit_deps = self._check_list_of_str('implicit_deps', implicit_deps)
+      implicit_deps = _check_list_of_str('implicit_deps', implicit_deps)
     if order_only_deps is not None:
-      order_only_deps = self._check_list_of_str('order_only_deps', order_only_deps)
+      order_only_deps = _check_list_of_str('order_only_deps', order_only_deps)
 
     self.module = module
     self.name = name
@@ -310,7 +231,6 @@ class Target(object):
     self.deps = deps
     self.depfile = depfile
     self.msvc_deps_prefix = msvc_deps_prefix
-    self.meta = meta or {}
     self.frameworks = frameworks or []
     self.explicit = explicit
 
@@ -324,22 +244,101 @@ class Target(object):
     command = ' running "{0}"'.format(self.command[0])
     return '<Target {self.fullname!r}{command}{pool}>'.format(**locals())
 
+  @staticmethod
+  def _get_name(module):
+    # Always use the frame of the current module, though.
+    if craftr.module() != module:
+      raise RuntimeError('target name deduction only available when '
+        'used from the currently executed module')
+    return magic.get_assigned_name(magic.get_module_frame(module))
+
   @property
   def fullname(self):
     return self.module.__ident__ + '.' + self.name
 
-  @staticmethod
-  def _check_list_of_str(name, value):
-    if not isinstance(value, str) and isinstance(value, collections.Iterable):
-      value = list(value)
-    if not isinstance(value, list):
-      raise TypeError('expected list of str for {0}, got {1}'.format(
-        name, type(value).__name__))
-    for item in value:
-      if not isinstance(item, str):
-        raise TypeError('expected list of str for {0}, found {1} inside'.format(
-          name, type(item).__name__))
-    return value
+
+class TargetBuilder(object):
+  ''' This is a helper class to make it easy to implement rule functions
+  that create a `Target`. Rule functions usually depend on inputs (being
+  files or other `Target`s that can also bring additional frameworks),
+  rule-level settings and frameworks. The `TargetBuilder` takes all of
+  this into account and prepares the data conveniently. '''
+
+  def __init__(self, inputs, frameworks, kwargs, module=None, name=None, stacklevel=1):
+    self.caller = magic.get_caller(stacklevel + 1)
+    frameworks = list(frameworks)
+    self.inputs = expand_inputs(inputs, frameworks)
+    self.frameworks = frameworks
+    self.options = FrameworkJoin(Framework(self.caller, kwargs), *frameworks)
+    self.module = module or craftr.module()
+    self.name = name
+    self.target = {}
+    if not self.name:
+      try:
+        self.name = Target._get_name(self.module)
+      except ValueError:
+        index = 0
+        while True:
+          name = '{0}_{1:0>4}'.format(self.caller, index)
+          if name not in session.targets:
+            break
+          index += 1
+        self.name = name
+
+  @property
+  def fullname(self):
+    return self.module.project_name + '.' + self.name
+
+  def __getitem__(self, key):
+    return self.options[key]
+
+  def get(self, key, default=None):
+    return self.options.get(key, default)
+
+  def merge(self, key):
+    return self.options.get_merge(key)
+
+  def warn(self, *objects, sep=' ', stacklevel=1, warntype=RuntimeWarning):
+    message = sep.join(map(str, objects))
+    message = 'Target({0!r}): {1}'.format(self.fullname, message)
+    warnings.warn(message, warntype, stacklevel + 1)
+
+  def invalid_option(self, option_name, option_value=_sentinel, cause=None):
+    if option_value is _sentinel:
+      option_value = self[option_name]
+    message = 'invalid option: {0} = {1!r}'.format(option_name, option_value)
+    if cause:
+      message = '{0} ({1})'.format(message, cause)
+    self.warn(message, stacklevel=2)
+
+  def add_framework(self, __fw_or_name, __fw_dict=None, **kwargs):
+    if not isinstance(__fw_or_name, Framework):
+      fw = Framework(__fw_or_name, __fw_dict, **kwargs)
+    else:
+      fw = __fw_or_name
+    if fw not in self.frameworks:
+      self.frameworks.append(fw)
+    self.options += [fw]
+    return fw
+
+  def expand_inputs(self, inputs):
+    frameworks = []
+    result = expand_inputs(inputs, frameworks)
+    self.frameworks += frameworks
+    self.options += frameworks
+    return result
+
+  def create_target(self, command, inputs=None, outputs=None, **kwargs):
+    if inputs is None:
+      inputs = self.inputs
+    kwargs.setdefault('frameworks', self.frameworks)
+    target = Target(command=command, inputs=inputs, outputs=outputs,
+      module=self.module, name=self.name, **kwargs)
+    for key, value in self.target.items():
+      # We can only set attributes that the target already has.
+      getattr(target, key)
+      setattr(target, key, value)
+    return target
 
 
 class Framework(dict):
@@ -355,57 +354,6 @@ class Framework(dict):
   Use the `Framework.Join` class to create an object to process the
   data from multiple frameworks. '''
 
-  class Join(object):
-    ''' Helper to process a collection of `Framework`s. '''
-
-    def __init__(self, *frameworks):
-      super().__init__()
-      self.used_keys = set()
-      self.frameworks = []
-      for fw in frameworks:
-        if isinstance(fw, (list, tuple)):
-          self.frameworks.extend(fw)
-        else:
-          self.frameworks.append(fw)
-      for fw in self.frameworks:
-        if not isinstance(fw, Framework):
-          raise TypeError('expected Framework, got {0}'.format(type(fw).__name__))
-
-    def __getitem__(self, key):
-      self.used_keys.add(key)
-      for fw in self.frameworks:
-        try:
-          return fw[key]
-        except KeyError:
-          pass
-      raise KeyError(key)
-
-    def get(self, key, default=None):
-      ''' Get the first available value of *key* from the frameworks. '''
-
-      try:
-        return self[key]
-      except KeyError:
-        return default
-
-    def get_merge(self, key):
-      ''' Merge all values of *key* in the frameworks into one list,
-      assuming that every key is a non-string sequence and can be
-      appended to a list. '''
-
-      self.used_keys.add(key)
-      result = []
-      for fw in self.frameworks:
-        try:
-          value = fw[key]
-        except KeyError:
-          continue
-        if not isinstance(value, collections.Sequence) or isinstance(value, str):
-          raise TypeError('expected a non-string sequence for {0!r} '
-            'in framework {1!r}, got {0}'.format(key, fw.name, type(value).__name__))
-        result += value
-      return result
-
   def __init__(self, __fw_name, __init_dict=None, **kwargs):
     super().__init__()
     if __init_dict is not None:
@@ -415,6 +363,73 @@ class Framework(dict):
 
   def __repr__(self):
     return 'Framework(name={0!r}, {1})'.format(self.name, super().__repr__())
+
+
+class FrameworkJoin(object):
+  ''' This class is used to process a set of `Framework`s and retreive
+  relevant information from it. For some options, you might want to read
+  the first value that is specified in any of the frameworks, for another
+  you may want to create a list of all values in the frameworks. This is
+  what the `FrameworkJoin` allows you to do.
+
+  ```python
+  >>> fw1 = Framework('foo', defines=['DEBUG'])
+  >>> fw2 = Framework('bar', defines=['DO_STUFF'])
+  >>> FrameworkJoin(fw1, fw2).merge('defines')
+  ['DEBUG', 'DO_STUFF']
+  ```
+  '''
+
+  def __init__(self, *frameworks):
+    super().__init__()
+    self.used_keys = set()
+    self.frameworks = []
+    self += frameworks
+
+  def __iadd__(self, frameworks):
+    for fw in frameworks:
+      if not isinstance(fw, Framework):
+        raise TypeError('expected Framework, got {0}'.format(type(fw).__name__))
+      if fw not in self.frameworks:
+        self.frameworks.append(fw)
+    return self
+
+  def __getitem__(self, key):
+    self.used_keys.add(key)
+    for fw in self.frameworks:
+      try:
+        return fw[key]
+      except KeyError:
+        pass
+    raise KeyError(key)
+
+  def get(self, key, default=None):
+    ''' Get the first available value of *key* from the frameworks. '''
+
+    try:
+      return self[key]
+    except KeyError:
+      return default
+
+  def merge(self, key):
+    ''' Merge all values of *key* in the frameworks into one list,
+    assuming that every key is a non-string sequence and can be
+    appended to a list. '''
+
+    self.used_keys.add(key)
+    result = []
+    for fw in self.frameworks:
+      try:
+        value = fw[key]
+      except KeyError:
+        continue
+      if not isinstance(value, collections.Sequence) or isinstance(value, str):
+        raise TypeError('expected a non-string sequence for {0!r} '
+          'in framework {1!r}, got {0}'.format(key, fw.name, type(value).__name__))
+      result += value
+    return result
+
+  get_merge = merge  # Backwards compatibility
 
 
 class ModuleError(RuntimeError):
@@ -441,6 +456,36 @@ def error(*objects, sep=' ', module=None):
   if not module:
     module = globals()['module']()
   raise ModuleError(message, module)
+
+
+def expand_inputs(inputs, frameworks=None):
+  ''' Expands a list of inputs into a list of filenames. An input is a
+  string (filename) or a `Target` object from which the `Target.outputs`
+  are used. Returns a list of strings.
+
+  If *frameworks* is specified, it must be a `list` to which the
+  frameworks of all input `Target`s will be appended. '''
+
+  if frameworks is not None and not isinstance(frameworks, list):
+    raise TypeError('frameworks must be None or list')
+
+  result = []
+
+  # We also accept a single string or Target as input.
+  if isinstance(inputs, (str, Target)):
+    inputs = [inputs]
+
+  for item in inputs:
+    if isinstance(item, Target):
+      if frameworks is not None:
+        frameworks += item.frameworks
+      result += item.outputs
+    elif isinstance(item, str):
+      result.append(item)
+    else:
+      raise TypeError('input must be Target or str, got {0}'.format(type(item).__name__))
+
+  return result
 
 
 def init_module(module):
@@ -471,28 +516,22 @@ def finish_module(module):
       module.__all__.append(key)
 
 
-def expand_inputs(inputs, join=None):
-  ''' Expands a list of inputs into a list of filenames. An input is a
-  string (filename) or a `Target` object from which the `Target.outputs`
-  are used. Returns a list of strings.
+def _check_list_of_str(name, value):
+  ''' Helper function to check if a given *value* is a list of strings
+  or is convertible to a list of strings. Will raise a `ValueError` if
+  not using the specified *name* as a hint. '''
 
-  If *join* is specified, it must be a `Framework.Join` object that
-  will be appended the frameworks used in the Targets that were
-  passed in *inputs*. '''
-
-  result = []
-  if isinstance(inputs, (str, Target)):
-    inputs = [inputs]
-  for item in inputs:
-    if isinstance(item, Target):
-      if join:
-        join.frameworks += item.frameworks
-      result += item.outputs
-    elif isinstance(item, str):
-      result.append(item)
-    else:
-      raise TypeError('input must be Target or str, got {0}'.format(type(item).__name__))
-  return result
+  if not isinstance(value, str) and isinstance(value, collections.Iterable):
+    value = list(value)
+  if not isinstance(value, list):
+    raise TypeError('expected list of str for {0}, got {1}'.format(
+      name, type(value).__name__))
+  for item in value:
+    if not isinstance(item, str):
+      raise TypeError('expected list of str for {0}, found {1} inside'.format(
+        name, type(item).__name__))
+  return value
 
 
-__all__ = ['craftr', 'expand_inputs', 'session', 'module', 'path', 'warn', 'Target', 'Framework']
+__all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
+  'Framework', 'FrameworkJoin', 'info', 'error', 'expand_inputs']

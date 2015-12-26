@@ -27,7 +27,7 @@ A very small interface for querying information about a Git repository.
       info('Unversioned changes present.')
 '''
 
-from craftr.shell import Process
+from craftr import shell
 
 
 class Git(object):
@@ -37,7 +37,7 @@ class Git(object):
     self.git_dir = git_dir
 
   def _popen(self, *args, **kwargs):
-    return Process(*args, pipe=True, cwd=self.git_dir, **kwargs)
+    return shell.pipe(*args, merge=False, cwd=self.git_dir, **kwargs)
 
   def status(self, include=None, exclude=None):
     result = []

@@ -19,12 +19,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr.ext.compiler import gen_objects, _BaseCompiler
+from craftr import *
+
+from craftr.ext.compiler import gen_objects, BaseCompiler
 import craftr
 import re
 
 
-class CythonCompiler(_BaseCompiler):
+class CythonCompiler(BaseCompiler):
   ''' Interface for Cython. '''
 
   name = 'Cython'
@@ -33,31 +35,33 @@ class CythonCompiler(_BaseCompiler):
     super().__init__(program=program, **kwargs)
     self.version = None
     if detect:
-      stdout = craftr.shell.Process([program, '-V']).stderr
-      match = re.match(r'cython\s+version\s+([\d\.]+)', stdout, re.I)
+      output = craftr.shell.pipe([program, '-V']).output
+      match = re.match(r'cython\s+version\s+([\d\.]+)', output, re.I)
       if match:
         self.version = match.group(1)
 
   def compile(self, py_sources, outputs=None, frameworks=(), target_name=None, **kwargs):
-    join = self._settings(frameworks, kwargs)
-    target = craftr.Target.Builder(self.name, name=target_name, foreach=True)
+    builder = self.builder(py_sources, frameworks, kwargs, name=target_name)
 
-    cpp = join.get('cpp')
-    python_version = join.get('python_version', 3)
-    fast_fail = join.get('fast_fail')
+    cpp = builder.get('cpp', False)
+    python_version = builder.get('python_version', 3)
+    fast_fail = builder.get('fast_fail', False)
 
     if outputs is None:
       outputs = gen_objects(py_sources, 'cython', suffix='.cpp' if cpp else '.c')
     if python_version not in (2, 3):
       raise ValueError('invalid python_version: {0!r}'.format(python_version))
 
-    include = set(join.get_merge('include'))
-    command = [join['program'], '$in', '-o', '$out', '-' + str(python_version)]
+    include = set(builder.merge('include'))
+    command = [builder['program'], '$in', '-o', '$out', '-' + str(python_version)]
     command += ['-I' + x for x in include]
     command += ['--fast-fail'] if fast_fail else []
     command += ['--cplus'] if cpp else []
-    command += join.get_merge('additional_flags')
+    command += builder.merge('additional_flags')
 
     # xxx: Determine the Python Framework and add it to the target!
 
-    return target(command, py_sources, outputs)
+    return builder.create_target(command, outputs=outputs)
+
+
+cythonc = CythonCompiler()

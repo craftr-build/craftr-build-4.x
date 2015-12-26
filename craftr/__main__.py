@@ -19,7 +19,8 @@
 # THE SOFTWARE.
 ''' That's what happens when you run Craftr. '''
 
-from craftr import session, shell, path
+from craftr import *
+from craftr import shell
 
 import argparse
 import craftr
@@ -31,6 +32,15 @@ import sys
 
 
 def _set_env(defs):
+  ''' This function updates the environment variables based on a list
+  of strings of the format `KEY=VALUE` where each subsequent part is
+  optional. The following behaviour applies:
+
+  - `KEY`: Assigns a value of `'true'` to the specified key
+  - `KEY=`: Deletes the specified key from the environment
+  - `KEY=VALUE`: Sets the specified key to the specified value.
+  '''
+
   for item in defs:
     key, assign, value = item.partition('=')
     if assign and not value:
@@ -42,6 +52,10 @@ def _set_env(defs):
 
 
 def _abs_env():
+  ''' Converts relative paths in the process environment to absolute
+  paths. This is necessary since Craftr switches to another working
+  directory during execution. See craftr-build/craftr#33 . '''
+
   def mk_abs(item):
     if not path.isabs(item) and path.exists(item):
       return path.abspath(item)
@@ -55,6 +69,10 @@ def _abs_env():
 
 
 def _run_func(main_module, name, args):
+  ''' Called to run a function with the specified *name* and set
+  `sys.argv` to *args*. If *name* is a relative identifier, it will
+  be searched relative to the *main_module* name. '''
+
   if '.' not in name:
     name = main_module + '.' + name
   module_name, func_name = name.rsplit('.', 1)
@@ -180,14 +198,14 @@ def main():
         # Non-recursive clean.
         cmd.append('-r')
       cmd += (t for t in args.targets)
-      ret = shell.call(cmd, shell=True)
+      ret = shell.run(cmd, shell=True, check=False).returncode
       if ret != 0:
         return ret
 
     # Execute the build.
     if args.b:
       cmd = ['ninja'] + [t for t in args.targets] + args.N
-      ret = shell.call(cmd, shell=True)
+      ret = shell.run(cmd, shell=True, check=False).returncode
       if ret != 0:
         return ret
 
@@ -202,3 +220,4 @@ def main():
 
 if __name__ == '__main__':
   sys.exit(main())
+

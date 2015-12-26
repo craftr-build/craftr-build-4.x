@@ -23,7 +23,6 @@
 #      probably get its own implementation.
 
 from .. import llvm
-from functools import partial
 
 class GccCompiler(llvm.LlvmCompiler):
 

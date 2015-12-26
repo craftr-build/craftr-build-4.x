@@ -19,13 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import shell, expand_inputs, Target
+from craftr import *
 from craftr.ext import platform
-from craftr.ext.compiler import _BaseCompiler, gen_output, gen_objects
+from craftr.ext.compiler import BaseCompiler, gen_output, gen_objects
 import re
 
 
-class Ar(_BaseCompiler):
+class Ar(BaseCompiler):
   ''' Interface for the Unix `ar` archiver. '''
 
   name = 'Unix AR'
@@ -45,7 +45,7 @@ class Ar(_BaseCompiler):
     return target(command, inputs, [output])
 
 
-class Ld(_BaseCompiler):
+class Ld(BaseCompiler):
   ''' Interface for the Unix `ld` command. '''
 
   name = 'Unix LD'
@@ -68,7 +68,7 @@ class Ld(_BaseCompiler):
     return target(command, inputs, [output])
 
 
-class Objcopy(_BaseCompiler):
+class Objcopy(BaseCompiler):
   ''' Interface for the `objcopy` tool. '''
 
   name = 'Unix Objcopy'
@@ -77,7 +77,7 @@ class Objcopy(_BaseCompiler):
     super().__init__(program=program, **kwargs)
     if detect:
       self.supported_targets = []
-      stdout = shell.Process([program, '--help']).stdout
+      stdout = shell.pipe([program, '--help']).stdout
       match = re.search(r'supported\s+targets:(.*)$', stdout, re.M)
       if match:
         self.supported_targets = match.group(1).split()
@@ -129,7 +129,7 @@ def pkg_config(*flags):
 
   command = ['pkg-config']
   command += flags
-  stdout = shell.Process(command, shell=True).stdout
+  stdout = shell.pipe(command, shell=True).stdout
   return shell.split(stdout)
 
 

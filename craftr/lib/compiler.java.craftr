@@ -19,8 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import expand_inputs, Target
-from craftr.shell import Process
+from craftr import *
 import re
 
 build_dir = 'java'
@@ -45,8 +44,8 @@ class JavaCompiler(object):
   def get_version(self):
     ''' Returns a tuple of `(name, version)`. '''
 
-    stdout = Process([self.javac, '-version']).stderr
-    return [x.strip() for x in stdout.split(' ')]
+    output = shell.pipe([self.javac, '-version']).output
+    return [x.strip() for x in output.split(' ')]
 
   def compile(self, source_dir, sources=None, debug=False, warn=True, classpath=(),
       additional_flags=()):

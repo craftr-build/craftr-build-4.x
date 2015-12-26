@@ -19,10 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import expand_inputs, Target, Framework
-from craftr.warn import invalid_option
+from craftr import *
 from craftr.ext import platform
-from craftr.ext.compiler import gen_objects, gen_output, _BaseCompiler
+from craftr.ext.compiler import gen_objects, gen_output, BaseCompiler
 from functools import partial
 
 
@@ -31,7 +30,7 @@ def flatten(iterable):
     yield from item
 
 
-class LlvmCompiler(_BaseCompiler):
+class LlvmCompiler(BaseCompiler):
   ''' Interface for the LLVM compiler. '''
 
   name = 'LLVM'
@@ -40,40 +39,35 @@ class LlvmCompiler(_BaseCompiler):
     super().__init__(program=program, language=language, **kwargs)
 
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
-    join = self._settings(frameworks, kwargs)
-    target = Target.Builder('llvm.compile', name=target_name, foreach=True,
-      frameworks=frameworks)
-    _warn_prefix = target.fullname
+    builder = self.builder(sources, frameworks, kwargs, name=target_name)
+    objects = gen_objects(builder.inputs, suffix=platform.obj)
+    fw = builder.add_framework(target.name)
 
-    include = set(join.get_merge('include'))
-    defines = set(join.get_merge('defines'))
-    language = join['language']
-    debug = join.get('debug', False)
-    std = join.get('std')
-    pedantic = join.get('pedantic', False)
-    pic = join.get('pic', False)
-    warn = join.get('warn', 'all')
-    optimize = join.get('optimize', None)
-    autodeps = join.get('autodeps', True)
-    description = join.get('description', 'LLVM Compile Object($out)')
+    include = set(builder.merge('include'))
+    defines = set(builder.merge('defines'))
+    language = builder['language']
+    debug = builder.get('debug', False)
+    std = builder.get('std')
+    pedantic = builder.get('pedantic', False)
+    pic = builder.get('pic', False)
+    warn = builder.get('warn', 'all')
+    optimize = builder.get('optimize', None)
+    autodeps = builder.get('autodeps', True)
+    builder.target['description'] = builder.get('description', 'LLVM Compile Object($out)')
 
     if platform.name == 'Darwin':
-      osx_fwpath = join.get_merge('osx_fwpath')
-      osx_frameworks = join.get_merge('osx_frameworks')
+      osx_fwpath = builder.merge('osx_fwpath')
+      osx_frameworks = builder.merge('osx_frameworks')
     else:
       osx_fwpath = []
       osx_frameworks = []
-
-    sources = expand_inputs(sources)
-    objects = gen_objects(sources, suffix=platform.obj)
-    fw = Framework(target.fullname)
 
     if language not in ('c', 'c++'):
       raise ValueError('invalid language: {0}'.format(language))
     if language == 'c++':
       fw['libs'] = ['c++']
 
-    command = [join['program'], '-x', language, '-c', '$in', '-o', '$out']
+    command = [builder['program'], '-x', language, '-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
     command += ['-pedantic'] if pedantic else []
@@ -90,11 +84,11 @@ class LlvmCompiler(_BaseCompiler):
     elif warn is None:
       pass
     else:
-      invalid_option('warn', warn)
+      builder.invalid_option('warn')
 
     if debug:
       if optimize and optimize != 'debug':
-        invalid_option('optimize', optimize, detail='no optimize with debug enabled')
+        builder.invalid_option('optimize', cause='no optimize with debug enabled')
     elif optimize == 'speed':
       command += ['-O4']
     elif optimize == 'size':
@@ -102,53 +96,49 @@ class LlvmCompiler(_BaseCompiler):
     elif optimize in ('debug', 'none', None):
       command += ['-O0']
     else:
-      invalid_option('optimize', optimize)
+      builder.invalid_option('optimize')
 
     if autodeps:
-      target.depfile = '$out.d'
-      target.deps = 'gcc'
+      builder.target['depfile'] = '$out.d'
+      builder.target['deps'] = 'gcc'
       command += ['-MMD', '-MF', '$depfile']
 
-    command += join.get_merge('additional_flags')
+    command += builder.merge('additional_flags')
 
-    self._warn_unused(join, kwargs, target.fullname)
-    target.frameworks.append(fw)
-    return target(command, sources, objects, description=description)
+    return builder.create_target(command, outputs=objects, foreach=True)
 
   def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
-    join = self._settings(frameworks, kwargs)
-    target = Target.Builder('llvm.link', name=target_name, frameworks=frameworks)
-    inputs = expand_inputs(inputs, join)
+    builder = self.builder(inputs, frameworks, kwargs, name=target_name)
 
     if output_type not in ('bin', 'dll'):
       raise ValueError('invalid output_type: {0!r}'.format(output_type))
     output = gen_output(output, suffix=getattr(platform, output_type))
 
-    libs = set(join.get_merge('libs'))
-    libpath = set(join.get_merge('libpath'))
-    external_libs = set(join.get_merge('external_libs'))
+    libs = set(builder.merge('libs'))
+    libpath = set(builder.merge('libpath'))
+    external_libs = set(builder.merge('external_libs'))
 
     if platform.name == 'Darwin':
-      osx_fwpath = join.get_merge('osx_fwpath')
-      osx_frameworks = join.get_merge('osx_frameworks')
+      osx_fwpath = builder.merge('osx_fwpath')
+      osx_frameworks = builder.merge('osx_frameworks')
     else:
       osx_fwpath = []
       osx_frameworks = []
 
-    command = [join['program'], '$in']
+    command = [builder['program'], '$in']
     command += ['-l' + x for x in libs]
     command += ['-L' + x for x in libpath]
     command += external_libs
     command += ['-dynamic'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
     command += flatten(['-framework', x] for x in osx_frameworks)
-    command += join.get_merge('additional_flags')
+    command += builder.merge('additional_flags')
     command += ['-o', '$out']
 
-    return target(command, inputs, [output], implicit_deps=external_libs)
+    return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 
 
 cc = LlvmCompiler(program='clang', language='c')
 cxx = LlvmCompiler(program='clang++', language='c++')
-ld = cc()
+ld = cc.fork()
 from craftr.ext.unix import ar

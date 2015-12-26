@@ -17,86 +17,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+''' This module is similar to the `subprocess.run()` interface that is
+available since Python 3.5 but is a bit customized so that it works
+better with Craftr. '''
 
 from shlex import split
+from subprocess import PIPE, STDOUT
 
 import os
 import re
 import shlex
 import subprocess
 import sys
-
-
-class Process(object):
-  ''' A simple wrapper for `subprocess.Popen` class with easier access
-  to the processes standard and error output. When an instance of this
-  class is created, the process will immediately be started and waited
-  for termination.
-
-  Arguments:
-    command: The argument list for the process.
-    shell (bool): True if the command should be executed in the shell.
-    merge (bool): True if the standard output should be merged with
-      the error output, False if not.
-  '''
-
-  class ExitCodeError(Exception):
-    ''' Raised if the process exits with a non-zero exit-code. '''
-
-    def __init__(self, process):
-      self.process = process
-
-    def __str__(self):
-      if self.process.stderr:
-        message = self.process.stderr[:200]
-      elif self.process.stdout:
-        message = self.process.stdout[:200]
-      else:
-        message = None
-
-      string = "Process '{0}' exited with exit-code {1}".format(
-        self.process.program, self.process.returncode)
-      if message:
-        if isinstance(message, bytes):
-          message = message.decode()
-        string += '\n\n' + '\n'.join('  ' + x for x in message.split('\n'))
-      return string
-
-  def __init__(self, command, input_=None, encoding=sys.getdefaultencoding(),
-      pipe=True, merge=False, shell=False, cwd=None, raise_=True):
-
-    super().__init__()
-
-    if shell and isinstance(command, (list, tuple)):
-      command = ' '.join(map(quote, command))
-
-    if pipe:
-      stdout = subprocess.PIPE
-      if merge:
-        stderr = subprocess.STDOUT
-      else:
-        stderr = subprocess.PIPE
-    else:
-      stdout = stderr = None
-
-    self.command = command
-    self.program = command[0] if not shell else shlex.split(command)[0]
-    self.popen = subprocess.Popen(command, shell=shell, stdout=stdout,
-      stderr=stderr, cwd=cwd)
-    self.stdout, self.stderr = self.popen.communicate(input_)
-
-    if encoding is not None:
-      if self.stdout is not None:
-        self.stdout = self.stdout.decode(encoding)
-      if self.stderr is not None:
-        self.stderr = self.stderr.decode(encoding)
-
-    if raise_ and self.returncode != 0:
-      raise Process.ExitCodeError(self)
-
-  @property
-  def returncode(self):
-    return self.popen.returncode
 
 
 def quote(s):
@@ -113,5 +45,147 @@ def quote(s):
     return shlex.quote(s)
 
 
-def call(command, pipe=False, raise_=False, **kwargs):
-  return Process(command, pipe=pipe, raise_=raise_, **kwargs).returncode
+class _ProcessError(Exception):
+  ''' Base class that implements the attributes and behaviour of errors
+  that will inherit from this exception class. '''
+
+  def __init__(self, process):
+    self.process = process
+
+  @property
+  def returncode(self):
+    return self.process.returncode
+
+  @property
+  def cmd(self):
+    return self.process.cmd
+
+  @property
+  def stdout(self):
+    return self.process.stdout
+
+  @property
+  def stderr(self):
+    return self.process.stderr
+
+  @property
+  def output(self):
+    return self.process.output
+
+
+class CalledProcessError(_ProcessError):
+  ''' This exception is raised when a process exits with a non-zero
+  returncode and the run was to be checked for such state. The exception
+  contains the process information. '''
+
+  def __str__(self):
+    return '{0!r} exited with non-zero exit-code {1}'.format(self.cmd, self.returncode)
+
+
+class TimeoutExpired(_ProcessError):
+  ''' This exception is raised when a process did not exit after a
+  specific timeout. If this exception was raised, the child process
+  has already been killed. '''
+
+  def __init__(self, process, timeout):
+    super().__init__(process)
+    assert isinstance(timeout, (int, float))
+    self.timeout = timeout
+
+  def __str__(self):
+    return '{0!r} expired timeout of {1} second(s)'.format(self.cmd, self.timeout)
+
+
+class CompletedProcess(object):
+  ''' This class represents a completed process. '''
+
+  __slots__ = 'cmd returncode stdout stderr'.split()
+
+  def __init__(self, cmd, returncode, stdout, stderr):
+    self.cmd = cmd
+    self.returncode = returncode
+    self.stdout = stdout
+    self.stderr = stderr
+
+  def __repr__(self):
+    return '<CompletedProcess {0!r} with exit-code {1}>'.format(self.cmd, self.returncode)
+
+  @property
+  def output(self):
+    return self.stdout
+
+  @output.setter
+  def output(self, value):
+    self.stdout = value
+
+  def decode(self, encoding):
+    if encoding is None:
+      return
+    if self.stdout:
+      self.stdout = self.stdout.decode(encoding)
+    if self.stderr:
+      self.stderr = self.stderr.decode(encoding)
+
+  def check_returncode(self):
+    if self.returncode != 0:
+      raise CalledProcessError(self)
+
+
+def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
+    timeout=None, check=False, cwd=None, encoding=sys.getdefaultencoding()):
+  ''' Run the process with the specified *cmd*. If *cmd* is a list of
+  commands and *shell* is True, the list will be automatically converted
+  to a properly escaped string for the shell to execute.
+
+  Raises:
+    CalledProcessError: If *check* is True and the process exited with
+      a non-zero exit-code.
+    TimeoutExpired: If *timeout* was specified and the process did not
+      finish before the timeout expires.
+    OSError: For some OS-level error, eg. if the program could not be
+      found.
+  '''
+
+  if shell and not isinstance(cmd, str):
+    cmd = ' '.join(map(quote, cmd))
+
+  try:
+    popen = subprocess.Popen(
+      cmd, stdin=stdin, stdout=stdout, stderr=stderr, shell=shell, cwd=cwd)
+    stdout, stderr = popen.communicate(input, timeout)
+  except subprocess.TimeoutExpired as exc:
+    # TimeoutExpired.stderr available only since Python3.5
+    stderr = getattr(exc, 'stderr', None)
+    process = CompletedProcess(exc.cmd, None, exc.output, stderr)
+    process.decode(encoding)
+    raise TimeoutExpired(process, timeout)
+  except OSError as exc:
+    if not exc.filename:
+      # Make sure the exception contains the name of the program
+      # that was being invoked.
+      if isinstance(cmd, str):
+        program = split(cmd)[0]
+      else:
+        program = cmd[0]
+      exc.filename = program
+    raise
+
+  process = CompletedProcess(cmd, popen.returncode, stdout, stderr)
+  process.decode(encoding)
+  if check:
+    process.check_returncode()
+  return process
+
+
+def pipe(*args, merge=True, **kwargs):
+  ''' Like `run()`, but pipes stdout and stderr to a buffer instead of
+  directing them to the current standard out and error files. If *merge*
+  is True, stderr will be merged into stdout. '''
+
+  kwargs.setdefault('stdout', PIPE)
+  kwargs.setdefault('stderr', STDOUT if merge else PIPE)
+  return run(*args, **kwargs)
+
+
+
+__all__ = ['PIPE', 'STDOUT', 'split', 'quote', 'run', 'pipe']

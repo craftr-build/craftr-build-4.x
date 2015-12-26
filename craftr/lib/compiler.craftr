@@ -19,7 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import module, magic, warn, Framework
+from craftr import *
+
 import collections
 import copy
 
@@ -54,45 +55,37 @@ def gen_objects(sources, subdir='obj', suffix=None):
   return objects
 
 
-class _BaseCompiler(object):
-  ''' Base class for compilers that contains a `Framework` object in
-  the `settings` member and can be used by subclasses to easily generate
-  a `Framework.Join` object to read the settings. '''
+class BaseCompiler(object):
+  ''' Base class for implementing a compiler object that can be forked
+  with new options and that makes it easy to implement rule methods. '''
 
   def __init__(self, **kwargs):
+    if not hasattr(self, 'name'):
+      raise TypeError('{0}.name is not set'.format(type(self).__name__))
     super().__init__()
-    self.parent = None
     self.settings = Framework(type(self).__name__, **kwargs)
+    self.frameworks = [self.settings]
 
-  def __call__(self, **kwargs):
-    ''' Create a copy of the compiler object that inherits the settings
-    from this compiler. '''
+  def builder(self, inputs, frameworks, kwargs, **_add_kwargs):
+    ''' Creates a `TargetBuilder` that also contains the frameworks of
+    this compiler object. '''
+
+    frameworks = self.frameworks + list(frameworks)
+    return TargetBuilder(inputs, frameworks, kwargs, stacklevel=2, **_add_kwargs)
+
+  def fork(self, **kwargs):
+    ''' Create a fork of the compiler while overriding the *kwargs*. '''
 
     obj = copy.copy(self)
+    # Create a new Settings framework for the compiler.
     obj.settings = Framework(type(self).__name__, **kwargs)
-    obj.parent = self
+    # Copy the frameworks of the parent.
+    obj.frameworks = self.frameworks[:]
+    obj.frameworks.append(obj.settings)
     return obj
 
   def __getitem__(self, key):
-    return self._settings((), None)[key]
+    return FrameworkJoin(*self.frameworks)[key]
 
-  def _settings(self, frameworks, kwargs):
-    frameworks = list(frameworks)
-    if kwargs:
-      caller = magic.get_frame(1).f_code.co_name
-      fwname = type(self).__name__ + '.' + caller
-      frameworks.append(Framework(fwname, **kwargs))
-
-    curr = self
-    while curr:
-      frameworks.insert(0, curr.settings)
-      curr = curr.parent
-
-    return Framework.Join(*frameworks)
-
-  def _warn_unused(self, join, kwargs, prefix):
-    result = {}
-    for key in kwargs:
-      if key not in join.used_keys:
-        result[key] = kwargs[key]
-    warn.unused_kwargs(result, prefix)
+  def __setitem__(self, key, value):
+    self.settings[key] = value

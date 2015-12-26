@@ -20,8 +20,7 @@
 # THE SOFTWARE.
 
 from os import environ
-from craftr import expand_inputs, Target, Framework
-from craftr import warn as _warn
+from craftr import *
 from craftr.ext import platform
 from craftr.ext.compiler import gen_objects
 
@@ -32,7 +31,7 @@ class NvccCompiler(object):
     super().__init__()
     # xxx: is this cross platform compatible or does it work only on Windows?
     if 'CUDA_PATH' not in environ:
-      _warn.warn('CUDA_PATH not in environment')
+      print('craftr: warn: [compiler.nvcc.NvccCompiler] CUDA_PATH not in environment')
       self.toolkit_path = None
       self.include = []
       self.program = 'nvcc'
@@ -70,9 +69,9 @@ class NvccCompiler(object):
     objects = gen_objects(sources, suffix=platform.obj)
     command = [self.program, '-c', '$in', '-o', '$out', '--machine', str(machine)]
 
-    meta = {
-      'libpath': self._get_libpath(machine),
-      'libs': ['cuda', 'cudadevrt', 'nvcuvid', 'OpenCL',
+    fw = Framework('nvcc.NvccCompiler.compile',
+      libpath = self._get_libpath(machine),
+      libs = ['cuda', 'cudadevrt', 'nvcuvid', 'OpenCL',
           'cudart' + ('_static' if static else '')],
-    }
-    return Target(command, sources, objects, meta=meta)
+    )
+    return Target(command, sources, objects, frameworks=[frameworks])

@@ -125,3 +125,10 @@ def get_module_frame(module):
       return frame
     frame = frame.f_back
   raise RuntimeError('module frame can not be found')
+
+
+
+def get_caller(stackdepth=1):
+  ''' Returns the name of the calling function. '''
+
+  return get_frame(stackdepth + 1).f_code.co_name
