@@ -65,14 +65,16 @@ def _log(level, *args, stacklevel=1, **kwargs):
       if fn.startswith('<'):
         fn = tty.colored(fn, 'yellow')
       else:
-        fn = path.relpath(fn)
+        fn = path.relpath(fn, session.cwd, only_sub=True)
         fn = tty.colored(fn, 'blue')
+
       func = frame.f_code.co_name
-      lineno = frame.f_lineno
       if func.startswith('<'):
         func = tty.colored(func, 'yellow', attrs='bold')
       else:
         func = tty.colored(func + '()', 'blue', attrs='bold')
+
+      lineno = frame.f_lineno
       print('  In', func, '[{0}:{1}]'.format(fn, lineno))
 
 

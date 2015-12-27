@@ -281,3 +281,21 @@ def iter_tree(dirname, depth=1):
 
   for path in dirname:
     yield from recursion(path, depth)
+
+
+
+def relpath(path, start='.', only_sub=False):
+  ''' Like the original `os.path.relpath()` function, but with the
+  *only_sub* parameter. If *only_sub* is True and *path* is not a
+  subpath of *start*, the *path* is returned unchanged. '''
+
+  if not only_sub:
+    return os.path.relpath(path, start)
+  else:
+    try:
+      res = os.path.relpath(path, start)
+    except ValueError:
+      return path  # On windows if drive letters don't match
+    if res.startswith(pardir):
+      return path
+    return res
