@@ -56,6 +56,9 @@ class Session(object):
     var: A dictionary of variables that will be exported to the Ninja
       build definitions file.
     verbosity: Logging verbosity level, defaults to 0.
+    strace_depth: The maximum number of frames to print on a stack
+      trace of a logging output with `info()`, `warn()` or `error()`.
+      Defaults to 3.
     '''
 
   def __init__(self, cwd=None, path=None):
@@ -68,6 +71,7 @@ class Session(object):
     self.targets = {}
     self.var = {}
     self.verbosity = 0
+    self.strace_depth = 3
 
     if path is not None:
       self.path.extend(path)

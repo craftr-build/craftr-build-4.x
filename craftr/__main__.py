@@ -113,6 +113,7 @@ def main():
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
   parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
   parser.add_argument('--rc', help='Execute the specified Craftr startup file. CAN be paired with --no-rc')
+  parser.add_argument('--strace-depth', type=int, default=3, help='Depth of logging stack trace. Defaults to 3')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -159,6 +160,7 @@ def main():
   session_obj = craftr.Session(cwd=old_cwd, path=[old_cwd])
   with craftr.magic.enter_context(session, session_obj):
     session.verbosity = args.v
+    session.strace_depth = args.strace_depth
     if do_run:
       # Run the environment files.
       if not args.no_rc:

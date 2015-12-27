@@ -58,7 +58,8 @@ def _log(level, *args, stacklevel=1, **kwargs):
   kwargs['file'].write(tty.reset)
   kwargs['file'].write(end)
   if session and module and session.verbosity >= meta['strace_min_verbosity']:
-    frames = list(_walk_frames(stacklevel=(stacklevel + 1), max_frames=5))
+    max_frames = session.strace_depth
+    frames = list(_walk_frames(stacklevel=(stacklevel + 1), max_frames=max_frames))
     for frame in reversed(frames):
       fn = frame.f_code.co_filename
       if fn.startswith('<'):
