@@ -74,4 +74,4 @@ class NvccCompiler(object):
       libs = ['cuda', 'cudadevrt', 'nvcuvid', 'OpenCL',
           'cudart' + ('_static' if static else '')],
     )
-    return Target(command, sources, objects, frameworks=[frameworks])
+    return Target(command, sources, objects, frameworks=[fw])

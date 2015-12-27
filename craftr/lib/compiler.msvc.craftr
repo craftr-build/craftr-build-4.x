@@ -152,7 +152,7 @@ class MsvcCompiler(BaseCompiler):
       command += ['/showIncludes']
     command += builder.merge('additional_flags')
 
-    return builder.create_target(command, outputs=objects, description=description)
+    return builder.create_target(command, outputs=objects, foreach=True)
 
 
 class MsvcLinker(BaseCompiler):
