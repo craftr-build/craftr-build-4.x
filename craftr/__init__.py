@@ -57,6 +57,7 @@ class Session(object):
       the object to this dictionary automatically.
     var: A dictionary of variables that will be exported to the Ninja
       build definitions file.
+    verbosity: Logging verbosity level, defaults to 0.
     '''
 
   def __init__(self, cwd=None, path=None):
@@ -68,6 +69,7 @@ class Session(object):
     self.modules = {}
     self.targets = {}
     self.var = {}
+    self.verbosity = 0
 
     if path is not None:
       self.path.extend(path)

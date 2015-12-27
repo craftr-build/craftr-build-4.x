@@ -101,6 +101,7 @@ def _run_func(main_module, name, args):
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-V', action='store_true', help='Print version and exit.')
+  parser.add_argument('-v', action='count', default=0, help='Increase the verbosity level.')
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
   parser.add_argument('-b', action='store_true', help='Build all or the specified targets. Note that no Craftr modules are executed, if that is not required by other options.')
@@ -157,6 +158,7 @@ def main():
 
   session_obj = craftr.Session(cwd=old_cwd, path=[old_cwd])
   with craftr.magic.enter_context(session, session_obj):
+    session.verbosity = args.v
     if do_run:
       # Run the environment files.
       if not args.no_rc:
