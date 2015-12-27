@@ -127,7 +127,6 @@ def get_module_frame(module):
   raise RuntimeError('module frame can not be found')
 
 
-
 def get_caller(stackdepth=1):
   ''' Returns the name of the calling function. '''
 

@@ -444,6 +444,10 @@ class ModuleError(RuntimeError):
     return 'craftr: error: [{0}] {1}'.format(self.module.project_name, self.message)
 
 
+class ModuleReturn(Exception):
+  pass
+
+
 def info(*args, **kwargs):
   prefix = 'craftr: info: [{0}]'.format(module.project_name)
   print(prefix, *args, **kwargs)
@@ -456,6 +460,18 @@ def error(*objects, sep=' ', module=None):
   if not module:
     module = globals()['module']()
   raise ModuleError(message, module)
+
+
+def return_():
+  ''' Raise a `ModuleReturn` exception, causing the module execution
+  to be aborted and returning back to the parent module. Note that this
+  function can only be called from a Craftr modules global stack frame,
+  otherwise a `RuntimeError` will be raised. '''
+
+  if magic.get_frame(1).f_globals is not vars(module):
+    raise RuntimeError('return_() can not be called outside the current '
+      'modules global stack frame')
+  raise ModuleReturn()
 
 
 def expand_inputs(inputs, frameworks=None):
@@ -534,4 +550,4 @@ def _check_list_of_str(name, value):
 
 
 __all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
-  'Framework', 'FrameworkJoin', 'info', 'error', 'expand_inputs']
+  'Framework', 'FrameworkJoin', 'info', 'error', 'return_', 'expand_inputs']

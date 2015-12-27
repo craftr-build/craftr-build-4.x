@@ -192,6 +192,8 @@ class CraftrLoader(object):
               exec(compile(fp.read(), self.filename, 'exec'), vars(module))
           finally:
             craftr.finish_module(module)
+      except craftr.ModuleReturn:
+        pass
       except Exception:
         del sys.modules[fullname]
         del self.session.modules[name]
