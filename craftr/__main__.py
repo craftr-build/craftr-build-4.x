@@ -167,7 +167,7 @@ def main():
       if args.rc:
         rc_file = path.normpath(args.rc, old_cwd)
         if not session.exec_if_exists(rc_file):
-          error('--rc {0!r} does not exist'.format(args.env))
+          error('--rc {0!r} does not exist'.format(args.rc))
           return errno.ENOENT
 
       # Load the main craftr module specified via the -m option
@@ -175,7 +175,7 @@ def main():
       try:
         module = importlib.import_module('craftr.ext.' + args.m)
       except craftr.ModuleError as exc:
-        error('in module {0!r}. Abort'.format(exc.module.project_name))
+        error('error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
 
       if args.f:

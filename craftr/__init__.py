@@ -37,8 +37,6 @@ import os
 import types
 import warnings
 
-from craftr import ext, path, shell, ninja
-
 # This object is used to indicate a state where a parameter was
 # not specified. This is used when None would be an accepted value.
 _sentinel = object()
@@ -444,35 +442,6 @@ class ModuleReturn(Exception):
   pass
 
 
-def info(*args, **kwargs):
-  prefix = 'craftr: info:'
-  if module:
-    prefix += ' [{0}]'.format(module.project_name)
-  kwargs.setdefault('file', sys.stderr)
-  print(prefix, *args, **kwargs)
-
-
-def warn(*args, **kwargs):
-  prefix = 'craftr: warn:'
-  if module:
-    prefix += ' [{0}]'.format(module.project_name)
-  kwargs.setdefault('file', sys.stderr)
-  print(prefix, *args, **kwargs)
-
-
-def error(*args, **kwargs):
-  ''' Raise `ModuleError` with the specified message when called
-  from a Craftr module or print the message to stderr. '''
-
-  prefix = 'craftr: error:'
-  if module:
-    prefix += ' [{0}]'.format(module.project_name)
-  kwargs.setdefault('file', sys.stderr)
-  print(prefix, *args, **kwargs)
-  if module:
-    raise ModuleError()
-
-
 def return_():
   ''' Raise a `ModuleReturn` exception, causing the module execution
   to be aborted and returning back to the parent module. Note that this
@@ -559,6 +528,9 @@ def _check_list_of_str(name, value):
         name, type(item).__name__))
   return value
 
+
+from craftr import ext, path, shell, ninja
+from craftr.logging import info, warn, error
 
 __all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
   'Framework', 'FrameworkJoin', 'info', 'warn', 'error', 'return_', 'expand_inputs']

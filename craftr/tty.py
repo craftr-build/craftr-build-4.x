@@ -19,6 +19,23 @@
 # THE SOFTWARE.
 
 import os
+import sys
+
+try:
+  import colorama
+except ImportError:
+  colorama = None
+
+# Only enable colorized output if attached to a TTY or if explicitly
+# requested by the environment.
+isatty = (sys.stdout.isatty() and sys.stderr.isatty())
+if os.environ.get('CRAFTR_ISATTY') == 'true':
+  isatty = True
+elif os.environ.get('CRAFTR_ISATTY') == 'false':
+  isatty = False
+
+if isatty and colorama:
+  colorama.init()
 
 
 def terminal_size():
@@ -49,3 +66,38 @@ def terminal_size():
 
 def clear_line():
   print('\r\33[K', end='')
+
+
+def colored(text, fg=None, bg=None, attrs=None, reset=True):
+  ''' Colorize *text*. The interface is very similar to the
+  `termcolor.colored()` function but only uses the `colorama` module.
+  If `colorama` is not available or the process is not attached to a
+  tty, return *text* unchanged. '''
+
+  result = compile(fg, bg, attrs) + text
+  if reset:
+    result += globals()['reset']
+  return result
+
+
+def compile(fg=None, bg=None, attrs=None, reset=False):
+  ''' Compile a ANSI style code. '''
+
+  result = ''
+  if not isatty or not colorama:
+    return result
+  if fg is not None:
+    result += getattr(colorama.Fore, fg)
+  if bg is not None:
+    result += getattr(colorama.Back, bg)
+  if isinstance(attrs, str):
+    result += getattr(colorama.Style, attrs)
+  elif attrs is not None:
+    for attr in attrs:
+      result += getattr(colorama.Style, attr)
+  if reset:
+    result += colorama.Style.RESET_ALL
+  return result
+
+
+reset = compile(reset=True)
