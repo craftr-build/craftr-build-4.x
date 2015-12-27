@@ -1,4 +1,5 @@
 colorama==0.3.5
 glob2==0.4.1
 ninja-syntax==1.6.0
+termcolor==1.1.0
 Werkzeug==0.11.2

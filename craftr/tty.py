@@ -22,9 +22,10 @@ import os
 import sys
 
 try:
-  import colorama
+  import colorama, termcolor
 except ImportError:
   colorama = None
+  termcolor = None
 
 # Only enable colorized output if attached to a TTY or if explicitly
 # requested by the environment.
@@ -68,36 +69,43 @@ def clear_line():
   print('\r\33[K', end='')
 
 
-def colored(text, fg=None, bg=None, attrs=None, reset=True):
-  ''' Colorize *text*. The interface is very similar to the
-  `termcolor.colored()` function but only uses the `colorama` module.
-  If `colorama` is not available or the process is not attached to a
-  tty, return *text* unchanged. '''
+def colored(text, color=None, on_color=None, attrs=None):
+  ''' Synonym for `termcolor.colored()` that can also be used if the
+  module is not available, in which case *text* is returned unchanged. '''
 
-  result = compile(fg, bg, attrs) + text
-  if reset:
-    result += globals()['reset']
-  return result
-
-
-def compile(fg=None, bg=None, attrs=None, reset=False):
-  ''' Compile a ANSI style code. '''
-
-  result = ''
-  if not isatty or not colorama:
-    return result
-  if fg is not None:
-    result += getattr(colorama.Fore, fg)
-  if bg is not None:
-    result += getattr(colorama.Back, bg)
+  if not termcolor or not isatty:
+    return text
   if isinstance(attrs, str):
-    result += getattr(colorama.Style, attrs)
-  elif attrs is not None:
-    for attr in attrs:
-      result += getattr(colorama.Style, attr)
-  if reset:
-    result += colorama.Style.RESET_ALL
-  return result
+    attrs = [attrs]
+  elif not attrs:
+    attrs = []
+  return termcolor.colored(text, color, on_color, attrs)
 
 
-reset = compile(reset=True)
+def compile(color=None, on_color=None, attrs=None):
+  ''' Compile an ANSI escape sequence and return it. Return an empty
+  string if the `termcolor` module is not available. To reset the styling,
+  use the `reset` string. '''
+
+  if not termcolor or not isatty:
+    return ''
+
+  if isinstance(attrs, str):
+    attrs = [attrs]
+  elif not attrs:
+    attrs = []
+
+  res = ''
+  fmt_str = '\033[%dm'
+  for attr in attrs:
+    res += fmt_str % termcolor.ATTRIBUTES[attr]
+  if on_color is not None:
+    res += fmt_str % termcolor.HIGHLIGHTS[on_color]
+  if color is not None:
+    res += fmt_str % termcolor.COLORS[color]
+
+  return res
+
+
+# ANSI code to reset the text styling.
+reset = termcolor.RESET if (termcolor and isatty) else ''
