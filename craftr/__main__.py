@@ -77,15 +77,15 @@ def _run_func(main_module, name, args):
     name = main_module + '.' + name
   module_name, func_name = name.rsplit('.', 1)
   if module_name not in session.modules:
-    print('craftr: error: no module "{0}" was loaded'.format(module_name))
+    error('no module "{0}" was loaded'.format(module_name))
     return errno.ENOENT
   module = session.modules[module_name]
   if not hasattr(module, func_name):
-    print('craftr: error: module "{0}" has no member "{1}"'.format(module_name, func_name))
+    error('module "{0}" has no member "{1}"'.format(module_name, func_name))
     return errno.ENOENT
   func = getattr(module, func_name)
   if not callable(func):
-    print('craftr: error: "{0}" is not callable'.format(name))
+    error('"{0}" is not callable'.format(name))
     return errno.ENOENT
   old_argv = sys.argv
   sys.argv = ['craftr -f {0}'.format(name)] + args
@@ -122,23 +122,23 @@ def main():
 
   if not args.m:
     if not path.isfile('Craftfile'):
-      print('craftr: error: "Craftfile" does not exist')
+      error('"Craftfile" does not exist')
       return errno.ENOENT
     args.m = craftr.ext.get_module_ident('Craftfile')
     if not args.m:
-      print('craftr: error: "Craftfile" has no or an invalid craftr_module(...) declaration')
+      error('"Craftfile" has no or an invalid craftr_module(...) declaration')
       return errno.ENOENT
 
   if not path.exists(args.d):
     os.makedirs(args.d)
   elif not path.isdir(args.d):
-    print('craftr: error: "{0}" is not a directory'.format(args.d))
+    error('"{0}" is not a directory'.format(args.d))
     return errno.ENOTDIR
 
   try:
     craftr.ninja.get_ninja_version()
   except OSError as exc:
-    print('craftr: error: ninja is not installed on the system')
+    error('ninja is not installed on the system')
     return errno.ENOENT
 
   # Convert relative to absolute target names.
@@ -154,7 +154,7 @@ def main():
   # we the -b option is specified and NOT -c == 1, -e, -f or -F.
   do_run = not args.b or any([args.c == 1, args.e, args.f, args.F])
   if not do_run:
-    print("craftr: skipping execution phase.")
+    info("skipping execution phase.")
 
   session_obj = craftr.Session(cwd=old_cwd, path=[old_cwd])
   with craftr.magic.enter_context(session, session_obj):
@@ -167,7 +167,7 @@ def main():
       if args.rc:
         rc_file = path.normpath(args.rc, old_cwd)
         if not session.exec_if_exists(rc_file):
-          print('craftr: error: --rc {0!r} does not exist'.format(args.env))
+          error('--rc {0!r} does not exist'.format(args.env))
           return errno.ENOENT
 
       # Load the main craftr module specified via the -m option
@@ -175,7 +175,7 @@ def main():
       try:
         module = importlib.import_module('craftr.ext.' + args.m)
       except craftr.ModuleError as exc:
-        print(str(exc))
+        error('in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
 
       if args.f:
@@ -186,7 +186,7 @@ def main():
       try:
         targets = [session.targets[x] for x in args.targets]
       except KeyError as key:
-        print('craftr: error: Target "{0}" does not exist'.format(key))
+        error('Target "{0}" does not exist'.format(key))
         return errno.ENOENT
 
       if args.e:

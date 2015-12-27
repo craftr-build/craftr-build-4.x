@@ -435,15 +435,9 @@ class FrameworkJoin(object):
 
 
 class ModuleError(RuntimeError):
-  ''' This function is raised with `error()`. It will cause Craftr to
-  exit with the supplied message. '''
 
-  def __init__(self, message, module):
-    self.message = message
-    self.module = module
-
-  def __str__(self):
-    return 'craftr: error: [{0}] {1}'.format(self.module.project_name, self.message)
+  def __init__(self, module=None):
+    self.module = module or craftr.module()
 
 
 class ModuleReturn(Exception):
@@ -451,17 +445,32 @@ class ModuleReturn(Exception):
 
 
 def info(*args, **kwargs):
-  prefix = 'craftr: info: [{0}]'.format(module.project_name)
+  prefix = 'craftr: info:'
+  if module:
+    prefix += ' [{0}]'.format(module.project_name)
+  kwargs.setdefault('file', sys.stderr)
   print(prefix, *args, **kwargs)
 
 
-def error(*objects, sep=' ', module=None):
-  ''' Raise `ModuleError` with the specified message. '''
+def warn(*args, **kwargs):
+  prefix = 'craftr: warn:'
+  if module:
+    prefix += ' [{0}]'.format(module.project_name)
+  kwargs.setdefault('file', sys.stderr)
+  print(prefix, *args, **kwargs)
 
-  message = sep.join(map(str, objects))
-  if not module:
-    module = globals()['module']()
-  raise ModuleError(message, module)
+
+def error(*args, **kwargs):
+  ''' Raise `ModuleError` with the specified message when called
+  from a Craftr module or print the message to stderr. '''
+
+  prefix = 'craftr: error:'
+  if module:
+    prefix += ' [{0}]'.format(module.project_name)
+  kwargs.setdefault('file', sys.stderr)
+  print(prefix, *args, **kwargs)
+  if module:
+    raise ModuleError()
 
 
 def return_():
@@ -552,4 +561,4 @@ def _check_list_of_str(name, value):
 
 
 __all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
-  'Framework', 'FrameworkJoin', 'info', 'error', 'return_', 'expand_inputs']
+  'Framework', 'FrameworkJoin', 'info', 'warn', 'error', 'return_', 'expand_inputs']
