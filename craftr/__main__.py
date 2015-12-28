@@ -143,7 +143,7 @@ def main():
     return errno.ENOENT
 
   # Convert relative to absolute target names.
-  mkabst = lambda x: (args.m + '.' + x) if ('.' not in x) else x
+  mkabst = lambda x: ((args.m + '.' + x) if ('.' not in x) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
   _set_env(args.D)
