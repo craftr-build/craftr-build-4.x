@@ -41,7 +41,7 @@ class LlvmCompiler(BaseCompiler):
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
-    fw = builder.add_framework(target.name)
+    fw = builder.add_framework(builder.name)
 
     include = set(builder.merge('include'))
     defines = set(builder.merge('defines'))

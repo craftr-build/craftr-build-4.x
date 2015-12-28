@@ -34,5 +34,5 @@ class GccCompiler(llvm.LlvmCompiler):
 
 cc = GccCompiler(program='gcc', language='c')
 cxx = GccCompiler(program='g++', language='c++')
-ld = CCompiler()
+ld = cc.fork()
 from ..llvm import ar
