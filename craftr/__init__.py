@@ -90,7 +90,6 @@ class Session(object):
     temp_mod.__file__ = filename
     init_module(temp_mod)
     temp_mod.__name__ = '__craftenv__'
-    del temp_mod.__ident__
 
     with open(filename, 'r') as fp:
       code = compile(fp.read(), filename, 'exec')
@@ -258,7 +257,7 @@ class Target(object):
 
   @property
   def fullname(self):
-    return self.module.__ident__ + '.' + self.name
+    return self.module.project_name + '.' + self.name
 
 
 class TargetBuilder(object):
@@ -538,9 +537,6 @@ def init_module(module):
   module.__session__ = session()
   module.project_dir = path.dirname(module.__file__)
   module.project_name = module.__name__[11:]
-
-  # Backwards compatibility
-  module.__ident__ = module.project_name
 
 
 def finish_module(module):
