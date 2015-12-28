@@ -496,6 +496,40 @@ def import_file(filename):
   return session.extension_importer.import_file(filename)
 
 
+def import_module(modname, globals=None, fromlist=None):
+  ''' Similar to `importlib.import_module()`, but this function can
+  also improt contents of *modname* into *globals*. If *globals* is
+  specified, the module will be directly imported into the dictionary.
+  If *fromlist* list `*`, a wildcard import into *globals* will be
+  perfromed. *fromlist* can also be a list of names to import.
+
+  This function always returns the root module. '''
+
+  wildcard = False
+  if fromlist == '*':
+    wildcard = True
+    fromlist = None
+
+  root = module = __import__(modname, globals, fromlist=fromlist)
+  for part in modname.split('.')[1:]:
+    module = getattr(module, part)
+  if globals is not None:
+    if wildcard:
+      if hasattr(module, '__all__'):
+        for key in module.__all__:
+          globals[key] = getattr(module, key)
+      else:
+        for key, value in vars(module).items():
+          if not key.startswith('_'):
+            globals[key] = value
+    elif fromlist is not None:
+      for key in fromlist:
+        globals[key] = value
+    else:
+      globals[modname.partition('.')[0]] = root
+  return root
+
+
 def init_module(module):
   ''' Called when a craftr module is being imported before it is
   executed to initialize its contents. '''
@@ -546,4 +580,4 @@ from craftr.logging import info, warn, error
 
 __all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
   'Framework', 'FrameworkJoin', 'info', 'warn', 'error', 'return_',
-  'expand_inputs', 'import_file']
+  'expand_inputs', 'import_file', 'import_module']

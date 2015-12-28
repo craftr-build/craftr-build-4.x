@@ -89,3 +89,11 @@ class BaseCompiler(object):
 
   def __setitem__(self, key, value):
     self.settings[key] = value
+
+
+class ToolDetectionError(Exception):
+  ''' This exception is raised if a command-line tool could not be
+  successfully be detected. '''
+
+
+__all__ = ['gen_output', 'gen_output', 'BaseCompiler', 'ToolDetectionError']
