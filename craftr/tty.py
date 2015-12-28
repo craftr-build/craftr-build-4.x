@@ -22,9 +22,13 @@ import os
 import sys
 
 try:
-  import colorama, termcolor
+  import colorama
 except ImportError:
   colorama = None
+
+try:
+  import termcolor
+except ImportError:
   termcolor = None
 
 # Only enable colorized output if attached to a TTY or if explicitly
