@@ -488,6 +488,14 @@ def expand_inputs(inputs, frameworks=None):
   return result
 
 
+def import_file(filename):
+  ''' Import a Craftr module by filename. '''
+
+  if not path.isabs(filename):
+    filename = path.local(filename)
+  return session.extension_importer.import_file(filename)
+
+
 def init_module(module):
   ''' Called when a craftr module is being imported before it is
   executed to initialize its contents. '''
@@ -537,4 +545,5 @@ from craftr import ext, path, shell, ninja
 from craftr.logging import info, warn, error
 
 __all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
-  'Framework', 'FrameworkJoin', 'info', 'warn', 'error', 'return_', 'expand_inputs']
+  'Framework', 'FrameworkJoin', 'info', 'warn', 'error', 'return_',
+  'expand_inputs', 'import_file']

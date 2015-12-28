@@ -67,18 +67,18 @@ class CraftrImporter(object):
 
   def _check_file(self, filename):
     if not path.isfile(filename):
-      return False
+      return None
     ident = get_module_ident(filename)
     if not ident:
       message = 'no craftr_module() declaration in "{0}"'.format(filename)
       warnings.warn(message, ImportWarning)
-      return False
+      return None
     if ident in self._cache and self._cache[ident] != filename:
       message ='module "{0}" already found elsewhere'.format(ident)
       warnings.warn(message, ImportWarning)
-      return False
+      return None
     self._cache[ident] = filename
-    return True
+    return ident
 
   def _rebuild_cache(self):
     ''' Rebuilds the importer cache for craftr modules. '''
@@ -141,6 +141,26 @@ class CraftrImporter(object):
           parent, _, name = key.rpartition('.')
           if parent:
             setattr(self.session.modules[parent], name, module)
+
+  def import_file(self, filename):
+    ''' Imports a Craftr module by *filename*. Raises `ImportError`
+    if *filename* is not a Craftr module or if the file is not the
+    same as would be imported when importing it by its module
+    identifier. '''
+
+    ident = get_module_ident(filename)
+    if not ident:
+      filename = path.relpath(filename, self.session.cwd)
+      raise ImportError('not a Craftr module: {0!r}'.format(filename))
+    if ident not in self._cache:
+      self._check_file(filename)
+      assert ident in self._cache
+    target_fn = path.normpath(self._cache[ident])
+    if target_fn != path.normpath(filename):
+      filename = path.relpath(filename, self.session.cwd)
+      raise ImportError('conflicting module import, {0!r} is not the '
+        'expected source file for module {1!r}'.format(filename, ident))
+    return importlib.import_module('craftr.ext.' + ident)
 
   def find_module(self, fullname, path=None):
     assert craftr.session == self.session
