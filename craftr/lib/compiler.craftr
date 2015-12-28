@@ -25,6 +25,25 @@ import collections
 import copy
 
 
+def detect_compiler(program, language):
+  ''' Detects the compiler interface based on the specified *program*
+  assuming it is used for the specified *language*. Returns the detected
+  compiler or raises `ToolDetectionError`. Supports all available compiler
+  toolset implementations. '''
+
+  from . import llvm, gcc, msvc
+
+  for module in [llvm, gcc, msvc]:
+    try:
+      desc = module.detect(program)
+    except ToolDetectionError:
+      pass
+    else:
+      return module.Compiler(program, language, desc)
+
+  raise ToolDetectionError('could not detect toolset for {0!r}'.format(program))
+
+
 def gen_output(output, subdir=None, suffix=None):
   if isinstance(output, str):
     if not path.isabs(output):
@@ -96,4 +115,4 @@ class ToolDetectionError(Exception):
   successfully be detected. '''
 
 
-__all__ = ['gen_output', 'gen_output', 'BaseCompiler', 'ToolDetectionError']
+__all__ = ['gen_output', 'gen_objects', 'BaseCompiler', 'ToolDetectionError']

@@ -19,23 +19,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# xxx: GCC is currently implemented as a synonym for LLVM. It should
-#      probably get its own implementation.
+from craftr import path
+import functools
 
-from .. import llvm
-from functools import partial
+name = 'win'
+standard = 'nt'
 
-detect = partial(llvm.detect, _mode='gcc')
-
-
-class GccCompiler(llvm.LlvmCompiler):
-
-  name = 'GCC (Craftr-LLVM-Backend)'
-
-  def __init__(self, program, language='c', desc=None, **kwargs):
-    if not desc:
-      desc = detect(program)
-    super().__init__(program=program, language=language, desc=desc, **kwargs)
+obj = lambda x: path.addsuffix(x, '.obj')
+bin = lambda x: path.addsuffix(x, '.exe')
+lib = lambda x: path.addsuffix(x, '.lib')
+dll = lambda x: path.addsuffix(x, '.dll')
 
 
-Compiler = GccCompiler
+@functools.lru_cache(maxsize=None)
+def get_tool(name):
+  from craftr.ext.compiler import msvc
+  # xxx: Implement detecting the compiler if no compiler toolset is
+  # available in the PATH by default via VS__COMNTOOLS and even allow
+  # using a GCC interface instead.
+  if name == 'cc':
+    return msvc.Compiler('cl', 'c')
+  elif name == 'cxx':
+    return msvc.Compiler('cl', 'c++')
+  elif name == 'ld':
+    return msvc.Linker('link')
+  elif name == 'ar':
+    return msvc.Archiver('lib')
+  else:
+    raise ValueError(name)

@@ -19,23 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# xxx: GCC is currently implemented as a synonym for LLVM. It should
-#      probably get its own implementation.
+from craftr import path
+from ..linux import get_tool
 
-from .. import llvm
-from functools import partial
+name = 'cygwin'
+standard = 'posix'
 
-detect = partial(llvm.detect, _mode='gcc')
-
-
-class GccCompiler(llvm.LlvmCompiler):
-
-  name = 'GCC (Craftr-LLVM-Backend)'
-
-  def __init__(self, program, language='c', desc=None, **kwargs):
-    if not desc:
-      desc = detect(program)
-    super().__init__(program=program, language=language, desc=desc, **kwargs)
-
-
-Compiler = GccCompiler
+obj = lambda x: path.addsuffix(x, '.obj')
+bin = lambda x: path.addsuffix(x, '.exe')
+lib = lambda x: path.addsuffix(x, '.lib')
+dll = lambda x: path.addsuffix(x, '.dll')

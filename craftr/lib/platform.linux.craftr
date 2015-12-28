@@ -19,23 +19,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# xxx: GCC is currently implemented as a synonym for LLVM. It should
-#      probably get its own implementation.
+from craftr import environ, path
+import craftr.ext.unix
+import craftr.ext.compiler
+import functools
 
-from .. import llvm
-from functools import partial
+name = 'linux'
+standard = 'posix'
 
-detect = partial(llvm.detect, _mode='gcc')
-
-
-class GccCompiler(llvm.LlvmCompiler):
-
-  name = 'GCC (Craftr-LLVM-Backend)'
-
-  def __init__(self, program, language='c', desc=None, **kwargs):
-    if not desc:
-      desc = detect(program)
-    super().__init__(program=program, language=language, desc=desc, **kwargs)
+obj = lambda x: path.addsuffix(x, '.o')
+bin = lambda x: x
+lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
+dll = lambda x: path.addsuffix(x, '.so')
 
 
-Compiler = GccCompiler
+@functools.lru_cache(maxsize=None)
+def get_tool(name):
+  from craftr.ext.compiler import detect_compiler
+  if name == 'cc':
+    return detect_compiler(environ.get('CC', 'gcc'), 'c')
+  elif name == 'cxx':
+    return detect_compiler(environ.get('CXX', 'g++'), 'c++')
+  elif name == 'ld':
+    return detect_compiler(environ.get('CCLD', 'gcc'), 'c')
+  elif name ==  'ar':
+    return craftr.ext.unix.Ar(environ.get('AR', 'ar'))
+  else:
+    raise ValueError(name)

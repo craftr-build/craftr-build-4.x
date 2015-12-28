@@ -19,72 +19,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import *
-from os import environ
+from craftr import import_module
 import sys
 
-if sys.platform.startswith('linux'):
-  std = 'Posix'
-  ident = 'linux'
-  name = 'Linux'
-
-  obj = lambda x: path.addsuffix(x, '.o')
-  bin = lambda x: x
-  lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
-  dll = lambda x: path.addsuffix(x, '.so')
-
-  from craftr.ext.compiler.gcc import cc, cxx, ld, ar
-elif sys.platform.startswith('win32'):
-  std = 'NT'
-  ident = 'win'
-  name = 'Windows'
-
-  obj = lambda x: path.addsuffix(x, '.obj')
-  bin = lambda x: path.addsuffix(x, '.exe')
-  lib = lambda x: path.addsuffix(x, '.lib')
-  dll = lambda x: path.addsuffix(x, '.dll')
-
-  from craftr.ext.compiler.msvc import cc, cxx, ar, ld
-elif sys.platform.startswith('cygwin'):
-  std = 'Posix'
-  ident = 'cygwin'
-  name = 'Cygwin'
-
-  obj = lambda x: path.addsuffix(x, '.o')
-  bin = lambda x: path.addsuffix(x, '.exe')
-  lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
-  dll = lambda x: path.addsuffix(x, '.dll')
-
-  from craftr.ext.compiler.gcc import cc, cxx, ld, ar
-elif sys.platform.startswith('darwin'):
-  std = 'Posix'
-  ident = 'mac'
-  name = 'Darwin'
-
-  obj = lambda x: path.addsuffix(x, '.o')
-  bin = lambda x: x
-  lib = lambda x: path.addprefix(path.addsuffix(x, '.a'), 'lib')
-  dll = lambda x: path.addsuffix(x, '.dylib')
-
-  from craftr.ext.compiler.llvm import cc, cxx, ld, ar
-else:
-  raise EnvironmentError('unsupported platform "{0}"'.format(sys.platform))
+# Wildcard-import the module for the current platform.
+import_module(__name__ + '.' + sys.platform, globals(), '*')
 
 
-# Determine the compiler for the current platform based on the
-# environment variables. This is used for all compilers but MSVC.
-def _check_compiler(envvar, language):
-  program = environ[envvar]
-  output = shell.Process([program, '--version'], merge=True).stdout.lower()
-  if 'llvm' in output:
-    from craftr.ext.compiler.llvm import LlvmCompiler as _class
-  elif 'gcc' in output:
-    from craftr.ext.compiler.gcc import GccCompiler as _class
-  else:
-    raise EnvironmentError('could not determne compiler from {0}={1!r}'.format(envvar, program))
-  return _class(program=program, language=language)
-
-if 'CC' in environ:
-  cc = _check_compiler('CC', 'c')
-if 'CXX' in environ:
-  cxx = _check_compiler('CXX', 'c++')
+cc = get_tool('cc')
+cxx = get_tool('cxx')
+ld = get_tool('ld')
+ar = get_tool('ar')

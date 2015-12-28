@@ -20,10 +20,58 @@
 # THE SOFTWARE.
 
 from craftr import *
+from craftr.ext.compiler import *
 from craftr.ext import platform
-from craftr.ext.compiler import gen_output, gen_objects, BaseCompiler
-import craftr
-import tempfile, os, re
+import os, re, tempfile
+
+
+def detect(program):
+  ''' Detects the version of the MSVC compiler from the specified
+  *program* name and returns a dictionary with information that can
+  be passed to the constructor of `MsvcCompiler` or raises
+  `ToolDetectionError`. '''
+
+  # Determine the msvc_deps_prefix by making a small test. The
+  # compilation will not succeed since no entry point is defined.
+  deps_prefix = None
+  with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
+    fp.write(b'#include <stddef.h>\n')
+    fp.close()
+    try:
+      output = shell.pipe([program, '/Zs', '/showIncludes', fp.name], check=False).output
+    finally:
+      os.remove(fp.name)
+
+    # Extract the compiler version and architecture from stdout.
+    expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+    match = re.search(expr, output, re.I)
+    if not match:
+      raise ToolDetectionError('MSVC version and architecture could not be detected\n\n' + output)
+
+    arch = match.group(2)
+    version = match.group(1)
+
+    # Find the "Note: including file:" in the current language. We
+    # assume that the structure is the same, only the words different.
+    # After the logo output follows the filename followed by the include
+    # notices.
+    for line in output.split('\n'):
+      if 'stddef.h' in line:
+        match = re.search('[\w\s]+:[\w\s]+:', line)
+        if match:
+          deps_prefix = match.group(0)
+
+  if not deps_prefix:
+    warn('msvc_deps_prefix could not be determined, fallback on english string')
+    deps_prefix = 'Note: including file:'
+
+  return {
+    'version': version,
+    'version_str': output.split('\n', 1)[0].strip(),
+    'target': arch,
+    'thread_model': 'win32',
+    'msvc_deps_prefix': deps_prefix,
+  }
 
 
 class MsvcCompiler(BaseCompiler):
@@ -31,63 +79,25 @@ class MsvcCompiler(BaseCompiler):
 
   name = 'MSVC'
 
-  def __init__(self, program='cl', detect=True, language='c', **kwargs):
+  def __init__(self, program='cl', language='c', desc=None, **kwargs):
     super().__init__(program=program, language=language, **kwargs)
     if language not in ('c', 'c++'):
       raise ValueError('unsupported language: {0}'.format(language))
-    self.deps_prefix = 'Note: including file:'
-    self.version = None
-    self.arch = None
-    if detect:
-      # xxx: Eventually add support for using VSXXXCOMNTOOLS env vars.
-      self._detect_compiler_info()
+    if desc is None:
+      desc = detect(program)
+    self.desc = desc
+    self.version = desc['version']
+    self.target = desc['target']
+    self.deps_prefix = desc['msvc_deps_prefix']
 
   def __repr__(self):
     res = '<MsvcCompiler language={0!r} deps_prefix={1!r}'.format(
       self.settings['language'], self.deps_prefix)
     if self.version:
-      res += ' version={0!r} arch={1!r}'.format(self.version, self.arch)
+      res += ' version={0!r} target={1!r}'.format(self.version, self.target)
     else:
       res += ' (undetermined)'
     return res + '>'
-
-  def _detect_compiler_info(self):
-    # Determine the msvc_deps_prefix by making a small test. The
-    # compilation will not succeed since no entry point is defined.
-    deps_prefix = None
-    with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
-      fp.write(b'#include <stddef.h>\n')
-      fp.close()
-      try:
-        output = shell.pipe([self.settings['program'], '/Zs', '/showIncludes', fp.name], check=False).output
-      finally:
-        os.remove(fp.name)
-
-      # Extract the compiler version and architecture from stdout.
-      expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
-      match = re.search(expr, output, re.I)
-      if not match:
-        raise ValueError('MSVC version and architecture could not be detected\n\n' + output)
-
-      self.arch = match.group(2)
-      self.version = match.group(1)
-
-      # Find the "Note: including file:" in the current language. We
-      # assume that the structure is the same, only the words different.
-      # After the logo output follows the filename followed by the include
-      # notices.
-      for line in output.split('\n'):
-        if 'stddef.h' in line:
-          match = re.search('[\w\s]+:[\w\s]+:', line)
-          if match:
-            deps_prefix = match.group(0)
-
-    if not deps_prefix:
-      print('craftr: warn: [compiler.msvc.MsvcCompiler]: msvc_deps_prefix could not be determined, fallback on english string')
-    else:
-      self.deps_prefix = deps_prefix
-
-    return True
 
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
@@ -210,7 +220,6 @@ class MsvcAr(BaseCompiler):
     return builder.create_target(command, outputs=[output], description=description)
 
 
-cc = MsvcCompiler()
-cxx = MsvcCompiler(language='c++')
-ld = MsvcLinker()
-ar = MsvcAr()
+Compiler = MsvcCompiler
+Linker = MsvcLinker
+Archiver = MsvcAr

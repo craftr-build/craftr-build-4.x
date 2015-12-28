@@ -26,6 +26,7 @@ import sys
 if sys.version < '3.4':
   raise EnvironmentError('craftr requires Python3.4')
 
+from os import environ
 from craftr import magic
 
 session = magic.new_context('session')
@@ -64,7 +65,7 @@ class Session(object):
   def __init__(self, cwd=None, path=None):
     super().__init__()
     self.cwd = cwd or os.getcwd()
-    self.env = os.environ.copy()
+    self.env = environ.copy()
     self.extension_importer = ext.CraftrImporter(self)
     self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
     self.modules = {}
@@ -109,10 +110,10 @@ class Session(object):
 
     # We can not change os.environ effectively, we must update the
     # dictionary instead.
-    self._old_environ = os.environ.copy()
-    os.environ.clear()
-    os.environ.update(self.env)
-    self.env = os.environ
+    self._old_environ = environ.copy()
+    environ.clear()
+    environ.update(self.env)
+    self.env = environ
 
     sys.meta_path.append(self.extension_importer)
     self.update()
@@ -123,9 +124,9 @@ class Session(object):
     to be put there by the `craftr.ext.CraftrImporter`). '''
 
     # Restore the original values of os.environ.
-    self.env = os.environ.copy()
-    os.environ.clear()
-    os.environ.update(self._old_environ)
+    self.env = environ.copy()
+    environ.clear()
+    environ.update(self._old_environ)
     del self._old_environ
 
     sys.meta_path.remove(self.extension_importer)
@@ -574,6 +575,7 @@ def _check_list_of_str(name, value):
 from craftr import ext, path, shell, ninja
 from craftr.logging import info, warn, error
 
-__all__ = ['session', 'module', 'path', 'shell', 'Target', 'TargetBuilder',
-  'Framework', 'FrameworkJoin', 'info', 'warn', 'error', 'return_',
-  'expand_inputs', 'import_file', 'import_module']
+__all__ = ['session', 'module', 'path', 'shell', 'environ',
+  'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
+  'info', 'warn', 'error', 'return_', 'expand_inputs',
+  'import_file', 'import_module']

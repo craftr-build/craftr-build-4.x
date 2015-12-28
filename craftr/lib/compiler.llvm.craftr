@@ -20,14 +20,66 @@
 # THE SOFTWARE.
 
 from craftr import *
+from craftr.ext.compiler import *
 from craftr.ext import platform
-from craftr.ext.compiler import gen_objects, gen_output, BaseCompiler
-from functools import partial
+import re
 
 
-def flatten(iterable):
+def _search(pattern, subject, mode=0):
+  ''' Performs `re.search()` and returns a list of the captured groups,
+  *including* the complete matched string as the first group. If the
+  regex search was unsuccessful, a list with that many items containing
+  None is returned. '''
+
+  pattern = re.compile(pattern, mode)
+  ngroups = pattern.groups + 1
+
+  res = pattern.search(subject)
+  if not res:
+    return [None] * ngroups
+  else:
+    groups = list(res.groups())
+    groups.insert(0, res.group(0))
+    return groups
+
+
+def _flatten(iterable):
   for item in iterable:
     yield from item
+
+
+def detect(program, _mode='llvm'):
+  ''' Tries to detect the version information of the LLVM *program*
+  by calling it with the `-v` option and returns a dictionary of the
+  extracted information. Raises `ToolDetectionError` if the information
+  could not be retrieved (eg. if *program* does not exist or is not an
+  LLVM or GCC compiler based on *_mode*). '''
+
+  try:
+    output = shell.pipe([program, '-v']).output
+  except FileNotFoundError as exc:
+    raise ValueError(exc)
+  if _mode == 'llvm':
+    version_str, version  = _search(r'clang\s+version\s+([\d\.\-]+).*$', output, re.I | re.M)
+    target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
+    thread_model = _search(r'Thread\s+model:\s*([\w\-\._]+)', output, re.I)[1]
+    if not version:
+      raise ToolDetectionError('could not determine LLVM version')
+  elif _mode == 'gcc':
+    version_str, version = _search(r'gcc\s+version\s+([\d\.\-]+).*\s*$', output, re.I)
+    target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
+    thread_model = _search(r'--enable-threads=([\w\-\._]+)', output)[1]
+    if not version:
+      raise ToolDetectionError('could not determine GCC version')
+  else:
+    raise ValueError('invalid _mode: {0!r}'.format(_mode))
+
+  return {
+    'version': version,
+    'version_str': version_str.strip(),
+    'target': target,
+    'thread_model': thread_model,
+  }
 
 
 class LlvmCompiler(BaseCompiler):
@@ -35,8 +87,12 @@ class LlvmCompiler(BaseCompiler):
 
   name = 'LLVM'
 
-  def __init__(self, program, language, **kwargs):
+  def __init__(self, program, language, desc=None, **kwargs):
     super().__init__(program=program, language=language, **kwargs)
+    if not desc:
+      desc = detect(program)
+    self.desc = desc
+    self.version = desc['version']
 
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
@@ -75,7 +131,7 @@ class LlvmCompiler(BaseCompiler):
     command += ['-D' + x for x in defines]
     command += ['-fPIC'] if pic else []
     command += ['-F' + x for x in osx_fwpath]
-    command += flatten(['-framework', x] for x in osx_frameworks)
+    command += _flatten(['-framework', x] for x in osx_frameworks)
 
     if warn == 'all':
       command += ['-Wall']
@@ -131,14 +187,12 @@ class LlvmCompiler(BaseCompiler):
     command += external_libs
     command += ['-dynamic'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
-    command += flatten(['-framework', x] for x in osx_frameworks)
+    command += _flatten(['-framework', x] for x in osx_frameworks)
     command += builder.merge('additional_flags')
     command += ['-o', '$out']
 
     return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 
 
-cc = LlvmCompiler(program='clang', language='c')
-cxx = LlvmCompiler(program='clang++', language='c++')
-ld = cc.fork()
-from craftr.ext.unix import ar
+
+Compiler = LlvmCompiler
