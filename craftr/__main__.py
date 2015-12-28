@@ -102,6 +102,7 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-V', action='store_true', help='Print version and exit.')
   parser.add_argument('-v', action='count', default=0, help='Increase the verbosity level.')
+  parser.add_argument('-r', action='store_true', help='Run craftr modules, even if that step would be skipped.')
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
   parser.add_argument('-b', action='store_true', help='Build all or the specified targets. Note that no Craftr modules are executed, if that is not required by other options.')
@@ -153,7 +154,7 @@ def main():
 
   # Check if we should omit the execution step. This is possile when
   # we the -b option is specified and NOT -c == 1, -e, -f or -F.
-  do_run = not args.b or any([args.c == 1, args.e, args.f, args.F])
+  do_run = any([args.r, args.c == 1, args.e, args.f, args.F])
   if not do_run:
     info("skipping execution phase.")
 
