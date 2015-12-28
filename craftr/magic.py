@@ -127,7 +127,22 @@ def get_module_frame(module):
   raise RuntimeError('module frame can not be found')
 
 
-def get_caller(stackdepth=1):
+def get_caller(stacklevel=1):
   ''' Returns the name of the calling function. '''
 
-  return get_frame(stackdepth + 1).f_code.co_name
+  return get_frame(stacklevel).f_code.co_name
+
+
+def get_caller_human(stacklevel=1):
+  ''' Returns the name of the calling function, concatenated with the
+  craftr module name, if available. '''
+
+  frame = get_frame(stacklevel)
+  name = frame.f_code.co_name
+  project_name = frame.f_globals.get('project_name')
+  if project_name:
+    if name == '<module>':
+      name = project_name
+    else:
+      name = project_name + '.' + name + '()'
+  return name

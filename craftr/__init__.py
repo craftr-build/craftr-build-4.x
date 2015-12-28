@@ -269,7 +269,7 @@ class TargetBuilder(object):
   this into account and prepares the data conveniently. '''
 
   def __init__(self, inputs, frameworks, kwargs, module=None, name=None, stacklevel=1):
-    self.caller = magic.get_caller(stacklevel + 1)
+    self.caller = magic.get_caller_human(stacklevel + 1)
     frameworks = list(frameworks)
     self.inputs = expand_inputs(inputs, frameworks)
     self.frameworks = frameworks
@@ -429,7 +429,7 @@ class FrameworkJoin(object):
         continue
       if not isinstance(value, collections.Sequence) or isinstance(value, str):
         raise TypeError('expected a non-string sequence for {0!r} '
-          'in framework {1!r}, got {0}'.format(key, fw.name, type(value).__name__))
+          'in framework {1!r}, got {2}'.format(key, fw.name, type(value).__name__))
       result += value
     return result
 
