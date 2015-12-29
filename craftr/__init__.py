@@ -248,6 +248,14 @@ class Target(object):
     command = ' running "{0}"'.format(self.command[0])
     return '<Target {self.fullname!r}{command}{pool}>'.format(**locals())
 
+  def __lshift__(self, other):
+    # xxx: Should we append the frameworks of the input targets to the
+    # frameworks of this target?
+    self.implicit_deps += expand_inputs(other)
+    return self
+
+  __ilshift__ = __lshift__
+
   @staticmethod
   def _get_name(module):
     # Always use the frame of the current module, though.
