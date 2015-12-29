@@ -104,16 +104,18 @@ def get_assigned_name(frame):
           result += op.argval
           break
         else:
-          raise ValueError('expected {LOAD_ATTR, STORE_ATTR}', op.opname)
+          # Could have been a LOAD_NAME in the expression that is
+          # assigned to the name. Reset and continue until we find
+          # a sequence that ends with STORE_ATTR or STORE_NAME.
+          result = ''
       else:
         if op.opname in ('LOAD_NAME', 'LOAD_FAST'):
           result += op.argval + '.'
         elif op.opname in ('STORE_NAME', 'STORE_FAST'):
           result = op.argval
           break
-        else:
-          message = 'expected {LOAD_NAME, LOAD_FAST, STORE_NAME, STORE_FAST}'
-          raise ValueError(message, op.opname)
+        elif op.opname == 'POP_TOP':
+          raise ValueError('could not find assigned name until POP_TOP')
 
   if not result:
     raise RuntimeError('last frame instruction not found')
@@ -149,5 +151,5 @@ def get_caller_human(stacklevel=1):
     if name == '<module>':
       name = project_name
     else:
-      name = project_name + '.' + name + '()'
+      name = project_name + '.' + name
   return name
