@@ -20,6 +20,7 @@
 ''' This module is where all the magic comes from. '''
 
 from contextlib import contextmanager
+from functools import partial
 from sys import _getframe as get_frame
 
 import dis
@@ -29,6 +30,10 @@ import werkzeug
 class Proxy(werkzeug.LocalProxy):
   ''' This `werkzeug.LocalProxy` subclass returns the current object
   when called instead of forwarding the call to the current object. '''
+
+  def __init__(self, *args, **kwargs):
+    target = partial(*args, **kwargs)
+    super().__init__(target)
 
   def __call__(self):
     return self._get_current_object()

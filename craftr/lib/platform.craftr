@@ -20,13 +20,14 @@
 # THE SOFTWARE.
 
 from craftr import import_module
+from craftr.magic import Proxy
 import sys
 
 # Wildcard-import the module for the current platform.
 import_module(__name__ + '.' + sys.platform, globals(), '*')
 
 
-cc = get_tool('cc')
-cxx = get_tool('cxx')
-ld = get_tool('ld')
-ar = get_tool('ar')
+cc = Proxy(get_tool, 'cc')
+cxx = Proxy(get_tool, 'cxx')
+ld = Proxy(get_tool, 'ld')
+ar = Proxy(get_tool, 'ar')
