@@ -57,8 +57,6 @@ def export(fp, main_module):
     validate_ident(target.fullname)
     if target.pool:
       validate_ident(target.pool)
-    if not target.inputs:
-      continue
     if target.deps not in (None, 'gcc', 'msvc'):
       raise ValueError('Target({0}).deps = {1!r} is invalid'.format(target.fullname, target.deps))
     command = ' '.join(map(shell.quote, target.command))
