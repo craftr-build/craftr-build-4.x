@@ -1,13 +1,18 @@
 # Copyright (C) 2015 Niklas Rosenstein
 # All rights reserved.
 
-from pip.req import parse_requirements
+from functools import partial
 from setuptools import setup, find_packages
 import os
+import pip.req, pip.download
 import sys
 
 if sys.version < '3.4':
   sys.exit("Craftr requires Python 3.4 or greater.")
+
+from pip.req import parse_requirements
+if pip.__version__ >= '6.0':
+  parse_requirements = partial(parse_requirements, session=pip.download.PipSession())
 
 requires = [str(x.req) for x in parse_requirements('requirements.txt')]
 script = 'bin/craftr.py' if os.name == 'nt' else 'bin/craftr'
