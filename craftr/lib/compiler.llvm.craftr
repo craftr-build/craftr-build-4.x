@@ -170,9 +170,16 @@ class LlvmCompiler(BaseCompiler):
       raise ValueError('invalid output_type: {0!r}'.format(output_type))
     output = gen_output(output, suffix=getattr(platform, output_type))
 
-    libs = set(builder.merge('libs'))
-    libpath = set(builder.merge('libpath'))
-    external_libs = set(builder.merge('external_libs'))
+    libs = builder.merge('libs')
+    # Clang is based on GCC libraries, so always use the gcc_libs option.
+    libs += builder.merge('gcc_libs')
+    if self.name == 'LLVM':
+      # We also use this class for GCC in which case the llvm_libs
+      # option should not be handled!
+      libs += builder.merge('llvm_libs')
+
+    libpath = builder.merge('libpath')
+    external_libs = builder.merge('external_libs')
 
     if platform.name == 'Darwin':
       osx_fwpath = builder.merge('osx_fwpath')
@@ -182,9 +189,9 @@ class LlvmCompiler(BaseCompiler):
       osx_frameworks = []
 
     command = [builder['program'], '$in']
-    command += ['-l' + x for x in libs]
-    command += ['-L' + x for x in libpath]
-    command += external_libs
+    command += ['-l' + x for x in set(libs)]
+    command += ['-L' + x for x in set(libpath)]
+    command += set(external_libs)
     command += ['-dynamic'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
     command += _flatten(['-framework', x] for x in osx_frameworks)
