@@ -181,7 +181,7 @@ class LlvmCompiler(BaseCompiler):
     libpath = builder.merge('libpath')
     external_libs = builder.merge('external_libs')
 
-    if platform.name == 'Darwin':
+    if platform.name == 'mac':
       osx_fwpath = builder.merge('osx_fwpath')
       osx_frameworks = builder.merge('osx_frameworks')
     else:
