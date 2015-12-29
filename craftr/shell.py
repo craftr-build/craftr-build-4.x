@@ -160,9 +160,9 @@ def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
     process.decode(encoding)
     raise TimeoutExpired(process, timeout)
   except OSError as exc:
-    if not exc.filename:
-      # Make sure the exception contains the name of the program
-      # that was being invoked.
+    if not exc.filename and os.name == 'nt':
+      # Windows does not include the name of the file with which
+      # the error occured in the exception message.
       if isinstance(cmd, str):
         program = split(cmd)[0]
       else:
