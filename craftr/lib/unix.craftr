@@ -34,15 +34,10 @@ class Ar(BaseCompiler):
     super().__init__(program=program, **kwargs)
 
   def staticlib(self, output, inputs, target_name=None, **kwargs):
-    join = self._settings([], kwargs)
-    target = Target.Builder(self.name, name=target_name)
-
-    inputs = expand_inputs(inputs, join)
+    builder = self.builder(inputs, [], kwargs, name=target_name)
     output = gen_output(output, suffix=platform.lib)
     command = [join['program'], 'rcs', '$out', '$in']
-
-    self._warn_unused(join, kwargs, target.fullname)
-    return target(command, inputs, [output])
+    return build.create_target(command,  outputs=[output])
 
 
 class Ld(BaseCompiler):
@@ -54,18 +49,15 @@ class Ld(BaseCompiler):
     super().__init__(program=program, **kwargs)
 
   def link(self, output, inputs, frameworks=(), target_name=None, **kwargs):
-    join = self._settings(frameworks, kwargs)
-    target = Target.Builder(self.name, name=target_name)
-
-    inputs = expand_inputs(inputs, join)
+    builder = self.builder(inputs, frameworks, kwargs, name=target_name)
     if not path.isabs(output):
       output = gen_output(output)  # xxx: suffix?
 
-    linker_script = join.get('linker_script', None)
+    linker_script = builder.get('linker_script', None)
 
     command = [join['program'], '$in', '-o', '$out']
     command += ['-T', linker_script] if linker_script else []
-    return target(command, inputs, [output])
+    return builder.create_target(command, outputs=[output])
 
 
 class Objcopy(BaseCompiler):
@@ -96,14 +88,13 @@ class Objcopy(BaseCompiler):
     - binary_architecture
     - description '''
 
-    join = self._settings([], kwargs)
-    target = Target.Builder(self.name, name=target_name, foreach=True)
+    builder = self.builder(inputs, [], kwargs, name=target_name)
 
     # xxx: I don't think that [:3] is the correct way to derive the suffix. :)
-    output_suffix = join.get('output_suffix', output_format[:3])
-    description = join.get('description', None)
-    input_format = join.get('input_format', None)
-    binary_architecture = join.get('binary_architecture', None)
+    output_suffix = builder.get('output_suffix', output_format[:3])
+    input_format = builder.get('input_format', None)
+    binary_architecture = builder.get('binary_architecture', None)
+    builder.target['description'] = builder.get('description', None)
 
     if self.supported_targets is not None:
       if output_format not in self.supported_targets:
@@ -111,16 +102,14 @@ class Objcopy(BaseCompiler):
       if input_format is not None and input_format not in self.supported_targets:
         raise ValueError('unsupported input format: {0}'.format(input_format))
 
-    command = [join['program']]
+    command = [builder['program']]
     command += ['-I', input_format] if input_format else []
     command += ['-B', binary_architecture] if binary_architecture else []
     command += ['-O', output_format, '$in', '$out']
 
-    inputs = expand_inputs(inputs, join)
     if outputs is None:
-      outputs = gen_objects(inputs, suffix=output_suffix)
-
-    return target(command, inputs, outputs, description=description)
+      outputs = gen_objects(builder.inputs, suffix=output_suffix)
+    return builder.create_target(command, outputs=outputs)
 
 
 def pkg_config(*flags):
