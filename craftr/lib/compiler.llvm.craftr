@@ -118,12 +118,17 @@ class LlvmCompiler(BaseCompiler):
       osx_fwpath = []
       osx_frameworks = []
 
-    if language not in ('c', 'c++'):
+    if language not in (None, 'c', 'c++', 'asm'):
       raise ValueError('invalid language: {0}'.format(language))
     if language == 'c++':
       fw['libs'] = ['c++']
 
-    command = [builder['program'], '-x', language, '-c', '$in', '-o', '$out']
+    if language == 'asm':
+      language = 'assembler'
+
+    command = [builder['program']]
+    command += ['-x', language] if language else []
+    command += ['-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
     command += ['-pedantic'] if pedantic else []
@@ -178,6 +183,15 @@ class LlvmCompiler(BaseCompiler):
       # option should not be handled!
       libs += builder.merge('llvm_libs')
 
+    linker_args = builder.merge('linker_args')
+    linker_args += builder.merge('gcc_linker_args')
+    if self.name == 'LLVM':
+      linker_args += builder.merge('llvm_linker_args')
+
+    linker_script = builder.get('linker_script', None)
+    if linker_script:
+      linker_args += ['-T', linker_script]
+
     libpath = builder.merge('libpath')
     external_libs = builder.merge('external_libs')
 
@@ -195,6 +209,8 @@ class LlvmCompiler(BaseCompiler):
     command += ['-dynamic'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
     command += _flatten(['-framework', x] for x in osx_frameworks)
+    if linker_args:
+      command += ['-Wl,' + ','.join(linker_args)]
     command += builder.merge('additional_flags')
     command += ['-o', '$out']
 
