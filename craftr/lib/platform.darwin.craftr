@@ -41,7 +41,7 @@ def get_tool(name):
   elif name == 'cxx':
     return detect_compiler(environ.get('CXX', 'clang++'))
   elif name == 'ld':
-    return detect_compiler(environ.get('CCLD', 'clang'))
+    return detect_compiler(environ.get('CC', 'clang'))
   elif name ==  'ar':
     return craftr.ext.unix.Archiver(environ.get('AR', 'ar'))
   else:
