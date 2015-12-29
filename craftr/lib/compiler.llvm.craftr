@@ -157,7 +157,7 @@ class LlvmCompiler(BaseCompiler):
     if autodeps:
       builder.target['depfile'] = '$out.d'
       builder.target['deps'] = 'gcc'
-      command += ['-MMD', '-MF', '$depfile']
+      command += ['-MD', '-MP', '-MF', '$depfile']
 
     command += builder.merge('additional_flags')
 
