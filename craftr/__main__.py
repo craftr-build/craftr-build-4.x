@@ -111,6 +111,7 @@ def main():
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
+  parser.add_argument('--daemon', type=craftr.daemon.parse_uri, help='Keep the Craftr daemon running under the specified host:port')
   parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
   parser.add_argument('--rc', help='Execute the specified Craftr startup file. CAN be paired with --no-rc')
   parser.add_argument('--strace-depth', type=int, default=3, help='Depth of logging stack trace. Defaults to 3')
@@ -153,7 +154,7 @@ def main():
 
   # Check if we should omit the execution step. This is possile when
   # we the -b option is specified and NOT -c == 1, -e, -f or -F.
-  do_run = any([args.e, args.f, args.F])
+  do_run = any([args.e, args.f, args.F, args.daemon])
   if not do_run and not args.b:
     # Do nothing at all? Then do the execution step.
     do_run = True
@@ -161,10 +162,12 @@ def main():
   if not do_run:
     info("skipping execution phase.")
 
-  session_obj = craftr.Session(cwd=old_cwd, path=[old_cwd])
-  with craftr.magic.enter_context(session, session_obj):
+  session = craftr.Session(cwd=old_cwd, path=[old_cwd], daemon_bind=args.daemon)
+  with craftr.magic.enter_context(craftr.session, session):
+    # Initialize the session settings from the command-line parameters.
     session.verbosity = args.v
     session.strace_depth = args.strace_depth
+
     if do_run:
       # Run the environment files.
       if not args.no_rc:
@@ -223,6 +226,14 @@ def main():
       with craftr.magic.enter_context(craftr.module, module):
         _run_func(args.m, args.F[0], args.F[1:])
 
+    if args.daemon:
+      try:
+        info('Kepping Craftr daemon alive.')
+        while True:
+          time.sleep(1)
+      except KeyboardInterrupt:
+        print(file=sys.stderr)
+        info('Quit.')
     return 0
 
 

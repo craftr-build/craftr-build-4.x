@@ -45,10 +45,12 @@ def _walk_frames(start_frame=None, stacklevel=1, max_frames=0):
     count += 1
 
 
-def _log(level, *args, stacklevel=1, **kwargs):
+def _log(level, *args, stacklevel=1, module_name=None, **kwargs):
   meta = LOG_METADATA[level]
   prefix = meta['fg'] + 'craftr|{0:>5}'.format(level)
-  if module:
+  if module_name:
+    prefix += '|' + module_name
+  elif module:
     prefix += '|' + module.project_name
   prefix += ' -> ' + tty.reset
   kwargs.setdefault('file', sys.stderr)
@@ -86,7 +88,7 @@ def warn(*args, stacklevel=1, **kwargs):
   _log('warn', *args, stacklevel=(stacklevel + 1), **kwargs)
 
 
-def error(*args, stacklevel=1, **kwargs):
+def error(*args, stacklevel=1, raise_=True, **kwargs):
   _log('error', *args, stacklevel=(stacklevel + 1), **kwargs)
-  if module:
+  if raise_ and module:
     raise ModuleError()

@@ -54,6 +54,16 @@ class Session(object):
     targets: A dictionary mapping full target names to actual `Target`
       objects that have been created. The `Target` constructors adds
       the object to this dictionary automatically.
+    daemon: A `daemon.CraftrDaemon` object that is started when the
+      session context is entered and stopped it is exited.
+    daemon_bind: A tuple of `(host, port)` for the address to bind the
+      daemon to, or None for `localhost` and a random system assigned
+      port.
+    daemon_funcs: A dictionary mapping the full identifier of a Python
+      function to the actual function object that can be called using
+      the Craftr S-COM interface.
+    ext_importer: A `ext.CraftrImporter` object that handles the
+      importing of Craftr extension modules.
     var: A dictionary of variables that will be exported to the Ninja
       build definitions file.
     verbosity: Logging verbosity level, defaults to 0.
@@ -62,11 +72,14 @@ class Session(object):
       Defaults to 3.
     '''
 
-  def __init__(self, cwd=None, path=None):
+  def __init__(self, cwd=None, path=None, daemon_bind=None):
     super().__init__()
     self.cwd = cwd or os.getcwd()
     self.env = environ.copy()
-    self.extension_importer = ext.CraftrImporter(self)
+    self.daemon = daemon.CraftrDaemon(self)
+    self.daemon_bind = daemon_bind
+    self.daemon_funcs = {}
+    self.ext_importer = ext.CraftrImporter(self)
     self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
     self.modules = {}
     self.targets = {}
@@ -102,7 +115,7 @@ class Session(object):
   def update(self):
     ''' See `extr.CraftrImporter.update()`. '''
 
-    self.extension_importer.update()
+    self.ext_importer.update()
 
   def on_context_enter(self, prev):
     if prev is not None:
@@ -115,13 +128,25 @@ class Session(object):
     environ.update(self.env)
     self.env = environ
 
-    sys.meta_path.append(self.extension_importer)
+    sys.meta_path.append(self.ext_importer)
     self.update()
+
+    # Start the Craftr Daemon to enable cross-process invocation
+    # of Python functions.
+    if self.daemon_bind:
+      self.daemon.bind(*self.daemon_bind)
+    else:
+      self.daemon.bind()
+    self.daemon.serve_forever_async()
+    environ['CRAFTR_DAEMON_URI'] = '{0}:{1}'.format(self.daemon.host, self.daemon.port)
 
   def on_context_leave(self):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make
     sure they're all in `Session.modules` (the modules are expected
     to be put there by the `craftr.ext.CraftrImporter`). '''
+
+    self.daemon.stop()
+    self.daemon.close()
 
     # Restore the original values of os.environ.
     self.env = environ.copy()
@@ -129,7 +154,7 @@ class Session(object):
     environ.update(self._old_environ)
     del self._old_environ
 
-    sys.meta_path.remove(self.extension_importer)
+    sys.meta_path.remove(self.ext_importer)
     for key, module in list(sys.modules.items()):
       if key.startswith('craftr.ext.'):
         name = key[11:]
@@ -501,7 +526,7 @@ def import_file(filename):
 
   if not path.isabs(filename):
     filename = path.local(filename)
-  return session.extension_importer.import_file(filename)
+  return session.ext_importer.import_file(filename)
 
 
 def import_module(modname, globals=None, fromlist=None):
@@ -580,8 +605,8 @@ def _check_list_of_str(name, value):
   return value
 
 
-from craftr import ext, path, shell, ninja
 from craftr.logging import info, warn, error
+from craftr import ext, path, shell, ninja, daemon
 
 __all__ = ['session', 'module', 'path', 'shell', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
