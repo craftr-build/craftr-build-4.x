@@ -10,10 +10,13 @@ Please check out the [wiki][]!
 
 __Features__
 
-- Compiler abstraction layers for MSVC, Gcc and Clang
-- Support for compiling Java and C# code
-- Invoke Python functions from the command-line, giving you the ability
-  to run arbitrary tasks using the information from the build environment
+- Cross-platform compilation rules for MSVC, GCC and LLVM
+- Built-in support for Java, C#, Flex, Yacc and ProtoBuf
+- [Seamless integration of Python functions into the Ninja build chain][craftr-daemon]
+
+__Upcoming Features__
+
+- [ ] Support for OpenCL, CUDA, Vala
 
 __Install__
 
@@ -32,3 +35,4 @@ __Requirements__
 
   [Ninja]: https://github.com/ninja-build/ninja
   [wiki]: https://github.com/craftr-build/craftr/wiki
+  [craftr-daemon]: https://github.com/craftr-build/craftr/wiki/Call-Python-functions-from-Ninja
