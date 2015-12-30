@@ -37,11 +37,11 @@ dll = lambda x: path.addsuffix(x, '.dylib')
 def get_tool(name):
   from craftr.ext.compiler import detect_compiler
   if name == 'cc':
-    return detect_compiler(environ.get('CC', 'clang'))
+    return detect_compiler(environ.get('CC', 'clang'), 'c')
   elif name == 'cxx':
-    return detect_compiler(environ.get('CXX', 'clang++'))
+    return detect_compiler(environ.get('CXX', 'clang++'), 'c++')
   elif name == 'ld':
-    return detect_compiler(environ.get('CC', 'clang'))
+    return detect_compiler(environ.get('CC', 'clang'), 'c')
   elif name ==  'ar':
     return craftr.ext.unix.Archiver(environ.get('AR', 'ar'))
   else:

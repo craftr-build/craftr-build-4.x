@@ -60,23 +60,23 @@ def detect(program, _mode='llvm'):
   except FileNotFoundError as exc:
     raise ValueError(exc)
   if _mode == 'llvm':
-    version_str, version  = _search(r'clang\s+version\s+([\d\.\-]+).*$', output, re.I | re.M)
+    version = _search(r'^.*(?:clang|llvm)\s+version\s+([\d\.\-]+).*$', output, re.I | re.M)
     target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
     thread_model = _search(r'Thread\s+model:\s*([\w\-\._]+)', output, re.I)[1]
-    if not version:
+    if not all(version):
       raise ToolDetectionError('could not determine LLVM version')
   elif _mode == 'gcc':
-    version_str, version = _search(r'gcc\s+version\s+([\d\.\-]+).*\s*$', output, re.I)
+    version = _search(r'^.*gcc\s+version\s+([\d\.\-]+).*\s*$', output, re.I)
     target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
     thread_model = _search(r'--enable-threads=([\w\-\._]+)', output)[1]
-    if not version:
+    if not all(version):
       raise ToolDetectionError('could not determine GCC version')
   else:
     raise ValueError('invalid _mode: {0!r}'.format(_mode))
 
   return {
-    'version': version,
-    'version_str': version_str.strip(),
+    'version': version[1],
+    'version_str': version[0].strip(),
     'target': target,
     'thread_model': thread_model,
   }
