@@ -28,7 +28,7 @@ import craftr
 import sys
 
 
-def run(program, *args, cwd=None, target_name=None):
+def run(program, *args, inputs=None, outputs=None, cwd=None, target_name=None):
   program = path.normpath(expand_inputs(program)[0])
   command = [program] + list(args)
   if cwd:
@@ -37,7 +37,9 @@ def run(program, *args, cwd=None, target_name=None):
     else:
       shell = environ['SHELL']
       command = [shell, '-c', 'cd', cwd, '&&'] + command
-  return Target(command, program, pool='console', name=target_name)
+  if not inputs:
+    inputs = program
+  return Target(command, inputs, outputs, pool='console', name=target_name)
 
 
 class _PythonToolMeta(abc.ABCMeta):
@@ -97,3 +99,33 @@ class PythonTool(object, metaclass=_PythonToolMeta):
   @abc.abstractmethod
   def execute(self, args):
     raise NotImplementedError
+
+
+class render_template(PythonTool):
+  ''' This is a simple Python tool that can render a template file
+  to a new file given a set of key/value pairs. Variables in the template
+  are references by `${KEY}$`. There is currently not escape mechanism
+  implemented. '''
+
+  def rule(self, template, output, **context):
+    command = ['$in', '$out']
+    for key, value in context.items():
+      assert '=' not in key
+      command.append('{0}={1}'.format(key, value))
+    return Target(command, template, output)
+
+  def execute(self, args):
+    print('rendering template {0} -> {1}'.format(args[0], args[1]))
+    with open(args[0], 'r') as src:
+      content = src.read()
+    for var in args[2:]:
+      key, sep, value = var.partition('=')
+      key = '${' + key + '}$'
+      if key not in content:
+        print('> ', key, 'not present in template')
+      else:
+        print('> ', key, 'replaced by', repr(value))
+        content = content.replace(key, value)
+    with open(args[1], 'w') as dst:
+      dst.write(content)
+    print('done.')
