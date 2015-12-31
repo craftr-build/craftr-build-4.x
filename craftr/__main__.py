@@ -44,28 +44,30 @@ def _set_env(defs):
   for item in defs:
     key, assign, value = item.partition('=')
     if assign and not value:
-      os.environ.pop(key, None)
+      environ.pop(key, None)
       continue
     elif not assign:
       value = 'true'
-    os.environ[key] = value
+    environ[key] = value
 
 
-def _abs_env():
+def _abs_env(cwd=None):
   ''' Converts relative paths in the process environment to absolute
   paths. This is necessary since Craftr switches to another working
   directory during execution. See craftr-build/craftr#33 . '''
 
+  cwd = path.abspath(cwd) if cwd else os.getcwd()
   def mk_abs(item):
     if not path.isabs(item) and path.exists(item):
-      return path.abspath(item)
+      return path.join(cwd, item)
     return item
-  for key, value in list(os.environ.items()):
+
+  for key, value in list(environ.items()):
     if key == 'PATH':
       value = path.sep.join(map(mk_abs, value.split(path.sep)))
     else:
       value = mk_abs(value)
-    os.environ[key] = value
+    environ[key] = value
 
 
 def _run_func(main_module, name, args):
@@ -147,8 +149,6 @@ def main():
   mkabst = lambda x: ((args.m + '.' + x) if ('.' not in x) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
-  _set_env(args.D)
-  _abs_env()
   old_cwd = os.getcwd()
   os.chdir(args.d)
 
@@ -164,6 +164,8 @@ def main():
 
   session = craftr.Session(cwd=old_cwd, path=[old_cwd], daemon_bind=args.daemon)
   with craftr.magic.enter_context(craftr.session, session):
+    _abs_env(old_cwd)
+
     # Initialize the session settings from the command-line parameters.
     session.verbosity = args.v
     session.strace_depth = args.strace_depth
@@ -178,6 +180,9 @@ def main():
         if not session.exec_if_exists(rc_file):
           error('--rc {0!r} does not exist'.format(args.rc))
           return errno.ENOENT
+
+      _set_env(args.D)
+      _abs_env(old_cwd)
 
       # Load the main craftr module specified via the -m option
       # or the "Craftfile" of the original cwd.
@@ -202,6 +207,9 @@ def main():
         # Export a ninja manifest.
         with open('build.ninja', 'w') as fp:
           craftr.ninja.export(fp, module)
+    else:
+      _set_env(args.D)
+      _abs_env(old_cwd)
 
     if args.c:
       cmd = ['ninja', '-t', 'clean']
