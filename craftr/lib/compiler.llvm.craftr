@@ -22,6 +22,7 @@
 from craftr import *
 from craftr.ext.compiler import *
 from craftr.ext import platform
+from functools import partial
 import re
 
 
@@ -232,3 +233,4 @@ class LlvmCompiler(BaseCompiler):
 
 
 Compiler = LlvmCompiler
+Linker = partial(LlvmCompiler, language='c')

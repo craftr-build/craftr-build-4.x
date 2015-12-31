@@ -39,3 +39,4 @@ class GccCompiler(llvm.LlvmCompiler):
 
 
 Compiler = GccCompiler
+Linker = partial(GccCompiler, language='c')
