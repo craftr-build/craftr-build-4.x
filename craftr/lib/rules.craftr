@@ -22,6 +22,8 @@
 from os import environ
 from craftr import *
 from craftr.ext import platform
+
+import abc
 import craftr
 import sys
 
@@ -38,16 +40,60 @@ def run(program, *args, cwd=None, target_name=None):
   return Target(command, program, pool='console', name=target_name)
 
 
-def pyfunc(func, args=(), inputs=(), outputs=None, target_name=None, **kwargs):
-  assert 'name' not in kwargs
+class _PythonToolMeta(abc.ABCMeta):
+  ''' Meta class for the `PythonTool` class. '''
 
-  kwargs.setdefault('description', 'craftr:{0}()'.format(func.__name__))
-  builder = TargetBuilder(inputs, [], {}, name=target_name)
-  func_name = module.project_name + '.' + builder.name
-  if func_name in session.daemon_funcs:
-    raise ValueError('daemon function {0!r} already registered'.format(func_name))
-  args = craftr._check_list_of_str('args', args)
-  session.daemon_funcs[func_name] = func
-  command = [sys.executable, '-m', 'craftr.daemon', func_name]
-  command += args
-  return builder.create_target(command, outputs=outputs, **kwargs)
+  def __new__(metacls, name, bases, dict):
+    tool_name = module.project_name + '.' + name
+    cls = super().__new__(metacls, name, bases, dict)
+    if not dict.get('__abstract__', False):
+      if tool_name in session.daemon_funcs:
+        raise ValueError('daemon_func {0!r} already registered'.format(tool_name))
+      instance = cls(tool_name)
+      session.daemon_funcs[tool_name] = instance.execute
+      return instance
+    return cls
+
+
+class PythonTool(object, metaclass=_PythonToolMeta):
+  ''' This is the base class for Python tools. A Python tool "simulates"
+  a command-line tool that can be used in Ninja. The tool's code is
+  executed in the original Craftr process and does not require a
+  re-evaluation of the Craftr module, making this method very efficient. '''
+
+  __abstract__ = True
+
+  def __init__(self, name):
+    ''' Called when the class is declared. There is only always a single
+    instance of a `PythonTool`. '''
+
+    self.name = name
+
+  def __call__(self, *args, **kwargs):
+    ''' This method is supposed to create a `craftr.Target` object
+    for the Python tool from the specified *args* and *kwargs*. The
+    default implementation calls `command()` to create the argument
+    list for the command. '''
+
+    assert self.name in session.daemon_funcs
+    target = self.rule(*args, **kwargs)
+
+    new_command = [sys.executable, '-m', 'craftr.daemon', self.name]
+    new_command += target.command
+    target.command = new_command
+
+    if not target.description:
+      target.description = 'craftr:' + self.name + '()'
+
+    return target
+
+  @abc.abstractmethod
+  def rule(self, **kwargs):
+    ''' This method is called from `__call__()` to create a Target.
+    The `Target.command` list must not contain the tool-name. '''
+
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def execute(self, args):
+    raise NotImplementedError
