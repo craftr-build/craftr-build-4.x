@@ -29,7 +29,10 @@ import sys
 
 
 def run(program, *args, inputs=None, outputs=None, cwd=None, target_name=None):
-  program = path.normpath(expand_inputs(program)[0])
+  if isinstance(program, Target):
+    assert len(program.outputs) == 1
+    program = path.abspath(program.outputs[0])
+
   command = [program] + list(args)
   if cwd:
     if platform.name == 'Windows':
