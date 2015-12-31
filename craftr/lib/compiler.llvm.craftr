@@ -60,13 +60,13 @@ def detect(program, _mode='llvm'):
   except FileNotFoundError as exc:
     raise ValueError(exc)
   if _mode == 'llvm':
-    version = _search(r'^.*(?:clang|llvm)\s+version\s+([\d\.\-]+).*$', output, re.I | re.M)
+    version = _search(r'^.*(clang|llvm)\s+version\s+([\d\.\-]+).*$', output, re.I | re.M)
     target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
     thread_model = _search(r'Thread\s+model:\s*([\w\-\._]+)', output, re.I)[1]
     if not all(version):
       raise ToolDetectionError('could not determine LLVM version')
   elif _mode == 'gcc':
-    version = _search(r'^.*gcc\s+version\s+([\d\.\-]+).*\s*$', output, re.I)
+    version = _search(r'^.*(gcc)\s+version\s+([\d\.\-]+).*\s*$', output, re.I | re.M)
     target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
     thread_model = _search(r'--enable-threads=([\w\-\._]+)', output)[1]
     if not all(version):
@@ -75,8 +75,9 @@ def detect(program, _mode='llvm'):
     raise ValueError('invalid _mode: {0!r}'.format(_mode))
 
   return {
-    'version': version[1],
+    'version': version[2],
     'version_str': version[0].strip(),
+    'name': version[1],
     'target': target,
     'thread_model': thread_model,
   }
@@ -93,6 +94,7 @@ class LlvmCompiler(BaseCompiler):
       desc = detect(program)
     self.desc = desc
     self.version = desc['version']
+    self.name = desc['name']
 
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
@@ -109,7 +111,9 @@ class LlvmCompiler(BaseCompiler):
     warn = builder.get('warn', 'all')
     optimize = builder.get('optimize', None)
     autodeps = builder.get('autodeps', True)
-    builder.target['description'] = builder.get('description', 'LLVM Compile Object($out)')
+    description = builder.get('description', None)
+    if not description:
+      description = '{0} Compile $out'.format(self.name)
 
     if platform.name == 'Darwin':
       osx_fwpath = builder.merge('osx_fwpath')
@@ -166,7 +170,8 @@ class LlvmCompiler(BaseCompiler):
 
     command += builder.merge('additional_flags')
 
-    return builder.create_target(command, outputs=objects, foreach=True)
+    return builder.create_target(command, outputs=objects, foreach=True,
+      description=description)
 
   def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
@@ -202,6 +207,10 @@ class LlvmCompiler(BaseCompiler):
       osx_fwpath = []
       osx_frameworks = []
 
+    description = builder.get('description', None)
+    if not description:
+      description = '{0} Link $out'.format(self.name)
+
     command = [builder['program'], '$in']
     command += ['-l' + x for x in set(libs)]
     command += ['-L' + x for x in set(libpath)]
@@ -214,7 +223,8 @@ class LlvmCompiler(BaseCompiler):
     command += builder.merge('additional_flags')
     command += ['-o', '$out']
 
-    return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
+    return builder.create_target(command, outputs=[output],
+      implicit_deps=external_libs, description=description)
 
 
 

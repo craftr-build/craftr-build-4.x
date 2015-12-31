@@ -38,7 +38,10 @@ def run(program, *args, cwd=None, target_name=None):
   return Target(command, program, pool='console', name=target_name)
 
 
-def pyfunc(func, args=(), inputs=(), outputs=None, target_name=None):
+def pyfunc(func, args=(), inputs=(), outputs=None, target_name=None, **kwargs):
+  assert 'name' not in kwargs
+
+  kwargs.setdefault('description', 'craftr:{0}()'.format(func.__name__))
   builder = TargetBuilder(inputs, [], {}, name=target_name)
   func_name = module.project_name + '.' + builder.name
   if func_name in session.daemon_funcs:
@@ -47,4 +50,4 @@ def pyfunc(func, args=(), inputs=(), outputs=None, target_name=None):
   session.daemon_funcs[func_name] = func
   command = [sys.executable, '-m', 'craftr.daemon', func_name]
   command += args
-  return builder.create_target(command, outputs=outputs)
+  return builder.create_target(command, outputs=outputs, **kwargs)
