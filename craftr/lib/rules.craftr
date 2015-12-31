@@ -115,17 +115,11 @@ class render_template(PythonTool):
     return Target(command, template, output)
 
   def execute(self, args):
-    print('rendering template {0} -> {1}'.format(args[0], args[1]))
     with open(args[0], 'r') as src:
       content = src.read()
     for var in args[2:]:
       key, sep, value = var.partition('=')
       key = '${' + key + '}$'
-      if key not in content:
-        print('> ', key, 'not present in template')
-      else:
-        print('> ', key, 'replaced by', repr(value))
-        content = content.replace(key, value)
+      content = content.replace(key, value)
     with open(args[1], 'w') as dst:
       dst.write(content)
-    print('done.')
