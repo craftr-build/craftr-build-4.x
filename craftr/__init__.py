@@ -70,6 +70,8 @@ class Session(object):
     strace_depth: The maximum number of frames to print on a stack
       trace of a logging output with `info()`, `warn()` or `error()`.
       Defaults to 3.
+    command_prefix: A list of strings that will be prefixed to *every*
+      command that is exported to Ninja.
     '''
 
   def __init__(self, cwd=None, path=None, server_bind=None):
@@ -86,6 +88,7 @@ class Session(object):
     self.var = {}
     self.verbosity = 0
     self.strace_depth = 3
+    self.command_prefix = []
 
     if path is not None:
       self.path.extend(path)

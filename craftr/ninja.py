@@ -59,7 +59,8 @@ def export(fp, main_module):
       validate_ident(target.pool)
     if target.deps not in (None, 'gcc', 'msvc'):
       raise ValueError('Target({0}).deps = {1!r} is invalid'.format(target.fullname, target.deps))
-    command = ' '.join(map(shell.quote, target.command))
+
+    command = ' '.join(map(shell.quote, session.command_prefix + target.command))
     command = re.sub(r"'(\$\w+)'", r'\1', command)  # Fix escaped $ variables on Unix, see issue #30
 
     writer.rule(target.fullname, command, pool=target.pool, deps=target.deps,
