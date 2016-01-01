@@ -47,12 +47,12 @@ def _walk_frames(start_frame=None, stacklevel=1, max_frames=0):
 
 def _log(level, *args, stacklevel=1, module_name=None, **kwargs):
   meta = LOG_METADATA[level]
-  prefix = meta['fg'] + 'craftr|{0:>5}'.format(level)
+  prefix = 'craftr: ' + meta['fg'] + '[{0:<5}]'.format(level.upper())
+  if not module_name and module:
+    module_name = module.project_name
   if module_name:
-    prefix += '|' + module_name
-  elif module:
-    prefix += '|' + module.project_name
-  prefix += ' -> ' + tty.reset
+    prefix += ' (' + module_name + ')'
+  prefix += ': ' +  tty.reset
   kwargs.setdefault('file', sys.stderr)
   end = kwargs.pop('end', '\n')
   kwargs['file'].write(prefix)
