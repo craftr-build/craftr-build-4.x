@@ -73,6 +73,7 @@ def export(fp, main_module):
 
     outputs = path.normpath(target.outputs) if target.outputs else [target.fullname]
     if target.foreach:
+      assert target.inputs is not None and target.outputs is not None
       assert len(target.inputs) == len(target.outputs)
       for infile, outfile in zip(target.inputs, target.outputs):
         writer.build(
@@ -85,7 +86,7 @@ def export(fp, main_module):
       writer.build(
         outputs,
         target.fullname,
-        path.normpath(target.inputs),
+        path.normpath(target.inputs if target.inputs is not None else []),
         implicit=path.normpath(target.implicit_deps),
         order_only=path.normpath(target.order_only_deps))
 
