@@ -52,10 +52,10 @@ class _PythonToolMeta(abc.ABCMeta):
     tool_name = module.project_name + '.' + name
     cls = super().__new__(metacls, name, bases, dict)
     if not dict.get('__abstract__', False):
-      if tool_name in session.daemon_funcs:
-        raise ValueError('daemon_func {0!r} already registered'.format(tool_name))
+      if tool_name in session.rts_funcs:
+        raise ValueError('Session.rts_funcs: {0!r} already registered'.format(tool_name))
       instance = cls(tool_name)
-      session.daemon_funcs[tool_name] = instance.execute
+      session.rts_funcs[tool_name] = instance.execute
       return instance
     return cls
 
@@ -80,10 +80,10 @@ class PythonTool(object, metaclass=_PythonToolMeta):
     default implementation calls `command()` to create the argument
     list for the command. '''
 
-    assert self.name in session.daemon_funcs
+    assert self.name in session.rts_funcs
     target = self.rule(*args, **kwargs)
 
-    new_command = [sys.executable, '-m', 'craftr.daemon', self.name]
+    new_command = ['craftr-rts', self.name]
     new_command += target.command
     target.command = new_command
 

@@ -18,15 +18,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-''' This module implements the Craftr daemon socket server that enables
-to call Python functions from the Craftr runtime from other processes.
-This file implements the server and client. To run the client, execute
-this script in the command-line. The `CRAFTR_DAEMON_URI` environment
-variable must contain the `host:port` combination of the server. '''
+''' This module implements the Craftr runtime server that enables to call
+Python functions from the servers process. If this file is executed as a
+script, it provides a client to call a function on the server. The server
+location is read from the `CRAFTR_RTS` environment variable. '''
 
 from craftr import environ, shell, info, warn, error
 from collections import deque
 from functools import partial
+
 import argparse
 import codecs
 import contextlib
@@ -46,7 +46,7 @@ except ImportError:
   cpu_count = lambda: 1
 
 
-_modname = ':daemon-client:' if __name__ == '__main__' else ':daemon'
+_modname = ':rts-client:' if __name__ == '__main__' else ':rts:'
 info = partial(info, module_name=_modname)
 warn = partial(warn, module_name=_modname)
 error = partial(error, module_name=_modname, raise_=False)
@@ -214,10 +214,10 @@ class RWFile(object):
 class _RequestHandler(object):
   ''' Represents a client request handler. '''
 
-  def __init__(self, daemon, sock, addr, close_socket=True):
+  def __init__(self, server, sock, addr, close_socket=True):
     super().__init__()
-    self.daemon = daemon
-    self.session = daemon.session
+    self.server = server
+    self.session = server.session
     self.sock = sock
     self.addr = addr
     self.headers = {'coding': 'utf8'}
@@ -292,11 +292,11 @@ class _RequestHandler(object):
         self.send_text(MSG_INVALID_REQUEST, 'command header not sent')
         return
 
-      if command not in self.session.daemon_funcs:
-        self.send_text(MSG_INVALID_REQUEST, '{0!r} is not a registered daemon function'.format(command))
+      if command not in self.session.rts_funcs:
+        self.send_text(MSG_INVALID_REQUEST, '{0!r} is not a registered rts function'.format(command))
         return
 
-      func = self.session.daemon_funcs[command]
+      func = self.session.rts_funcs[command]
 
       # xxx does it make sense to use the _RequestHandler.lock
       # to synchronize read/write from/to the streams?
@@ -330,7 +330,7 @@ class _RequestHandler(object):
             traceback.print_exc()
           finally:
             # xxx: debug: Enable if output of the exception message in
-            # Craftr daemon process is desired.
+            # Craftr server process is desired.
             pass
             # reset()
             #traceback.print_exc()
@@ -389,7 +389,7 @@ class _RequestHandler(object):
 
 
 class _Client(object):
-  ''' Client implementation for communicating with the Craftr daemon. '''
+  ''' Client implementation for communicating with the Craftr runtime server. '''
 
   def __init__(self, host, port, timeout=1.0):
     super().__init__()
@@ -439,7 +439,7 @@ class _Client(object):
       raise InvalidResponse('unexpected response: {0!r}'.format(message_type))
 
 
-class CraftrDaemon(object):
+class CraftrRuntimeServer(object):
   ''' This class implements the Craftr socket communication. It uses
   a very simple protocol: At the begin of each data chunk comes a
   message identifier of 4 chars. After the three chars follows a
@@ -471,15 +471,15 @@ class CraftrDaemon(object):
   def close(self):
     with self.lock_state:
       if self.state != 'off':
-        raise RuntimeError('daemon is still running, can not close socket')
+        raise RuntimeError('server is still running, can not close socket')
     if not self.sock:
-      raise RuntimeError('daemon is not bound')
+      raise RuntimeError('server is not bound')
     with self.lock_sock:
       self.sock.close()
       self.sock = self.host = self.port = None
 
   def stop(self):
-    ''' Wait for all connections to close and stop the daemon. '''
+    ''' Wait for all connections to close and stop the server. '''
 
     with self.lock_state:
       self.state = 'stopping'
@@ -496,10 +496,10 @@ class CraftrDaemon(object):
     ''' Accept client connections until `stop()` is called. '''
 
     if not self.sock:
-      raise RuntimeError('daemon is not bound')
+      raise RuntimeError('server is not bound')
     with self.lock_state:
       if self.state == 'running':
-        raise RuntimeError('daemon already running')
+        raise RuntimeError('server already running')
       self.state = 'running'
 
     self.sock.listen(listen)
@@ -532,9 +532,9 @@ def client_main():
   args = parser.parse_args()
 
   try:
-    uri = parse_uri(environ.get('CRAFTR_DAEMON_URI', ''))
+    uri = parse_uri(environ.get('CRAFTR_RTS', ''))
   except ValueError:
-    parser.error('invalid CRAFTR_DAEMON_URI = {0!r}'.format(environ.get('CRAFTR_DAEMON_URI', '')))
+    parser.error('invalid CRAFTR_RTS = {0!r}'.format(environ.get('CRAFTR_RTS', '')))
 
   client = _Client(uri[0], uri[1])
   client.send_command(args.command)

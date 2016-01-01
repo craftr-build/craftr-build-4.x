@@ -54,12 +54,12 @@ class Session(object):
     targets: A dictionary mapping full target names to actual `Target`
       objects that have been created. The `Target` constructors adds
       the object to this dictionary automatically.
-    daemon: A `daemon.CraftrDaemon` object that is started when the
-      session context is entered and stopped it is exited.
-    daemon_bind: A tuple of `(host, port)` for the address to bind the
-      daemon to, or None for `localhost` and a random system assigned
+    server: An `rts.CraftrRuntimeServer` object that is started when
+      the session context is entered and stopped it is exited.
+    server_bind: A tuple of `(host, port)` for the address to bind the
+      server to, or None for `localhost` and a random system assigned
       port.
-    daemon_funcs: A dictionary mapping the full identifier of a Python
+    rts_funcs: A dictionary mapping the full identifier of a Python
       function to the actual function object that can be called using
       the Craftr S-COM interface.
     ext_importer: A `ext.CraftrImporter` object that handles the
@@ -72,13 +72,13 @@ class Session(object):
       Defaults to 3.
     '''
 
-  def __init__(self, cwd=None, path=None, daemon_bind=None):
+  def __init__(self, cwd=None, path=None, server_bind=None):
     super().__init__()
     self.cwd = cwd or os.getcwd()
     self.env = environ.copy()
-    self.daemon = daemon.CraftrDaemon(self)
-    self.daemon_bind = daemon_bind
-    self.daemon_funcs = {}
+    self.server = rts.CraftrRuntimeServer(self)
+    self.server_bind = server_bind
+    self.rts_funcs = {}
     self.ext_importer = ext.CraftrImporter(self)
     self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
     self.modules = {}
@@ -131,22 +131,22 @@ class Session(object):
     sys.meta_path.append(self.ext_importer)
     self.update()
 
-    # Start the Craftr Daemon to enable cross-process invocation
+    # Start the Craftr Server to enable cross-process invocation
     # of Python functions.
-    if self.daemon_bind:
-      self.daemon.bind(*self.daemon_bind)
+    if self.server_bind:
+      self.server.bind(*self.server_bind)
     else:
-      self.daemon.bind()
-    self.daemon.serve_forever_async()
-    environ['CRAFTR_DAEMON_URI'] = '{0}:{1}'.format(self.daemon.host, self.daemon.port)
+      self.server.bind()
+    self.server.serve_forever_async()
+    environ['CRAFTR_RTS'] = '{0}:{1}'.format(self.server.host, self.server.port)
 
   def on_context_leave(self):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make
     sure they're all in `Session.modules` (the modules are expected
     to be put there by the `craftr.ext.CraftrImporter`). '''
 
-    self.daemon.stop()
-    self.daemon.close()
+    self.server.stop()
+    self.server.close()
 
     # Restore the original values of os.environ.
     self.env = environ.copy()
@@ -606,7 +606,7 @@ def _check_list_of_str(name, value):
 
 
 from craftr.logging import info, warn, error
-from craftr import ext, path, shell, ninja, daemon
+from craftr import ext, path, shell, ninja, rts
 
 __all__ = ['session', 'module', 'path', 'shell', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',

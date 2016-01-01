@@ -17,7 +17,7 @@ from pip.req import parse_requirements
 if pip.__version__ >= '6.0':
   parse_requirements = partial(parse_requirements, session=pip.download.PipSession())
 
-scripts = ['bin/craftr']
+scripts = ['bin/craftr', 'bin/craftr-rts']
 
 # On Windows, we need this scripts with a .py suffix.
 if os.name == 'nt':
