@@ -86,10 +86,6 @@ class PythonTool(object, metaclass=_PythonToolMeta):
     new_command = ['craftr-rts', self.name]
     new_command += target.command
     target.command = new_command
-
-    if not target.description:
-      target.description = 'craftr:' + self.name + '()'
-
     return target
 
   @abc.abstractmethod

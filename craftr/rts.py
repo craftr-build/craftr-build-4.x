@@ -245,7 +245,8 @@ class _RequestHandler(object):
     return self.headers['coding']
 
   def info(self, *args, **kwargs):
-    info('[{0}:{1}]'.format(*self.addr), *args, **kwargs)
+    if self.session.verbosity > 0:
+      info('[{0}:{1}]'.format(*self.addr), *args, **kwargs)
 
   def accept_message(self):
     message_type, data = parse_message(self.sock)

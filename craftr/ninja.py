@@ -87,7 +87,7 @@ def export(fp, main_module):
       writer.build(
         outputs,
         target.fullname,
-        path.normpath(target.inputs if target.inputs is not None else []),
+        path.normpath(target.inputs or []),
         implicit=path.normpath(target.implicit_deps),
         order_only=path.normpath(target.order_only_deps))
 
