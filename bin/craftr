@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# -*- mode: python -*-
-# Copyright (C) 2015 Niklas Rosenstein
+# Copyright (C) 2016  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,9 +18,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-''' Script to run Craftr. '''
 
+import os
 import sys
-import craftr.__main__
+
+if os.name == 'nt':
+  # We have to make sure that on Windos, this script doesn't
+  # import itself when it actually tries to import the real
+  # craftr module.
+  for path in sys.path[:]:
+    ref_file = os.path.join(path, 'craftr.py')
+    if os.path.isfile(ref_file):
+      sys.path.remove(path)
+
+
+from craftr.__main__ import main
 if __name__ == "__main__":
-  sys.exit(craftr.__main__.main())
+  sys.exit(main())
