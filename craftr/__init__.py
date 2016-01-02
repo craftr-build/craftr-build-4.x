@@ -309,6 +309,7 @@ class TargetBuilder(object):
     frameworks = list(frameworks)
     self.inputs = expand_inputs(inputs, frameworks)
     self.frameworks = frameworks
+    self.caller_kwargs = kwargs
     self.options = FrameworkJoin(Framework(self.caller, kwargs), *frameworks)
     self.module = module or craftr.module()
     self.name = name
@@ -369,7 +370,7 @@ class TargetBuilder(object):
 
   def create_target(self, command, inputs=None, outputs=None, **kwargs):
     # Complain about unhandled options.
-    unused_options = self.options.keys() - self.options.used_keys
+    unused_options = self.caller_kwargs.keys() - self.options.used_keys
     if unused_options:
       self.log('info', 'unusued options for {0}():'.format(self.caller), unused_options, stacklevel=2)
 
