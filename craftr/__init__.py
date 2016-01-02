@@ -305,7 +305,7 @@ class TargetBuilder(object):
   this into account and prepares the data conveniently. '''
 
   def __init__(self, inputs, frameworks, kwargs, module=None, name=None, stacklevel=1):
-    self.caller = magic.get_caller_human(stacklevel + 1)
+    self.caller = magic.get_caller(stacklevel + 1)
     frameworks = list(frameworks)
     self.inputs = expand_inputs(inputs, frameworks)
     self.frameworks = frameworks
@@ -336,12 +336,11 @@ class TargetBuilder(object):
     return self.options.get(key, default)
 
   def merge(self, key):
-    return self.options.get_merge(key)
+    return self.options.merge(key)
 
-  def warn(self, *objects, sep=' ', stacklevel=1, warntype=RuntimeWarning):
-    message = sep.join(map(str, objects))
-    message = 'Target({0!r}): {1}'.format(self.fullname, message)
-    warnings.warn(message, warntype, stacklevel + 1)
+  def log(self, level, *args, stacklevel=1, **kwargs):
+    module_name = '{0}'.format(self.module.project_name, self.name)
+    log(level, *args, module_name=module_name, stacklevel=stacklevel + 1, **kwargs)
 
   def invalid_option(self, option_name, option_value=_sentinel, cause=None):
     if option_value is _sentinel:
@@ -349,7 +348,7 @@ class TargetBuilder(object):
     message = 'invalid option: {0} = {1!r}'.format(option_name, option_value)
     if cause:
       message = '{0} ({1})'.format(message, cause)
-    self.warn(message, stacklevel=2)
+    self.log('warn', message, stacklevel=2)
 
   def add_framework(self, __fw_or_name, __fw_dict=None, **kwargs):
     if not isinstance(__fw_or_name, Framework):
@@ -369,6 +368,11 @@ class TargetBuilder(object):
     return result
 
   def create_target(self, command, inputs=None, outputs=None, **kwargs):
+    # Complain about unhandled options.
+    unused_options = self.options.keys() - self.options.used_keys
+    if unused_options:
+      self.log('info', 'unusued options for {0}():'.format(self.caller), unused_options, stacklevel=2)
+
     if inputs is None:
       inputs = self.inputs
     kwargs.setdefault('frameworks', self.frameworks)
@@ -469,7 +473,13 @@ class FrameworkJoin(object):
       result += value
     return result
 
-  get_merge = merge  # Backwards compatibility
+  def keys(self):
+    ''' Returns a set of all keys in all frameworks. '''
+
+    keys = set()
+    for fw in self.frameworks:
+      keys |= fw.keys()
+    return keys
 
 
 class ModuleError(RuntimeError):
@@ -608,7 +618,7 @@ def _check_list_of_str(name, value):
   return value
 
 
-from craftr.logging import info, warn, error
+from craftr.logging import log, info, warn, error
 from craftr import ext, path, shell, ninja, rts
 
 __all__ = ['session', 'module', 'path', 'shell', 'environ',

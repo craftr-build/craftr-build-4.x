@@ -45,13 +45,16 @@ def _walk_frames(start_frame=None, stacklevel=1, max_frames=0):
     count += 1
 
 
-def _log(level, *args, stacklevel=1, module_name=None, **kwargs):
+def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs):
   meta = LOG_METADATA[level]
   prefix = 'craftr: ' + meta['fg'] + '[{0:<5}]'.format(level.upper())
   if not module_name and module:
     module_name = module.project_name
   if module_name:
-    prefix += ' (' + module_name + ')'
+    prefix += ' (' + module_name
+    if module:
+      prefix += '|L' + str(magic.get_module_frame(module).f_lineno)
+    prefix += ')'
   prefix += ': ' +  tty.reset
   kwargs.setdefault('file', sys.stderr)
   end = kwargs.pop('end', '\n')
@@ -59,36 +62,40 @@ def _log(level, *args, stacklevel=1, module_name=None, **kwargs):
   print(*args, end='', **kwargs)
   kwargs['file'].write(tty.reset)
   kwargs['file'].write(end)
-  if session and module and session.verbosity >= meta['strace_min_verbosity']:
+  if show_trace is None:
+    show_trace = bool(session and module and session.verbosity >= meta['strace_min_verbosity'])
+  if show_trace:
     max_frames = session.strace_depth
     frames = list(_walk_frames(stacklevel=(stacklevel + 1), max_frames=max_frames))
     for frame in reversed(frames):
       fn = frame.f_code.co_filename
       if fn.startswith('<'):
-        fn = tty.colored(fn, 'yellow')
+        fn = tty.colored(fn, 'yellow', attrs='bold')
       else:
         fn = path.relpath(fn, session.cwd, only_sub=True)
-        fn = tty.colored(fn, 'blue')
+        fn = tty.colored(fn, 'red', attrs='bold')
 
       func = frame.f_code.co_name
+      if func == '<module>' and 'project_name' in frame.f_globals:
+        func = '<craftr.ext.{0}>'.format(frame.f_globals['project_name'])
       if func.startswith('<'):
         func = tty.colored(func, 'yellow', attrs='bold')
       else:
         func = tty.colored(func + '()', 'blue', attrs='bold')
 
       lineno = frame.f_lineno
-      print('  In', func, '[{0}:{1}]'.format(fn, lineno))
+      print('  In', func, '[{0}|L{1}]'.format(fn, lineno))
 
 
 def info(*args, stacklevel=1, **kwargs):
-  _log('info', *args, stacklevel=(stacklevel + 1), **kwargs)
+  log('info', *args, stacklevel=(stacklevel + 1), **kwargs)
 
 
 def warn(*args, stacklevel=1, **kwargs):
-  _log('warn', *args, stacklevel=(stacklevel + 1), **kwargs)
+  log('warn', *args, stacklevel=(stacklevel + 1), **kwargs)
 
 
 def error(*args, stacklevel=1, raise_=True, **kwargs):
-  _log('error', *args, stacklevel=(stacklevel + 1), **kwargs)
+  log('error', *args, stacklevel=(stacklevel + 1), **kwargs)
   if raise_ and module:
     raise ModuleError()
