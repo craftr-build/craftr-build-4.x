@@ -79,49 +79,6 @@ def enter_context(context_proxy, context_obj):
       assert stack.pop() is context_obj
 
 
-def get_assigned_name(frame):
-  ''' Checks the bytecode of *frame* to find the name of the variable
-  a result is being assigned to and returns that name. Returns the full
-  left operand of the assignment. Raises a `ValueError` if the variable
-  name could not be retrieved from the bytecode (eg. if an unpack sequence
-  is on the left side of the assignment).
-
-      >>> var = get_assigned_frame(sys._getframe())
-      >>> assert var == 'var'
-  '''
-
-  SEARCHING, MATCHED = 1, 2
-  state = SEARCHING
-  result = ''
-  for op in dis.get_instructions(frame.f_code):
-    if state == SEARCHING and op.offset == frame.f_lasti:
-      state = MATCHED
-    elif state == MATCHED:
-      if result:
-        if op.opname == 'LOAD_ATTR':
-          result += op.argval + '.'
-        elif op.opname == 'STORE_ATTR':
-          result += op.argval
-          break
-        else:
-          # Could have been a LOAD_NAME in the expression that is
-          # assigned to the name. Reset and continue until we find
-          # a sequence that ends with STORE_ATTR or STORE_NAME.
-          result = ''
-      else:
-        if op.opname in ('LOAD_NAME', 'LOAD_FAST'):
-          result += op.argval + '.'
-        elif op.opname in ('STORE_NAME', 'STORE_FAST'):
-          result = op.argval
-          break
-        elif op.opname == 'POP_TOP':
-          raise ValueError('could not find assigned name until POP_TOP')
-
-  if not result:
-    raise RuntimeError('last frame instruction not found')
-  return result
-
-
 def get_module_frame(module):
   ''' Returns the stack frame that *module* is being executed in. If
   the stack frame can not be found, a `RuntimeError` is raised. '''
@@ -153,3 +110,180 @@ def get_caller_human(stacklevel=1):
     else:
       name = project_name + '.' + name
   return name
+
+
+# Bytecode parsing stuff =====================================================
+
+
+def _build_stackdelta_map():
+  ''' Builds a dictionary that maps the name of an op-code to the
+  number of elemnts it adds to the stack when executed. For some
+  opcodes, the dictionary may contain a function which requires the
+  `dis.Instruction` object to determine the actual value.
+
+  The dictionary mostly only contains information for instructions
+  used in expressions. '''
+
+  def _call_function_argc(argc):
+    func_obj = 1
+    args_pos = (argc & 0xff)
+    args_kw = ((argc >> 8) & 0xff) * 2
+    return func_obj + args_pos + args_kw
+
+  def _make_function_argc(argc):
+    args_pos = (argc + 0xff)
+    args_kw = ((argc >> 8) & 0xff) * 2
+    annotations = (argc >> 0x7fff)
+    anootations_names = 1 if annotations else 0
+    code_obj = 1
+    qualname = 1
+    return args_pos + args_kw + annotations + anootations_names + code_obj + qualname
+
+  result = {
+    'NOP': 0,
+    'POP_TOP': -1,
+    'ROT_TWO': 0,
+    'ROT_THREE': 0,
+    'DUP_TOP': 1,
+    'DUP_TOP_TWO': 2,
+
+    # Unary operations
+    'GET_ITER': 0,
+    'GET_YIELD_FROM_ITER': 0,
+
+    # Coroutine operations
+    'GET_AWAITABLE': 0,
+    'GET_AITER': 0,
+    'GET_ANEXT': 0,
+    'BEFORE_ASYNC_WITH': 0,
+    'SETUP_ASYNC_WITH': 0,
+
+    # Miscellaneous operations
+    'PRINT_EXPR': -1,
+    'BREAK_LOOP': 0,  # xxx: verify
+    'CONTINUE_LOOP': 0,  # xxx: verify
+    'SET_ADD': -1,  # xxx: verify
+    'LIST_APPEND': -1,  # xxx: verify
+    'MAP_ADD': -2,  # xxx: verify
+    'RETURN_VALUE': -1,  # xxx: verify
+    'YIELD_VALUE': -1,
+    'YIELD_FROM': -1,
+    'IMPORT_STAR': -1,
+
+    # 'POP_BLOCK':
+    # 'POP_EXCEPT':
+    # 'END_FINALLY':
+    # 'LOAD_BUILD_CLASS':
+    # 'SETUP_WITH':
+    # 'WITH_CLEANUP_START':
+    # 'WITH_CLEANUP_FINISH':
+    'STORE_NAME': -1,
+    'DELETE_NAME': 0,
+    'UNPACK_SEQUENCE': lambda op: op.arg,
+    'UNPACK_EX': lambda op: (op.arg & 0xff) - (op.arg >> 8 & 0xff),  # xxx: check
+    'STORE_ATTR': -2,
+    'DELETE_ATTR': -1,
+    'STORE_GLOBAL': -1,
+    'DELETE_GLOBAL': 0,
+    'LOAD_CONST': 1,
+    'LOAD_NAME': 1,
+    'BUILD_TUPLE': lambda op: 1 - op.arg,
+    'BUILD_LIST': lambda op: 1 - op.arg,
+    'BUILD_SET': lambda op: 1 - op.arg,
+    'BUILD_MAP': lambda op: 1 - op.arg,
+    'LOAD_ATTR': 0,
+    'COMPARE_OP': 1,  # xxx: check
+    # 'IMPORT_NAME':
+    # 'IMPORT_FROM':
+    # 'JUMP_FORWARD':
+    # 'POP_JUMP_IF_TRUE':
+    # 'POP_JUMP_IF_FALSE':
+    # 'JUMP_IF_TRUE_OR_POP':
+    # 'JUMP_IF_FALSE_OR_POP':
+    # 'JUMP_ABSOLUTE':
+    # 'FOR_ITER':
+    'LOAD_GLOBAL': 1,
+    # 'SETUP_LOOP'
+    # 'SETUP_EXCEPT'
+    # 'SETUP_FINALLY':
+    'LOAD_FAST': 1,
+    'STORE_FAST': -1,
+    'DELETE_FAST': 0,
+    # 'LOAD_CLOSURE':
+    'LOAD_DEREF': 1,
+    'LOAD_CLASSDEREF': 1,
+    'STORE_DEREF': -1,
+    'DELETE_DEREF': 0,
+    'RAISE_VARARGS': lambda op: -op.arg,
+    'CALL_FUNCTION': lambda op: 1 - _call_function_argc(op.arg),
+    'MAKE_FUNCTION': lambda op: 1 - _make_function_argc(op.arg),
+    # 'MAKE_CLOSURE':
+    'BUILD_SLICE': lambda op: 1 - op.arg,
+    # 'EXTENDED_ARG':
+    'CALL_FUNCTION_VAR': lambda op: 1 - _call_function_argc(op.arg),
+    'CALL_FUNCTION_KW': lambda op: 1 - _call_function_argc(op.arg),
+    'CALL_FUNCTION_VAR_KW': lambda op: 1 - _call_function_argc(op.arg),
+  }
+
+  for code in dis.opmap.keys():
+    if code.startswith('UNARY_'):
+      result[code] = 0
+    elif code.startswith('BINARY_') or code.startswith('INPLACE_'):
+      result[code] = -1
+
+  return result
+
+
+_stackdelta_map = _build_stackdelta_map()
+
+
+def get_stackdelta(op):
+  ''' Return the number of elements that *op* adds to the stack. '''
+
+  res = _stackdelta_map[op.opname]
+  if callable(res):
+    res = res(op)
+  return res
+
+
+def get_assigned_name(frame):
+  ''' Checks the bytecode of *frame* to find the name of the variable
+  a result is being assigned to and returns that name. Returns the full
+  left operand of the assignment. Raises a `ValueError` if the variable
+  name could not be retrieved from the bytecode (eg. if an unpack sequence
+  is on the left side of the assignment).
+
+      >>> var = get_assigned_name(sys._getframe())
+      >>> assert var == 'var'
+  '''
+
+  SEARCHING, MATCHED = 1, 2
+  state = SEARCHING
+  result = ''
+  stacksize = 0
+  for op in dis.get_instructions(frame.f_code):
+    if state == SEARCHING and op.offset == frame.f_lasti:
+      if not op.opname.startswith('CALL_FUNCTION'):
+        raise RuntimeError('get_assigned_name() requires entry at CALL_FUNCTION')
+      state = MATCHED
+
+      # For a top-level expression, the stack-size should be 1 after
+      # the function at which we entered was executed.
+      stacksize = 1
+    elif state == MATCHED:
+      # Update the would-be size of the stack after this instruction.
+      # If we're at zero, we found the last instruction of the expression.
+      stacksize += get_stackdelta(op)
+      if stacksize == 0:
+        if op.opname not in ('STORE_NAME', 'STORE_ATTR', 'STORE_GLOBAL', 'STORE_FAST'):
+          raise ValueError('expression is not assigned')
+        return result + op.argval
+      elif stacksize < 0:
+        raise ValueError('not a top-level expression')
+
+      if op.opname == 'LOAD_ATTR':
+        result += op.argval + '.'
+
+  if not result:
+    raise RuntimeError('last frame instruction not found')
+  assert False
