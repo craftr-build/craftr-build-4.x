@@ -119,7 +119,6 @@ def main():
   parser.add_argument('--strace-depth', type=int, default=3, help='Depth of logging stack trace. Defaults to 3')
   parser.add_argument('--rts', action='store_true', help='If this option is specified, the Craftr runtime server will serve forever.')
   parser.add_argument('--rts-at', type=craftr.rts.parse_uri, help='Manually specify the host:port for the Craftr runtime server.')
-  parser.add_argument('--win-direct', action='store_true', help='If this argument is specified, commands will NOT be prefixed by "cmd /c" on Windows.')
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
@@ -192,8 +191,6 @@ def main():
     session.verbosity = args.v
     session.strace_depth = args.strace_depth
     session.export = args.e
-    if os.name == 'nt' and not args.win_direct:
-      session.command_prefix = ['cmd', '/c']
 
     if do_run:
       # Run the environment files.

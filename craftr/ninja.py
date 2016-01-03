@@ -18,11 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import *
+from craftr import path, shell, warn, session
 from craftr import __version__ as craftr_version
+from craftr.utils import find_program
 
 import ninja_syntax
 import re
+import sys
 
 
 def get_ninja_version():
@@ -62,8 +64,27 @@ def export(fp, main_module):
     if target.deps not in (None, 'gcc', 'msvc'):
       raise ValueError('Target({0}).deps = {1!r} is invalid'.format(target.fullname, target.deps))
 
-    command = ' '.join(map(shell.quote, session.command_prefix + target.command))
-    command = re.sub(r"'(\$\w+)'", r'\1', command)  # Fix escaped $ variables on Unix, see issue #30
+    # On Windows, commands that are not executables require the interpreter.
+    # See issue craftr-build/craftr#67
+    command_args = target.command
+    if sys.platform.startswith('win32'):
+      try:
+        prog = find_program(command_args[0])
+      except FileNotFoundError:
+        # do nothing and assume the file is executable
+        warn('ninja export: program {0!r} (target: {1}) could not be found'.format(
+          command_args[0], target.fullname))
+      else:
+        # xxx: do a more sophisticated check if the file is an executable image.
+        is_executable = prog.lower().endswith('.exe')
+        if not is_executable:
+          command_args = ['cmd', '/c'] + command_args
+
+    # Convert the command arguments to a command string.
+    command = ' '.join(map(shell.quote, command_args))
+
+    # Fix escaped $ variables on Unix, see issue craftr-build/craftr#30
+    command = re.sub(r"'(\$\w+)'", r'\1', command)
 
     writer.rule(target.fullname, command, pool=target.pool, deps=target.deps,
       depfile=target.depfile, description=target.description)
