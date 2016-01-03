@@ -24,6 +24,7 @@ from functools import partial
 from sys import _getframe as get_frame
 
 import dis
+import sys
 import werkzeug
 
 
@@ -100,7 +101,7 @@ def get_caller(stacklevel=1):
 # Bytecode parsing stuff =====================================================
 
 
-def _build_stackdelta_map():
+def _build_opstackd():
   ''' Builds a dictionary that maps the name of an op-code to the
   number of elemnts it adds to the stack when executed. For some
   opcodes, the dictionary may contain a function which requires the
@@ -134,14 +135,6 @@ def _build_stackdelta_map():
 
     # Unary operations
     'GET_ITER': 0,
-    'GET_YIELD_FROM_ITER': 0,
-
-    # Coroutine operations
-    'GET_AWAITABLE': 0,
-    'GET_AITER': 0,
-    'GET_ANEXT': 0,
-    'BEFORE_ASYNC_WITH': 0,
-    'SETUP_ASYNC_WITH': 0,
 
     # Miscellaneous operations
     'PRINT_EXPR': -1,
@@ -210,6 +203,17 @@ def _build_stackdelta_map():
     'CALL_FUNCTION_VAR_KW': lambda op: 1 - _call_function_argc(op.arg),
   }
 
+  if sys.version >= '3.5':
+    result.update({
+      'BEFORE_ASYNC_WITH': 0,
+      'SETUP_ASYNC_WITH': 0,
+      # Coroutine operations
+      'GET_YIELD_FROM_ITER': 0,
+      'GET_AWAITABLE': 0,
+      'GET_AITER': 0,
+      'GET_ANEXT': 0,
+    })
+
   for code in dis.opmap.keys():
     if code.startswith('UNARY_'):
       result[code] = 0
@@ -219,28 +223,34 @@ def _build_stackdelta_map():
   return result
 
 
-_stackdelta_map = _build_stackdelta_map()
+opstackd = _build_opstackd()
 
 
 def get_stackdelta(op):
   ''' Return the number of elements that *op* adds to the stack. '''
 
-  res = _stackdelta_map[op.opname]
+  res = opstackd[op.opname]
   if callable(res):
     res = res(op)
   return res
 
 
-def get_assigned_name(frame):
+def get_assigned_name(frame, _debug=False):
   ''' Checks the bytecode of *frame* to find the name of the variable
   a result is being assigned to and returns that name. Returns the full
   left operand of the assignment. Raises a `ValueError` if the variable
   name could not be retrieved from the bytecode (eg. if an unpack sequence
   is on the left side of the assignment).
 
-      >>> var = get_assigned_name(sys._getframe())
-      >>> assert var == 'var'
-  '''
+  > Known Limitations: The expression in the *frame* from which this
+  > function is called must be the first part of that expression. For
+  > example, `foo = [get_assigned_name(get_frame())] + [42]` works,
+  > but `foo = [42, get_assigned_name(get_frame())]` does not!
+
+  ```python
+  >>> var = get_assigned_name(sys._getframe())
+  >>> assert var == 'var'
+  ``` '''
 
   SEARCHING, MATCHED = 1, 2
   state = SEARCHING
@@ -261,7 +271,7 @@ def get_assigned_name(frame):
       stacksize += get_stackdelta(op)
       if stacksize == 0:
         if op.opname not in ('STORE_NAME', 'STORE_ATTR', 'STORE_GLOBAL', 'STORE_FAST'):
-          raise ValueError('expression is not assigned')
+          raise ValueError('expression is not assigned or branch is not first part of the expression')
         return result + op.argval
       elif stacksize < 0:
         raise ValueError('not a top-level expression')
