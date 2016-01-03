@@ -121,9 +121,9 @@ class CompletedProcess(object):
   def decode(self, encoding):
     if encoding is None:
       return
-    if self.stdout:
+    if self.stdout is not None:
       self.stdout = self.stdout.decode(encoding)
-    if self.stderr:
+    if self.stderr is not None:
       self.stderr = self.stderr.decode(encoding)
 
   def check_returncode(self):
