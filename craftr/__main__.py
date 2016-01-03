@@ -127,10 +127,13 @@ def main():
     print('Craftr {0}'.format(craftr.__version__))
     return 0
 
-  if args.p and not args.d:
-    # Use the current directory as the build directory.
-    debug('use . as build directory (-p)', verbosity=args.v)
-    args.d = os.getcwd()
+  if not args.d:
+    if args.p:
+      debug('use . as build directory (-p)', verbosity=args.v)
+      args.d = os.getcwd()
+    else:
+      debug('default build directory is "./build"', verbosity=args.v)
+      args.d = 'build'
   if not args.p:
     args.p = os.getcwd()
 
