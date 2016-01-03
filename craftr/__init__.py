@@ -119,6 +119,20 @@ class Session(object):
 
     self.ext_importer.update()
 
+  def start_server(self):
+    # Start the Craftr Server to enable cross-process invocation
+    # of Python functions.
+    if self.server_bind:
+      self.server.bind(*self.server_bind)
+    else:
+      self.server.bind()
+    self.server.serve_forever_async()
+    environ['CRAFTR_RTS'] = '{0}:{1}'.format(self.server.host, self.server.port)
+
+  def stop_server(self):
+    self.server.stop()
+    self.server.close()
+
   def on_context_enter(self, prev):
     if prev is not None:
       raise RuntimeError('session context can not be nested')
@@ -133,22 +147,14 @@ class Session(object):
     sys.meta_path.append(self.ext_importer)
     self.update()
 
-    # Start the Craftr Server to enable cross-process invocation
-    # of Python functions.
-    if self.server_bind:
-      self.server.bind(*self.server_bind)
-    else:
-      self.server.bind()
-    self.server.serve_forever_async()
-    environ['CRAFTR_RTS'] = '{0}:{1}'.format(self.server.host, self.server.port)
+    self.start_server()
 
   def on_context_leave(self):
     ''' Remove all `craftr.ext.` modules from `sys.modules` and make
     sure they're all in `Session.modules` (the modules are expected
     to be put there by the `craftr.ext.CraftrImporter`). '''
 
-    self.server.stop()
-    self.server.close()
+    self.stop_server()
 
     # Restore the original values of os.environ.
     self.env = environ.copy()

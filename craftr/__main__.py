@@ -167,6 +167,12 @@ def main():
   old_cwd = args.p
   os.chdir(args.d)
 
+  # Delete the .craftr-rts file that indicates that the project used
+  # the RTS feature. It will be re-created if the project still uses it.
+  if args.e and path.exists('.craftr-rts'):
+    debug('removing .craftr-rts flag file', verbosity=args.v)
+    os.remove('.craftr-rts')
+
   # Delete the .cmd directory that eventually contains files with
   # command-line arguments in it. Only when we would re-generate
   # these files.
@@ -181,7 +187,10 @@ def main():
     # Do nothing at all? Then do the execution step.
     do_run = True
 
-  if not do_run:
+  if not do_run and path.exists('.craftr-rts'):
+    info('can not skip execution phase, RTS feature required')
+    do_run = True
+  elif not do_run:
     info("skipping execution phase.")
 
   session = craftr.Session(cwd=old_cwd, path=[old_cwd], server_bind=args.rts_at)
@@ -227,6 +236,12 @@ def main():
         return errno.ENOENT
 
       if args.e:
+        # Are there any targets that use the RTS feature? If so,
+        # we must create a flag file so Craftr knows RTS is required
+        # for subsequent invokations without the -e option.
+        if any(t.command[0] == 'craftr-rts' for t in session.targets.values()):
+          open('.craftr-rts', 'w').close()
+
         # Export a ninja manifest.
         with open('build.ninja', 'w') as fp:
           craftr.ninja.export(fp, module)
