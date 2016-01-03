@@ -394,7 +394,7 @@ class TargetBuilder(object):
     files. Returns the filename of the generated file. '''
 
     path.makedirs('.cmd')
-    filename = '.cmd/{0}'.format(self.name)
+    filename = '.cmd/{0}'.format(self.fullname)
     if suffix:
       filename += suffix
     with open(filename, 'w') as fp:
