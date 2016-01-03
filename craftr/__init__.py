@@ -371,7 +371,7 @@ class TargetBuilder(object):
     # Complain about unhandled options.
     unused_options = self.caller_kwargs.keys() - self.options.used_keys
     if unused_options:
-      self.log('info', 'unusued options for {0}():'.format(self.caller), unused_options, stacklevel=2)
+      self.log('info', 'unused options for {0}():'.format(self.caller), unused_options, stacklevel=2)
 
     if inputs is None:
       inputs = self.inputs
