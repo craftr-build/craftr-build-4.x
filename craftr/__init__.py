@@ -637,10 +637,10 @@ def _check_list_of_str(name, value):
   return value
 
 
-from craftr.logging import log, info, warn, error
+from craftr.logging import log, debug, info, warn, error
 from craftr import ext, path, shell, ninja, rts
 
 __all__ = ['session', 'module', 'path', 'shell', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
-  'info', 'warn', 'error', 'return_', 'expand_inputs',
+  'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs',
   'import_file', 'import_module']

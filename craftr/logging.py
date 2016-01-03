@@ -28,6 +28,7 @@ import traceback
 # Log-level metadata about the minimum required verbosity level for
 # printing a stack-trace and the colors for colorized output.
 LOG_METADATA = {
+  'debug': {'strace_min_verbosity': 3, 'fg': tty.compile('yellow', attrs='bold')},
   'info':  {'strace_min_verbosity': 2, 'fg': tty.compile('cyan', attrs='bold')},
   'warn':  {'strace_min_verbosity': 2, 'fg': tty.compile('magenta', attrs='bold')},
   'error': {'strace_min_verbosity': 1, 'fg': tty.compile('red', attrs='bold')},
@@ -43,6 +44,14 @@ def _walk_frames(start_frame=None, stacklevel=1, max_frames=0):
     yield frame
     frame = frame.f_back
     count += 1
+
+
+def debug(*args, stacklevel=1, verbosity=None, **kwargs):
+  if verbosity is None and session:
+    verbosity = session.verbosity
+  if verbosity is None or verbosity >= 1:
+    stacklevel += 1
+    log('debug', *args, stacklevel=stacklevel, **kwargs)
 
 
 def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs):
@@ -88,14 +97,17 @@ def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs)
 
 
 def info(*args, stacklevel=1, **kwargs):
-  log('info', *args, stacklevel=(stacklevel + 1), **kwargs)
+  stacklevel += 1
+  log('info', *args, stacklevel=stacklevel, **kwargs)
 
 
 def warn(*args, stacklevel=1, **kwargs):
-  log('warn', *args, stacklevel=(stacklevel + 1), **kwargs)
+  stacklevel += 1
+  log('warn', *args, stacklevel=stacklevel, **kwargs)
 
 
 def error(*args, stacklevel=1, raise_=True, **kwargs):
-  log('error', *args, stacklevel=(stacklevel + 1), **kwargs)
+  stacklevel += 1
+  log('error', *args, stacklevel=stacklevel, **kwargs)
   if raise_ and module:
     raise ModuleError()

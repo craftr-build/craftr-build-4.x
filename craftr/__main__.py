@@ -129,6 +129,7 @@ def main():
 
   if args.p and not args.d:
     # Use the current directory as the build directory.
+    debug('use . as build directory (-p)', verbosity=args.v)
     args.d = os.getcwd()
   if not args.p:
     args.p = os.getcwd()
@@ -167,7 +168,7 @@ def main():
   # command-line arguments in it. Only when we would re-generate
   # these files.
   if args.e and path.exists('.cmd'):
-    info('delete .cmd directory')
+    debug('removing build .cmd directory (command-line files)', verbosity=args.v)
     shutil.rmtree('.cmd')
 
   # Check if we should omit the execution step. This is possile when
