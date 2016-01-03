@@ -1,6 +1,7 @@
 <h1>Craftr: Powerful meta build system for Ninja
 <img align="right" height="100" src="http://i.imgur.com/i3hYFZ3.png"></h1>
 [![Build Status](https://travis-ci.org/craftr-build/craftr.svg?branch=master)](https://travis-ci.org/craftr-build/craftr)
+[![Code Issues](https://www.quantifiedcode.com/api/v1/project/e5f9d2e0933b4609844a98185f88b831/badge.svg)](https://www.quantifiedcode.com/app/project/e5f9d2e0933b4609844a98185f88b831)
 
 Craftr is a meta build system for [Ninja][] that uses Python to as its
 build process description language. With a powerful programming language

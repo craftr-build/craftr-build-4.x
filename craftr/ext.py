@@ -66,6 +66,10 @@ class CraftrImporter(object):
     self.session = session
 
   def _check_file(self, filename):
+    ''' If *filename* is a Craftr module, extract the identifier and
+    add it to `CraftrImporter._cache`. Return the module identifier,
+    or None if it is no Craftr module. '''
+
     if not path.isfile(filename):
       return None
     ident = get_module_ident(filename)
@@ -163,6 +167,8 @@ class CraftrImporter(object):
     return importlib.import_module('craftr.ext.' + ident)
 
   def find_module(self, fullname, path=None):
+    ''' PEP 0302 -- New Import Hooks '''
+
     assert craftr.session == self.session
     if not fullname.startswith('craftr.ext.'):
       return None
@@ -176,6 +182,7 @@ class CraftrImporter(object):
 
 
 class CraftrLoader(object):
+  ''' Loader class created by the `CraftrImporter`. '''
 
   def __init__(self, kind, filename, session):
     super().__init__()
@@ -184,6 +191,8 @@ class CraftrLoader(object):
     self.session = session
 
   def load_module(self, fullname):
+    ''' PEP 0302 -- New Import Hooks '''
+
     assert fullname.startswith('craftr.ext.')
     assert craftr.session == self.session
     name = fullname[11:]

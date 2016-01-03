@@ -25,6 +25,7 @@ from unittest import TestCase
 
 
 class TestMagic(TestCase):
+  ''' Tests for the `craftr.magic` module. '''
 
   def test_opstackd_validity(self):
     ''' Test if all keys in `magic.opstackd` are valid opcodes. '''
@@ -40,7 +41,7 @@ class TestMagic(TestCase):
     foo = get_assigned_name(get_frame())
     self.assertEqual("foo", foo)
 
-    spam = [get_assigned_name(get_frame(), True)] + ["bar"]
+    spam = [get_assigned_name(get_frame())] + ["bar"]
     self.assertEqual("spam", spam[0])
 
     obj.eggs = (lambda: get_assigned_name(get_frame(1)))()
@@ -51,5 +52,5 @@ class TestMagic(TestCase):
 
     with self.assertRaises(ValueError):
       # get_assigned_name() branch must be first part of the expression.
-      spam = [42] + [get_assigned_name(get_frame(), True)] + ["bar"]
+      spam = [42] + [get_assigned_name(get_frame())] + ["bar"]
       self.assertEqual("spam", spam[0])

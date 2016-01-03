@@ -26,6 +26,8 @@ import re
 
 
 def get_ninja_version():
+  ''' Read the ninja version from the `ninja` program and return it. '''
+
   if not hasattr(get_ninja_version, 'result'):
     get_ninja_version.result = shell.pipe('ninja --version', shell=True).output.strip()
   return get_ninja_version.result

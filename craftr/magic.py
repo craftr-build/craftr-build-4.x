@@ -235,7 +235,7 @@ def get_stackdelta(op):
   return res
 
 
-def get_assigned_name(frame, _debug=False):
+def get_assigned_name(frame):
   ''' Checks the bytecode of *frame* to find the name of the variable
   a result is being assigned to and returns that name. Returns the full
   left operand of the assignment. Raises a `ValueError` if the variable
