@@ -21,7 +21,10 @@
 
 from craftr import *
 from craftr.tty import clear_line
+from functools import partial
+from fnmatch import fnmatch
 
+import collections
 import ctypes
 import errno
 import sys
@@ -43,58 +46,82 @@ else:
   _is_win32 = False
 
 
-def build(filename, base_dir, include=(), exclude=(), optional=(),
-    prefix=None, quiet=False):
-  ''' Build a ZIP archive at *filename* and include the specified files.
-  The *base_dir* is stripped from the absolute filenames to find the
-  arcname. Also, if a relative path is specified in *include*, *exclude*
-  or *optional*, *base_dir* is assumed to be the parent directory. If
-  a glob-character (ie. ? or *) is found in one of the items specified
-  for *include*, *exclude* and *optional*, they are globbed directly.
-  Also, a directory name will include all files in it. '''
+class Archive(object):
+  ''' Helper class to build and a list of files for an archive
+  and then create that archive from that list. '''
 
-  def expand(filelist):
-    result = set()
-    for item in filelist:
-      if not path.isabs(item):
-        item = path.normpath(path.join(base_dir, item))
-      if path.isdir(item):
-        result |= set(path.glob(path.join(item, '**')))
+  File = collections.namedtuple('File', 'name rel_dir arc_name')
+
+  def __init__(self, base_dir = None, prefix = None):
+    self._files = []
+    self._base_dir = base_dir or module.project_dir
+    self._prefix = prefix
+
+  def add(self, name, rel_dir = None, arc_name = None, parts = None):
+    ''' Add a file, directory or `Target` to the archive file list.
+    If *parts* is specified, it must be a number which specifies how
+    many parts of the arc name are kept from the right. '''
+
+    if arc_name and parts:
+      raise TypeError('arc_name conflicts with parts')
+
+    def _raise_arc():
+      if arc_name:
+        raise TypeError('arc_name can only be specified for a single file')
+
+    if not rel_dir:
+      rel_dir = self._base_dir
+    if isinstance(name, (tuple, list)):
+      _raise_arc()
+      [self.add(path.abspath(x), rel_dir, None, parts) for x in name]
+    elif isinstance(name, str):
+      if not path.isabs(name):
+        name = path.local(name)
+      # xxx: make sure *name* is a subpath of *rel_dir*
+      if path.isglob(name):
+        _raise_arc()
+        self.add(path.glob(name), rel_dir, None, parts)
+      elif path.isdir(name):
+        _raise_arc()
+        self.add(path.glob(path.join(name, '**')), rel_dir, None, parts)
       else:
-        result |= set(path.autoglob(item))
-    return set(map(path.normpath, result))
+        if not path.isfile(name):
+          raise FileNotFoundError(name)
+        if parts:
+          assert not arc_name
+          path_parts = path.split_path(name)
+          arc_name = path.sep.join(path_parts[-parts:])
+        if _is_win32:
+          name = _win32_get_long_path_name(name)
+        self._files.append(Archive.File(name, rel_dir, arc_name))
+    else:
+      raise TypeError('name must be str/list/tuple')
 
-  files = expand(include) - expand(exclude)
-  optional = expand(optional) - files
+  def exclude(self, filter):
+    ''' Remove all files in the Archive's file list that match the
+    specified *filter*. The filter can be a string, in which case it
+    is applied with `fnmatch()` or a function which accepts a single
+    argument (the filename). '''
 
-  for fn in files:
-    if not path.exists(fn):
-      raise OSError(errno.ENOENT, 'No such file or directory: {!r}'.format(fn))
-  for fn in optional:
-    if path.exists(fn):
-      files.add(fn)
+    if isinstance(filter, str):
+      def wrapper(pattern):
+        return lambda x: fnmatch(x, pattern)
+      filter = wrapper(filter)
 
-  if not files:
-    raise ValueError('no files to build an archive from')
+    self._files = [file for file in self._files if not filter(file.name)]
 
-  filename = path.abspath(filename)
-  zf = zipfile.ZipFile(filename, 'w')
-  for fn in files:
-    if _is_win32:
-      fn = _win32_get_long_path_name(fn)
-    arcname = path.relpath(fn, base_dir).replace('\\', '/')
-    if arcname == path.curdir or arcname.startswith(path.pardir):
-      raise ValueError('pathname not a subdir of basedir', fn, base_dir)
-    if prefix:
-      arcname = prefix + '/' + arcname
-    if not quiet:
-      clear_line()
-      print('writing {!r}... '.format(arcname), end='')
-    zf.write(fn, arcname)
-    if not quiet:
-      print('done.', end='')
-    sys.stdout.flush()
-  zf.close()
-  if not quiet:
-    clear_line()
-    print('{} files compressed in {!r}'.format(len(files), filename))
+  def save(self, name=None, format='zip'):
+    ''' Save the archvie under the specified name. If the name is not
+    specfified, the *prefix* must have been passed to the `Archive`
+    constructor. The format must be `'zip'` for now. '''
+
+    assert format == 'zip', "format must be 'zip' for now"
+    if not name:
+      if not self._prefix:
+        raise ValueError('no name and no Archive prefix specified')
+      name = self._prefix + '.' + format
+
+    zf = zipfile.ZipFile(name, 'w')
+    for file in self._files:
+      arc_name = file.arc_name or path.relpath(file.name, file.rel_dir)
+      zf.write(file.name, arc_name)
