@@ -37,7 +37,7 @@ class Git(object):
     self.git_dir = git_dir
 
   def _popen(self, *args, **kwargs):
-    return shell.pipe(*args, merge=False, cwd=self.git_dir, **kwargs)
+    return shell.pipe(*args, check=True, merge=False, cwd=self.git_dir, **kwargs)
 
   def status(self, include=None, exclude=None):
     result = []

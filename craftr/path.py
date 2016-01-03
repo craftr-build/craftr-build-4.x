@@ -20,11 +20,17 @@
 
 from craftr import module, session
 from os.path import *
-from os import sep, pathsep, curdir, pardir
+from os import sep, pathsep, curdir, pardir, getcwd
 
 import collections
 import glob2
 import os
+
+
+def isglob(path):
+  ''' Returns True if *path* is a glob-able pattern, False if not. '''
+
+  return any(x in path for x in '*?')
 
 
 def autoglob(path, parent=None):
@@ -32,7 +38,7 @@ def autoglob(path, parent=None):
   If it is not, it will return `[path]` as is, not checking wether it
   exists or not. '''
 
-  if any(x in path for x in '*?'):
+  if isglob(path):
     return glob(path, parent=parent)
   else:
     return [path]
@@ -283,7 +289,6 @@ def iter_tree(dirname, depth=1):
     yield from recursion(path, depth)
 
 
-
 def relpath(path, start='.', only_sub=False):
   ''' Like the original `os.path.relpath()` function, but with the
   *only_sub* parameter. If *only_sub* is True and *path* is not a
@@ -299,3 +304,18 @@ def relpath(path, start='.', only_sub=False):
     if res.startswith(pardir):
       return path
     return res
+
+
+
+def split_path(path):
+  ''' Splits *path* into a list of its parts. '''
+
+  result = []
+  path = normpath(path)
+  path, base = split(path)
+  while base:
+    result.append(base)
+    path, base = split(path)
+
+  result.reverse()
+  return result
