@@ -22,6 +22,7 @@
 from os import environ
 from craftr import *
 from craftr.ext import platform
+from craftr.ext.compiler import gen_output
 
 import abc
 import craftr
@@ -111,7 +112,7 @@ class render_template(PythonTool):
     for key, value in context.items():
       assert '=' not in key
       command.append('{0}={1}'.format(key, value))
-    return Target(command, template, output)
+    return Target(command, template, gen_output(output))
 
   def execute(self, args):
     with open(args[0], 'r') as src:
