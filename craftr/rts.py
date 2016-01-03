@@ -133,7 +133,11 @@ def parse_uri(uri):
 
 
 class InvalidRequest(Exception):
-  pass
+  def __init__(self, message_type, message):
+    self.message_type = message_type
+    self.message = message
+  def __str__(self):
+    return '{0}: {1}'.format(self.message_type.decode('unicode_escape'), self.message)
 
 
 class InvalidResponse(Exception):
@@ -402,7 +406,7 @@ class _Client(object):
     send_message(self.sock, message_type, data)
     result = parse_message(self.sock)
     if result[0] == MSG_INVALID_REQUEST:
-      raise InvalidRequest(message_type, data.decode('utf8'))
+      raise InvalidRequest(message_type, result[1].decode('utf8'))
     if expect and result[0] != expect:
       emsg = 'expected {0!r} from server, received {1!r}'.format(expect, result[0])
       raise InvalidResponse(emsg)
