@@ -44,11 +44,25 @@ def detect_compiler(program, language):
   raise ToolDetectionError('could not detect toolset for {0!r}'.format(program))
 
 
-def gen_output(output, subdir=None, suffix=None):
+def gen_output_dir(output_dir):
+  ''' Given an output directory that is a relative path, it will be
+  prefixed with the current modules' project name. An absolute path is
+  left unchanged. If None is given, the current working directory is
+  returned. '''
+
+  if output_dir is None:
+    output_dir = '.'
+  else:
+    if not path.isabs(output_dir):
+      output_dir = path.join(module.project_name, output_dir)
+  return output_dir
+
+
+def gen_output(output, output_dir='', suffix=None):
+  output_dir = gen_output_dir(output_dir)
   if isinstance(output, str):
     if not path.isabs(output):
-      pdir = path.join(module.project_name, subdir) if subdir else module.project_name
-      output = path.join(pdir, output)
+      output = path.join(output_dir, output)
     if suffix is not None:
       if callable(suffix):
         output = suffix(output)
@@ -56,16 +70,17 @@ def gen_output(output, subdir=None, suffix=None):
         output = path.addsuffix(output, suffix)
     return output
   elif isinstance(output, collections.Iterable):
-    return [gen_output(x, subdir, suffix) for x in output]
+    return [gen_output(x, output_dir, suffix) for x in output]
   else:
     raise TypeError('expected str or Iterable')
 
 
-def gen_objects(sources, subdir='obj', suffix=None):
+def gen_objects(sources, output_dir='obj', suffix=None):
   if not sources:
     return []
   basedir = path.commonpath(sources)
-  objects = path.move(sources, basedir, path.join(module.project_name, subdir))
+  output_dir = gen_output_dir(output_dir)
+  objects = path.move(sources, basedir, output_dir)
   if suffix is not None:
     if callable(suffix):
       objects = [suffix(path.rmvsuffix(x)) for x in objects]
