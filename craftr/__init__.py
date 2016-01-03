@@ -72,6 +72,7 @@ class Session(object):
       Defaults to 3.
     command_prefix: A list of strings that will be prefixed to *every*
       command that is exported to Ninja.
+    export: Set to True when a `build.ninja` file is generated.
     '''
 
   def __init__(self, cwd=None, path=None, server_bind=None):
@@ -89,6 +90,7 @@ class Session(object):
     self.verbosity = 0
     self.strace_depth = 3
     self.command_prefix = []
+    self.export = False
 
     if path is not None:
       self.path.extend(path)
@@ -385,22 +387,25 @@ class TargetBuilder(object):
       setattr(target, key, value)
     return target
 
-  def write_command_file(self, arguments, suffix=None):
+  def write_command_file(self, arguments, suffix=None, always=False):
     ''' Writes a file to the `.cmd` folder in the builder directory (ie.
     the current directory) that contains the command-line arguments
     specified in *arguments*. The name of that file is the name of the
     Target that is created with this builder. Optionally, a suffix
     for that file can be specified to be able to write multiple such
-    files. Returns the filename of the generated file. '''
+    files. Returns the filename of the generated file. If *always* is
+    set to True, the file will always be created even if `Session.export`
+    is set to False. '''
 
-    path.makedirs('.cmd')
     filename = '.cmd/{0}'.format(self.fullname)
-    if suffix:
-      filename += suffix
-    with open(filename, 'w') as fp:
-      for arg in arguments:
-        fp.write(shell.quote(arg))
-        fp.write(' ')
+    if always or session.export:
+      path.makedirs('.cmd')
+      if suffix:
+        filename += suffix
+      with open(filename, 'w') as fp:
+        for arg in arguments:
+          fp.write(shell.quote(arg))
+          fp.write(' ')
     return filename
 
 

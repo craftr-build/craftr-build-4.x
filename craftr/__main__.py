@@ -188,6 +188,7 @@ def main():
     # Initialize the session settings from the command-line parameters.
     session.verbosity = args.v
     session.strace_depth = args.strace_depth
+    session.export = args.e
     if os.name == 'nt' and not args.win_direct:
       session.command_prefix = ['cmd', '/c']
 
