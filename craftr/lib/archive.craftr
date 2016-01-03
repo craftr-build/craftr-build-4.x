@@ -25,25 +25,9 @@ from functools import partial
 from fnmatch import fnmatch
 
 import collections
-import ctypes
 import errno
 import sys
 import zipfile
-
-if sys.platform.startswith('win32'):
-  _is_win32 = True
-  def _win32_get_long_path_name(path):
-    # Thanks to http://stackoverflow.com/a/3694799/791713
-    assert sys.platform.startswith('win32')
-    buf = ctypes.create_unicode_buffer(len(path) + 1)
-    GetLongPathNameW = ctypes.windll.kernel32.GetLongPathNameW
-    res = GetLongPathNameW(path, buf, len(path) + 1)
-    if res == 0 or res > 260:
-      return path
-    else:
-      return buf.value
-else:
-  _is_win32 = False
 
 
 class Archive(object):
@@ -99,8 +83,7 @@ class Archive(object):
           assert not arc_name
           path_parts = path.split_path(name)
           arc_name = path.sep.join(path_parts[-parts:])
-        if _is_win32:
-          name = _win32_get_long_path_name(name)
+        name = path.get_long_path_name(name)
         self._files.append(Archive.File(name, rel_dir, arc_name))
     else:
       raise TypeError('name must be str/list/tuple')

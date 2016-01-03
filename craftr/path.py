@@ -23,6 +23,7 @@ from os.path import *
 from os import sep, pathsep, curdir, pardir, getcwd
 
 import collections
+import ctypes
 import glob2
 import os
 
@@ -320,10 +321,29 @@ def split_path(path):
   return result
 
 
-
 def makedirs(path):
   ''' Simple `os.makedirs()` clone that does not error if *path*
   is already an existing directory. '''
 
   if not os.path.isdir(path):
     os.makedirs(path)
+
+
+
+def get_long_path_name(path):
+  ''' On Windows, this function returns the correct capitalization
+  for *path*. On all other systems, this returns *path* unchanged. '''
+
+  # xxx: what about cygwin?
+  if sys.platform.startswith('win32'):
+    # Thanks to http://stackoverflow.com/a/3694799/791713
+    assert sys.platform.startswith('win32')
+    buf = ctypes.create_unicode_buffer(len(path) + 1)
+    GetLongPathNameW = ctypes.windll.kernel32.GetLongPathNameW
+    res = GetLongPathNameW(path, buf, len(path) + 1)
+    if res == 0 or res > 260:
+      return path
+    else:
+      return buf.value
+  else:
+    return path
