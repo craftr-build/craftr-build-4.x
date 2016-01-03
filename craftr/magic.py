@@ -86,7 +86,7 @@ def get_module_frame(module):
 
   frame = get_frame(1)
   while frame:
-    if frame.f_globals is vars(module) and frame.f_locals is vars(module):
+    if frame.f_globals is vars(module) is vars(module):
       return frame
     frame = frame.f_back
   raise RuntimeError('module frame can not be found')
