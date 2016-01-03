@@ -126,7 +126,10 @@ class LlvmCompiler(BaseCompiler):
     if language not in (None, 'c', 'c++', 'asm'):
       raise ValueError('invalid language: {0}'.format(language))
     if language == 'c++':
-      fw['libs'] = ['c++']
+      if type(self).name == 'LLVM':
+        fw['libs'] = ['c++']
+      else:
+        fw['libs'] = ['stdc++']
 
     if language == 'asm':
       language = 'assembler'
@@ -185,14 +188,14 @@ class LlvmCompiler(BaseCompiler):
     libs = builder.merge('libs')
     # Clang is based on GCC libraries, so always use the gcc_libs option.
     libs += builder.merge('gcc_libs')
-    if self.name == 'LLVM':
+    if type(self).name == 'LLVM':
       # We also use this class for GCC in which case the llvm_libs
       # option should not be handled!
       libs += builder.merge('llvm_libs')
 
     linker_args = builder.merge('linker_args')
     linker_args += builder.merge('gcc_linker_args')
-    if self.name == 'LLVM':
+    if type(self).name == 'LLVM':
       linker_args += builder.merge('llvm_linker_args')
 
     linker_script = builder.get('linker_script', None)
