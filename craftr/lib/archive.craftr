@@ -48,14 +48,22 @@ else:
 
 class Archive(object):
   ''' Helper class to build and a list of files for an archive
-  and then create that archive from that list. '''
+  and then create that archive from that list. If no *name* is
+  specified, it is derived from the *prefix*. The *format* must
+  be `'zip'` for now. '''
 
   File = collections.namedtuple('File', 'name rel_dir arc_name')
 
-  def __init__(self, base_dir = None, prefix = None):
+  def __init__(self, name = None, base_dir = None, prefix = None, format = 'zip'):
+    assert format == 'zip', "format must be 'zip' for now"
+    if not name:
+      if not prefix:
+        raise TypeError('neither name nor prefix argument specified')
+      name = prefix + '.' + format
     self._files = []
     self._base_dir = base_dir or module.project_dir
     self._prefix = prefix
+    self.name = name
 
   def add(self, name, rel_dir = None, arc_name = None, parts = None):
     ''' Add a file, directory or `Target` to the archive file list.
@@ -110,18 +118,11 @@ class Archive(object):
 
     self._files = [file for file in self._files if not filter(file.name)]
 
-  def save(self, name=None, format='zip'):
-    ''' Save the archvie under the specified name. If the name is not
-    specfified, the *prefix* must have been passed to the `Archive`
-    constructor. The format must be `'zip'` for now. '''
+  def save(self):
+    ''' Save the archive. '''
 
-    assert format == 'zip', "format must be 'zip' for now"
-    if not name:
-      if not self._prefix:
-        raise ValueError('no name and no Archive prefix specified')
-      name = self._prefix + '.' + format
-
-    zf = zipfile.ZipFile(name, 'w')
+    zf = zipfile.ZipFile(self.name, 'w')
     for file in self._files:
       arc_name = file.arc_name or path.relpath(file.name, file.rel_dir)
       zf.write(file.name, arc_name)
+    zf.close()
