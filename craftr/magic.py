@@ -80,14 +80,21 @@ def enter_context(context_proxy, context_obj):
       assert stack.pop() is context_obj
 
 
-def get_module_frame(module):
+def get_module_frame(module, allow_local=True, start_frame=None, stacklevel=None):
   ''' Returns the stack frame that *module* is being executed in. If
   the stack frame can not be found, a `RuntimeError` is raised. '''
 
-  frame = get_frame(1)
+  if not start_frame and stacklevel is not None:
+    frame = get_frame(stacklevel)
+  elif start_frame:
+    frame = start_frame
+  else:
+    frame = get_frame(1)
+
   while frame:
-    if frame.f_globals is vars(module) is vars(module):
-      return frame
+    if frame.f_globals is vars(module):
+      if frame.f_locals is vars(module) or allow_local:
+        return frame
     frame = frame.f_back
   raise RuntimeError('module frame can not be found')
 

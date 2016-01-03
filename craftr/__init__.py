@@ -290,7 +290,7 @@ class Target(object):
     if craftr.module() != module:
       raise RuntimeError('target name deduction only available when '
         'used from the currently executed module')
-    return magic.get_assigned_name(magic.get_module_frame(module))
+    return magic.get_assigned_name(magic.get_module_frame(module, allow_local=False))
 
   @property
   def fullname(self):
