@@ -306,7 +306,6 @@ def relpath(path, start='.', only_sub=False):
     return res
 
 
-
 def split_path(path):
   ''' Splits *path* into a list of its parts. '''
 
@@ -319,3 +318,12 @@ def split_path(path):
 
   result.reverse()
   return result
+
+
+
+def makedirs(path):
+  ''' Simple `os.makedirs()` clone that does not error if *path*
+  is already an existing directory. '''
+
+  if not os.path.isdir(path):
+    os.makedirs(path)
