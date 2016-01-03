@@ -27,9 +27,9 @@ import craftr
 import errno
 import importlib
 import os
+import shutil
 import subprocess
 import sys
-
 
 def _set_env(defs):
   ''' This function updates the environment variables based on a list
@@ -153,6 +153,13 @@ def main():
 
   old_cwd = os.getcwd()
   os.chdir(args.d)
+
+  # Delete the .cmd directory that eventually contains files with
+  # command-line arguments in it. Only when we would re-generate
+  # these files.
+  if args.e and path.exists('.cmd'):
+    info('delete .cmd directory')
+    shutil.rmtree('.cmd')
 
   # Check if we should omit the execution step. This is possile when
   # we the -b option is specified and NOT -c == 1, -e, -f or -F.

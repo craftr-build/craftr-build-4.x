@@ -385,6 +385,24 @@ class TargetBuilder(object):
       setattr(target, key, value)
     return target
 
+  def write_command_file(self, arguments, suffix=None):
+    ''' Writes a file to the `.cmd` folder in the builder directory (ie.
+    the current directory) that contains the command-line arguments
+    specified in *arguments*. The name of that file is the name of the
+    Target that is created with this builder. Optionally, a suffix
+    for that file can be specified to be able to write multiple such
+    files. Returns the filename of the generated file. '''
+
+    path.makedirs('.cmd')
+    filename = '.cmd/{0}'.format(self.name)
+    if suffix:
+      filename += suffix
+    with open(filename, 'w') as fp:
+      for arg in arguments:
+        fp.write(shell.quote(arg))
+        fp.write(' ')
+    return filename
+
 
 class Framework(dict):
   ''' A framework rerpresentation a set of options that are to be taken
