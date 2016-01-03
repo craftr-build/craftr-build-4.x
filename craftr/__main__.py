@@ -108,7 +108,8 @@ def main():
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
   parser.add_argument('-b', action='store_true', help='Build all or the specified targets. Note that no Craftr modules are executed, if that is not required by other options.')
   parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
-  parser.add_argument('-d', default='build', help='The build directory')
+  parser.add_argument('-d', help='The build directory. Defaults to "build". Can be out of tree.')
+  parser.add_argument('-p', help='Specify the main directory (eventually to load the Craftfile from). If -d is not specified, the CWD is build directory.')
   parser.add_argument('-D', default=[], action='append', help='Set an option, is automatically converted to the closest applicable datatype')
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
@@ -126,13 +127,21 @@ def main():
     print('Craftr {0}'.format(craftr.__version__))
     return 0
 
+  if args.p and not args.d:
+    # Use the current directory as the build directory.
+    args.d = os.getcwd()
+  if not args.p:
+    args.p = os.getcwd()
+
   if not args.m:
-    if not path.isfile('Craftfile'):
-      error('"Craftfile" does not exist')
+    cfile = path.join(args.p, 'Craftfile')
+    if not path.isfile(cfile):
+      error('{0!r} does not exist'.format(path.relpath(cfile)))
       return errno.ENOENT
-    args.m = craftr.ext.get_module_ident('Craftfile')
+    args.m = craftr.ext.get_module_ident(cfile)
     if not args.m:
-      error('"Craftfile" has no or an invalid craftr_module(...) declaration')
+      error('{0!r} has no or an invalid craftr_module(...) declaration'.format(
+        path.relpath(cfile)))
       return errno.ENOENT
 
   if not path.exists(args.d):
@@ -151,7 +160,7 @@ def main():
   mkabst = lambda x: ((args.m + '.' + x) if ('.' not in x) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
-  old_cwd = os.getcwd()
+  old_cwd = args.p
   os.chdir(args.d)
 
   # Delete the .cmd directory that eventually contains files with
