@@ -26,6 +26,7 @@ import collections
 import ctypes
 import glob2
 import os
+import sys
 
 
 def isglob(path):
@@ -62,10 +63,13 @@ def glob(*patterns, parent=None):
   return result
 
 
-def listdir(path):
+def listdir(path, abs=True):
   ''' This version of `os.listdir` yields absolute paths. '''
 
-  return (os.path.join(path, x) for x in os.listdir(path))
+  if abs:
+    return (os.path.join(path, x) for x in os.listdir(path))
+  else:
+    return iter(os.listdir(path))
 
 
 def commonpath(paths):

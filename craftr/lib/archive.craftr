@@ -52,7 +52,12 @@ class Archive(object):
   def add(self, name, rel_dir = None, arc_name = None, parts = None):
     ''' Add a file, directory or `Target` to the archive file list.
     If *parts* is specified, it must be a number which specifies how
-    many parts of the arc name are kept from the right. '''
+    many parts of the arc name are kept from the right.
+
+    .. note:: *name* can be a filename, the path to a directory,
+      a glob pattern or list. Note that a directory will be globbed
+      for its contents and will then be added recursively. A glob
+      pattern that yields a directory path will add that directory. '''
 
     if arc_name and parts:
       raise TypeError('arc_name conflicts with parts')
@@ -75,7 +80,7 @@ class Archive(object):
         self.add(path.glob(name), rel_dir, None, parts)
       elif path.isdir(name):
         _raise_arc()
-        self.add(path.glob(path.join(name, '**')), rel_dir, None, parts)
+        self.add(path.glob(path.join(name, '*')), rel_dir, None, parts)
       else:
         if not path.isfile(name):
           raise FileNotFoundError(name)
@@ -84,7 +89,8 @@ class Archive(object):
           path_parts = path.split_path(name)
           arc_name = path.sep.join(path_parts[-parts:])
         name = path.get_long_path_name(name)
-        self._files.append(Archive.File(name, rel_dir, arc_name))
+        file = Archive.File(name, rel_dir, arc_name)
+        self._files.append(file)
     else:
       raise TypeError('name must be str/list/tuple')
 
