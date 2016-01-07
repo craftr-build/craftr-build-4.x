@@ -95,11 +95,12 @@ def export(fp, main_module):
       indent = 1 if version > '1.6.0' else 0
       writer.variable('msvc_deps_prefix', target.msvc_deps_prefix, indent)
 
-    outputs = path.normpath(target.outputs) if target.outputs else [target.fullname]
+    inputs = path.normpath(target.inputs or [])
+    outputs = path.normpath(target.outputs) if target.outputs is not None else [target.fullname]
     if target.foreach:
       assert target.inputs is not None and target.outputs is not None
-      assert len(target.inputs) == len(target.outputs)
-      for infile, outfile in zip(target.inputs, target.outputs):
+      assert len(inputs) == len(outputs)
+      for infile, outfile in zip(inputs, outputs):
         writer.build(
           [path.normpath(outfile)],
           target.fullname,
@@ -110,11 +111,11 @@ def export(fp, main_module):
       writer.build(
         outputs,
         target.fullname,
-        path.normpath(target.inputs or []),
+        path.normpath(inputs),
         implicit=path.normpath(target.implicit_deps),
         order_only=path.normpath(target.order_only_deps))
 
-    if target.outputs and target.fullname not in target.outputs:
+    if target.fullname not in outputs:
       writer.build(target.fullname, 'phony', outputs)
     if target.pool != 'console' and not target.explicit:
       default.append(target.fullname)
