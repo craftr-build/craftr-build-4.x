@@ -423,10 +423,16 @@ class Framework(dict):
   returns a list of frameworks that are being used in the inputs.
 
   Use the `Framework.Join` class to create an object to process the
-  data from multiple frameworks. '''
+  data from multiple frameworks.
 
-  def __init__(self, __fw_name, __init_dict=None, **kwargs):
+  Arguments:
+    __fw_name: The name of the Framework. If omitted, the assigned
+      name of the calling module will be used- '''
+
+  def __init__(self, __fw_name=None, __init_dict=None, **kwargs):
     super().__init__()
+    if not __fw_name:
+      __fw_name = Target._get_name(module())
     if __init_dict is not None:
       self.update(__init_dict)
     self.update(kwargs)
