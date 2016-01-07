@@ -92,6 +92,13 @@ class Session(object):
     if path is not None:
       self.path.extend(path)
 
+    self.targets['clean'] = Target(
+      command = 'ninja -t clean',
+      inputs = None,
+      outputs = None,
+      name='clean',
+      module=None)
+
   def exec_if_exists(self, filename):
     ''' Executes *filename* if it exists. Used for running the Craftr
     environment files before the modules are loaded. Returns None if the
@@ -223,7 +230,7 @@ class Target(object):
       var=None, deps=None, depfile=None, msvc_deps_prefix=None,
       explicit=False, frameworks=None, module=None, name=None):
 
-    if not module:
+    if not module and craftr.module:
       module = craftr.module()
     if not name:
       name = Target._get_name(module)
@@ -271,10 +278,11 @@ class Target(object):
     self.frameworks = frameworks or []
     self.explicit = explicit
 
-    targets = module.__session__.targets
-    if self.fullname in targets:
-      raise ValueError('target {0!r} already exists'.format(self.fullname))
-    targets[self.fullname] = self
+    if module:
+      targets = module.__session__.targets
+      if self.fullname in targets:
+        raise ValueError('target {0!r} already exists'.format(self.fullname))
+      targets[self.fullname] = self
 
   def __repr__(self):
     pool = ' in "{0}"'.format(self.pool) if self.pool else ''
@@ -299,7 +307,10 @@ class Target(object):
 
   @property
   def fullname(self):
-    return self.module.project_name + '.' + self.name
+    if self.module:
+      return self.module.project_name + '.' + self.name
+    else:
+      return self.name
 
 
 class TargetBuilder(object):

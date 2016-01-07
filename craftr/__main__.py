@@ -32,7 +32,7 @@ import shutil
 import subprocess
 import sys
 
-def _set_env(defs):
+def _set_env(defs, main_module_name):
   ''' This function updates the environment variables based on a list
   of strings of the format `KEY=VALUE` where each subsequent part is
   optional. The following behaviour applies:
@@ -40,6 +40,9 @@ def _set_env(defs):
   - `KEY`: Assigns a value of `'true'` to the specified key
   - `KEY=`: Deletes the specified key from the environment
   - `KEY=VALUE`: Sets the specified key to the specified value.
+
+  If the key is prefixed with a dot, it is prefixed with the current
+  main modules name.
   '''
 
   for item in defs:
@@ -49,6 +52,8 @@ def _set_env(defs):
       continue
     elif not assign:
       value = 'true'
+    if key.startswith('.'):
+      key = main_module_name + key
     environ[key] = value
 
 
@@ -111,7 +116,11 @@ def main():
   parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
   parser.add_argument('-d', help='The build directory. Defaults to "build". Can be out of tree.')
   parser.add_argument('-p', help='Specify the main directory (eventually to load the Craftfile from). If -d is not specified, the CWD is build directory.')
-  parser.add_argument('-D', default=[], action='append', help='Set an option, is automatically converted to the closest applicable datatype')
+  parser.add_argument('-D', default=[], action='append',
+    help='Set an option (environment variable). -D<key> will set <key> to the '
+    'string "true". -D<key>= will delete the variable, if present. -D<key>=<value> '
+    'will set the variable <key> to the string <value>. <key> can be prefixed with '
+    'a dot, in which case it is prefixed with the current main modules name.')
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
@@ -161,7 +170,7 @@ def main():
     return errno.ENOENT
 
   # Convert relative to absolute target names.
-  mkabst = lambda x: ((args.m + '.' + x) if ('.' not in x) else x).replace(':', '.')
+  mkabst = lambda x: ((args.m + x) if (x.startswith('.')) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
   old_cwd = args.p
@@ -213,7 +222,7 @@ def main():
           error('--rc {0!r} does not exist'.format(args.rc))
           return errno.ENOENT
 
-      _set_env(args.D)
+      _set_env(args.D, args.m)
       _abs_env(old_cwd)
 
       # Load the main craftr module specified via the -m option
@@ -232,7 +241,7 @@ def main():
       try:
         targets = [session.targets[x] for x in args.targets]
       except KeyError as key:
-        error('Target "{0}" does not exist'.format(key))
+        error('Target {0} does not exist'.format(key))
         return errno.ENOENT
 
       if args.e:
