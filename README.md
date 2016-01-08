@@ -1,47 +1,58 @@
-<h1>The Craftr build system
-<img align="right" height="100" src="http://i.imgur.com/i3hYFZ3.png"></h1>
-[![Build Status](https://travis-ci.org/craftr-build/craftr.svg?branch=master)](https://travis-ci.org/craftr-build/craftr)
-[![Code Issues](https://www.quantifiedcode.com/api/v1/project/e5f9d2e0933b4609844a98185f88b831/badge.svg)](https://www.quantifiedcode.com/app/project/e5f9d2e0933b4609844a98185f88b831)
+<h1>
+  Craftr
+  <a href="https://travis-ci.org/craftr-build/craftr"><img alt="Build Status" src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"/></a>
+  <img align="right" height="85" src="http://i.imgur.com/i3hYFZ3.png"/>
+</h1>
 
-Craftr is a meta build system that generates build files for the fast and
-efficient [Ninja][] build tool. It uses Python scripts to define the build
-commands and dependencies.
+
+Meta build system based on [Ninja][] and [Python 3.4+][Python].
+
+```python
+# craftr_module(simple)
+from craftr import *
+from craftr.ext.platform cxx, ld
+
+obj = cxx.compile(
+  sources = path.glob('src/*.cpp')
+)
+program = ld.link(
+  inputs = obj
+)
+```
 
 __Key Features__
 
-* High flexibility due to the nature of a real programming language
-* Builtin support for C/C++ (MSVC, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
-* [Integrate tasks][Wiki_Tasks] and [Python scripts][Wiki_Python_Tools] in build definitions
-* Build definitions in modules, make your own building blocks for large projects
+* Modular builds written in Python
+* Combine them with [Tasks][wiki_Tasks]
 * Easily extensible framework
+* Builtin support for C/C++ (MSVC, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
+
+__Upcoming Features__
+
+- [ ] Cross-platform support for OpenCL, CUDA, Vala
 
 __Additional Links__
 
 * [Documentation](https://github.com/craftr-build/craftr/wiki)
-* [Additional Craftr modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
+* [Craftr extension build modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
 * [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
-
-  [Wiki_Tasks]: https://github.com/craftr-build/craftr/wiki/General#tasks
-  [Wiki_Python_Tools]: https://github.com/craftr-build/craftr/wiki/Python-Tools
-
-__Upcoming Features__
-
-- [ ] Support for OpenCL, CUDA, Vala
 
 __Requirements__
 
 - [Ninja][]
-- Python 3.4
+- [Python][] 3.4 or higher
 - see [requirements.txt](requirements.txt)
 
 __Why another build tool?__
 
-Because I think most other available options sucks. That's why.
+Because (imho) all other available options suck. And don't even get me
+started 'bout IDEs.
 
 ----
 
-<p align="center">Copyright &copy; 2015  Niklas Rosenstein</p>
+<p align="center">MIT Licensed -- Copyright &copy; 2015  Niklas Rosenstein</p>
 
   [Ninja]: https://github.com/ninja-build/ninja
+  [Python]: https://www.python.org/
   [wiki]: https://github.com/craftr-build/craftr/wiki
-  [craftr-daemon]: https://github.com/craftr-build/craftr/wiki/Call-Python-functions-from-Ninja
+  [wiki_Tasks]: https://github.com/craftr-build/craftr/wiki/General#tasks
