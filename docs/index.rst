@@ -33,9 +33,9 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
 **Contents**:
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
-  Introduction <self>
+  self
   compiler_abstraction
   rts
   magic

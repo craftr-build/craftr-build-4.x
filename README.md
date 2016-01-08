@@ -1,6 +1,9 @@
 <h1>
   Craftr
   <a href="https://travis-ci.org/craftr-build/craftr"><img alt="Build Status" src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"/></a>
+  <a href='http://craftr.readthedocs.org/en/latest/?badge=latest'>
+    <img src='https://readthedocs.org/projects/craftr/badge/?version=latest' alt='Documentation Status' />
+  </a>
   <img align="right" height="85" src="http://i.imgur.com/i3hYFZ3.png"/>
 </h1>
 
@@ -23,7 +26,7 @@ program = ld.link(
 __Key Features__
 
 * Modular builds written in Python
-* Combine them with [Tasks][wiki_Tasks]
+* Combine them with [Tasks][docs_Tasks]
 * Easily extensible framework
 * Builtin support for C/C++ (MSVC, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
 
@@ -33,7 +36,7 @@ __Upcoming Features__
 
 __Additional Links__
 
-* [Documentation](https://github.com/craftr-build/craftr/wiki)
+* [Documentation](http://craftr.readthedocs.org/en/latest/?badge=latest)
 * [Craftr extension build modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
 * [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
 
@@ -45,8 +48,7 @@ __Requirements__
 
 __Why another build tool?__
 
-Because (imho) all other available options suck. And don't even get me
-started 'bout IDEs.
+Because (imho) all other available options suck.
 
 ----
 
@@ -54,5 +56,4 @@ started 'bout IDEs.
 
   [Ninja]: https://github.com/ninja-build/ninja
   [Python]: https://www.python.org/
-  [wiki]: https://github.com/craftr-build/craftr/wiki
-  [wiki_Tasks]: https://github.com/craftr-build/craftr/wiki/General#tasks
+  [docs_Tasks]: http://craftr.readthedocs.org/en/latest/?badge=latest#tasks
