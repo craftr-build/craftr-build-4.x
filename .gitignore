@@ -3,3 +3,4 @@
 *.egg-info
 test/
 build/
+docs/_build/
