@@ -14,6 +14,7 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
     sources = path.glob('src/*.cpp')
   )
   program = ld.link(
+    output = 'main',
     inputs = obj
   )
 

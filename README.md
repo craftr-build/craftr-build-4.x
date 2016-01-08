@@ -19,6 +19,7 @@ obj = cxx.compile(
   sources = path.glob('src/*.cpp')
 )
 program = ld.link(
+  output = 'main',
   inputs = obj
 )
 ```
