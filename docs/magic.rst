@@ -1,5 +1,5 @@
-Craftr magic revealed
-=====================
+Craftr Magic Explained
+=======================
 
 Craftr uses some magic tricks behind the scenes to make the interface
 as convenient as possible. Most of the magic comes from the :mod:`craftr.magic`

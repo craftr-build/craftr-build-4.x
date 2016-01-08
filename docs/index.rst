@@ -36,6 +36,7 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
   :maxdepth: 1
 
   self
+  ext
   api
   compiler_abstraction
   rts

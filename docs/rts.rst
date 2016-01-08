@@ -1,5 +1,5 @@
-Craftr RTS & Python Tools
-=========================
+RTS & Python Tools
+==================
 
 Craftr allows you to create Python (command-line) Tools inside the ``Craftfile`` that Ninja
 can call through the **Craftr RTS** (runtime server). These tools are all executed in the

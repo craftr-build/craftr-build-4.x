@@ -6,27 +6,47 @@ API Documentation
 This part of the documentation contains the API reference of the functions
 and classes that can be used in Craftfiles.
 
-Classes
--------
+Functions
+---------
 
-.. autoclass:: Session
-  :members:
-.. autoclass:: Target
-  :members:
-.. autoclass:: TargetBuilder
-  :members:
-.. autoclass:: Framework
-  :members:
-.. autoclass:: FrameworkJoin
-  :members:
-
-Logging
--------
+.. autofunction:: return_
+.. autofunction:: expand_inputs
+.. autofunction:: import_file
+.. autofunction:: import_module
 
 .. autofunction:: debug
 .. autofunction:: info
 .. autofunction:: warn
 .. autofunction:: error
+
+Session Objects
+---------------
+
+.. autoclass:: Session
+  :members:
+
+Target Objects
+--------------
+
+.. autoclass:: Target
+  :members:
+
+TargetBuilder Objects
+---------------------
+.. autoclass:: TargetBuilder
+  :members:
+
+Framework Objects
+-----------------
+
+.. autoclass:: Framework
+  :members:
+
+FrameworkJoin Objects
+----------------------
+
+.. autoclass:: FrameworkJoin
+  :members:
 
 The ``path`` module
 -------------------

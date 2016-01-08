@@ -45,34 +45,85 @@ _sentinel = object()
 
 
 class Session(object):
-  ''' The `Session` object is the manage of a meta build session that
-  manages the craftr modules and build `Target`s.
+  ''' This class manages a build session and encapsulates all Craftr
+  modules and :class:`Targets<Target>`.
 
-  Attributes:
-    path: A list of additional search paths for Craftr modules.
-    modules: A dictionary of craftr extension modules, without the
-      `craftr.ext.` prefix.
-    targets: A dictionary mapping full target names to actual `Target`
-      objects that have been created. The `Target` constructors adds
-      the object to this dictionary automatically.
-    server: An `rts.CraftrRuntimeServer` object that is started when
-      the session context is entered and stopped it is exited.
-    server_bind: A tuple of `(host, port)` for the address to bind the
-      server to, or None for `localhost` and a random system assigned
-      port.
-    rts_funcs: A dictionary mapping the full identifier of a Python
-      function to the actual function object that can be called using
-      the Craftr S-COM interface.
-    ext_importer: A `ext.CraftrImporter` object that handles the
-      importing of Craftr extension modules.
-    var: A dictionary of variables that will be exported to the Ninja
-      build definitions file.
-    verbosity: Logging verbosity level, defaults to 0.
-    strace_depth: The maximum number of frames to print on a stack
-      trace of a logging output with `info()`, `warn()` or `error()`.
-      Defaults to 3.
-    export: Set to True when a `build.ninja` file is generated.
-    '''
+  .. attribute:: cwd
+
+    The original working directory from which Craftr was invoked, or
+    the directory specified with the ``-p`` command-line option. This
+    is different than the current working directory since Craftr changes
+    to the build directory immediately.
+
+  .. attribute:: env
+
+    A dictionary of environment variables, initialized as a copy of
+    :data:`os.environ`. In a Craftfile, you can use :data:`os.environ`
+    or the alias :data:`craftr.environ` instead, which is more convenient
+    that accessing ``session.env``.
+
+  .. attribute:: path
+
+    A list of search paths for Craftr extension modules. See :doc:`ext`.
+
+  .. attribute:: modules
+
+    A dictionary of Craftr extension modules. Key is the module name
+    without the ``craftr.ext.`` prefix.
+
+  .. attribute:: targets
+
+    A dictionary mapping the full identifier to :class:`Target` objects
+    that have been declared during the build session. When the Session
+    is created, a ``clean`` Target which calls ``ninja -t clean`` is
+    always created automatically.
+
+  .. attribute:: server
+
+    An :class:`rts.CraftrRuntimeServer` object that is started when
+    the session context is entered with :func:`magic.enter_context`
+    and stopped when the context is exited. See :meth:`on_context_enter`.
+
+  .. attribute:: server_bind
+
+    A tuple of ``(host, port)`` which the :attr:`server` will be
+    bound to when it is started. Defaults to None, in which case
+    the server is bound to the localhost on a random port.
+
+  .. attribute:: rst_funcs
+
+    A dictionary that contains function objects that are handled by
+    the :doc:`Craftr RTS <rts>`. Functions in this dictionary must
+    accept exactly one argument, being a list of command-line arguments
+    passed to the ``craftr-rts`` program.
+
+  .. attribute:: ext_importer
+
+    A :class:`ext.CraftrImporter` object that handles the importing of
+    Craftr extension modules. See :doc:`ext`.
+
+  .. attribute:: var
+
+    A dictionary of variables that will be exported to the Ninja manifest.
+
+  .. attribute:: verbosity
+
+    The logging verbosity level. Defaults to 0. Used by the logging
+    functions :func:`debug`, :func:`info`, :func:`warn` and :func:`error`.
+
+  .. attribute:: strace_depth:
+
+    The logging functions may print a stack trace of the log call when
+    the verbosity is high enough. This defines the depth of the stack
+    trace. Defaults to 3.
+
+  .. attribute:: export
+
+    This is set to True when the ``-e`` option was specified on the
+    command-line, meaning that a Ninja manifest will be exported. Some
+    projects eventually need to export additional files before running
+    Ninja, for example with :meth:`TargetBuilder.write_command_file`.
+  '''
 
   def __init__(self, cwd=None, path=None, server_bind=None):
     super().__init__()
@@ -123,11 +174,12 @@ class Session(object):
     return temp_mod
 
   def update(self):
-    ''' See `extr.CraftrImporter.update()`. '''
+    ''' Alias for :meth:`Session.ext_importer.update()<
+    ext.CraftrImporter.update>`. '''
 
     self.ext_importer.update()
 
-  def start_server(self):
+  def _start_server(self):
     # Start the Craftr Server to enable cross-process invocation
     # of Python functions.
     if self.server_bind:
@@ -137,11 +189,25 @@ class Session(object):
     self.server.serve_forever_async()
     environ['CRAFTR_RTS'] = '{0}:{1}'.format(self.server.host, self.server.port)
 
-  def stop_server(self):
+  def _stop_server(self):
     self.server.stop()
     self.server.close()
 
   def on_context_enter(self, prev):
+    ''' Called when entering the Session context with
+    :func:`magic.enter_context`. Does the following things:
+
+    * Sets up the :data`os.environ` with the values from :attr:`Session.env`
+    * Adds the :attr:`Session.ext_importer` to :data:`sys.meta_path`
+    * Starts the Craftr Runtime Server (:attr:`Session.server`) and sets
+      the ``CRAFTR_RTS`` environment variable
+
+    .. note:: A copy of the original :data:`os.environ` is saved and later
+      restored in :meth:`on_context_leave`. The :data:`os.environ` object
+      can not be replaced by another object, that is why we change its
+      values in-place.
+    '''
+
     if prev is not None:
       raise RuntimeError('session context can not be nested')
 
@@ -155,14 +221,21 @@ class Session(object):
     sys.meta_path.append(self.ext_importer)
     self.update()
 
-    self.start_server()
+    self._start_server()
 
   def on_context_leave(self):
-    ''' Remove all `craftr.ext.` modules from `sys.modules` and make
-    sure they're all in `Session.modules` (the modules are expected
-    to be put there by the `craftr.ext.CraftrImporter`). '''
+    ''' Called when the context manager entered with
+    :func:`magic.enter_context` is exited. Undos all of the stuff
+    that :meth:`on_context_enter` did and more.
 
-    self.stop_server()
+    * Stop the Craftr Runtime Server
+    * Restore the :data:`os.environ` dictionary
+    * Removes all ``craftr.ext.`` modules from :data:`sys.modules` and
+      ensures they are in :attr:`Session.modules` (they are expected to
+      be put there from the :class:`ext.CraftrImporter`).
+    '''
+
+    self._stop_server()
 
     # Restore the original values of os.environ.
     self.env = environ.copy()
@@ -185,45 +258,113 @@ class Session(object):
 
 class Target(object):
   ''' This class is a direct representation of a Ninja rule and the
-  corresponding in- and output files that will be built using that rule.
+  corresponding in- and output files. Will be rendered into a ``rule``
+  and one or many ``build`` statements in the Ninja manifest.
 
-  Attributes:
-    name: The name of the target. This is usually deduced from the
-      variable the target is assigned to if no explicit name was
-      passed to the `Target` constructor. Note that the actualy
-      identifier of the target that can be passed to Ninja is
-      concatenated with the `module` identifier.
-    module: A Craftr extension module which this target belongs to. It
-      can be specified on construction manually, or the current active
-      module is used automatically.
-    command: A list of strings that represents the command to execute.
-    inputs: A list of filenames that are listed as direct inputs.
-    outputs: A list of filenames that are generated by the target.
-    implicit_deps: A list of filenames that mark the target as dirty
-      if they changed and will cause it to be rebuilt, but that are
-      not taken as direct input files (i.e. `$in` does not expand these
-      files).
-    order_only_deps: See "Order-only dependencies" in the [Ninja Manual][].
-    foreach: A boolean value that determines if the command is appliead
-      for each pair of filenames in `inputs` and `outputs`, or invoked
-      only once. Note that if this is True, the number of elements in
-      `inputs` and `outputs` must match!
-    description: A description of the target to display when it is being
-      built. This ends up as a variable definition to the target's rule,
-      so you may use variables in this as well.
-    pool: The name of the build pool. Defaults to None. Can be "console"
-      for "targets" that don't actually build files but run a program.
-      Craftr ensures that targets in the "console" pool are never
-      executed implicitly when running Ninja.  # xxx: todo!
-    deps: The mode for automatic dependency detection for C/C++ targets.
-      See the "C/C++ Header Depenencies" section in the [Ninja Manual][].
-    depfile: A filename that contains additional dependencies.
-    msvc_deps_prefix: The MSVC dependencies prefix to be used for the rule.
-    explicit: If True, the target will only be built by Ninja if it is
-      explicitly targeted from the command-line or required by another
-      target. Defaults to False.
+  .. attribute:: name
 
-  [Ninja Manual]: https://ninja-build.org/manual.html
+    The name of the target. This is usually deduced from the
+    variable the target is assigned to if no explicit name was
+    passed to the :class:`Target` constructor. Note that the
+    actual name of the generated Ninja rule must be read from
+    :attr:`fullname`.
+
+  .. attribute:: module
+
+    The Craftr extension module this target belongs to. Defaults to
+    the currently executed module (retrieved from the thread-local
+    :data:`module`). Can be None, but only if there is no module
+    currently being executed.
+
+  .. attribute:: command
+
+    A list of strings that represents the command to execute. A string
+    can be passed to the constructor in which case it is parsed with
+    :func:`shell.quote`.
+
+  .. attribute:: inputs
+
+    A list of filenames that are listed as inputs to the target and
+    that are substituted for ``$in`` and ``$in_newline`` during the
+    Ninja execution. Can be None. The :class:`Target` constructor
+    expands the passed argument with :func:`expand_inputs`, thus
+    also accepts a single filename, Target or a list with Targets
+    and/or filenames.
+
+  .. attribute:: outputs
+
+    A list of filenames that are listed as outputs of the target and
+    that are substituted for ``$out`` during the Ninja execution.
+    Can be None. The :class:`Target` constructor accepts a list of
+    filenames or a single filename for this attribute.
+
+    .. note:: Ninja does not support multiple outputs for a single
+      ``build`` instruction, thus, multiple outputs are usually only
+      used with :attr:`foreach` set to True.
+
+  .. attribute:: implicit_deps
+
+      A list of filenames that are required to build the Target,
+      additionally to the :attr:`inputs`, but are not expanded by
+      the ``$in`` variable in Ninja. See "Implicit dependencies"
+      in the `Ninja Manual`_.
+
+  .. attribute:: order_only_deps
+
+    See "Order-only dependencies" in the `Ninja Manual`_.
+
+  .. attribute:: foreach
+
+    If this is set to True, the number of :attr:`inputs` must match
+    the number of :attr:`outputs`. Instead of generating a single
+    ``build`` instruction in the Ninja manifest, an instruction for
+    each input/output pair will be created instead. Defaults to False.
+
+  .. attribute:: description
+
+    A description of the Target. Will be added to the generated Ninja
+    rule. Defaults to None.
+
+  .. attribute:: pool
+
+    The name of the build pool. Defaults to None. Can be ``"console"``
+    for Targets that don't actually build files but run a program. Craftr
+    will treat Targets in that pool as if :attr:`explicit` is True.
+
+  .. attribute:: deps
+
+    The mode for automatic dependency detection for C/C++ targets.
+    See the "C/C++ Header Depenencies" section in the `Ninja Manual`_.
+
+  .. attribute:: depfile
+
+    A filename that contains additional dependencies.
+
+  .. attribute:: msvc_deps_prefix
+
+    The MSVC dependencies prefix to be used for the rule.
+
+  .. attribute:: frameworks
+
+    A list of :class:`Frameworks<Framework>` that are used by the Target.
+    Rule functions that take other Targets as inputs can include this list.
+    For example, a C++ compiler might add a Framework with ``libs = ['c++']``
+    to a Target so that the Linker to which the C++ object files target is
+    passed automatically knows to link with the ``c++`` library.
+
+    Usually, a rule function uses the :class:`TargetBuilder` (which
+    internally uses :meth:`expand_inputs`) to collect all Frameworks
+    used in the input targets.
+
+  .. attribute:: explicit
+
+    If True, the target will only be built by Ninja if it is explicitly
+    specified on the command-line or if it is required by another target.
+    Defaults to False.
+
+  .. automethod:: Target.__lshift__
+
+  .. _Ninja Manual: https://ninja-build.org/manual.html
   '''
 
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
@@ -291,6 +432,12 @@ class Target(object):
     return '<Target {self.fullname!r}{command}{pool}>'.format(**locals())
 
   def __lshift__(self, other):
+    ''' Shift operator to add to the list of :attr:`implicit_deps`.
+
+    .. note:: If *other* is or contains a :class:`Target`, the targets
+      frameworks are *not* added to this Target's framework list!
+    '''
+
     # xxx: Should we append the frameworks of the input targets to the
     # frameworks of this target?
     self.implicit_deps += expand_inputs(other)
@@ -308,6 +455,10 @@ class Target(object):
 
   @property
   def fullname(self):
+    ''' The full identifier of the Target. If the Target is assigned
+    to a :attr:`module`, this is the module name and the :attr:`Target.name`,
+    otherwise the same as :attr:`Target.name`. '''
+
     if self.module:
       return self.module.project_name + '.' + self.name
     else:
@@ -316,17 +467,58 @@ class Target(object):
 
 class TargetBuilder(object):
   ''' This is a helper class to make it easy to implement rule functions
-  that create a `Target`. Rule functions usually depend on inputs (being
-  files or other `Target`s that can also bring additional frameworks),
-  rule-level settings and frameworks. The `TargetBuilder` takes all of
-  this into account and prepares the data conveniently. '''
+  that create a :class:`Target`. Rule functions usually depend on inputs
+  (being files or other Targets that can also contain additional frameworks),
+  rule-level settings and :class:`Frameworks<Framework>`. The TargetBuilder
+  takes all of this into account and prepares the data conveniently.
+
+  :param inputs: Inputs for the target. Processed by :func:`expand_inputs`.
+    Use :attr:`TargetBuilder.inputs` instead of the argument you passed
+    here to access the inputs. Must be a string, :class:`Target`, list or None.
+  :param frameworks: A list of frameworks to take into account.
+  :param kwargs: Additional keyword-arguments that have been passed to the
+    rule-function. These will be turned into a new :class:`Framework` object.
+    :meth:`create_target` will check if all arguments of this dictionary
+    have been taken into account and will yield a warning if not.
+  :param module:
+  :param name:
+  :param stacklevel:
+
+  .. attribute:: caller
+
+  .. attribute:: inputs
+
+  .. attribute:: frameworks
+
+  .. attribute:: kwargs
+
+  .. attribute:: options
+
+    A :class:`FrameworkJoin` object that is used to read settings from
+    the list of frameworks collected from the input Targets, the
+    additional frameworks specified to the :class:`TargetBuilder`
+    constructor and the specified ``kwargs`` dictionary.
+
+  .. attribute:: module
+
+  .. attribute:: name
+
+    The name of the Target that is being built.
+
+  .. attribute:: target
+
+    A dictonary of additional keyword arguments to pass to the
+    :class:`Target` constructor in :meth:`create_target`.
+
+  .. automethod:: TargetBuilder.__getitem__
+  '''
 
   def __init__(self, inputs, frameworks, kwargs, module=None, name=None, stacklevel=1):
     self.caller = magic.get_caller(stacklevel + 1)
     frameworks = list(frameworks)
     self.inputs = expand_inputs(inputs, frameworks)
     self.frameworks = frameworks
-    self.caller_kwargs = kwargs
+    self.kwargs = kwargs
     self.options = FrameworkJoin(Framework(self.caller, kwargs), *frameworks)
     self.module = module or craftr.module()
     self.name = name
@@ -345,22 +537,36 @@ class TargetBuilder(object):
 
   @property
   def fullname(self):
+    ''' The full name of the Target that is being built. '''
+
     return self.module.project_name + '.' + self.name
 
   def __getitem__(self, key):
+    ''' Alias for :meth:`FrameworkJoin.__getitem__`. '''
+
     return self.options[key]
 
   def get(self, key, default=None):
+    ''' Alias for :meth:`FrameworkJoin.get`. '''
+
     return self.options.get(key, default)
 
   def merge(self, key):
+    ''' Alias for :meth:`FrameworkJoin.merge`. '''
+
     return self.options.merge(key)
 
   def log(self, level, *args, stacklevel=1, **kwargs):
+    ''' Log function that includes the :attr:`fullname`. '''
+
     module_name = '{0}'.format(self.module.project_name, self.name)
     log(level, *args, module_name=module_name, stacklevel=stacklevel + 1, **kwargs)
 
   def invalid_option(self, option_name, option_value=_sentinel, cause=None):
+    ''' Use this method in a rule function if you found the value of an
+    option has an invalid option. You should raise a :class:`ValueError`
+    on a fatal error instead. '''
+
     if option_value is _sentinel:
       option_value = self[option_name]
     message = 'invalid option: {0} = {1!r}'.format(option_name, option_value)
@@ -369,6 +575,9 @@ class TargetBuilder(object):
     self.log('warn', message, stacklevel=2)
 
   def add_framework(self, __fw_or_name, __fw_dict=None, **kwargs):
+    ''' Add or create a new Framework and add it to :attr:`options`
+    and :attr:`frameworks`. '''
+
     if not isinstance(__fw_or_name, Framework):
       fw = Framework(__fw_or_name, __fw_dict, **kwargs)
     else:
@@ -379,6 +588,9 @@ class TargetBuilder(object):
     return fw
 
   def expand_inputs(self, inputs):
+    ''' Wrapper for :func:`expand_inputs` that will add the Frameworks
+    extracted from the *inputs* to :attr:`options` and :attr:`frameworks`. '''
+
     frameworks = []
     result = expand_inputs(inputs, frameworks)
     self.frameworks += frameworks
@@ -386,8 +598,22 @@ class TargetBuilder(object):
     return result
 
   def create_target(self, command, inputs=None, outputs=None, **kwargs):
+    ''' Create a :class:`Target` and return it.
+
+    :param command: The command-line for the Target.
+    :param inputs: The inputs for the Target. If None, the
+      :attr:`TargetBuilder.inputs` will be used instead.
+    :param outputs: THe outputs for the Target.
+    :param kwargs: Additional keyword arguments for the Target constructor.
+      Make sure that none conflicts with the :attr:`target` dictionary.
+
+    .. note:: This function will yield a warning when there are any keys
+      in the :attr:`kwargs` dictionary that have not been read from the
+      :class:`options`.
+    '''
+
     # Complain about unhandled options.
-    unused_options = self.caller_kwargs.keys() - self.options.used_keys
+    unused_options = self.kwargs.keys() - self.options.used_keys
     if unused_options:
       self.log('info', 'unused options for {0}():'.format(self.caller), unused_options, stacklevel=2)
 
@@ -425,21 +651,22 @@ class TargetBuilder(object):
 
 
 class Framework(dict):
-  ''' A framework rerpresentation a set of options that are to be taken
+  ''' A Framework represents a set of options that are to be taken
   into account by compiler classes. Eg. you might create a framework
   that contains the additional information and options required to
   compile code using OpenCL and pass that to the compiler interface.
 
-  Compiler interfaces may also add items to `Target.frameworks`
-  that can be taken into account by other target rules. `expand_inputs()`
+  Compiler interfaces may also add items to :attr:`Target.frameworks`
+  that can be taken into account by other target rules. :func:`expand_inputs()`
   returns a list of frameworks that are being used in the inputs.
 
-  Use the `Framework.Join` class to create an object to process the
+  Use the :class:`FrameworkJoin` class to create an object to process the
   data from multiple frameworks.
 
-  Arguments:
-    __fw_name: The name of the Framework. If omitted, the assigned
-      name of the calling module will be used- '''
+  :param __fw_name: The name of the Framework. If omitted, the assigned
+    name of the calling module will be used.
+  :param __init_dict: A dictionary to initialize the Framework with.
+  :param kwargs: Additional key/value pairs for the Framework. '''
 
   def __init__(self, __fw_name=None, __init_dict=None, **kwargs):
     super().__init__()
@@ -455,18 +682,31 @@ class Framework(dict):
 
 
 class FrameworkJoin(object):
-  ''' This class is used to process a set of `Framework`s and retreive
-  relevant information from it. For some options, you might want to read
-  the first value that is specified in any of the frameworks, for another
-  you may want to create a list of all values in the frameworks. This is
-  what the `FrameworkJoin` allows you to do.
+  ''' This class is used to process a set of :class:`Frameworks<Framework>`
+  and retreive relevant information from it. For some options, you might
+  want to read the first value that is specified in any of the frameworks,
+  for another you may want to create a list of all values in the frameworks.
+  This is what the FrameworkJoin allows you to do.
 
-  ```python
-  >>> fw1 = Framework('foo', defines=['DEBUG'])
-  >>> fw2 = Framework('bar', defines=['DO_STUFF'])
-  >>> FrameworkJoin(fw1, fw2).merge('defines')
-  ['DEBUG', 'DO_STUFF']
-  ```
+  .. code-block:: python
+
+    >>> fw1 = Framework('fw2', defines=['DEBUG'])
+    >>> fw2 = Framework(defines=['DO_STUFF'])
+    >>> print(fw2.name)
+    'fw2'
+    >>> FrameworkJoin(fw1, fw2).merge('defines')
+    ['DEBUG', 'DO_STUFF']
+
+  .. attribute:: used_keys
+
+    A set of keys that have been accessed via :meth:`__getitem__`,
+    :meth:`get` and :meth:`merge`.
+
+  .. attribute:: frameworks
+
+    The list of :class:`Framework` objects.
+
+  .. automethod:: FrameworkJoin.__iadd__
   '''
 
   def __init__(self, *frameworks):
@@ -538,10 +778,10 @@ class ModuleReturn(Exception):
 
 
 def return_():
-  ''' Raise a `ModuleReturn` exception, causing the module execution
+  ''' Raise a :class:`ModuleReturn` exception, causing the module execution
   to be aborted and returning back to the parent module. Note that this
   function can only be called from a Craftr modules global stack frame,
-  otherwise a `RuntimeError` will be raised. '''
+  otherwise a :class:`RuntimeError` will be raised. '''
 
   if magic.get_frame(1).f_globals is not vars(module):
     raise RuntimeError('return_() can not be called outside the current '
@@ -551,11 +791,11 @@ def return_():
 
 def expand_inputs(inputs, frameworks=None):
   ''' Expands a list of inputs into a list of filenames. An input is a
-  string (filename) or a `Target` object from which the `Target.outputs`
-  are used. Returns a list of strings.
+  string (filename) or a :class:`Target` object from which the
+  :attr:`Target.outputs` are used. Returns a list of strings.
 
-  If *frameworks* is specified, it must be a `list` to which the
-  frameworks of all input `Target`s will be appended. '''
+  If *frameworks* is specified, it must be a :class:`list` to which the
+  frameworks of all input :class:`Target` objects will be appended. '''
 
   if frameworks is not None and not isinstance(frameworks, list):
     raise TypeError('frameworks must be None or list')
