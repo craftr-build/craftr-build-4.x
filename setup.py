@@ -26,7 +26,7 @@ import pip.req, pip.download
 import shutil
 import sys
 
-if sys.version < '3.4':
+if os.environ.get('READTHEDOCS') != 'True' and sys.version < '3.4':
   sys.exit("Craftr requires Python 3.4 or greater.")
 
 # parse_requirements() interface has changed in Pip 6.0

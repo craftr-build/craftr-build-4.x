@@ -22,8 +22,9 @@
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
 __version__ = '0.20.0-dev'
 
+import os
 import sys
-if sys.version < '3.4':
+if os.environ.get('READTHEDOCS') != 'True' and sys.version < '3.4':
   raise EnvironmentError('craftr requires Python3.4')
 
 from os import environ
