@@ -24,7 +24,7 @@ __version__ = '0.20.0-dev'
 
 import os
 import sys
-if os.environ.get('READTHEDOCS') != 'True' and sys.version < '3.4':
+if sys.version < '3.4':
   raise EnvironmentError('craftr requires Python3.4')
 
 from os import environ
