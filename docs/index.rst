@@ -69,28 +69,24 @@ Getting Started
 
 There is usually a file named "Craftfile" in your current working directory.
 This file is a Python script that will be executed when you run ``craftr``.
-Every Craftfile must have a module name declaration in its head. It can be
-anywhere in the first comment-block of the file.
+Every Craftfile must have a module name declaration which can be anywhere
+in the first comment block at the beginning of the file. Craftr will parse
+the comment and use it to identify the module. It will also create the global
+variable `project_name` and `project_dir`.
 
 .. code-block:: python
 
-  # -*- mode: python; -*-
-  # Copyright (C) 2016  Niklas Rosenstein
-  # craftr_module(my_module_name)
-  print("Hello Craftr! This is", project_name)
+  # craftr_module(my_project)
+  print("Hello Craftr! This is", project_name, "from", project_dir)
 
 To run this script, simply type ``craftr`` in your command-line.
 
 ::
 
   $ craftr
-  Hello Craftr! This is my_module_name
+  Hello Craftr! This is my_project from /home/niklas/Desktop/my_project
   $ ls
   Craftfile build
-
-.. note:: You can also explicitly specify the name of the Craftr module
-  to execute by using the ``-m`` option like ``craftr -m my_module_name``
-  (see `Command Line Interface`_ for more information).
 
 .. _BuildDirSwitch:
 
@@ -100,6 +96,10 @@ the build directory before executing modules and exporting a Ninja manifest,
 thus the build directory must exist before anything else can happen. The
 default build directory is called "build" and you can change it with the
 ``-d`` or ``-p`` command line options.
+
+.. note:: You can also explicitly specify the name of the Craftr module
+  to execute by using the ``-m`` option like ``craftr -m my_module_name``
+  (see `Command Line Interface`_ for more information).
 
 Targets
 -------
