@@ -38,9 +38,7 @@ scripts = ['bin/craftr', 'bin/craftr-rts']
 
 # On Windows, we need this scripts with a .py suffix.
 if os.name == 'nt':
-  if not os.path.isdir('build/bin'):
-    os.makedirs('build/bin')
-  new_scripts = [os.path.join('build', x) + '.py' for x in scripts]
+  new_scripts = [x + '.py' for x in scripts]
   for src, dst in zip(scripts, new_scripts):
     shutil.copy2(src, dst)
   scripts = new_scripts
