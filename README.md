@@ -12,8 +12,10 @@ Meta build system based on [Ninja][] and [Python 3.4+][Python].
 
 ```python
 # craftr_module(simple)
+# A basic example to compile a C++ program on any supported platform.
+
 from craftr import *
-from craftr.ext.platform cxx, ld
+from craftr.ext.platform import cxx, ld
 
 obj = cxx.compile(
   sources = path.glob('src/*.cpp')

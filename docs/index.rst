@@ -7,6 +7,8 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
 .. code-block:: python
 
   # craftr_module(simple)
+  # A basic example to compile a C++ program on any supported platform.
+
   from craftr import *
   from craftr.ext.platform import cxx, ld
 
