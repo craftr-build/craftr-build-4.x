@@ -148,8 +148,9 @@ class Session(object):
       command = 'ninja -t clean',
       inputs = None,
       outputs = None,
-      name='clean',
-      module=None)
+      name = 'clean',
+      module = None,
+      explicit = True)
 
   def exec_if_exists(self, filename):
     ''' Executes *filename* if it exists. Used for running the Craftr
