@@ -255,7 +255,7 @@ def main():
         with open('build.ninja', 'w') as fp:
           craftr.ninja.export(fp, module)
     else:
-      _set_env(args.D)
+      _set_env(args.D, args.m)
       _abs_env(old_cwd)
 
     if args.c:
