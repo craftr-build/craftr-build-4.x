@@ -20,13 +20,9 @@
 # THE SOFTWARE.
 
 from craftr import *
-from craftr.tty import clear_line
-from functools import partial
+from craftr.utils import slotobject
 from fnmatch import fnmatch
 
-import collections
-import errno
-import sys
 import zipfile
 
 
@@ -36,7 +32,7 @@ class Archive(object):
   specified, it is derived from the *prefix*. The *format* must
   be `'zip'` for now. '''
 
-  File = collections.namedtuple('File', 'name rel_dir arc_name')
+  File = slotobject('File', 'name arc_name')
 
   def __init__(self, name = None, base_dir = None, prefix = None, format = 'zip'):
     assert format == 'zip', "format must be 'zip' for now"
@@ -88,8 +84,12 @@ class Archive(object):
           assert not arc_name
           path_parts = path.split_path(name)
           arc_name = path.sep.join(path_parts[-parts:])
+        if not arc_name:
+          arc_name = path.relpath(name, rel_dir)
+          if path.sep != '/':
+            arc_name = arc_name.replace(path.sep, '/')
         name = path.get_long_path_name(name)
-        file = Archive.File(name, rel_dir, arc_name)
+        file = Archive.File(name, arc_name)
         self._files.append(file)
     else:
       raise TypeError('name must be str/list/tuple')
@@ -107,11 +107,30 @@ class Archive(object):
 
     self._files = [file for file in self._files if not filter(file.name)]
 
+  def rename(self, old_arcname, new_arcname):
+    ''' Rename the *old_arcname* to *new_arcname*. This will take
+    folders into account. '''
+
+    old_arcname_dir = old_arcname
+    if not old_arcname.endswith('/'):
+      old_arcname_dir += '/'
+    new_arcname_dir = new_arcname
+    if not new_arcname_dir.endswith('/'):
+      new_arcname_dir += '/'
+
+    for file in self._files:
+      if file.arc_name == old_arcname:
+        assert new_arcname
+        file.arc_name = new_arcname
+      elif file.arc_name.startswith(old_arcname_dir):
+        file.arc_name = file.arc_name[len(old_arcname_dir):]
+        if new_arcname:
+          file.arc_name = new_arcname_dir + file.arc_name
+
   def save(self):
     ''' Save the archive. '''
 
     zf = zipfile.ZipFile(self.name, 'w')
     for file in self._files:
-      arc_name = file.arc_name or path.relpath(file.name, file.rel_dir)
-      zf.write(file.name, arc_name)
+      zf.write(file.name, file.arc_name)
     zf.close()
