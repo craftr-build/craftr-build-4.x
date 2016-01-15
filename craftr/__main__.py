@@ -123,6 +123,7 @@ def main():
     'a dot, in which case it is prefixed with the current main modules name.')
   parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
   parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
+  parser.add_argument('-I', default=[], action='append', help='Add a path to the Craftr extension module search path.')
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
   parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
   parser.add_argument('--rc', help='Execute the specified Craftr startup file. CAN be paired with --no-rc')
@@ -145,6 +146,9 @@ def main():
       args.d = 'build'
   if not args.p:
     args.p = os.getcwd()
+
+  # Normalize the search path directories.
+  args.I = path.normpath(args.I)
 
   if not args.m:
     cfile = path.join(args.p, 'Craftfile')
@@ -202,7 +206,7 @@ def main():
   elif not do_run:
     info("skipping execution phase.")
 
-  session = craftr.Session(cwd=old_cwd, path=[old_cwd], server_bind=args.rts_at)
+  session = craftr.Session(cwd=old_cwd, path=[old_cwd] + args.I, server_bind=args.rts_at)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
 
