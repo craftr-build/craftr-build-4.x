@@ -291,6 +291,25 @@ Command Line Interface
     --rts-at RTS_AT       Manually specify the host:port for the Craftr runtime
                           server.
 
+.. note::
+
+  Craftr will try to skip the phase of executing the Craftfile if possible.
+  For example, if you only use the ``-b`` option to invoke Ninja, Craftr
+  will inform you that the execution phase is skipped.
+
+  Also, to ensure consistency of the environment variables when building
+  with Craftr, options that are specified with the ``-D`` option are written
+  into the Ninja manifest. If ``-e`` is *not* passed, Craftr will read these
+  cached options and *prepend* them to the list of ``-D`` options.
+
+  ::
+
+    $ craftr -e -Ddebug
+    $ craftr -b
+    craftr: [INFO ]: skipping execution phase.
+    craftr: [INFO ]: prepending cached options: -Ddebug
+
+
 Target References & Build Options
 ---------------------------------
 
