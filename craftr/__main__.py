@@ -150,6 +150,13 @@ def main():
   if not args.p:
     args.p = os.getcwd()
 
+  # If we don't export a manifest and the build directory does not exist,
+  # then what the heck? User, pls.
+  if not args.e and not path.isdir(args.d):
+    error('build directory "{0}" does not exist (thus there is no '
+      'manifest). use -e'.format(args.d))
+    return 1
+
   # Normalize the search path directories.
   args.I = path.normpath(args.I)
 
