@@ -281,7 +281,7 @@ class Target(object):
 
     A list of strings that represents the command to execute. A string
     can be passed to the constructor in which case it is parsed with
-    :func:`shell.quote`.
+    :func:`shell.split`.
 
   .. attribute:: inputs
 

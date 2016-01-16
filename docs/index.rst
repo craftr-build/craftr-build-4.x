@@ -87,20 +87,29 @@ To run this script, simply type ``craftr`` in your command-line.
   $ craftr
   Hello Craftr! This is my_project from /home/niklas/Desktop/my_project
   $ ls
-  Craftfile build
+  Craftfile
+
+Craftr will automatically use the module name from the Craftfile in
+the current directory as the main module for this session. You can
+override this behaviour by using the ``-m <module_name>`` option.
 
 .. _BuildDirSwitch:
 
-You might have noticed that ``build`` directory that appeared in your
-current working directory all of the sudden. Craftr always switches to
-the build directory before executing modules and exporting a Ninja manifest,
-thus the build directory must exist before anything else can happen. The
-default build directory is called "build" and you can change it with the
-``-d`` or ``-p`` command line options.
+.. note:: Craftr will *always* change to the build directory internally
+  before executing the Craftfile and Ninja will be invoked from that
+  directory, too. The default build directory is ``build/`` but you
+  can change it with the ``-d`` option or ``-p`` option.
 
-.. note:: You can also explicitly specify the name of the Craftr module
-  to execute by using the ``-m`` option like ``craftr -m my_module_name``
-  (see `Command Line Interface`_ for more information).
+  If the build directory it switches to didn't exist from the start and
+  does not have any content after Craftr finishes, it will be deleted
+  again.
+
+  ::
+
+    $ craftr -d build_debug
+    $ # or
+    $ mkdir build_debug && cd build_debug
+    $ craftr -p ..
 
 Targets
 -------
