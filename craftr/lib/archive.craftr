@@ -40,6 +40,8 @@ class Archive(object):
       if not prefix:
         raise TypeError('neither name nor prefix argument specified')
       name = prefix + '.' + format
+    if prefix and not prefix.endswith('/'):
+      prefix += '/'
     self._files = []
     self._base_dir = base_dir or module.project_dir
     self._prefix = prefix
@@ -88,6 +90,8 @@ class Archive(object):
           arc_name = path.relpath(name, rel_dir)
           if path.sep != '/':
             arc_name = arc_name.replace(path.sep, '/')
+        if self._prefix:
+          arc_name = self._prefix + arc_name
         name = path.get_long_path_name(name)
         file = Archive.File(name, arc_name)
         self._files.append(file)
