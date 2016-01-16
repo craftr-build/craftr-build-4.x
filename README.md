@@ -1,5 +1,5 @@
 <h1>
-  Craftr
+  The Craftr build system
   <a href="https://travis-ci.org/craftr-build/craftr"><img alt="Build Status" src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"/></a>
   <a href='http://craftr.readthedocs.org/en/latest/?badge=latest'>
     <img src='https://readthedocs.org/projects/craftr/badge/?version=latest' alt='Documentation Status' />
@@ -8,7 +8,7 @@
 </h1>
 
 
-Meta build system based on [Ninja][] and [Python 3.4+][Python].
+Craftr is a build system based on [Ninja][] and [Python 3.4+][Python].
 
 ```python
 # craftr_module(simple)
