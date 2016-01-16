@@ -32,6 +32,9 @@ import shutil
 import subprocess
 import sys
 
+MANIFEST = 'build.ninja'
+
+
 def _set_env(defs, main_module_name):
   ''' This function updates the environment variables based on a list
   of strings of the format `KEY=VALUE` where each subsequent part is
@@ -206,6 +209,14 @@ def main():
   elif not do_run:
     info("skipping execution phase.")
 
+  if not args.e and path.isfile(MANIFEST):
+    # If we're not exporting the Ninja build definitions again, we'll
+    # read the ones cached in the Ninja manifest (if it exists).
+    cached_defs = craftr.ninja.extract_defs(MANIFEST)
+    if cached_defs:
+      info('prepending cached options:', ' '.join(shell.quote(x) for x in cached_defs))
+    args.D = cached_defs + args.D
+
   session = craftr.Session(cwd=old_cwd, path=[old_cwd] + args.I, server_bind=args.rts_at)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
@@ -256,8 +267,8 @@ def main():
           open('.craftr-rts', 'w').close()
 
         # Export a ninja manifest.
-        with open('build.ninja', 'w') as fp:
-          craftr.ninja.export(fp, module)
+        with open(MANIFEST, 'w') as fp:
+          craftr.ninja.export(fp, module, args.D)
     else:
       _set_env(args.D, args.m)
       _abs_env(old_cwd)
