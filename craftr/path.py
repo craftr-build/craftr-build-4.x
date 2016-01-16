@@ -333,7 +333,6 @@ def makedirs(path):
     os.makedirs(path)
 
 
-
 def get_long_path_name(path):
   ''' On Windows, this function returns the correct capitalization
   for *path*. On all other systems, this returns *path* unchanged. '''

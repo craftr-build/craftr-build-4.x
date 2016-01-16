@@ -66,14 +66,24 @@ def _abs_env(cwd=None):
   directory during execution. See craftr-build/craftr#33 . '''
 
   cwd = path.abspath(cwd) if cwd else os.getcwd()
-  def mk_abs(item):
-    if not path.isabs(item) and path.exists(item):
-      return path.join(cwd, item)
-    return item
+  def mk_abs(value):
+    # Actually on Windows, there are variables like HOMEDRIVE and
+    # SYSTEMDRIVE that look like 'C:' (without trailing backslash)
+    # and these are not seen as absolute paths and path.join()
+    # also bugs out.
+    if os.name == 'nt':
+      if len(value) == 2 and value[1] == ':':
+        # Just a drive letter.
+        return value
+    if not path.isabs(value):
+      test_path = path.normpath(path.join(cwd, value))
+      if path.exists(test_path):
+        return test_path
+    return value
 
   for key, value in list(environ.items()):
     if key == 'PATH':
-      value = path.sep.join(map(mk_abs, value.split(path.sep)))
+      value = path.pathsep.join(map(mk_abs, value.split(path.pathsep)))
     else:
       value = mk_abs(value)
     environ[key] = value
