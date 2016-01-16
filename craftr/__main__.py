@@ -191,6 +191,7 @@ def main():
   mkabst = lambda x: ((args.m + x) if (x.startswith('.')) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
+  info('Changing directory:', args.d)
   old_cwd = args.p
   os.chdir(args.d)
 
@@ -223,17 +224,17 @@ def main():
     do_run = True
 
   if not do_run and path.exists('.craftr-rts'):
-    info('can not skip execution phase, RTS feature required')
+    info('Can not skip execution phase, RTS feature required')
     do_run = True
   elif not do_run:
-    info("skipping execution phase.")
+    info("Skipping execution phase")
 
   if not args.e and path.isfile(MANIFEST):
     # If we're not exporting the Ninja build definitions again, we'll
     # read the ones cached in the Ninja manifest (if it exists).
     cached_defs = craftr.ninja.extract_defs(MANIFEST)
     if cached_defs:
-      info('prepending cached options:', ' '.join(shell.quote(x) for x in cached_defs))
+      info('Prepending cached options:', ' '.join(shell.quote(x) for x in cached_defs))
     args.D = cached_defs + args.D
 
   session = craftr.Session(cwd=old_cwd, path=[old_cwd] + args.I, server_bind=args.rts_at)
