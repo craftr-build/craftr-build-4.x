@@ -175,6 +175,7 @@ def main():
         path.relpath(cfile)))
       return errno.ENOENT
 
+  build_dir_exists = os.path.isdir(args.d)
   if not path.exists(args.d):
     os.makedirs(args.d)
   elif not path.isdir(args.d):
@@ -191,16 +192,18 @@ def main():
   mkabst = lambda x: ((args.m + x) if (x.startswith('.')) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
-  info('Changing directory:', args.d)
-  old_cwd = args.p
-  os.chdir(args.d)
+  old_cwd = path.normpath(args.p)
+  if os.getcwd() != path.normpath(args.d):
+    started_from_build_dir = False
+    os.chdir(args.d)
+    info('Changing directory:', args.d)
 
-  # If the build directory is empty after running craftr, we can
-  # delete it.
+  # If the build directory didn't exist from the start and it
+  # is empty after Craftr exits, we can delete it again.
   @atexit.register
   def _delete_build_dir():
     os.chdir(old_cwd)
-    if not os.listdir(args.d):
+    if not build_dir_exists and not os.listdir(args.d):
       os.rmdir(args.d)
 
   # Delete the .craftr-rts file that indicates that the project used
