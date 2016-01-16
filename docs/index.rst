@@ -1,5 +1,5 @@
-The Craftr meta build system
-============================
+The Craftr build system
+=======================
 
 Craftr is a cross-platform meta build system based on `Ninja`_. To whet your
 appetite, here's a simple ``Craftfile`` to build a C++ program:
@@ -41,7 +41,6 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
   self
   ext
   api
-  compiler_abstraction
   rts
   magic
 
@@ -194,7 +193,7 @@ There are a bunch of rules provided by the built-in Craftr extension modules
 to compile C/C++, C#, Java, etc. For example, the ``ext.platform`` Craftr module
 gives you access to a compiler implementation for C/C++. These are based on
 ``compiler.gcc``, ``compiler.clang`` or ``compiler.msvc`` based on your platform
-and environment. Go to :doc:`compiler_abstraction` for more information.
+and environment. Go to :ref:`compiler_abstraction` for more information.
 
 Frameworks
 ----------
