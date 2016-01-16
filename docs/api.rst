@@ -18,6 +18,7 @@ Functions
 .. autofunction:: info
 .. autofunction:: warn
 .. autofunction:: error
+.. autofunction:: craftr_min_version
 
 Session Objects
 ---------------

@@ -904,19 +904,13 @@ def _check_list_of_str(name, value):
   return value
 
 
-def min_version(version_string):
+def craftr_min_version(version_string):
   ''' Ensure the current version of Craftr is at least the version
-  specified with *version_string*, otherwise call :func:`error()`.
-
-  .. note:: When using ``from craftr import *``, this function
-    is imported as ``craftr_min_version``.
-  '''
+  specified with *version_string*, otherwise call :func:`error()`. '''
 
   if __version__ < version_string:
     error('requires at least Craftr v{0}'.format(version_string))
 
-
-craftr_min_version = min_version
 
 from craftr.logging import log, debug, info, warn, error
 from craftr import ext, path, shell, ninja, rts
