@@ -299,10 +299,6 @@ class Target(object):
     Can be None. The :class:`Target` constructor accepts a list of
     filenames or a single filename for this attribute.
 
-    .. note:: Ninja does not support multiple outputs for a single
-      ``build`` instruction, thus, multiple outputs are usually only
-      used with :attr:`foreach` set to True.
-
   .. attribute:: implicit_deps
 
       A list of filenames that are required to build the Target,
