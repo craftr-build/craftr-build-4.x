@@ -58,6 +58,7 @@ Built-in Craftr extension modules
   - :mod:`craftr.ext.compiler.yacc`
 
 - :mod:`craftr.ext.git`
+- :mod:`craftr.ext.options`
 - :mod:`craftr.ext.platform`
 
   - :mod:`craftr.ext.platform.cygwin`
