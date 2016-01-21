@@ -29,7 +29,38 @@ def detect(program):
   ''' Detects the version of the MSVC compiler from the specified
   *program* name and returns a dictionary with information that can
   be passed to the constructor of `MsvcCompiler` or raises
-  `ToolDetectionError`. '''
+  `ToolDetectionError`.
+
+  This function also supports detecting the Clang-CL compiler. '''
+
+  clang_cl_expr = r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)'
+  msvc_expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+
+  # Determine kind and version. We need to do this separately from
+  # the /showIncludes detection as Clang CL does not display a logo
+  # when being invoked.
+  #
+  # We can't use the /? option if the actual "program" is a batch
+  # script as this will print the help for batch files (Microsoft, pls).
+  # MSVC will error on -v, Clang CL will give us good info.
+  output = shell.pipe([program, '-v'], shell=True, check=False).output
+  match = re.match(clang_cl_expr, output, re.I)
+  if match:
+    # We've detected a version of Clang CL!
+    name = 'Clang-CL'
+    version = match.group(1)
+    arch = match.group(2)
+    thread_model = match.group(3)
+  else:
+    # Extract the MSVC compiler version and architecture.
+    match = re.search(msvc_expr, output, re.I)
+    if not match:
+      raise ToolDetectionError('MSVC version and architecture could not be detected\n\n' + output)
+
+    name = 'MSVC'
+    version = match.group(1)
+    arch = match.group(2)
+    thread_model = 'win32'
 
   # Determine the msvc_deps_prefix by making a small test. The
   # compilation will not succeed since no entry point is defined.
@@ -37,19 +68,11 @@ def detect(program):
   with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
     fp.write(b'#include <stddef.h>\n')
     fp.close()
+    command = [program, '/Zs', '/showIncludes', fp.name]
     try:
-      output = shell.pipe([program, '/Zs', '/showIncludes', fp.name], check=False).output
+      output = shell.pipe(command, shell=True, check=False).output
     finally:
       os.remove(fp.name)
-
-    # Extract the compiler version and architecture from stdout.
-    expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
-    match = re.search(expr, output, re.I)
-    if not match:
-      raise ToolDetectionError('MSVC version and architecture could not be detected\n\n' + output)
-
-    arch = match.group(2)
-    version = match.group(1)
 
     # Find the "Note: including file:" in the current language. We
     # assume that the structure is the same, only the words different.
@@ -66,10 +89,11 @@ def detect(program):
     deps_prefix = 'Note: including file:'
 
   return {
+    'name': name,
     'version': version,
     'version_str': output.split('\n', 1)[0].strip(),
     'target': arch,
-    'thread_model': 'win32',
+    'thread_model': thread_model,
     'msvc_deps_prefix': deps_prefix,
   }
 
@@ -86,6 +110,7 @@ class MsvcCompiler(BaseCompiler):
     if desc is None:
       desc = detect(program)
     self.desc = desc
+    self.name = desc['name']
     self.version = desc['version']
     self.target = desc['target']
     self.deps_prefix = desc['msvc_deps_prefix']
@@ -111,7 +136,7 @@ class MsvcCompiler(BaseCompiler):
     optimize = builder.get('optimize', None)
     exceptions = builder.get('exceptions', None)
     autodeps = builder.get('autodeps', True)
-    builder.target['description'] = builder.get('description', 'MSVC Compile Object ($out)')
+    builder.target['description'] = builder.get('description', '{0} Compile Object ($out)'.format(self.name))
 
     if language not in ('c', 'c++'):
       raise ValueError('invalid language: {0!r}'.format(language))

@@ -25,7 +25,7 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
 - Modular builds written in Python
 - Integrate `Tasks`_ that can be invoked from the command-line
 - Easily extensible framework
-- Builtin support for C/C++ (MSVC, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
+- Builtin support for C/C++ (MSVC, Clang-CL, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
 - **[todo]** Cross-platform support for OpenCL, CUDA, Vala
 
 **Requirements**:

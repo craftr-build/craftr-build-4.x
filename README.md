@@ -31,7 +31,7 @@ __Key Features__
 * Modular builds written in Python
 * Combine them with [Tasks][docs_Tasks]
 * Easily extensible framework
-* Builtin support for C/C++ (MSVC, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
+* Builtin support for C/C++ (MSVC, Clang-CL, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
 
 __Upcoming Features__
 

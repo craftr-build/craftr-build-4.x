@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr import path
+from craftr import path, environ
 import functools
 
 name = 'win'
@@ -38,9 +38,9 @@ def get_tool(name):
   # available in the PATH by default via VS__COMNTOOLS and even allow
   # using a GCC interface instead.
   if name == 'cc':
-    return msvc.Compiler('cl', 'c')
+    return msvc.Compiler(environ.get('CC', 'cl'), 'c')
   elif name == 'cxx':
-    return msvc.Compiler('cl', 'c++')
+    return msvc.Compiler(environ.get('CC', 'cl'), 'c++')
   elif name == 'ld':
     return msvc.Linker('link')
   elif name == 'ar':
