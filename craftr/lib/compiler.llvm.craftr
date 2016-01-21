@@ -99,7 +99,7 @@ class LlvmCompiler(BaseCompiler):
     self.name = desc['name'].lower()
     assert self.name in ('gcc', 'clang', 'llvm'), self.name
 
-  def compile(self, sources, frameworks=(), target_name=None, **kwargs):
+  def compile(self, sources, frameworks=(), target_name=None, meta=None, **kwargs):
     '''
     Supported options:
 
@@ -124,7 +124,7 @@ class LlvmCompiler(BaseCompiler):
     Target meta variables: *none*
     '''
 
-    builder = self.builder(sources, frameworks, kwargs, name=target_name)
+    builder = self.builder(sources, frameworks, kwargs, name=target_name, meta=meta)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
     fw = builder.add_framework(builder.name)
 
@@ -211,7 +211,8 @@ class LlvmCompiler(BaseCompiler):
     return builder.create_target(command, outputs=objects, foreach=True,
       description=description)
 
-  def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
+  def link(self, output, inputs, output_type='bin', frameworks=(),
+      target_name=None, meta=None, **kwargs):
     '''
     Supported options:
 

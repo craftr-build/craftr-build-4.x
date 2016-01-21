@@ -107,14 +107,17 @@ Example:
     inputs = [some_library, sources]
   )
 
+  # You can read additional properties from the Target.meta dictionary
+  info('static library path:', some_library.meta['staticlib_output'])
+  info('main path:', some_library.meta['link_output'])
 
-.. function:: cc.compile(source, frameworks=(), target_name=None, **kwargs)
-              cxx.compile(source, frameworks=(), target_name=None, **kwargs)
+.. function:: cc.compile(source, frameworks=(), target_name=None, meta=None, **kwargs)
+              cxx.compile(source, frameworks=(), target_name=None, meta=None, **kwargs)
 
   Compile the C/C++ *sources* into object files. The object files
   are generated using :func:`~craftr.ext.compiler.gen_objects`.
 
-.. function:: ld.link(output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs)
+.. function:: ld.link(output, inputs, output_type='bin', frameworks=(), target_name=None, meta=None, **kwargs)
 
   Link the *inputs* into the file specified by *output*. The *output_type*
   defines whether an executable or shared library is created.

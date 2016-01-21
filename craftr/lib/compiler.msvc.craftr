@@ -124,7 +124,7 @@ class MsvcCompiler(BaseCompiler):
       res += ' (undetermined)'
     return res + '>'
 
-  def compile(self, sources, frameworks=(), target_name=None, **kwargs):
+  def compile(self, sources, frameworks=(), target_name=None, meta=None, **kwargs):
     '''
     Supported options:
 
@@ -152,7 +152,7 @@ class MsvcCompiler(BaseCompiler):
     Target meta variables: *none*
     '''
 
-    builder = self.builder(sources, frameworks, kwargs, name=target_name)
+    builder = self.builder(sources, frameworks, kwargs, name=target_name, meta=meta)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
 
     include = set(builder.merge('include'))
@@ -226,7 +226,8 @@ class MsvcLinker(BaseCompiler):
   def __init__(self, program='link', **kwargs):
     super().__init__(program=program, **kwargs)
 
-  def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
+  def link(self, output, inputs, output_type='bin', frameworks=(),
+      target_name=None, meta=None, **kwargs):
     '''
     Supported options:
 
@@ -246,7 +247,7 @@ class MsvcLinker(BaseCompiler):
       * link_output -- The output filename of the link operation.
     '''
 
-    builder = self.builder(inputs, frameworks, kwargs, name=target_name)
+    builder = self.builder(inputs, frameworks, kwargs, name=target_name, meta=meta)
 
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
@@ -281,7 +282,8 @@ class MsvcAr(BaseCompiler):
   def __init__(self, program='lib', **kwargs):
     super().__init__(program=program, **kwargs)
 
-  def staticlib(self, output, inputs, export=(), frameworks=(), target_name=None, **kwargs):
+  def staticlib(self, output, inputs, export=(), frameworks=(),
+      target_name=None, meta=None, **kwargs):
     '''
     Supported options:
 
@@ -295,7 +297,7 @@ class MsvcAr(BaseCompiler):
       * staticlib_output -- The output filename of the library operation.
     '''
 
-    builder = self.builder(inputs, frameworks, kwargs, name=target_name)
+    builder = self.builder(inputs, frameworks, kwargs, name=target_name, meta=meta)
     output = gen_output(output, suffix=platform.lib)
 
     command = [builder['program'], '/nologo']
