@@ -125,6 +125,33 @@ class MsvcCompiler(BaseCompiler):
     return res + '>'
 
   def compile(self, sources, frameworks=(), target_name=None, **kwargs):
+    '''
+    Supported options:
+
+      * include
+      * defines
+      * language
+      * debug
+      * warn
+      * optimize
+      * exceptions
+      * autodeps
+      * description
+      * program
+      * additional_flags
+      * msvc_additional_flags
+
+    Unsupported options supported by other compilers:
+
+      * std
+      * pedantic
+      * pic
+      * osx_fwpath
+      * osx_frameworks
+
+    Target meta variables: *none*
+    '''
+
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
 
@@ -186,6 +213,7 @@ class MsvcCompiler(BaseCompiler):
       builder.target['msvc_deps_prefix'] = self.deps_prefix
       command += ['/showIncludes']
     command += builder.merge('additional_flags')
+    command += builder.merge('msvc_additional_flags')
 
     return builder.create_target(command, outputs=objects, foreach=True)
 
@@ -199,6 +227,25 @@ class MsvcLinker(BaseCompiler):
     super().__init__(program=program, **kwargs)
 
   def link(self, output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs):
+    '''
+    Supported options:
+
+      * libpath
+      * libs
+      * msvc_libs
+      * external_libs
+      * msvc_external_libs
+      * debug
+      * description
+      * program
+      * additional_flags
+      * msvc_additional_flags
+
+    Target meta variables:
+
+      * link_output -- The output filename of the link operation.
+    '''
+
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
 
     if output_type not in ('bin', 'dll'):
@@ -220,7 +267,9 @@ class MsvcLinker(BaseCompiler):
     command += [x + '.lib' for x in libs]
     command += external_libs
     command += builder.merge('additional_flags')
+    command += builder.merge('msvc_additional_flags')
 
+    builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 
 
@@ -233,6 +282,19 @@ class MsvcAr(BaseCompiler):
     super().__init__(program=program, **kwargs)
 
   def staticlib(self, output, inputs, export=(), frameworks=(), target_name=None, **kwargs):
+    '''
+    Supported options:
+
+      * program
+      * additional_flags
+      * msvc_additional_flags
+      * description
+
+    Target meta variables:
+
+      * staticlib_output -- The output filename of the library operation.
+    '''
+
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
     output = gen_output(output, suffix=platform.lib)
 

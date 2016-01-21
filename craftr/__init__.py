@@ -372,7 +372,7 @@ class Target(object):
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, foreach=False, description=None, pool=None,
       var=None, deps=None, depfile=None, msvc_deps_prefix=None,
-      explicit=False, frameworks=None, module=None, name=None):
+      explicit=False, frameworks=None, meta=None, module=None, name=None):
 
     if not module and craftr.module:
       module = craftr.module()
@@ -406,6 +406,11 @@ class Target(object):
     if order_only_deps is not None:
       order_only_deps = _check_list_of_str('order_only_deps', order_only_deps)
 
+    if meta is None:
+      meta = {}
+    if not isinstance(meta, dict):
+      raise TypeError('meta must be a dictionary')
+
     self.module = module
     self.name = name
     self.command = command
@@ -421,6 +426,7 @@ class Target(object):
     self.msvc_deps_prefix = msvc_deps_prefix
     self.frameworks = frameworks or []
     self.explicit = explicit
+    self.meta = meta
 
     if module:
       targets = module.__session__.targets
@@ -513,10 +519,25 @@ class TargetBuilder(object):
     construction in :meth:`create_target`. Can only set attributes that
     are already attributes of the :class:`Target`.
 
+  .. attribute:: meta
+
+    Meta data for the Target that is passed directly to
+    :attr:`Target.meta`.
+
+    .. note:: If the :param:`meta` parameter to the constructor
+      is None, it will be read from the :param:`kwargs` dictionary
+      (thus inheriting the option from the called rule function).
+
   .. automethod:: TargetBuilder.__getitem__
   '''
 
-  def __init__(self, inputs, frameworks, kwargs, module=None, name=None, stacklevel=1):
+  def __init__(self, inputs, frameworks, kwargs, meta=None,
+      module=None, name=None, stacklevel=1):
+    if meta is None:
+      meta = {}
+    if not isinstance(meta, dict):
+      raise TypeError('meta must be a dictionary')
+    self.meta = meta
     self.caller = magic.get_caller(stacklevel + 1)
     frameworks = list(frameworks)
     self.inputs = expand_inputs(inputs, frameworks)
@@ -636,7 +657,7 @@ class TargetBuilder(object):
       inputs = self.inputs
     kwargs.setdefault('frameworks', self.frameworks)
     target = Target(command=command, inputs=inputs, outputs=outputs,
-      module=self.module, name=self.name, **kwargs)
+      meta=self.meta, module=self.module, name=self.name, **kwargs)
     for key, value in self.target_attrs.items():
       # We can only set attributes that the target already has.
       getattr(target, key)

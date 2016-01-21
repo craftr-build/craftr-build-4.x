@@ -34,10 +34,23 @@ class Ar(BaseCompiler):
     super().__init__(program=program, **kwargs)
 
   def staticlib(self, output, inputs, target_name=None, **kwargs):
+    '''
+    Supported options:
+
+      * program
+      * ar_additional_flags -- A string of additional flags (not a list!)
+
+    Target meta variables:
+
+      * staticlib_output -- The output filename of the library operation.
+    '''
+
     builder = self.builder(inputs, [], kwargs, name=target_name)
     output = gen_output(output, suffix=platform.lib)
-    command = [join['program'], 'rcs', '$out', '$in']
-    return build.create_target(command,  outputs=[output])
+    flags = ''.join(set('rcs' + ''.join(builder.merge('ar_additional_flags'))))
+    command = [join['program'], flags, '$out', '$in']
+    builder.meta['staticlib_output'] = output
+    return build.create_target(command, outputs=[output])
 
 
 class Ld(BaseCompiler):
@@ -49,6 +62,17 @@ class Ld(BaseCompiler):
     super().__init__(program=program, **kwargs)
 
   def link(self, output, inputs, frameworks=(), target_name=None, **kwargs):
+    '''
+    Supported options:
+
+      * program
+      * linker_script
+
+    Target meta variables:
+
+      * link_output -- The output filename of the link operation.
+    '''
+
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
     if not path.isabs(output):
       output = gen_output(output)  # xxx: suffix?
@@ -57,6 +81,8 @@ class Ld(BaseCompiler):
 
     command = [join['program'], '$in', '-o', '$out']
     command += ['-T', linker_script] if linker_script else []
+
+    builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output])
 
 
@@ -81,12 +107,16 @@ class Objcopy(BaseCompiler):
     specified *inputs* generating *outputs* with the specified *output_format*.
     If *outputs* is omitted, it will be automatically generated from *inputs*.
 
-    Additional options:
-    - program
-    - output_suffix
-    - input_format
-    - binary_architecture
-    - description '''
+    Supported options:
+
+      * program
+      * output_suffix
+      * input_format
+      * binary_architecture
+      * description
+
+    Target meta variables: *none*
+    '''
 
     builder = self.builder(inputs, [], kwargs, name=target_name)
 
