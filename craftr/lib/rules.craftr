@@ -46,59 +46,41 @@ def run(program, *args, inputs=None, outputs=None, cwd=None, target_name=None):
   return Target(command, inputs, outputs, pool='console', name=target_name)
 
 
-class _PythonToolMeta(abc.ABCMeta):
-  ''' Meta class for the `PythonTool` class. '''
+class PythonTool(object):
+  ''' Base class for Python tools. Python tools are class objects that
+  can be invoked from Ninja through the Craftr RTS (Runtime Server)
+  using socket communication and the ``craftr-rts-invoke`` command.
 
-  def __new__(metacls, name, bases, dict):
-    tool_name = module.project_name + '.' + name
-    cls = super().__new__(metacls, name, bases, dict)
-    if not dict.get('__abstract__', False):
-      if tool_name in session.rts_funcs:
-        raise ValueError('Session.rts_funcs: {0!r} already registered'.format(tool_name))
-      instance = cls(tool_name)
-      session.rts_funcs[tool_name] = instance.execute
-      return instance
-    return cls
+  .. note:: This class overrides ``__new__()`` and returns a
+    :class:`Target` rather than an instance of :class:`PythonTool`.
+  '''
 
-
-class PythonTool(object, metaclass=_PythonToolMeta):
-  ''' This is the base class for Python tools. A Python tool "simulates"
-  a command-line tool that can be used in Ninja. The tool's code is
-  executed in the original Craftr process and does not require a
-  re-evaluation of the Craftr module, making this method very efficient. '''
-
-  __abstract__ = True
-
-  def __init__(self, name):
-    ''' Called when the class is declared. There is only always a single
-    instance of a `PythonTool`. '''
-
-    self.name = name
-
-  def __call__(self, *args, **kwargs):
-    ''' This method is supposed to create a `craftr.Target` object
-    for the Python tool from the specified *args* and *kwargs*. The
-    default implementation calls `command()` to create the argument
-    list for the command. '''
-
-    assert self.name in session.rts_funcs
-    target = self.rule(*args, **kwargs)
-
-    new_command = ['craftr-rts', self.name]
-    new_command += target.command
-    target.command = new_command
+  def __new__(cls, *args, **kwargs):
+    instance = super().__new__(cls)
+    instance.__init__(*args, **kwargs)
+    builder = instance._builder
+    del instance._builder
+    session.rts_funcs[builder.fullname] = instance
+    target = builder.create_target(
+      ['craftr-rts-invoke', builder.fullname], outputs=instance._outputs)
     return target
 
-  @abc.abstractmethod
-  def rule(self, **kwargs):
-    ''' This method is called from `__call__()` to create a Target.
-    The `Target.command` list must not contain the tool-name. '''
+  def __init__(self, inputs, outputs, frameworks=(), **kwargs):
+    super().__init__()
+    self._builder = TargetBuilder(inputs, frameworks, kwargs)
+    self._outputs = outputs
+    self.name = self._builder.fullname
 
-    raise NotImplementedError
-
   @abc.abstractmethod
-  def execute(self, args):
-    raise NotImplementedError
+  def invoke(self, args):
+    ''' Called when the tool is invoked. *args* is a list of command-line
+    arguments were passed additionally to ``craftr-rts-invoke``. This is
+    just an empty list in most cases as the :class:`PythonTool` instance
+    can save all data it needs in its attributes.
+
+    .. important:: This method could be called in a threaded context.
+      Don't import new modules and be thread-safe.
+    '''
 
 
 class render_template(PythonTool):
@@ -107,19 +89,17 @@ class render_template(PythonTool):
   are references by `${KEY}$`. There is currently not escape mechanism
   implemented. '''
 
-  def rule(self, template, output, **context):
-    command = ['$in', '$out']
-    for key, value in context.items():
-      assert '=' not in key
-      command.append('{0}={1}'.format(key, value))
-    return Target(command, template, gen_output(output))
+  def __init__(self, template, output, **context):
+    super().__init__([template], [output])
+    self.template = template
+    self.output = output
+    self.context = context
 
-  def execute(self, args):
-    with open(args[0], 'r') as src:
+  def __call__(self, args):
+    with open(self.template) as src:
       content = src.read()
-    for var in args[2:]:
-      key, sep, value = var.partition('=')
+    for key, value in self.context.items():
       key = '${' + key + '}$'
       content = content.replace(key, value)
-    with open(args[1], 'w') as dst:
+    with open(self.output, 'w') as dst:
       dst.write(content)

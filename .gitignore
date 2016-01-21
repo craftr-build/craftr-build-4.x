@@ -6,4 +6,4 @@ build/
 docs/_build/
 
 bin/craftr.py
-bin/craftr-rts.py
+bin/craftr-rts-invoke.py
