@@ -507,10 +507,11 @@ class TargetBuilder(object):
 
     The name of the Target that is being built.
 
-  .. attribute:: target
+  .. attribute:: target_attrs
 
-    A dictonary of additional keyword arguments to pass to the
-    :class:`Target` constructor in :meth:`create_target`.
+    A dictonary of arguments that are set to the target after
+    construction in :meth:`create_target`. Can only set attributes that
+    are already attributes of the :class:`Target`.
 
   .. automethod:: TargetBuilder.__getitem__
   '''
@@ -524,7 +525,7 @@ class TargetBuilder(object):
     self.options = FrameworkJoin(Framework(self.caller, kwargs), *frameworks)
     self.module = module or craftr.module()
     self.name = name
-    self.target = {}
+    self.target_attrs = {}
     if not self.name:
       try:
         self.name = Target._get_name(self.module)
@@ -542,6 +543,18 @@ class TargetBuilder(object):
     ''' The full name of the Target that is being built. '''
 
     return self.module.project_name + '.' + self.name
+
+  @property
+  def target(self):
+    ''' A dictonary of arguments that are set to the target after
+    construction in :meth:`create_target`. Can only set attributes that
+    are already attributes of the :class:`Target`.
+
+    .. deprecated::
+      Use :attr:`target_attrs` instead.
+    '''
+
+    return self.target_attrs
 
   def __getitem__(self, key):
     ''' Alias for :meth:`FrameworkJoin.__getitem__`. '''
@@ -624,7 +637,7 @@ class TargetBuilder(object):
     kwargs.setdefault('frameworks', self.frameworks)
     target = Target(command=command, inputs=inputs, outputs=outputs,
       module=self.module, name=self.name, **kwargs)
-    for key, value in self.target.items():
+    for key, value in self.target_attrs.items():
       # We can only set attributes that the target already has.
       getattr(target, key)
       setattr(target, key, value)
