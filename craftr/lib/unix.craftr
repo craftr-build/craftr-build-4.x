@@ -151,6 +151,3 @@ def pkg_config(*flags):
   command += flags
   stdout = shell.pipe(command, shell=True).stdout
   return shell.split(stdout)
-
-
-ar = Ar()
