@@ -90,12 +90,13 @@ class Session(object):
     bound to when it is started. Defaults to None, in which case
     the server is bound to the localhost on a random port.
 
-  .. attribute:: rst_funcs
+  .. attribute:: rts_funcs
 
-    A dictionary that contains function objects that are handled by
-    the :doc:`Craftr RTS <rts>`. Functions in this dictionary must
-    accept exactly one argument, being a list of command-line arguments
-    passed to the ``craftr-rts`` program.
+    A dictionary that maps target names to functions. The function will
+    be invoked when you call ``craftr-rts <func_name>`` (note: the
+    Craftr Runtime Server must be running and the environment variable
+    ``CRAFTR_RTS`` must be set). The functions added to this dictionary
+    must accept a list of command-line arguments.
 
   .. attribute:: ext_importer
 
@@ -125,7 +126,8 @@ class Session(object):
     Ninja, for example with :meth:`TargetBuilder.write_command_file`.
   '''
 
-  def __init__(self, cwd=None, path=None, server_bind=None):
+  def __init__(self, cwd=None, path=None, server_bind=None, verbosity=0,
+      strace_depth=3, export=False):
     super().__init__()
     self.cwd = cwd or os.getcwd()
     self.env = environ.copy()
@@ -137,9 +139,9 @@ class Session(object):
     self.modules = {}
     self.targets = {}
     self.var = {}
-    self.verbosity = 0
-    self.strace_depth = 3
-    self.export = False
+    self.verbosity = verbosity
+    self.strace_depth = strace_depth
+    self.export = export
 
     if path is not None:
       self.path.extend(path)
@@ -180,7 +182,10 @@ class Session(object):
 
     self.ext_importer.update()
 
-  def _start_server(self):
+  def start_server(self):
+    ''' Start the Craftr RTS server (see :attr:`Session.server`). It
+    will automatically be stopped when the session context is exited. '''
+
     # Start the Craftr Server to enable cross-process invocation
     # of Python functions.
     if self.server_bind:
@@ -189,10 +194,12 @@ class Session(object):
       self.server.bind()
     self.server.serve_forever_async()
     environ['CRAFTR_RTS'] = '{0}:{1}'.format(self.server.host, self.server.port)
+    debug('Started Craftr RTS at {0}:{1}'.format(self.server.host, self.server.port))
 
   def _stop_server(self):
-    self.server.stop()
-    self.server.close()
+    if self.server.running:
+      self.server.stop()
+      self.server.close()
 
   def on_context_enter(self, prev):
     ''' Called when entering the Session context with
@@ -221,8 +228,6 @@ class Session(object):
 
     sys.meta_path.append(self.ext_importer)
     self.update()
-
-    self._start_server()
 
   def on_context_leave(self):
     ''' Called when the context manager entered with

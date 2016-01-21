@@ -529,6 +529,13 @@ class CraftrRuntimeServer(object):
     thread.start()
     return thread
 
+  @property
+  def running(self):
+    ''' True if the server is currently running and bound to an
+    address, False if not. '''
+
+    return bool(self.sock)
+
 
 def client_main():
   parser = argparse.ArgumentParser()

@@ -19,12 +19,12 @@
 # THE SOFTWARE.
 ''' That's what happens when you run Craftr. '''
 
+import craftr
 from craftr import *
 from craftr import shell
 
 import argparse
 import atexit
-import craftr
 import errno
 import importlib
 import os
@@ -32,6 +32,8 @@ import time
 import shutil
 import subprocess
 import sys
+
+from functools import partial
 
 MANIFEST = 'build.ninja'
 
@@ -91,9 +93,9 @@ def _abs_env(cwd=None):
 
 
 def _run_func(main_module, name, args):
-  ''' Called to run a function with the specified *name* and set
-  `sys.argv` to *args*. If *name* is a relative identifier, it will
-  be searched relative to the *main_module* name. '''
+  ''' Called to run a function with the specified *name* and passes
+  it *args* as its positional arguments. If *name* is a relative
+  identifier, it will be searched relative to the *main_module* name. '''
 
   if '.' not in name:
     name = main_module + '.' + name
@@ -109,10 +111,8 @@ def _run_func(main_module, name, args):
   if not callable(func):
     error('"{0}" is not callable'.format(name))
     return errno.ENOENT
-  old_argv = sys.argv
-  sys.argv = ['craftr -f {0}'.format(name)] + args
   try:
-    func()
+    func(*args)
   except SystemExit as exc:
     return exc.errno
   finally:
@@ -147,16 +147,19 @@ def main():
   parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
 
+  # The verbosity level can not be read at some levels, that' why we
+  # have to always pass it to the debug() function.
+  debug = partial(craftr.debug, verbosity=args.v)
+
   if args.V:
-    print('Craftr {0}'.format(craftr.__version__))
+    print('craftr {0}'.format(craftr.__version__))
     return 0
 
   if not args.d:
     if args.p:
-      debug('use . as build directory (-p)', verbosity=args.v)
+      debug('Using "." as build directory (-p)')
       args.d = os.getcwd()
     else:
-      debug('default build directory is "./build"', verbosity=args.v)
       args.d = 'build'
   if not args.p:
     args.p = os.getcwd()
@@ -183,10 +186,11 @@ def main():
     return errno.ENOTDIR
 
   try:
-    craftr.ninja.get_ninja_version()
+    ninja_ver = craftr.ninja.get_ninja_version()
   except OSError as exc:
-    error('ninja is not installed on the system')
+    error('Ninja could not be found. Goto https://ninja-build.org/')
     return errno.ENOENT
+  debug('Detected ninja v{0}'.format(ninja_ver))
 
   # Convert relative to absolute target names.
   mkabst = lambda x: ((args.m + x) if (x.startswith('.')) else x).replace(':', '.')
@@ -196,7 +200,7 @@ def main():
   if os.getcwd() != path.normpath(args.d):
     started_from_build_dir = False
     os.chdir(args.d)
-    info('Changing directory:', args.d)
+    info('Changed directory to "{0}"'.format(args.d))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
@@ -209,14 +213,14 @@ def main():
   # Delete the .craftr-rts file that indicates that the project used
   # the RTS feature. It will be re-created if the project still uses it.
   if args.e and path.exists('.craftr-rts'):
-    debug('removing .craftr-rts flag file', verbosity=args.v)
     os.remove('.craftr-rts')
+    debug('Removed .craftr-rts flag file')
 
   # Delete the .cmd directory that eventually contains files with
   # command-line arguments in it. Only when we would re-generate
   # these files.
   if args.e and path.exists('.cmd'):
-    debug('removing build .cmd directory (command-line files)', verbosity=args.v)
+    debug('Removing build .cmd directory (command-line files)')
     shutil.rmtree('.cmd')
 
   # Check if we should omit the execution step. This is possile when
@@ -240,14 +244,15 @@ def main():
       info('Prepending cached options:', ' '.join(shell.quote(x) for x in cached_defs))
     args.D = cached_defs + args.D
 
-  session = craftr.Session(cwd=old_cwd, path=[old_cwd] + args.I, server_bind=args.rts_at)
+  session = craftr.Session(
+    cwd=old_cwd,
+    path=[old_cwd] + args.I,
+    server_bind=args.rts_at,
+    verbosity=args.v,
+    strace_depth=args.strace_depth,
+    export=args.e)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
-
-    # Initialize the session settings from the command-line parameters.
-    session.verbosity = args.v
-    session.strace_depth = args.strace_depth
-    session.export = args.e
 
     if do_run:
       # Run the environment files.
@@ -268,13 +273,8 @@ def main():
       try:
         module = importlib.import_module('craftr.ext.' + args.m)
       except craftr.ModuleError as exc:
-        error('error in module {0!r}. Abort'.format(exc.module.project_name))
+        error('Error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
-
-      if args.f:
-        # Pre-build function.
-        with craftr.magic.enter_context(craftr.module, module):
-          _run_func(args.m, args.f[0], args.f[1:])
 
       try:
         targets = [session.targets[x] for x in args.targets]
@@ -286,8 +286,9 @@ def main():
         # Are there any targets that use the RTS feature? If so,
         # we must create a flag file so Craftr knows RTS is required
         # for subsequent invokations without the -e option.
-        if any(t.command[0] == 'craftr-rts' for t in session.targets.values()):
+        if session.rts_funcs:
           open('.craftr-rts', 'w').close()
+          debug('Created .craftr-rts flag file')
 
         # Export a ninja manifest.
         with open(MANIFEST, 'w') as fp:
@@ -296,6 +297,17 @@ def main():
       _set_env(args.D, args.m)
       _abs_env(old_cwd)
 
+    # If the session has targets that require the RTS feature or
+    # if the --rts flag was specified, start the RTS server.
+    if args.rts or session.rts_funcs:
+      session.start_server()
+
+    # Pre-build function.
+    if args.f:
+      with craftr.magic.enter_context(craftr.module, module):
+        _run_func(args.m, args.f[0], args.f[1:])
+
+    # Perform a full or rule-based clean.
     if args.c:
       cmd = ['ninja', '-t', 'clean']
       if args.c == 1:
@@ -306,27 +318,27 @@ def main():
       if ret != 0:
         return ret
 
-    # Execute the build.
+    # Perform the build.
     if args.b:
       cmd = ['ninja'] + [t for t in args.targets] + args.N
       ret = shell.run(cmd, shell=True, check=False).returncode
       if ret != 0:
         return ret
 
+    # Post-build function.
     if args.F:
-      # Post-build function.
       assert do_run
       with craftr.magic.enter_context(craftr.module, module):
         _run_func(args.m, args.F[0], args.F[1:])
 
     if args.rts:
       try:
-        info('Craftr Runtime Server keep-alive at', environ['CRAFTR_RTS'])
+        info('Craftr RTS alive at {0}. Use CTRL+C to stop.'.format(environ['CRAFTR_RTS']))
         while True:
           time.sleep(1)
       except KeyboardInterrupt:
         print(file=sys.stderr)
-        info('Craftr Runtime Server shutdown.')
+        info('Craftr RTS stopped. Bye bye')
     return 0
 
 
