@@ -115,8 +115,6 @@ def _run_func(main_module, name, args):
     func(*args)
   except SystemExit as exc:
     return exc.errno
-  finally:
-    sys.argv = old_argv
   return 0
 
 
