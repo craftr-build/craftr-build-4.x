@@ -84,6 +84,7 @@ class Archive(object):
       else:
         if not path.isfile(name):
           raise FileNotFoundError(name)
+        name = path.get_long_path_name(name)
         if parts:
           assert not arc_name
           path_parts = path.split_path(name)
@@ -92,6 +93,10 @@ class Archive(object):
           arc_name = path.relpath(name, rel_dir)
           if path.sep != '/':
             arc_name = arc_name.replace(path.sep, '/')
+          # Make sure the arc_name contains no par-dirs.
+          # xxx: Issues with other platforms here that don't use .. ?
+          while arc_name.startswith('..'):
+            arc_name = arc_name[3:]
         if self._prefix:
           arc_name = self._prefix + arc_name
         name = path.get_long_path_name(name)
