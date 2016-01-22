@@ -364,6 +364,13 @@ class Target(object):
     specified on the command-line or if it is required by another target.
     Defaults to False.
 
+  .. attribute:: meta
+
+    A dictionary of meta variables that can be set from anywhere. Usually,
+    rule functions use this dictionary to promote additional information
+    to the caller, for example what the actual computed output filename
+    of a compilation is.
+
   .. automethod:: Target.__lshift__
 
   .. _Ninja Manual: https://ninja-build.org/manual.html
