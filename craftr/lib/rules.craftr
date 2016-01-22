@@ -19,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+__all__ = ['run', 'PythonTool', 'render_template']
+
 from os import environ
 from craftr import *
 from craftr.ext import platform
@@ -30,6 +32,17 @@ import sys
 
 
 def run(program, *args, inputs=None, outputs=None, cwd=None, target_name=None):
+  ''' Create a :class:`Target` that runs *program* with the specified
+  command-line *args*. The target will be executed in the Ninja ``console``
+  pool. This is useful to avoid manually calling executables.
+
+  .. code-block:: python
+
+    main = ld.link(objects, ...)
+    from craftr.ext import rules
+    run = rules.run(main)
+  '''
+
   if isinstance(program, Target):
     assert len(program.outputs) == 1
     program = path.abspath(program.outputs[0])
@@ -53,6 +66,8 @@ class PythonTool(object):
 
   .. note:: This class overrides ``__new__()`` and returns a
     :class:`Target` rather than an instance of :class:`PythonTool`.
+
+  .. automethod:: __call__
   '''
 
   def __new__(cls, *args, **kwargs):
@@ -72,7 +87,7 @@ class PythonTool(object):
     self.name = self._builder.fullname
 
   @abc.abstractmethod
-  def invoke(self, args):
+  def __call__(self, args):
     ''' Called when the tool is invoked. *args* is a list of command-line
     arguments were passed additionally to ``craftr-rts-invoke``. This is
     just an empty list in most cases as the :class:`PythonTool` instance

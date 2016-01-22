@@ -19,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+__all__ = ['name', 'standard', 'obj', 'bin', 'lib', 'dll', 'get_tool']
+
 from craftr import environ, path
 import craftr.ext.unix
 import craftr.ext.compiler

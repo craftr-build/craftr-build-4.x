@@ -18,6 +18,22 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+''' This module imports a platform implementation based on
+:data:`sys.platform` and exports all its contents into the global
+module scope.
+
+:Submodules:
+
+.. toctree::
+  :maxdepth: 2
+
+  platform_cygwin
+  platform_darwin
+  platform_linux
+  platform_win32
+'''
+
+__all__ = ['cc', 'cxx', 'ld', 'ar']
 
 from craftr import import_module
 from craftr.magic import Proxy
@@ -31,3 +47,5 @@ cc = Proxy(get_tool, 'cc')
 cxx = Proxy(get_tool, 'cxx')
 ld = Proxy(get_tool, 'ld')
 ar = Proxy(get_tool, 'ar')
+
+foo = "Fbar"

@@ -19,13 +19,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+__all__ = ['NvccCompiler']
+
 from os import environ
 from craftr import *
 from craftr.ext import platform
 from craftr.ext.compiler import gen_objects
 
 class NvccCompiler(object):
-  ''' Interface for the NVIDIA CUDA compiler. '''
+  ''' Interface for the NVIDIA CUDA compiler. Uses the environment
+  variable ``CUDA_PATH`` to determine the CUDA toolkit location.
+
+  .. important:: This has been tested on Windows only, yet.
+  '''
 
   def __init__(self):
     super().__init__()

@@ -43,31 +43,16 @@ import the ``qt5`` module.
 Built-in Craftr extension modules
 ---------------------------------
 
-- :mod:`craftr.ext.archive`
-- :mod:`craftr.ext.compiler`
+.. toctree::
+  :maxdepth: 2
 
-  - :mod:`craftr.ext.compiler.csc`
-  - :mod:`craftr.ext.compiler.cython`
-  - :mod:`craftr.ext.compiler.flex`
-  - :mod:`craftr.ext.compiler.gcc`
-  - :mod:`craftr.ext.compiler.java`
-  - :mod:`craftr.ext.compiler.llvm`
-  - :mod:`craftr.ext.compiler.msvc`
-  - :mod:`craftr.ext.compiler.nvcc`
-  - :mod:`craftr.ext.compiler.protoc`
-  - :mod:`craftr.ext.compiler.yacc`
-
-- :mod:`craftr.ext.git`
-- :mod:`craftr.ext.options`
-- :mod:`craftr.ext.platform`
-
-  - :mod:`craftr.ext.platform.cygwin`
-  - :mod:`craftr.ext.platform.darwin`
-  - :mod:`craftr.ext.platform.linux`
-  - :mod:`craftr.ext.platform.win32`
-
-- :mod:`craftr.ext.rules`
-- :mod:`craftr.ext.unix`
+  ext/archive
+  ext/compiler
+  ext/git
+  ext/options
+  ext/platform
+  ext/rules
+  ext/unix
 
 Platform Abstraction Interface
 ------------------------------

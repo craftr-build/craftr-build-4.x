@@ -19,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+__all__ = ['Ar', 'Ld', 'Objcopy', 'pkg_config']
+
 from craftr import *
 from craftr.ext import platform
 from craftr.ext.compiler import BaseCompiler, gen_output, gen_objects

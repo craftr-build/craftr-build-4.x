@@ -19,8 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# xxx: GCC is currently implemented as a synonym for LLVM. It should
-#      probably get its own implementation.
+__all__ = ['GccCompiler']
 
 from .. import llvm
 from functools import partial
@@ -29,6 +28,12 @@ detect = partial(llvm.detect, _mode='gcc')
 
 
 class GccCompiler(llvm.LlvmCompiler):
+  ''' Interface for the GCC compiler.
+
+  .. note:: Currently inherits the LLVM implementation. Will eventually
+    get its own implementatio in the future, but not as long as the LLVM
+    version works well for GCC, too.
+  '''
 
   name = 'GCC (Craftr-LLVM-Backend)'
 

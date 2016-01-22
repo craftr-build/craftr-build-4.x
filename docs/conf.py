@@ -19,6 +19,18 @@ import shlex
 
 print("[craftr/docs/conf.py]: Python", sys.version)
 
+import atexit
+import craftr
+print("[craftr/docs/conf.py]: Entering Craftr session context.")
+
+_ctx = craftr.magic.enter_context(craftr.session, craftr.Session())
+_ctx.__enter__()
+
+@atexit.register
+def _ctx_leave():
+  print("[craftr/docs/conf.py]: Leaving Craftr session context.")
+  atexit.register(lambda: _ctx.__exit__(None, None, None))
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.

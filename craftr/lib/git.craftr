@@ -27,6 +27,8 @@ A very small interface for querying information about a Git repository.
       info('Unversioned changes present.')
 '''
 
+__all__ = ['Git']
+
 from craftr import shell
 
 

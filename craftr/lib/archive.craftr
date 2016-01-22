@@ -19,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+__all__ = ['Archive']
+
 from craftr import *
 from craftr.utils import slotobject
 from fnmatch import fnmatch
@@ -30,7 +32,7 @@ class Archive(object):
   ''' Helper class to build and a list of files for an archive
   and then create that archive from that list. If no *name* is
   specified, it is derived from the *prefix*. The *format* must
-  be `'zip'` for now. '''
+  be ``'zip'`` for now. '''
 
   File = slotobject('File', 'name arc_name')
 
@@ -101,7 +103,7 @@ class Archive(object):
   def exclude(self, filter):
     ''' Remove all files in the Archive's file list that match the
     specified *filter*. The filter can be a string, in which case it
-    is applied with `fnmatch()` or a function which accepts a single
+    is applied with :func:`fnmatch` or a function which accepts a single
     argument (the filename). '''
 
     if isinstance(filter, str):
