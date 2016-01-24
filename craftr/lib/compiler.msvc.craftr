@@ -309,7 +309,8 @@ class MsvcAr(BaseCompiler):
     command += ['$in', '/OUT:$out']
 
     builder.target['description'] = builder.get('description', 'MSVC lib ($out)')
-    return builder.create_target(command, outputs=[output], description=description)
+    builder.meta['staticlib_output'] = output
+    return builder.create_target(command, outputs=[output])
 
 
 Compiler = MsvcCompiler
