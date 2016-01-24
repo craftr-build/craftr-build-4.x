@@ -31,11 +31,18 @@ import subprocess
 import sys
 
 
+class safe(str):
+  ''' If this object is passed to `quote()`, it will not be escaped. '''
+  pass
+
+
 def quote(s):
   ''' Enhanced implementation for Windows systems as the original
   `shlex.quote()` function uses single-quotes on Windows which can lead
   to problems. '''
 
+  if isinstance(s, safe):
+    return s
   if os.name == 'nt' and os.sep == '\\':
     s = s.replace('"', '\\"')
     if re.search('\s', s):
