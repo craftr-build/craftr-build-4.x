@@ -1,10 +1,12 @@
-<h1>
+<p align="center">
+  <img src="http://i.imgur.com/i3hYFZ3.png"/>
+</p>
+<h1 align="center">
   The Craftr build system
   <a href="https://travis-ci.org/craftr-build/craftr"><img alt="Build Status" src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"/></a>
   <a href='http://craftr.readthedocs.org/en/latest/?badge=latest'>
     <img src='https://readthedocs.org/projects/craftr/badge/?version=latest' alt='Documentation Status' />
   </a>
-  <img align="right" height="85" src="http://i.imgur.com/i3hYFZ3.png"/>
 </h1>
 
 
