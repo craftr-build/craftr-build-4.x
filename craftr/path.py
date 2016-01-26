@@ -24,6 +24,7 @@ from os import sep, pathsep, curdir, pardir, getcwd
 
 import collections
 import ctypes
+import errno
 import glob2
 import os
 import sys
@@ -118,7 +119,7 @@ def commonpath(paths):
   return common
 
 
-def normpath(path, parent_dir=None):
+def normpath(path, parent_dir=None, abs=True):
   ''' Normalizes a filesystem path. Also expands user variables.
   If a *parent_dir* is specified, a relative path is considered
   relative to that directory and converted to an absolute path.
@@ -126,11 +127,14 @@ def normpath(path, parent_dir=None):
 
   *path* may be an iterable other than a string in which case the
   function is applied recursively to all its items and a list is
-  returned instead of a string. '''
+  returned instead of a string.
+
+  If *abs* is True, the path is returned as an absolute path
+  always, otherwise the path is returned in its original structure.'''
 
   if isinstance(path, str):
     path = os.path.expanduser(path)
-    if not os.path.isabs(path):
+    if abs and not os.path.isabs(path):
       if parent_dir is None:
         parent_dir = os.getcwd()
       path = os.path.join(parent_dir, path)
@@ -350,3 +354,18 @@ def get_long_path_name(path):
       return buf.value
   else:
     return path
+
+
+
+def silent_remove(filename):
+  ''' Remove the file *filename* if it exists and be silent if it
+  does not. Returns True if the file was removed, False if it did
+  not exist. Raises an error in all other cases. '''
+
+  try:
+    os.remove(filename)
+    return True
+  except OSError as exc:
+    if exc.errno != errno.ENOENT:
+      raise
+  return False

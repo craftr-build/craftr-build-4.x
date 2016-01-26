@@ -21,7 +21,9 @@
 from craftr import environ, path
 
 import os
+import re
 import sys
+from tempfile import mkstemp as _mkstemp
 
 # PATH fiddling --------------------------------------------------------------
 
@@ -134,3 +136,58 @@ def slotobject(cls_name, slots):
     '__slots__': slots,
     '__str__': __str__,
   })
+
+
+def flatten(iterable):
+  ''' Given an *iterable* that in turn yields an iterable, this function
+  flattens the nested iterables into a single iteration. '''
+
+  for item in iterable:
+    yield from item
+
+
+class tempfile(object):
+  ''' A better temporary file class where the :meth:`close` function
+  does not delete the file but only :meth:`__exit__` does. '''
+
+  def __init__(self, suffix='', prefix='tmp', dir=None, text=False):
+    super().__init__()
+    self.fd, self.name = _mkstemp(suffix, prefix, dir, text)
+    self.fp = os.fdopen(self.fd, 'w' if text else 'wb')
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *__):
+    try:
+      self.close()
+    finally:
+      path.silent_remove(self.name)
+
+  def __getattr__(self, name):
+    return getattr(self.fp, name)
+
+  def close(self):
+    if self.fp:
+      self.fp.close()
+      self.fp = None
+
+
+# Regular Expression Helpers -------------------------------------------------
+
+def gre_search(pattern, subject, mode=0):
+  ''' Performs `re.search()` and returns a list of the captured groups,
+  *including* the complete matched string as the first group. If the
+  regex search was unsuccessful, a list with that many items containing
+  None is returned. '''
+
+  pattern = re.compile(pattern, mode)
+  ngroups = pattern.groups + 1
+
+  res = pattern.search(subject)
+  if not res:
+    return [None] * ngroups
+  else:
+    groups = list(res.groups())
+    groups.insert(0, res.group(0))
+    return groups

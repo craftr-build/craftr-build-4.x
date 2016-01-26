@@ -35,6 +35,7 @@ module = magic.new_context('module')
 
 import craftr
 import collections
+import functools
 import os
 import types
 import warnings
@@ -904,6 +905,30 @@ def import_module(modname, globals=None, fromlist=None):
   return root
 
 
+def memoize_tool(func):
+  ''' Decorator for functions that take the path to a program as an
+  argument and extract information from it such as its version or
+  raising a :class:`craftr.ext.compiler.ToolDetectionError` if the
+  tool could not be detected.
+
+  Basically, this is just a memoize decorator but it applies
+  :func:`path.normpath` to the argument passed to the wrapped
+  function. :-) '''
+
+  cache = {}
+
+  @functools.wraps(func)
+  def wrapper(program):
+    program = path.normpath(program, abs=False)
+    try:
+      result = cache[program]
+    except KeyError:
+      result = cache[program] = func(program)
+    return result
+
+  return wrapper
+
+
 def init_module(module):
   ''' Called when a craftr module is being imported before it is
   executed to initialize its contents. '''
@@ -955,9 +980,9 @@ def craftr_min_version(version_string):
 
 
 from craftr.logging import log, debug, info, warn, error
-from craftr import ext, path, shell, ninja, rts
+from craftr import ext, path, shell, ninja, rts, utils
 
-__all__ = ['session', 'module', 'path', 'shell', 'environ',
+__all__ = ['session', 'module', 'path', 'shell', 'utils', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
   'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs',
-  'import_file', 'import_module', 'craftr_min_version']
+  'import_file', 'import_module', 'memoize_tool', 'craftr_min_version']
