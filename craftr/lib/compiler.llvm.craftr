@@ -22,68 +22,90 @@
 __all__ = ['detect', 'LlvmCompiler', 'Compiler', 'Linker']
 
 from craftr import *
-from craftr.ext.compiler import *
+from craftr import utils
 from craftr.ext import platform
+from craftr.ext.compiler import *
+
 from functools import partial
 import re
 
 
-def _search(pattern, subject, mode=0):
-  ''' Performs `re.search()` and returns a list of the captured groups,
-  *including* the complete matched string as the first group. If the
-  regex search was unsuccessful, a list with that many items containing
-  None is returned. '''
-
-  pattern = re.compile(pattern, mode)
-  ngroups = pattern.groups + 1
-
-  res = pattern.search(subject)
-  if not res:
-    return [None] * ngroups
-  else:
-    groups = list(res.groups())
-    groups.insert(0, res.group(0))
-    return groups
+_e_llvm_version = r'^.*(clang|llvm)\s+version\s+([\d\.\-]+).*$'
+_e_llvm_target = r'Target:\s*([\w\-\._]+)'
+_e_llvm_thread = r'Thread\s+model:\s*([\w\-\._]+)'
 
 
-def _flatten(iterable):
-  for item in iterable:
-    yield from item
+@memoize_tool
+def detect(program):
+  ''' Assuming *program* points to Clang or Clang++, this function
+  determines meta information about it. The returned dictionary contains
+  the following keys:
 
+  * version
+  * version_str
+  * name
+  * target
+  * thread_model
+  * cpp_stdlib (only present for Clang++)
 
-def detect(program, _mode='llvm'):
-  ''' Tries to detect the version information of the LLVM *program*
-  by calling it with the `-v` option and returns a dictionary of the
-  extracted information. Raises `ToolDetectionError` if the information
-  could not be retrieved (eg. if *program* does not exist or is not an
-  LLVM or GCC compiler based on *_mode*). '''
+  :raise OSError: If *program* can not be executed (eg. if it does not exist).
+  :raise ToolDetectionError: If *program* is not Clang or Clang++. '''
 
-  try:
-    output = shell.pipe([program, '-v']).output
-  except FileNotFoundError as exc:
-    raise ValueError(exc)
-  if _mode == 'llvm':
-    version = _search(r'^.*(clang|llvm)\s+version\s+([\d\.\-]+).*$', output, re.I | re.M)
-    target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
-    thread_model = _search(r'Thread\s+model:\s*([\w\-\._]+)', output, re.I)[1]
-    if not all(version):
-      raise ToolDetectionError('could not determine LLVM version')
-  elif _mode == 'gcc':
-    version = _search(r'^.*(gcc)\s+version\s+([\d\.\-]+).*\s*$', output, re.I | re.M)
-    target = _search(r'Target:\s*([\w\-\._]+)', output, re.I)[1]
-    thread_model = _search(r'--enable-threads=([\w\-\._]+)', output)[1]
-    if not all(version):
-      raise ToolDetectionError('could not determine GCC version')
-  else:
-    raise ValueError('invalid _mode: {0!r}'.format(_mode))
+  output = shell.pipe([program, '-v']).output
+  version = utils.gre_search(_e_llvm_version, output, re.I | re.M)
+  target = utils.gre_search(_e_llvm_target, output, re.I)[1]
+  thread_model = utils.gre_search(_e_llvm_thread, output, re.I)[1]
+  del output
 
-  return {
+  if not all(version):
+    raise ToolDetectionError('could not determine LLVM version')
+
+  result = {
     'version': version[2],
     'version_str': version[0].strip(),
-    'name': version[1],
+    'name': version[1].lower(),
     'target': target,
     'thread_model': thread_model,
   }
+
+  # Check for a C++ compiler.
+  if program[-2:] == '++':
+    stdlib = detect_cpp_stdlib(program)
+    if stdlib:
+      result['cpp_stdlib'] = stdlib
+
+  return result
+
+
+def detect_cpp_stdlib(program):
+  ''' Performs a test compilation of a C++ file with *program*
+  and tries to determine the C++ stdlib that is required for
+  linking. '''
+
+  # Just create a temporary C++ file to be able to read the link
+  # flags that would be invoked.
+  with utils.tempfile(suffix='.cpp') as fp:
+    fp.close()
+    output = shell.pipe([program, '-v', fp.name]).output.split('\n')
+    # Check for a line that looks like a linker command.
+    for line in output:
+      try:
+        parts = shell.split(line)
+      except ValueError:
+        continue
+      if not line:
+        continue
+      program = parts[0].lower().split(path.sep)
+      if 'ld' in program or 'collect2' in program:
+        # Looking good. Is it using -lc++ or -lstdc++?
+        if '-lc++' in parts:
+          return 'c++'
+        elif '-lstdc++' in parts:
+          return 'stdc++'
+        else:
+          warn('C++ stdlib could not be detected.')
+  return None
+
 
 
 class LlvmCompiler(BaseCompiler):
@@ -98,7 +120,7 @@ class LlvmCompiler(BaseCompiler):
       desc = detect(program)
     self.desc = desc
     self.version = desc['version']
-    self.name = desc['name'].lower()
+    self.name = desc['name']
     assert self.name in ('gcc', 'clang', 'llvm'), self.name
 
   def compile(self, sources, frameworks=(), target_name=None, meta=None, **kwargs):
@@ -153,13 +175,13 @@ class LlvmCompiler(BaseCompiler):
 
     if language not in (None, 'c', 'c++', 'asm'):
       raise ValueError('invalid language: {0}'.format(language))
+
+    stdlib = None
     if language == 'c++':
-      if self.name in ('llvm', 'clang'):
-        fw['libs'] = ['c++']
-      elif self.name == 'gcc':
-        fw['libs'] = ['stdc++']
-      else:
-        assert False
+      stdlib = builder.get('cpp_stdlib', None)
+      if not stdlib:
+        stdlib = self.desc.get('cpp_stdlib', 'stdc++')
+      fw['libs'] = [stdlib]
 
     if language == 'asm':
       language = 'assembler'
@@ -169,12 +191,14 @@ class LlvmCompiler(BaseCompiler):
     command += ['-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
+    if self.name in ('clang', 'llvm'):
+      command += ['-stdlib=lib' + stdlib] if stdlib else []
     command += ['-pedantic'] if pedantic else []
     command += ['-I' + x for x in include]
     command += ['-D' + x for x in defines]
     command += ['-fPIC'] if pic else []
     command += ['-F' + x for x in osx_fwpath]
-    command += _flatten(['-framework', x] for x in osx_frameworks)
+    command += utils.flatten(['-framework', x] for x in osx_frameworks)
 
     if warn == 'all':
       command += ['-Wall']
@@ -218,6 +242,7 @@ class LlvmCompiler(BaseCompiler):
     '''
     Supported options:
 
+      * debug
       * lib
       * gcc_libs
       * llvm_libs
@@ -247,6 +272,7 @@ class LlvmCompiler(BaseCompiler):
     output = gen_output(output, suffix=getattr(platform, output_type))
     implicit_deps = []
 
+    debug = builder.get('debug', False)
     libs = builder.merge('libs')
     # Clang is based on GCC libraries, so always use the gcc_libs option.
     libs += builder.merge('gcc_libs')
@@ -281,12 +307,13 @@ class LlvmCompiler(BaseCompiler):
       description = '{0} Link $out'.format(self.name)
 
     command = [builder['program'], '$in']
+    command += ['-g'] if debug else []
     command += ['-l' + x for x in set(libs)]
     command += ['-L' + x for x in set(libpath)]
     command += set(external_libs)
     command += ['-dynamic'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
-    command += _flatten(['-framework', x] for x in osx_frameworks)
+    command += utils.flatten(['-framework', x] for x in osx_frameworks)
     if linker_args:
       command += ['-Wl,' + ','.join(linker_args)]
     command += builder.merge('additional_flags')
@@ -301,7 +328,6 @@ class LlvmCompiler(BaseCompiler):
     builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output],
       implicit_deps=implicit_deps, description=description)
-
 
 
 Compiler = LlvmCompiler

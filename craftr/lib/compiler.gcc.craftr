@@ -21,10 +21,55 @@
 
 __all__ = ['GccCompiler']
 
+from craftr import *
 from .. import llvm
 from functools import partial
+import re
 
-detect = partial(llvm.detect, _mode='gcc')
+
+_e_gcc_version = r'^.*(gcc)\s+version\s+([\d\.\-]+).*\s*$'
+_e_gcc_target = r'Target:\s*([\w\-\._]+)'
+_e_gcc_thread = r'--enable-threads=([\w\-\._]+)'
+
+
+@memoize_tool
+def detect(program):
+  ''' Assuming *program* points to GCC or GCC++, this function determines
+  meta information about it. The returned dictionary contains the
+  following keys:
+
+  * version
+  * version_str
+  * name
+  * target
+  * thread_model
+  * cpp_stdlib (only present for GCC++)
+
+  :raise OSError: If *program* can not be executed (eg. if it does not exist).
+  :raise ToolDetectionError: If *program* is not GCC or GCC++. '''
+
+  output = shell.pipe([program, '-v']).output
+  version = utils.gre_search(_e_gcc_version, output, re.I | re.M)
+  target = utils.gre_search(_e_gcc_target, output, re.I)[1]
+  thread_model = utils.gre_search(_e_gcc_thread, output, re.I)[1]
+
+  if not all(version):
+    raise ToolDetectionError('could not determine GCC version')
+
+  result = {
+    'version': version[2],
+    'version_str': version[0].strip(),
+    'name': version[1],
+    'target': target,
+    'thread_model': thread_model,
+  }
+
+  # Check for a C++ compiler.
+  if program[-2:] == '++':
+    stdlib = llvm.detect_cpp_stdlib(program)
+    if stdlib:
+      result['cpp_stdlib'] = stdlib
+  return result
 
 
 class GccCompiler(llvm.LlvmCompiler):

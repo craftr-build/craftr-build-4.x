@@ -28,6 +28,7 @@ from craftr.ext import platform
 import os, re, tempfile
 
 
+@memoize_tool
 def detect(program):
   ''' Detects the version of the MSVC compiler from the specified
   *program* name and returns a dictionary with information that can
@@ -35,6 +36,20 @@ def detect(program):
   `ToolDetectionError`.
 
   This function also supports detecting the Clang-CL compiler. '''
+
+  ''' Assuming *program* points to a MSVC compiler or Clang-CL compiler,
+  this function extracts meta information of the tool. The returned
+  dictionary contains the following keys:
+
+  * name (either ``'msvc'`` or ``'clang-cl'``)
+  * version
+  * version_str
+  * target
+  * thread_model
+  * msvc_deps_prefix
+
+  :raise OSError: If *program* can not be executed (eg. if it does not exist).
+  :raise ToolDetectionError: If *program* is not GCC or GCC++. '''
 
   clang_cl_expr = r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)'
   msvc_expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
@@ -50,7 +65,7 @@ def detect(program):
   match = re.match(clang_cl_expr, output, re.I)
   if match:
     # We've detected a version of Clang CL!
-    name = 'Clang-CL'
+    name = 'clang-cl'
     version = match.group(1)
     arch = match.group(2)
     thread_model = match.group(3)
@@ -60,7 +75,7 @@ def detect(program):
     if not match:
       raise ToolDetectionError('MSVC version and architecture could not be detected\n\n' + output)
 
-    name = 'MSVC'
+    name = 'msvc'
     version = match.group(1)
     arch = match.group(2)
     thread_model = 'win32'
@@ -104,7 +119,7 @@ def detect(program):
 class MsvcCompiler(BaseCompiler):
   ''' Interface for the MSVC compiler. '''
 
-  name = 'MSVC'
+  name = 'msvc'
 
   def __init__(self, program='cl', language='c', desc=None, **kwargs):
     super().__init__(program=program, language=language, **kwargs)
@@ -224,7 +239,7 @@ class MsvcCompiler(BaseCompiler):
 class MsvcLinker(BaseCompiler):
   ''' Interface for the MSVC linker. '''
 
-  name = 'MSVC-LINK'
+  name = 'msvc:link'
 
   def __init__(self, program='link', **kwargs):
     super().__init__(program=program, **kwargs)
@@ -280,7 +295,7 @@ class MsvcLinker(BaseCompiler):
 class MsvcAr(BaseCompiler):
   ''' Interface for the MSVC lib tool. '''
 
-  name = 'MSVC-LIB'
+  name = 'msvc:lib'
 
   def __init__(self, program='lib', **kwargs):
     super().__init__(program=program, **kwargs)
