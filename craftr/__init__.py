@@ -432,7 +432,7 @@ class Target(object):
     self.deps = deps
     self.depfile = depfile
     self.msvc_deps_prefix = msvc_deps_prefix
-    self.frameworks = frameworks or []
+    self.frameworks = expand_frameworks(frameworks or [])
     self.explicit = explicit
     self.meta = meta
 
@@ -549,9 +549,9 @@ class TargetBuilder(object):
     self.caller = magic.get_caller(stacklevel + 1)
     frameworks = list(frameworks)
     self.inputs = expand_inputs(inputs, frameworks)
-    self.frameworks = frameworks
+    self.frameworks = expand_frameworks(frameworks)
     self.kwargs = kwargs
-    self.options = FrameworkJoin(Framework(self.caller, kwargs), *frameworks)
+    self.options = FrameworkJoin(Framework(self.caller, kwargs), *self.frameworks)
     self.module = module or craftr.module()
     self.name = name
     self.target_attrs = {}
@@ -732,6 +732,11 @@ class FrameworkJoin(object):
   for another you may want to create a list of all values in the frameworks.
   This is what the FrameworkJoin allows you to do.
 
+  .. note::
+
+    The :class:`FrameworkJoin` does not use :func:`expand_frameworks` but
+    uses the list of frameworks passed to the constructor as-is.
+
   .. code-block:: python
 
     >>> fw1 = Framework('fw2', defines=['DEBUG'])
@@ -839,7 +844,8 @@ def expand_inputs(inputs, frameworks=None):
   :attr:`Target.outputs` are used. Returns a list of strings.
 
   If *frameworks* is specified, it must be a :class:`list` to which the
-  frameworks of all input :class:`Target` objects will be appended. '''
+  frameworks of all input :class:`Target` objects will be appended. The
+  frameworks need to be expanded with :func:`expand_frameworks`. '''
 
   if frameworks is not None and not isinstance(frameworks, list):
     raise TypeError('frameworks must be None or list')
@@ -860,6 +866,22 @@ def expand_inputs(inputs, frameworks=None):
     else:
       raise TypeError('input must be Target or str, got {0}'.format(type(item).__name__))
 
+  return result
+
+
+def expand_frameworks(frameworks, result=None):
+  ''' Given a list of :class:`Framework` objects, this function creates
+  a new list that contains all objects of *frameworks* and additionally
+  all objects that are listed in each of the frameworks ``"frameworks"``
+  key recursively. Duplicates are also elimated. '''
+
+  if result is None:
+    result = []
+  for fw in frameworks:
+    # xxx: does this compare the dictionary contents? We do NOT want that.
+    if fw not in result:
+      result.append(fw)
+    expand_frameworks(fw.get('frameworks', []), result)
   return result
 
 
