@@ -562,7 +562,7 @@ class TargetBuilder(object):
         index = 0
         while True:
           name = '{0}_{1:0>4}'.format(self.caller, index)
-          if name not in session.targets:
+          if self.module.project_name + '.' + name not in session.targets:
             break
           index += 1
         self.name = name
