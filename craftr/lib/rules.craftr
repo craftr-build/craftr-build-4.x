@@ -49,7 +49,7 @@ def run(program, *args, inputs=None, outputs=None, cwd=None, target_name=None):
 
   command = [program] + list(args)
   if cwd:
-    if platform.name == 'Windows':
+    if platform.name == 'win':
       command = ['cmd', '/c', 'cd', cwd, shell.safe('&&')] + command
     else:
       command = [shell.safe('('), 'cd', cwd, shell.safe('&&')] + command + [shell.safe(')')]
