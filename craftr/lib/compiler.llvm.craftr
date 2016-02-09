@@ -22,7 +22,6 @@
 __all__ = ['detect', 'LlvmCompiler', 'Compiler', 'Linker']
 
 from craftr import *
-from craftr import utils
 from craftr.ext import platform
 from craftr.ext.compiler import *
 
@@ -152,8 +151,8 @@ class LlvmCompiler(BaseCompiler):
     objects = gen_objects(builder.inputs, suffix=platform.obj)
     fw = builder.add_framework(builder.name)
 
-    include = set(builder.merge('include'))
-    defines = set(builder.merge('defines'))
+    include = utils.unique(builder.merge('include'))
+    defines = utils.unique(builder.merge('defines'))
     language = builder['language']
     debug = builder.get('debug', False)
     std = builder.get('std')
@@ -308,9 +307,9 @@ class LlvmCompiler(BaseCompiler):
 
     command = [builder['program'], '$in']
     command += ['-g'] if debug else []
-    command += ['-l' + x for x in set(libs)]
-    command += ['-L' + x for x in set(libpath)]
-    command += set(external_libs)
+    command += ['-l' + x for x in utils.unique(libs)]
+    command += ['-L' + x for x in utils.unique(libpath)]
+    command += utils.unique(external_libs)
     command += ['-dynamic'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
     command += utils.flatten(['-framework', x] for x in osx_frameworks)

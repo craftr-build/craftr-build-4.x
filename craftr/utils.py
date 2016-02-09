@@ -146,6 +146,17 @@ def flatten(iterable):
     yield from item
 
 
+def unique(iterable):
+  ''' Create a list of items in *iterable* without duplicate, preserving
+  the order of the elements where it first appeared. '''
+
+  result = []
+  for item in iterable:
+    if item not in result:
+      result.append(item)
+  return result
+
+
 class tempfile(object):
   ''' A better temporary file class where the :meth:`close` function
   does not delete the file but only :meth:`__exit__` does. '''

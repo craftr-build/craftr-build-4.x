@@ -49,10 +49,10 @@ class Ar(BaseCompiler):
 
     builder = self.builder(inputs, [], kwargs, name=target_name, meta=meta)
     output = gen_output(output, suffix=platform.lib)
-    flags = ''.join(set('rcs' + ''.join(builder.merge('ar_additional_flags'))))
-    command = [join['program'], flags, '$out', '$in']
+    flags = ''.join(utils.unique('rcs' + ''.join(builder.merge('ar_additional_flags'))))
+    command = [builder['program'], flags, '$out', '$in']
     builder.meta['staticlib_output'] = output
-    return build.create_target(command, outputs=[output])
+    return builder.create_target(command, outputs=[output])
 
 
 class Ld(BaseCompiler):
