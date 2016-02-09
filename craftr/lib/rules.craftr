@@ -50,10 +50,9 @@ def run(program, *args, inputs=None, outputs=None, cwd=None, target_name=None):
   command = [program] + list(args)
   if cwd:
     if platform.name == 'Windows':
-      command = ['cmd', '/c', 'cd', cwd, '&&'] + command
+      command = ['cmd', '/c', 'cd', cwd, shell.safe('&&')] + command
     else:
-      shell = environ['SHELL']
-      command = [shell, '-c', 'cd', cwd, '&&'] + command
+      command = [shell.safe('('), 'cd', cwd, shell.safe('&&')] + command + [shell.safe(')')]
   if not inputs:
     inputs = program
   return Target(command, inputs, outputs, pool='console', name=target_name)
