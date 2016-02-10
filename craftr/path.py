@@ -47,11 +47,15 @@ def autoglob(path, parent=None):
     return [path]
 
 
-def glob(*patterns, parent=None):
+def glob(*patterns, exclude=None, parent=None):
   ''' Wrapper for `glob2.glob()` that accepts an arbitrary number of
   patterns and matches them. The paths are normalized with `normpath()`.
   If called from within a module, relative patterns are assumed relative
-  to the modules parent directory. '''
+  to the modules parent directory.
+
+  If *exclude* is specified, it must be a string or a list of strings
+  that is/contains glob patterns or filenames to be removed from the
+  result before returning.'''
 
   if not parent and module:
     parent = module.project_dir
@@ -61,6 +65,20 @@ def glob(*patterns, parent=None):
     if not isabs(pattern):
       pattern = join(parent, pattern)
     result += glob2.glob(normpath(pattern))
+
+  if isinstance(exclude, str):
+    exclude = [exclude]
+  if exclude is not None:
+    for pattern in exclude:
+      if not isabs(pattern):
+        pattern = join(parent, pattern)
+      if not isglob(pattern):
+        print('>>>', normpath(pattern), result)
+        result.remove(normpath(pattern))
+      else:
+        for item in glob2.glob(normpath(pattern)):
+          result.remove(item)
+
   return result
 
 
