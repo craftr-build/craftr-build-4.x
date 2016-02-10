@@ -158,6 +158,7 @@ class MsvcCompiler(BaseCompiler):
       * program
       * additional_flags
       * msvc_additional_flags
+      * msvc_compile_additional_flags
 
     Unsupported options supported by other compilers:
 
@@ -232,6 +233,7 @@ class MsvcCompiler(BaseCompiler):
       command += ['/showIncludes']
     command += builder.merge('additional_flags')
     command += builder.merge('msvc_additional_flags')
+    command += builder.merge('msvc_compile_additional_flags')
 
     return builder.create_target(command, outputs=objects, foreach=True)
 
@@ -259,6 +261,7 @@ class MsvcLinker(BaseCompiler):
       * program
       * additional_flags
       * msvc_additional_flags
+      * msvc_link_additional_flags
 
     Target meta variables:
 
@@ -287,6 +290,7 @@ class MsvcLinker(BaseCompiler):
     command += external_libs
     command += builder.merge('additional_flags')
     command += builder.merge('msvc_additional_flags')
+    command += builder.merge('msvc_link_additional_flags')
 
     builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
@@ -308,6 +312,7 @@ class MsvcAr(BaseCompiler):
       * program
       * additional_flags
       * msvc_additional_flags
+      * msvc_staticlib_additional_flags
       * description
 
     Target meta variables:
@@ -321,6 +326,8 @@ class MsvcAr(BaseCompiler):
     command = [builder['program'], '/nologo']
     command += ['/export:' + x for x in export]
     command += builder.merge('additional_flags')
+    command += builder.merge('msvc_additional_flags')
+    command += builder.merge('msvc_staticlib_additional_flags')
     command += ['$in', '/OUT:$out']
 
     builder.target['description'] = builder.get('description', 'MSVC lib ($out)')

@@ -142,7 +142,9 @@ class LlvmCompiler(BaseCompiler):
       * program
       * additional_flags
       * gcc_additional_flags
+      * gcc_compile_additional_flags
       * llvm_additional_flags
+      * llvm_compile_additional_flags
 
     Target meta variables: *none*
     '''
@@ -228,8 +230,10 @@ class LlvmCompiler(BaseCompiler):
     command += builder.merge('additional_flags')
     if self.name in ('clang', 'llvm'):
       command += builder.merge('llvm_additional_flags')
+      command += builder.merge('llvm_compile_additional_flags')
     elif self.name == 'gcc':
       command += builder.merge('gcc_additional_flags')
+      command += builder.merge('gcc_compile_additional_flags')
     else:
       assert False, self.name
 
@@ -257,7 +261,9 @@ class LlvmCompiler(BaseCompiler):
       * program
       * additional_flags
       * gcc_additional_flags
+      * gcc_link_additional_flags
       * llvm_additional_flags
+      * llvm_link_additional_flags
 
     Target meta variables:
 
@@ -318,8 +324,10 @@ class LlvmCompiler(BaseCompiler):
     command += builder.merge('additional_flags')
     if self.name in ('clang', 'llvm'):
       command += builder.merge('llvm_additional_flags')
+      command += builder.merge('llvm_link_additional_flags')
     elif self.name == 'gcc':
       command += builder.merge('gcc_additional_flags')
+      command += builder.merge('gcc_link_additional_flags')
     else:
       assert False, self.name
     command += ['-o', '$out']
