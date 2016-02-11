@@ -122,7 +122,7 @@ def export(fp, main_module, defs):
 
     if target.fullname not in outputs:
       writer.build(target.fullname, 'phony', outputs)
-    if target.pool != 'console' and not target.explicit:
+    if not target.explicit:
       default.append(target.fullname)
     writer.newline()
 

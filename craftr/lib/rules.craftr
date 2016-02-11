@@ -92,6 +92,7 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     program = path.abspath(commands.outputs[0])
     commands = [[program] + list(args)]
     pool = pool or 'console'
+    builder.target_attrs['explicit'] = True
   elif isinstance(commands, str):
     commands = [commands]
 
