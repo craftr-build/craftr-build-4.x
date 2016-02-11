@@ -31,7 +31,8 @@ import craftr
 import sys
 
 
-def run(commands, args=(), inputs=(), outputs=None, cwd=None, target_name=None):
+def run(commands, args=(), inputs=(), outputs=None, cwd=None,
+    pool=None, description=None, target_name=None):
   ''' This function creates a :class:`Target` that runs a custom command.
   The function is three different modes based on the first parameter.
 
@@ -75,6 +76,11 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None, target_name=None):
     can be referenced using the Ninja variable ``%out`` in the command(s).
   :param cwd: An optional working directory to switch to when executing
     the command(s). If None is passed, the build directory is used.
+  :param pool: Override the default pool that the command is executed in.
+    If a :class:`Target` is passed for *commands*, this will default to
+    ``console``.
+  :param description: Optional target description displayed when building
+    with Ninja.
   :param target_name: An optional override for the return target's name.
   :return: A :class:`Target`.
   '''
@@ -85,6 +91,7 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None, target_name=None):
     assert len(commands.outputs) == 1, "Target for rules.run() must specify exactly one output file"
     program = path.abspath(commands.outputs[0])
     commands = [[program] + list(args)]
+    pool = pool or 'console'
   elif isinstance(commands, str):
     commands = [commands]
 
@@ -98,10 +105,10 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None, target_name=None):
       else:
         command = [shell.safe('('), 'cd', cwd, shell.safe('&&')] + command + [shell.safe(')')]
   else:
-    command, program = builder.write_multicommand_file(commands, cwd = cwd)
+    command, program = builder.write_multicommand_file(commands, cwd=cwd)
 
   inputs = builder.inputs or program
-  return builder.create_target(command, inputs, outputs)
+  return builder.create_target(command, inputs, outputs, pool=pool, description=description)
 
 
 class PythonTool(object):
