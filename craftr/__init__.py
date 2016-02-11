@@ -533,8 +533,8 @@ class TargetBuilder(object):
     Meta data for the Target that is passed directly to
     :attr:`Target.meta`.
 
-    .. note:: If the :param:`meta` parameter to the constructor
-      is None, it will be read from the :param:`kwargs` dictionary
+    .. note:: If the *meta* parameter to the constructor
+      is None, it will be read from the *kwargs* dictionary
       (thus inheriting the option from the called rule function).
 
   .. automethod:: TargetBuilder.__getitem__
