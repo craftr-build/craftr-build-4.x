@@ -11,6 +11,7 @@ Functions
 
 .. autofunction:: return_
 .. autofunction:: expand_inputs
+.. autofunction:: expand_frameworks
 .. autofunction:: import_file
 .. autofunction:: import_module
 
@@ -34,6 +35,7 @@ Target Objects
 
 TargetBuilder Objects
 ---------------------
+
 .. autoclass:: TargetBuilder
   :members:
 

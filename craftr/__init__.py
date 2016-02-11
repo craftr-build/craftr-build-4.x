@@ -37,6 +37,7 @@ import craftr
 import collections
 import functools
 import os
+import stat
 import types
 import warnings
 
@@ -682,16 +683,85 @@ class TargetBuilder(object):
     set to True, the file will always be created even if `Session.export`
     is set to False. '''
 
-    filename = '.cmd/{0}'.format(self.fullname)
-    if always or session.export:
-      path.makedirs('.cmd')
-      if suffix:
-        filename += suffix
-      with open(filename, 'w') as fp:
-        for arg in arguments:
-          fp.write(shell.quote(arg))
-          fp.write(' ')
+    filename = '.cmd/' + self.fullname
+    if suffix:
+      filename += suffix
+    if not always and not session.export:
+      return
+
+    path.makedirs('.cmd')
+    with open(filename, 'w') as fp:
+      for arg in arguments:
+        fp.write(shell.quote(arg))
+        fp.write(' ')
+
     return filename
+
+  def write_multicommand_file(self, commands, cwd = None, exit_on_error = True,
+      suffix = None, always = False):
+    ''' Write a platform dependent script that executes the specified
+    *commands* in order. If *exit_on_error* is True, the script will
+    exit if an error is encountered while executing the commands.
+
+    Returns a list representing the command-line to run the script.
+
+    :param commands: A list of strings or command lists that are
+      written into the script file.
+    :param cwd: Optionally, the working directory to change to
+      when the script is executed.
+    :param exit_on_error: If this is True, the script will exit
+      immediately if any command returned a non-zero exit code.
+    :param suffix: An optional file suffix. Note that on Windows,
+      ``.cmd`` is added to the filename after that suffix.
+    :param always: If this is true, the file is always created, not
+      only if a Ninja manifest is being exported (see :attr:`Session.export`).
+    :return: A tuple of two elements. The first element is a command list
+      that represents the command used to invoke the created script. The
+      second element is the actual command file that was written.
+    '''
+
+    from craftr.ext import platform
+
+    filename = '.cmd/' + self.fullname
+    if suffix:
+      filename += suffix
+    filename = path.normpath(filename, abs=False)
+
+    if platform.name == platform.WIN32:
+      filename += '.cmd'
+      result = ['cmd', '/Q', '/c', filename]
+    else:
+      result = [filename]
+
+    if always or session.export:
+      # Make sure we only have strings of commands.
+      prep_commands = []
+      for command in commands:
+        if not isinstance(command, str):
+          command = ' '.join(map(shell.quote, command))
+        prep_commands.append(command)
+      commands = prep_commands
+
+      # Write the script file.
+      path.makedirs('.cmd')
+      with open(filename, 'w') as fp:
+        if platform.name == platform.WIN32:
+          for cmd in commands:
+            fp.write(cmd)
+            fp.write('\n')
+            fp.write('if %errorlevel% neq 0 exit %errorlevel%\n\n')
+        else:
+          # XXX Are there differences from bash to other shells we need to
+          # take into account?
+          fp.write('#!' + utils.find_program(environ['SHELL']) + '\n')
+          fp.write('set -e\n\n')
+          for cmd in commands:
+            fp.write(cmd)
+            fp.write('\n')
+      os.chmod(filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |
+        stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)  # rwxrw-r--
+
+    return result, filename
 
 
 class Framework(dict):

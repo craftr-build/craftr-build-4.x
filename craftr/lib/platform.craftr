@@ -39,13 +39,17 @@ from craftr import import_module
 from craftr.magic import Proxy
 import sys
 
+# Identifiers for the current platform names.
+WIN32 = 'win'
+DARWIN = 'mac'
+LINUX = 'linux'
+CYGWIN = 'cygwin'
+
 # Wildcard-import the module for the current platform.
 import_module(__name__ + '.' + sys.platform, globals(), '*')
 
-
+# get_tool() imported from the current platform module.
 cc = Proxy(get_tool, 'cc')
 cxx = Proxy(get_tool, 'cxx')
 ld = Proxy(get_tool, 'ld')
 ar = Proxy(get_tool, 'ar')
-
-foo = "Fbar"
