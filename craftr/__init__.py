@@ -746,6 +746,8 @@ class TargetBuilder(object):
       path.makedirs('.cmd')
       with open(filename, 'w') as fp:
         if platform.name == platform.WIN32:
+          if cwd:
+            fp.write('cd ' + shell.quote(cwd) + '\n\n')
           for cmd in commands:
             fp.write(cmd)
             fp.write('\n')
@@ -754,7 +756,10 @@ class TargetBuilder(object):
           # XXX Are there differences from bash to other shells we need to
           # take into account?
           fp.write('#!' + utils.find_program(environ['SHELL']) + '\n')
-          fp.write('set -e\n\n')
+          fp.write('set -e\n')
+          if cwd:
+            fp.write('cd ' + shell.quote(cwd) + '\n')
+          fp.write('\n')
           for cmd in commands:
             fp.write(cmd)
             fp.write('\n')
