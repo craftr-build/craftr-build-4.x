@@ -87,6 +87,7 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
 
   builder = TargetBuilder(inputs, [], {}, name = target_name)
 
+  program = None
   if isinstance(commands, Target):
     assert len(commands.outputs) == 1, "Target for rules.run() must specify exactly one output file"
     program = path.abspath(commands.outputs[0])
@@ -99,7 +100,6 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
   if len(commands) == 1:
     # We don't need a multi command file for a single command.
     command = commands[0]
-    program = command[0]
     if cwd:
       if platform.name == platform.WIN32:
         command = ['cmd', '/c', 'cd', cwd, shell.safe('&&')] + command

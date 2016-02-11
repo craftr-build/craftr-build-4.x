@@ -749,7 +749,12 @@ class TargetBuilder(object):
           if cwd:
             fp.write('cd ' + shell.quote(cwd) + '\n\n')
           for cmd in commands:
-            fp.write(cmd)
+            # XXX For some reason, we need to invoke these commands
+            # using "cmd /Q /c" too instead of just the command, otherwise
+            # there seem to be some problems for example with CMake which
+            # causes the bash script to exit immediately after CMake
+            # is finished.
+            fp.write('cmd /Q /c ' + cmd)
             fp.write('\n')
             fp.write('if %errorlevel% neq 0 exit %errorlevel%\n\n')
         else:
