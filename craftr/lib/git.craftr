@@ -55,13 +55,22 @@ class Git(object):
       result.append((status, filename))
     return result
 
-  def describe(self, mode='tags', all=False):
+  def describe(self, mode='tags', all=False, fallback=True):
     if mode not in ('tags', 'contains'):
       raise ValueError('invalid describe mode {!r}'.format(mode))
     command = ['git', 'describe', '--{}'.format(mode)]
     if all:
       command.append('--all')
-    return self._popen(command).stdout.strip()
+    try:
+      return self._popen(command).stdout.strip()
+    except shell.CalledProcessError as exc:
+      if fallback and 'No names found' in exc.stderr:
+        # Let's create an alternative description instead.
+        sha = self._popen(['git', 'rev-parse', 'HEAD']).output[:7]
+        count = int(self._popen(['git', 'rev-list', 'HEAD', '--count']).output.strip())
+        return '{}-{}'.format(count, sha)
+      raise
+
 
   def branches(self):
     command = ['git', 'branch']
