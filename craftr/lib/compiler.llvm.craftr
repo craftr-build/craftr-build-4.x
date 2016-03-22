@@ -216,7 +216,7 @@ class LlvmCompiler(BaseCompiler):
     elif optimize == 'speed':
       command += ['-O4']
     elif optimize == 'size':
-      commandm += ['-Os']
+      command += ['-Os']
     elif optimize in ('debug', 'none', None):
       command += ['-O0']
     else:
