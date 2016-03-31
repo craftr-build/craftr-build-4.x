@@ -1,4 +1,4 @@
-# Copyright (C) 2015  Niklas Rosenstein
+# Copyright (C) 2016  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@ requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
   name='craftr-build',
-  version='0.20.0',
+  version='1.0.0',
   author='Niklas Rosenstein',
   author_email='rosensteinniklas(at)gmail.com',
   url='https://github.com/craftr-build/craftr',
