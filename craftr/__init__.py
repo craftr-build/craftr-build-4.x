@@ -1,4 +1,4 @@
-# Copyright (C) 2015  Niklas Rosenstein
+# Copyright (C) 2016  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
 ''' Craftr is a powerful meta build system for Ninja. '''
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.20.0-dev'
+__version__ = '1.0.0'
 
 import os
 import sys
