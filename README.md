@@ -47,6 +47,15 @@ program = ld.link(
 )
 ```
 
+Export and build with [Ninja][].
+
+    $ craftr -eb
+    [2/2] g++ simple/obj/main.o simple/obj/utils.o -o simple/main
+    $ ls build
+    build.ninja simple
+    $ ls build/simple
+    main obj
+
 ----
 
 <p align="center">MIT Licensed &ndash; Copyright &copy; 2016  Niklas Rosenstein</p>
