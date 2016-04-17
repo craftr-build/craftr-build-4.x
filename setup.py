@@ -34,15 +34,6 @@ from pip.req import parse_requirements
 if pip.__version__ >= '6.0':
   parse_requirements = partial(parse_requirements, session=pip.download.PipSession())
 
-scripts = ['bin/craftr', 'bin/craftr-rts-invoke']
-
-# On Windows, we need this scripts with a .py suffix.
-if os.name == 'nt':
-  new_scripts = [x + '.py' for x in scripts]
-  for src, dst in zip(scripts, new_scripts):
-    shutil.copy2(src, dst)
-  scripts = new_scripts
-
 # Parse the requirements from requirements.txt
 requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
@@ -54,7 +45,12 @@ setup(
   author_email='rosensteinniklas(at)gmail.com',
   url='https://github.com/craftr-build/craftr',
   install_requires=requirements,
-  scripts=scripts,
+  entry_points=dict(
+    console_scripts=[
+      "craftr = craftr.__main__:main",
+      "craftr-rts-invoke = craftr.rts:client_main",
+    ]
+  ),
   packages=find_packages('.'),
   package_dir={'': '.'},
   package_data={
