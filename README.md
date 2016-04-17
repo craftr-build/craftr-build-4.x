@@ -2,7 +2,9 @@ __NAME__
 
 `craftr` - build system based on [Ninja][] and [Python 3.4+][Python].
 
-[![PyPI Version](https://badge.fury.io/py/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
+[![PyPI Downloads](http://img.shields.io/pypi/dm/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
+[![PyPI Version](https://img.shields.io/pypi/v/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
+[![Travis CI](https://travis-ci.org/craftr-build/craftr.svg)](https://travis-ci.org/craftr-build/craftr)
 
 __DESCRIPTION__
 
