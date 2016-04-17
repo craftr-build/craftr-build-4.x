@@ -47,23 +47,18 @@ appetite, here's a simple ``Craftfile`` to build a C++ program:
 Installation
 ------------
 
-You should install Craftr using `Pip`_, preferably into a `virtualenv`_. Craftr
-is currently an alpha project in active development and changes very quickly.
-It is therefore recommended to use an *editable Pip installation* from the
-cloned Git repository.
+With Pip
 
 ::
 
-  $ git clone git@github.com:craftr-build/craftr.git
-  $ cd craftr
-  $ pip install -e .
+    niklas@sunbird ~$ pip install craftr-build
 
-You can grab the latest version of Craftr by doing
+Latest development version (editable, thus updatable with ``git pull``)
 
 ::
 
-  $ git pull origin master
-  $ pip install -e .
+    niklas@sunbird ~$ git clone https://github.com/craftr-build/craftr.git
+    niklas@sunbird ~$ pip install -e craftr
 
 Getting Started
 ---------------

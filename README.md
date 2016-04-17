@@ -2,7 +2,7 @@ __NAME__
 
 `craftr` - build system based on [Ninja][] and [Python 3.4+][Python].
 
-![PyPI Version](https://badge.fury.io/py/craftr-build.svg)
+[![PyPI Version](https://badge.fury.io/py/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 
 __DESCRIPTION__
 
@@ -28,6 +28,17 @@ __DEPENDENCIES__
 - [Ninja][]
 - [Python][] 3.4 or higher
 - see [requirements.txt](requirements.txt)
+
+__INSTALLATION__
+
+With Pip
+
+    niklas@sunbird ~$ pip install craftr-build
+
+Latest development version (editable, thus updatable with `git pull`)
+
+    niklas@sunbird ~$ git clone https://github.com/craftr-build/craftr.git
+    niklas@sunbird ~$ pip install -e craftr
 
 __EXAMPLES__
 
