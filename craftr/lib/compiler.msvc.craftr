@@ -182,6 +182,7 @@ class MsvcCompiler(BaseCompiler):
     optimize = builder.get('optimize', None)
     exceptions = builder.get('exceptions', None)
     autodeps = builder.get('autodeps', True)
+    msvc_runtime_library = builder.get('msvc_runtime_library', None)
     builder.target['description'] = builder.get('description', '{0} Compile Object ($out)'.format(self.name))
 
     if language not in ('c', 'c++'):
@@ -226,6 +227,13 @@ class MsvcCompiler(BaseCompiler):
       command += ['/Od']
     else:
       builder.invalid_option('optimize')
+
+    if msvc_runtime_library == 'dynamic':
+      command += ['/MTd' if debug else '/MT']
+    elif msvc_runtime_library == 'static':
+      command += ['/MDd' if debug else '/MD']
+    elif msvc_runtime_library is not None:
+      raise ValueError('invalid msvc_runtime_library: {0!r}'.format(msvc_runtime_library))
 
     if autodeps:
       builder.target['deps'] = 'msvc'
