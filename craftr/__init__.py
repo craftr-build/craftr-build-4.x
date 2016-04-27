@@ -687,7 +687,7 @@ class TargetBuilder(object):
     if suffix:
       filename += suffix
     if not always and not session.export:
-      return
+      return filename
 
     path.makedirs('.cmd')
     with open(filename, 'w') as fp:
