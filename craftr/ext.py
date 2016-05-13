@@ -89,7 +89,11 @@ class CraftrImporter(object):
 
     def check_dir(dirname):
       self._check_file(path.join(dirname, 'Craftfile'))
-      for filename in path.listdir(dirname):
+      try:
+        files = path.listdir(dirname)
+      except OSError:
+        return
+      for filename in files:
         if filename.endswith('.craftr'):
           self._check_file(filename)
 
