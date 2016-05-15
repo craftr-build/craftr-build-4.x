@@ -166,9 +166,11 @@ def main():
   args.I = path.normpath(args.I)
 
   if not args.m:
-    cfile = path.join(args.p, 'Craftfile')
+    cfile = path.join(args.p, 'Craftfile.py')
     if not path.isfile(cfile):
-      error('{0!r} does not exist'.format(path.relpath(cfile)))
+      cfile = path.join(args.p, 'Craftfile')
+    if not path.isfile(cfile):
+      error('{0!r}[.py] does not exist'.format(path.relpath(cfile)))
       return errno.ENOENT
     args.m = craftr.ext.get_module_ident(cfile)
     if not args.m:
@@ -255,8 +257,8 @@ def main():
     if do_run:
       # Run the environment files.
       if not args.no_rc:
-        session.exec_if_exists(path.normpath('~/.craftrc'))
-        session.exec_if_exists(path.join(old_cwd, '.craftrc'))
+        session.exec_if_exists(path.normpath('~/craftrc.py'))
+        session.exec_if_exists(path.join(old_cwd, 'craftrc.py'))
       if args.rc:
         rc_file = path.normpath(args.rc, old_cwd)
         if not session.exec_if_exists(rc_file):
@@ -267,7 +269,7 @@ def main():
       _abs_env(old_cwd)
 
       # Load the main craftr module specified via the -m option
-      # or the "Craftfile" of the original cwd.
+      # or the "Craftfile.py" of the original cwd.
       try:
         module = importlib.import_module('craftr.ext.' + args.m)
       except craftr.ModuleError as exc:

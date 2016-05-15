@@ -39,8 +39,9 @@ def get_module_ident(filename):
   *filename* and returns it, or None if the file does not contain
   a `craftr_module(...)` declaration in the first comment-block. '''
 
-  if filename.endswith('.craftr'):
-    return path.basename(filename)[:-7]
+  base = path.basename(filename)
+  if base.startswith('craftr.ext.') and base.endswith('.py'):
+    return base[11:-3] or None
 
   expr = re.compile('#\s*craftr_module\(([\w\.]+)\)')
   with open(filename, "r") as fp:
@@ -52,7 +53,7 @@ def get_module_ident(filename):
         if match:
           return match.group(1)
       elif in_comment_block:
-        return False
+        return None
 
 
 class CraftrImporter(object):
@@ -88,13 +89,13 @@ class CraftrImporter(object):
     ''' Rebuilds the importer cache for craftr modules. '''
 
     def check_dir(dirname):
-      self._check_file(path.join(dirname, 'Craftfile'))
+      self._check_file(path.join(dirname, 'Craftfile.py'))
       try:
         files = path.listdir(dirname)
       except OSError:
         return
       for filename in files:
-        if filename.endswith('.craftr'):
+        if filename.endswith('.py'):
           self._check_file(filename)
 
     self._cache.clear()

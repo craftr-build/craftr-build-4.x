@@ -2,7 +2,7 @@ The Craftr build system
 =======================
 
 Craftr is a cross-platform meta build system based on `Ninja`_. To whet your
-appetite, here's a simple ``Craftfile`` to build a C++ program:
+appetite, here's a simple ``Craftfile.py`` to build a C++ program:
 
 .. code-block:: python
 
@@ -63,7 +63,7 @@ Latest development version (editable, thus updatable with ``git pull``)
 Getting Started
 ---------------
 
-There is usually a file named "Craftfile" in your current working directory.
+There is usually a file named "Craftfile.py" in your current working directory.
 This file is a Python script that will be executed when you run ``craftr``.
 Every Craftfile must have a module name declaration which can be anywhere
 in the first comment block at the beginning of the file. Craftr will parse
@@ -82,7 +82,7 @@ To run this script, simply type ``craftr`` in your command-line.
   $ craftr
   Hello Craftr! This is my_project from /home/niklas/Desktop/my_project
   $ ls
-  Craftfile
+  Craftfile.py
 
 Craftr will automatically use the module name from the Craftfile in
 the current directory as the main module for this session. You can
@@ -139,7 +139,7 @@ execute with `Ninja`_.
 
   Also, :ref:`Craftr always switches to the build directory<BuildDirSwitch>`,
   which is why we use the :func:`path.local()<craftr.path.local>` function to
-  create a path relative to the "Craftfile" directory.
+  create a path relative to the "Craftfile.py" directory.
 
 Rules
 -----
@@ -325,7 +325,7 @@ Options are set via environment variables. This is the order in which the
 variables are overwritten:
 
 1. Envrionment variables from your shell
-2. ``.craftrc`` files that modify the :data:`craftr.environ` dictionary
+2. ``craftrc.py`` files that modify the :data:`craftr.environ` dictionary
 3. The ``-D`` option that can be specified on the command-line
 4. Craftr modules that modify the :data:`craftr.environ` dictionary
 
@@ -339,8 +339,8 @@ If your Craftfile identifier is ``my_project`` and you pass
   You can also reference targets from a Craftr module that would normally
   not be imported into your current Craftfile. For instance, lets say you
   have a library called `libs.myfoo` and the build definitions are in a
-  `Craftfile` and you have a `libs.myfoo.test.craftr` file that exposes a
-  `run` target, you can do this from the command-line:
+  ``Craftfile.py`` and you have a `libs.myfoo.test.craftr` file that exposes
+  a ``run`` target, you can do this from the command-line:
 
   ::
 
@@ -348,16 +348,18 @@ If your Craftfile identifier is ``my_project`` and you pass
 
   Instead of having to switch the main module.
 
+  ::
+
     craftr -m libs.myfoo.test -eb .run
 
 
-.craftrc Files
---------------
+craftrc.py Files
+-----------------
 
-Before Craftr will execute the main Craftr module, it will look for ``.craftrc``
+Before Craftr will execute the main Craftr module, it will look for ``craftrc.py``
 files in the user home and working directory and execute them. It will skip
 this step if you pass ``--no-rc``. You can specify a difference file instead
-of the ``.craftrc`` of the current working directory with the ``--rc <filename>``
+of the ``craftrc.py`` of the current working directory with the ``--rc <filename>``
 option.
 
 Craftr RC files are intended to setup environment variables that can have
@@ -365,7 +367,7 @@ influence on the build process on a per-user and per-project basis. The RC files
 are execute **before** the options passed with ``-D`` are set.
 
 For example, for using the `craftr.ext.qt5`_ module on Windows, I use this
-``.craftrc`` file in my home directory:
+``craftrc.py`` file in my home directory:
 
 .. code-block:: python
 

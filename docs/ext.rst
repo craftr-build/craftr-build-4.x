@@ -14,7 +14,7 @@ For example, your project structure might look like this:
 ::
 
   awesome.app/
-    Craftfile
+    Craftfile.py
     src/
       ...
     vendor/
@@ -22,7 +22,7 @@ For example, your project structure might look like this:
         qt5.craftr
 
 To import the ``craftr.ext.qt5`` module, you first need to add ``vendor/``
-to the :attr:`craftr.Session.path`. You can do this from a ``.craftrc`` file
+to the :attr:`craftr.Session.path`. You can do this from a ``craftrc.py`` file
 or directly in your Craftfile. Note that you need to call the :func:`update()
 <craftr.Session.update>` method, otherwise you still will not be able to
 import the ``qt5`` module.

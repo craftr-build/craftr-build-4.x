@@ -1,10 +1,10 @@
 RTS & Python Tools
 ==================
 
-Craftr allows you to create Python (command-line) Tools inside the ``Craftfile``
+Craftr allows you to create Python (command-line) Tools inside the ``Craftfile.py``
 that Ninja can call through the **Craftr RTS** (runtime server). These tools are
 all executed in the same Craftr process, thus being very efficient since the
-``Craftfile`` does *not* need to be re-evaluated with each invocation.
+``Craftfile.py`` does *not* need to be re-evaluated with each invocation.
 
 You will see something like ``craftr-rts-invoke project.my_tool_target`` in the
 ``build.ninja`` file. When you run Craftr, it will create a socket server and
