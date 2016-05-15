@@ -334,6 +334,22 @@ If your Craftfile identifier is ``my_project`` and you pass
 ``craftr -D.debug=true``, it will set the environment variable
 ``my_project.debug`` to the string ``true``.
 
+.. note::
+
+  You can also reference targets from a Craftr module that would normally
+  not be imported into your current Craftfile. For instance, lets say you
+  have a library called `libs.myfoo` and the build definitions are in a
+  `Craftfile` and you have a `libs.myfoo.test.craftr` file that exposes a
+  `run` target, you can do this from the command-line:
+
+  ::
+
+    craftr -eb .test.run
+
+  Instead of having to switch the main module.
+
+    craftr -m libs.myfoo.test -eb .run
+
 
 .craftrc Files
 --------------

@@ -274,6 +274,12 @@ def main():
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
 
+      # We can reference completely external targets from the command
+      # line, and we need to make sure these are imported as well.
+      for tname in args.targets:
+        mname = tname.rpartition('.')[0]
+        importlib.import_module('craftr.ext.' + mname)
+
       try:
         targets = [session.targets[x] for x in args.targets]
       except KeyError as key:
