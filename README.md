@@ -41,12 +41,14 @@ program = ld.link(
 
 Run Craftr from the command-line:
 
-    $ craftr -eb
+    niklas ~/Desktop/test $ craftr -eb -N -v
     craftr: [INFO ]: Changed directory to "build"
-    [2/2] g++ simple/obj/main.o simple/obj/utils.o -o simple/main
-    $ ls build
-    build.ninja simple
-    $ ls build/simple
+    [1/3] clang++ -x c++ -c /Users/niklas/Desktop/test/src/main.cpp -o /Users/niklas/Desktop/test/build/my_project/obj/main.o -stdlib=libc++ -Wall -O0 -MD -MP -MF /Users/niklas/Desktop/test/build/my_project/obj/main.o.d
+    [2/3] clang++ -x c++ -c /Users/niklas/Desktop/test/src/foo.cpp -o /Users/niklas/Desktop/test/build/my_project/obj/foo.o -stdlib=libc++ -Wall -O0 -MD -MP -MF /Users/niklas/Desktop/test/build/my_project/obj/foo.o.d
+    [3/3] clang /Users/niklas/Desktop/test/build/my_project/obj/foo.o /Users/niklas/Desktop/test/build/my_project/obj/main.o -lc++ -o /Users/niklas/Desktop/test/build/my_project/main
+    niklas ~/Desktop/test $ ls build
+    build.ninja my_project
+    niklas ~/Desktop/test $ ls build/my_project/
     main obj
 
 #### Additional Links
