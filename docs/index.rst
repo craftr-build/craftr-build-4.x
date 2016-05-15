@@ -43,6 +43,7 @@ appetite, here's a simple ``Craftfile.py`` to build a C++ program:
   api
   rts
   magic
+  changelog
 
 Installation
 ------------
