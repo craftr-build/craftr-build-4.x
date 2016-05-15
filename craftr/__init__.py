@@ -1082,9 +1082,9 @@ def craftr_min_version(version_string):
 
 
 from craftr.logging import log, debug, info, warn, error
-from craftr import ext, path, shell, ninja, rts, utils
+from craftr import ext, options, path, shell, ninja, rts, utils
 
-__all__ = ['session', 'module', 'path', 'shell', 'utils', 'environ',
+__all__ = ['session', 'module', 'path', 'options', 'shell', 'utils', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
   'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs',
   'import_file', 'import_module', 'memoize_tool', 'craftr_min_version']

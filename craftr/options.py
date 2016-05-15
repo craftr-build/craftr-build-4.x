@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-# Copyright (C) 2016-2016  Niklas Rosenstein
+# Copyright (C) 2016  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,9 +18,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+''' Utility functions to read options from the environment. '''
 
-from craftr import warn
-warn('craftr.ext.options will be removed in the next version')
-warn('use craftr.options instead')
+__all__ = ['get_option']
 
-from craftr.options import get, get_option
+from craftr import module, environ
+
+
+def get_option(name, inherit_global = True):
+  ''' Reads the option *name* prefixed with the current module's
+  identifier from the environment and returns its value. If the option
+  is not set and *inherit_global* is True, it will also try to find
+  *name* without the module's prefix. Returns None if the option does
+  not exist at all.
+
+  This function has an alias :meth:`get`. '''
+
+  full_name = module.project_name + '.' + name
+  try:
+    value = environ[full_name]
+  except KeyError:
+    if inherit_global:
+      value = environ.get(name, None)
+    else:
+      value = None
+  return value
+
+
+get = get_option
