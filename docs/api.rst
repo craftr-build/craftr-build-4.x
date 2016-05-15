@@ -70,7 +70,7 @@ The ``utils`` module
   :members:
 
 The ``options`` module
-======================
+----------------------
 
 .. automodule:: craftr.options
   :members:

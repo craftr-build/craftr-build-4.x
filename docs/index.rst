@@ -384,28 +384,40 @@ variable to ``false`` instead. For any other value, default behaviour applies.
 Debugging
 ---------
 
-You can use the ``pdb`` module for an interactive debugging session in your
-Craftr script if anything doesn't work as you would expect it to. Simply put
-the following line at the position you want the program to be paused for
-debugging.
+Not only can you debug your Craftr build scripts with the :mod`pdb`
+module, but you can also increase the verbosity level to increase
+the output detail. By default, Craftr already shows the module and
+line number when using the :func:`craftr.info`, :func:`craftr.warn`
+or :func:`craftr.error` functions. However, there might be cases
+where you are facing messages as such and you don't know from where
+exactly they originate.
 
-.. code-block:: python
+::
 
-  import pdb; pdb.set_trace()
+    craftr: [INFO ]: Changed directory to "build"
+    craftr: [WARN ] (options|L23): craftr.ext.options will be removed in the next version
+    craftr: [WARN ] (options|L24): use craftr.options instead
 
-You can also enable verbose output that will enable a stack trace being printed
-with every line of log message that is being output by Craftr modules. The stack
-trace is stripped to one line per frame and limited to 5 frames. If you specify
-``-v``, the traceback will only be printed for :func:`craftr.error` calls. If
-you want to enable it for :func:`craftr.info` and :func:`craftr.warn` as well, use
-``-vv``. You can also specify the ``--strace-depth`` option to specify the depth
-of the stack trace.
+Simply pass the ``-vv`` option to show stacktrace with each message.
+Also note that this stacktrace is nicely highlighted if you're in a
+terminal that supports ANSI color codes.
 
-.. image:: http://i.imgur.com/IQL5GzN.png
+::
 
+    craftr: [DEBUG]: Detected ninja v1.6.0
+    craftr: [INFO ]: Changed directory to "build"
+    craftr: [WARN ] (options|L23): craftr.ext.options will be removed in the next version
+      In _load_backward_compatible() [<frozen importlib._bootstrap>|L634]
+      In load_module() [/Users/niklas/Documents/craftr/craftr/ext.py|L225]
+      In <craftr.ext.options> [/Users/niklas/Documents/craftr/craftr/lib/options.craftr|L23]
+    craftr: [WARN ] (options|L24): use craftr.options instead
+      In _load_backward_compatible() [<frozen importlib._bootstrap>|L634]
+      In load_module() [/Users/niklas/Documents/craftr/craftr/ext.py|L225]
+      In <craftr.ext.options> [/Users/niklas/Documents/craftr/craftr/lib/options.craftr|L24]
 
-.. image:: http://i.imgur.com/VcyF801.png
-
+You can also use a verbosity level of one by passing only one ``-v``
+and Craftr will only show the stack trace of :func:`craftr.error`
+messages.
 
 Additional Links
 ----------------
