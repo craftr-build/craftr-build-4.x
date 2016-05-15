@@ -1,79 +1,89 @@
-__NAME__
-
-`craftr` - build system based on [Ninja][] and [Python 3.4+][Python].
+# Craftr
 
 [![PyPI Downloads](http://img.shields.io/pypi/dm/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 [![PyPI Version](https://img.shields.io/pypi/v/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 [![Travis CI](https://travis-ci.org/craftr-build/craftr.svg)](https://travis-ci.org/craftr-build/craftr)
 
-__DESCRIPTION__
+Craftr is the build system of the future based on [Ninja][] and [Python][].
 
-Craftr is a cross-platform meta build system that features modular build
-defintions, multiple abstraction layers, flexibility, extensibility, scalability
-and performance. It can be used for any kinds of software build automation and
-is not bound to a specific language domain.
+* [x] Modular build scripts
+* [x] Cross-platform support
+* [x] Low- and high-level interfaces for specifying build dependencies and commands
+* [x] Good performance compared to traditional build systems like CMake and Make or Meson
+* [x] LDL: Language-domain-less, Craftr is an omnipotent build system
+* [x] Extensive STL with high-level interfaces to common compiler toolsets like
+      MSVC, Clang, GCC, Java, Protobuf, Yacc, Cython, Flex, NVCC
+* [x] **Consequent** out-of-tree builds
 
-__CONTRIBUTING__
+### Getting Started
 
-I am developing this project in my free time. Contributions of any kind are
-highly welcome. If you're having trouble getting started with Craftr, please
-open a [new issue][].
-
-__ADDITIONAL LINKS__
-
-* [Documentation](http://craftr.readthedocs.org/en/latest/?badge=latest)
-* [Craftr extension build modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
-* [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
-
-__DEPENDENCIES__
-
-- [Ninja][]
-- [Python][] 3.4 or higher
-- see [requirements.txt](requirements.txt)
-
-__INSTALLATION__
-
-With Pip
-
-    niklas@sunbird ~$ pip install craftr-build
-
-Latest development version (editable, thus updatable with `git pull`)
-
-    niklas@sunbird ~$ git clone https://github.com/craftr-build/craftr.git
-    niklas@sunbird ~$ pip install -e craftr
-
-__EXAMPLES__
-
-A basic example to compile a C++ program on any of the support platforms.
+Craftr uses `Craftfile.py` or `craftr.ext.<module_name>.py` files as build scripts.
+`Craftfile.py` files require the `# craftr_module(...)` line and are automatically
+detected by Craftr as the project's main script.
 
 ```python
-# craftr_module(simple)
-from craftr import *
-from craftr.ext.platform import cxx, ld
+# craftr_module(my_project)
 
+from craftr import path                   # similar to os.path with a lot of additional features
+from craftr.ext.platform import cxx, ld   # import the C++ compiler and Linker for the current platform
+
+# Create object files for each .cpp file in the src/ directory.
 obj = cxx.compile(
   sources = path.glob('src/*.cpp')
 )
+
+# Link all object files into an executable called "main".
 program = ld.link(
   output = 'main',
   inputs = obj
 )
 ```
 
-Export and build with [Ninja][].
+Run Craftr from the command-line:
 
     $ craftr -eb
+    craftr: [INFO ]: Changed directory to "build"
     [2/2] g++ simple/obj/main.o simple/obj/utils.o -o simple/main
     $ ls build
     build.ninja simple
     $ ls build/simple
     main obj
 
+#### Additional Links
+
+* [Changelog](docs/changelog.rst)
+* [Documentation](http://craftr.readthedocs.org/en/latest/?badge=latest)
+* [Craftr extension build modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
+* [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
+
+### Contribute
+
+I welcome all contributions, feedback and suggestions! If you have any of
+those or just want to chat, ping me on twitter [@rosensteinn][], by [mail][] or
+open a [new issue][]!
+
+### Requirements
+
+- [Ninja][]
+- [Python][] 3.4 or higher
+- see [requirements.txt](requirements.txt)
+
+### Installation
+
+    pip install craftr-build
+
+To install from the Git repository, use the `-e` flag to be able to update
+Craftr by simply pulling the latest changes from the remote repository.
+
+    git clone https://github.com/craftr-build/craftr.git && cd craftr
+    pip install -e .
+
 ----
 
 <p align="center">MIT Licensed &ndash; Copyright &copy; 2016  Niklas Rosenstein</p>
 
   [new issue]: https://github.com/craftr-build/craftr/issues/new
+  [@rosensteinn]: https://twitter.com/rosensteinn
+  [mail]: mailto:rosensteinniklas@gmail.com
   [Ninja]: https://github.com/ninja-build/ninja
   [Python]: https://www.python.org/
-  [docs_Tasks]: http://craftr.readthedocs.org/en/latest/?badge=latest#tasks
