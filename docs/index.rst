@@ -1,39 +1,76 @@
 The Craftr build system
 =======================
 
-Craftr is a cross-platform meta build system based on `Ninja`_. To whet your
-appetite, here's a simple ``Craftfile.py`` to build a C++ program:
+Craftr is the build system of the future based on `Ninja`_ and `Python`_.
+
+* Modular build scripts
+* Cross-platform support
+* Low- and high-level interfaces for specifying build dependencies and commands
+* Good performance compared to traditional build systems like CMake and Make or Meson
+* LDL: Language-domain-less, Craftr is an omnipotent build system
+* Extensive STL with high-level interfaces to common compiler toolsets like
+  MSVC, Clang, GCC, Java, Protobuf, Yacc, Cython, Flex, NVCC
+* **Consequent** out-of-tree builds
+
+Getting Started
+---------------
+
+Craftr is built around Python-ish modules that we call Craftr modules or
+scripts. There are two ways a Craftr module can be created:
+
+1. A file named ``Craftfile.py`` with a ``# craftr_module(...)` declaration
+2. A file named ``craftr.ext.<module_name>.py``
+
+By default, Craftr will execute the ``Craftfile.py`` from the current
+working directy if no different main module is specified with the ``-m``
+option. Below you can find a simple Craftfile that can build a C++ program
+on any platform (that is supported by the Craftr STL).
 
 .. code-block:: python
 
-  # craftr_module(simple)
-  # A basic example to compile a C++ program on any supported platform.
+  # craftr_module(my_project)
 
-  from craftr import *
-  from craftr.ext.platform import cxx, ld
+  from craftr import path                   # similar to os.path with a lot of additional features
+  from craftr.ext.platform import cxx, ld   # import the C++ compiler and Linker for the current platform
 
+  # Create object files for each .cpp file in the src/ directory.
   obj = cxx.compile(
-    sources = path.glob('src/*.cpp')
+    sources = path.glob('src/*.cpp'),
+    std = 'c++11',
   )
+
+  # Link all object files into an executable called "main".
   program = ld.link(
     output = 'main',
     inputs = obj
   )
 
-**Key Features** of Craftr:
+Now you can run Craftr with the ``-e`` flag to export a Ninja manifest
+and the ``-b`` flag to trigger a build. Since we want to build everything,
+we need not specify any target on the command-line.
 
-- Modular builds written in Python
-- Integrate `Tasks`_ that can be invoked from the command-line
-- Easily extensible framework
-- Builtin support for C/C++ (MSVC, Clang-CL, GCC, LLVM), Java, C#, Flex, Yacc and ProtoBuf
-- **[todo]** Cross-platform support for OpenCL, CUDA, Vala
+.. note:: The ``-N -v`` passes the ``-v`` flag to Ninja!
 
-**Requirements**:
+::
+
+    niklas ~/Desktop/test $ craftr -eb -N -v
+    craftr: [INFO ]: Changed directory to "build"
+    [1/3] clang++ -x c++ -c /Users/niklas/Desktop/test/src/main.cpp -o /Users/niklas/Desktop/test/build/my_project/obj/main.o -stdlib=libc++ -Wall -O0 -MD -MP -MF /Users/niklas/Desktop/test/build/my_project/obj/main.o.d
+    [2/3] clang++ -x c++ -c /Users/niklas/Desktop/test/src/foo.cpp -o /Users/niklas/Desktop/test/build/my_project/obj/foo.o -stdlib=libc++ -Wall -O0 -MD -MP -MF /Users/niklas/Desktop/test/build/my_project/obj/foo.o.d
+    [3/3] clang /Users/niklas/Desktop/test/build/my_project/obj/foo.o /Users/niklas/Desktop/test/build/my_project/obj/main.o -lc++ -o /Users/niklas/Desktop/test/build/my_project/main
+    niklas ~/Desktop/test $ ls build
+    build.ninja my_project
+    niklas ~/Desktop/test $ ls build/my_project/
+    main obj
+
+Requirements
+------------
 
 - `Ninja`_
 - `Python`_ 3.4 or newer
 
-**Contents**:
+Contents
+--------
 
 .. toctree::
   :maxdepth: 1
@@ -48,64 +85,17 @@ appetite, here's a simple ``Craftfile.py`` to build a C++ program:
 Installation
 ------------
 
-With Pip
+::
+
+    pip install craftr-build
+
+To install from the Git repository, use the `-e` flag to be able to update
+Craftr by simply pulling the latest changes from the remote repository.
 
 ::
 
-    niklas@sunbird ~$ pip install craftr-build
-
-Latest development version (editable, thus updatable with ``git pull``)
-
-::
-
-    niklas@sunbird ~$ git clone https://github.com/craftr-build/craftr.git
-    niklas@sunbird ~$ pip install -e craftr
-
-Getting Started
----------------
-
-There is usually a file named "Craftfile.py" in your current working directory.
-This file is a Python script that will be executed when you run ``craftr``.
-Every Craftfile must have a module name declaration which can be anywhere
-in the first comment block at the beginning of the file. Craftr will parse
-the comment and use it to identify the module. It will also create the global
-variable `project_name` and `project_dir`.
-
-.. code-block:: python
-
-  # craftr_module(my_project)
-  print("Hello Craftr! This is", project_name, "from", project_dir)
-
-To run this script, simply type ``craftr`` in your command-line.
-
-::
-
-  $ craftr
-  Hello Craftr! This is my_project from /home/niklas/Desktop/my_project
-  $ ls
-  Craftfile.py
-
-Craftr will automatically use the module name from the Craftfile in
-the current directory as the main module for this session. You can
-override this behaviour by using the ``-m <module_name>`` option.
-
-.. _BuildDirSwitch:
-
-.. note:: Craftr will *always* change to the build directory internally
-  before executing the Craftfile and Ninja will be invoked from that
-  directory, too. The default build directory is ``build/`` but you
-  can change it with the ``-d`` option or ``-p`` option.
-
-  If the build directory it switches to didn't exist from the start and
-  does not have any content after Craftr finishes, it will be deleted
-  again.
-
-  ::
-
-    $ craftr -d build_debug
-    $ # or
-    $ mkdir build_debug && cd build_debug
-    $ craftr -p ..
+    git clone https://github.com/craftr-build/craftr.git && cd craftr
+    pip install -e .
 
 Targets
 -------
