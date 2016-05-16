@@ -24,6 +24,19 @@ v1.1.0 (unreleased)
 * add ``craftr.shell.format()`` and ``~.join()`` functions
 * ``craftr.shell.run()`` now splits strings into a command list if
   the *shell* argument is False
+* add ``Target.rts_func`` and constructor now accepts a callable for
+  the *command* parameter
+* removed ``Session.rts_funcs``
+* add ``Session.has_rts_targets()``
+* add ``task()`` decorator function
+* Craftr RTS now searches in the registered targets for an RTS target
+  and calls the RTS function with two arguments (inputs, outputs) instead
+  of the arglist
+* removed ``MSG_ARGUMENT`` from the Craftr RTS spec
+* functions wrapped with the ``task()`` decorator can now be specified
+  on the command-line just like normal targets
+* remove ``craftr.ext.rules.PythonTool`` and ``~.render_template``
+  since they are no longer necessary with the new ``task()`` decorator
 
 v1.0.0
 ------

@@ -67,9 +67,6 @@ MSG_NOOP = b'noop'
 # The encoding can be changed by sending the header charset=<coding>.
 MSG_HEADER = b'head'
 
-# This message adds an argument to the argument list on the server side.
-MSG_ARGUMENT = b'arg+'
-
 # Sent to start the command on the server side.
 MSG_RUN = b'run!'
 
@@ -231,7 +228,6 @@ class _RequestHandler(object):
     self.stdout = None
     self.stderr = None
     self.result = None
-    self.arglist = []
     self.lock = threading.RLock()
 
     try:
@@ -280,13 +276,6 @@ class _RequestHandler(object):
       self.send_message(MSG_NOOP)
       return
 
-    elif message_type == MSG_ARGUMENT:
-      if self.thread:
-        self.send_message(MSG_INVALID_REQUEST, 'already running')
-      self.arglist.append(data.decode(self.coding))
-      self.send_message(MSG_NOOP)
-      return
-
     elif message_type == MSG_RUN:
       if self.thread:
         self.send_text(MSG_INVALID_REQUEST, 'already started')
@@ -297,11 +286,16 @@ class _RequestHandler(object):
         self.send_text(MSG_INVALID_REQUEST, 'command header not sent')
         return
 
-      if command not in self.session.rts_funcs:
-        self.send_text(MSG_INVALID_REQUEST, '{0!r} is not a registered rts function'.format(command))
+      try:
+        target = self.session.targets[command]
+      except KeyError:
+        self.send_text(MSG_INVALID_REQUEST, '{0!r} is not a registered target'.format(command))
+        return
+      if not target.rts_func:
+        self.send_text(MSG_INVALID_REQUEST, '{0!r} is not an RTS target'.format(command))
         return
 
-      func = self.session.rts_funcs[command]
+      func = target.rts_func
 
       # xxx does it make sense to use the _RequestHandler.lock
       # to synchronize read/write from/to the streams?
@@ -320,7 +314,7 @@ class _RequestHandler(object):
           thread_stdin.dest_file = io.TextIOWrapper(io.BufferedReader(self.stdin))
           thread_stdout.dest_file = io.TextIOWrapper(io.BufferedWriter(self.stdout))
           thread_stderr.dest_file = thread_stdout.dest_file  # io.TextIOWrapper(io.BufferedWriter(self.stderr))
-          result = func(self.arglist)
+          result = func(target.inputs, target.outputs)
           if result is None:
             result = 0
           elif not isinstance(result, int):
@@ -414,10 +408,6 @@ class _Client(object):
 
   def send_command(self, command):
     self._send(MSG_HEADER, b'command=' + command.encode('utf8'), expect=MSG_NOOP)
-
-  def send_arglist(self, args):
-    for arg in args:
-      self._send(MSG_ARGUMENT, arg.encode('utf8'), expect=MSG_NOOP)
 
   def send_run(self):
     self._send(MSG_RUN, expect=MSG_NOOP)
@@ -540,7 +530,6 @@ class CraftrRuntimeServer(object):
 def client_main():
   parser = argparse.ArgumentParser()
   parser.add_argument('command', help='the command to invoke, usually the name of a Python function')
-  parser.add_argument('subargs', nargs='...', help='additional arguments for the command')
   args = parser.parse_args()
 
   try:
@@ -550,7 +539,6 @@ def client_main():
 
   client = _Client(uri[0], uri[1])
   client.send_command(args.command)
-  client.send_arglist(args.subargs)
   client.send_run()
 
   try:

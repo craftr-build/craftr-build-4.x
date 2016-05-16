@@ -292,7 +292,7 @@ def main():
         # Are there any targets that use the RTS feature? If so,
         # we must create a flag file so Craftr knows RTS is required
         # for subsequent invokations without the -e option.
-        if session.rts_funcs:
+        if session.has_rts_targets():
           open('.craftr-rts', 'w').close()
           debug('Created .craftr-rts flag file')
 
@@ -305,7 +305,7 @@ def main():
 
     # If the session has targets that require the RTS feature or
     # if the --rts flag was specified, start the RTS server.
-    if args.rts or session.rts_funcs:
+    if args.rts or session.has_rts_targets():
       session.start_server()
 
     # Pre-build function.

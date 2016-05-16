@@ -30,6 +30,7 @@ if sys.version < '3.4':
 from os import environ
 from craftr import magic
 
+RTS_COMMAND = 'craftr-rts-invoke'
 session = magic.new_context('session')
 module = magic.new_context('module')
 
@@ -92,14 +93,6 @@ class Session(object):
     bound to when it is started. Defaults to None, in which case
     the server is bound to the localhost on a random port.
 
-  .. attribute:: rts_funcs
-
-    A dictionary that maps target names to functions. The function will
-    be invoked when you call ``craftr-rts <func_name>`` (note: the
-    Craftr Runtime Server must be running and the environment variable
-    ``CRAFTR_RTS`` must be set). The functions added to this dictionary
-    must accept a list of command-line arguments.
-
   .. attribute:: ext_importer
 
     A :class:`ext.CraftrImporter` object that handles the importing of
@@ -135,7 +128,6 @@ class Session(object):
     self.env = environ.copy()
     self.server = rts.CraftrRuntimeServer(self)
     self.server_bind = server_bind
-    self.rts_funcs = {}
     self.ext_importer = ext.CraftrImporter(self)
     self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
     self.modules = {}
@@ -155,6 +147,15 @@ class Session(object):
       name = 'clean',
       module = None,
       explicit = True)
+
+  def has_rts_targets(self):
+    ''' Returns True if there is any registered :class:`Target` in the
+    Session that requires the RTS feature (ie. Tasks). '''
+
+    for target in self.targets.values():
+      if target.rts_func:
+        return True
+    return False
 
   def exec_if_exists(self, filename):
     ''' Executes *filename* if it exists. Used for running the Craftr
@@ -290,6 +291,10 @@ class Target(object):
     can be passed to the constructor in which case it is parsed with
     :func:`shell.split`.
 
+    *New in v1.1.0*: If you pass a function object as the :attr:`command`,
+    the target will be invoked via the Craftr RTS and calls that function
+    with two parameters: The :attr:`inputs` and :attr:`outputs`.
+
   .. attribute:: inputs
 
     A list of filenames that are listed as inputs to the target and
@@ -308,10 +313,10 @@ class Target(object):
 
   .. attribute:: implicit_deps
 
-      A list of filenames that are required to build the Target,
-      additionally to the :attr:`inputs`, but are not expanded by
-      the ``$in`` variable in Ninja. See "Implicit dependencies"
-      in the `Ninja Manual`_.
+    A list of filenames that are required to build the Target,
+    additionally to the :attr:`inputs`, but are not expanded by
+    the ``$in`` variable in Ninja. See "Implicit dependencies"
+    in the `Ninja Manual`_.
 
   .. attribute:: order_only_deps
 
@@ -383,37 +388,39 @@ class Target(object):
       var=None, deps=None, depfile=None, msvc_deps_prefix=None,
       explicit=False, frameworks=None, meta=None, module=None, name=None):
 
-    if not module and craftr.module:
-      module = craftr.module()
-    if not name:
-      name = Target._get_name(module)
-
-    if isinstance(command, str):
+    if callable(command):
+      # This target will be a task, alias RTS target.
+      if not name:
+        name = command.__name__
+      if not description:
+        description = command.__doc__
+    elif isinstance(command, str):
       command = shell.split(command)
     else:
       command = _check_list_of_str('command', command)
     if not command:
       raise ValueError('command can not be empty')
 
-    if inputs is not None:
-      if isinstance(inputs, str):
-        inputs = [inputs]
-      inputs = expand_inputs(inputs)
-      inputs = _check_list_of_str('inputs', inputs)
-    if outputs is not None:
-      if isinstance(outputs, str):
-        outputs = [outputs]
-      elif callable(outputs):
-        outputs = outputs(inputs)
-      outputs = _check_list_of_str('outputs', outputs)
+    if not module and craftr.module:
+      module = craftr.module()
+    if not name:
+      name = Target._get_name(module)
+
+    def _expand(x, name):
+      if x is None: return None
+      if isinstance(x, str):
+        x = [x]
+      x = expand_inputs(x)
+      x = _check_list_of_str(name, x)
+      return x
+
+    inputs = _expand(inputs, 'inputs')
+    outputs = _expand(outputs, 'outputs')
+    implicit_deps = _expand(implicit_deps, 'implicit_deps')
+    order_only_deps = _expand(order_only_deps, 'order_only_deps')
 
     if foreach and len(inputs) != len(outputs):
       raise ValueError('len(inputs) must match len(outputs) in foreach Target')
-
-    if implicit_deps is not None:
-      implicit_deps = _check_list_of_str('implicit_deps', implicit_deps)
-    if order_only_deps is not None:
-      order_only_deps = _check_list_of_str('order_only_deps', order_only_deps)
 
     if meta is None:
       meta = {}
@@ -422,6 +429,12 @@ class Target(object):
 
     self.module = module
     self.name = name
+
+    self.rts_func = None
+    if callable(command):
+      self.rts_func = command
+      command = [RTS_COMMAND, self.fullname]
+
     self.command = command
     self.inputs = inputs
     self.outputs = outputs
@@ -965,6 +978,22 @@ def expand_frameworks(frameworks, result=None):
   return result
 
 
+def task(func=None, *args, **kwargs):
+  ''' Create a task :class:`Target` that uses the Craftr RTS
+  feature. If *func* is None, this function returns a decorator
+  that finally creates the :class:`Target`, otherwise the task
+  is created instantly. '''
+
+  def wrapper(func):
+    return Target(func, *args, **kwargs)
+
+  if func is None:
+    return wrapper
+  if not callable(func):
+    raise TypeError('func must be callable')
+  return wrapper(func)
+
+
 def import_file(filename):
   ''' Import a Craftr module by filename. '''
 
@@ -1086,5 +1115,5 @@ from craftr import ext, options, path, shell, ninja, rts, utils
 
 __all__ = ['session', 'module', 'path', 'options', 'shell', 'utils', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
-  'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs',
+  'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs', 'task',
   'import_file', 'import_module', 'memoize_tool', 'craftr_min_version']
