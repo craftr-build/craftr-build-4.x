@@ -83,4 +83,9 @@ Limitations
   by running Ninja manually
 * Due to the above limitation, using the ``-b`` flag to only build
   with targets that require RTS will Craftr **not allow to skip**
-  the execution phase
+  the execution phase. Instead, Crafr will let you know that the
+  phase can not be skipped:
+
+  ::
+
+      craftr: [INFO ]: Can not skip execution phase, RTS feature required
