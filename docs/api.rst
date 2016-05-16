@@ -21,6 +21,8 @@ Functions
 .. autofunction:: error
 .. autofunction:: craftr_min_version
 
+.. autofunction:: task
+
 Session Objects
 ---------------
 

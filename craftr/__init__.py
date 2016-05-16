@@ -982,7 +982,27 @@ def task(func=None, *args, **kwargs):
   ''' Create a task :class:`Target` that uses the Craftr RTS
   feature. If *func* is None, this function returns a decorator
   that finally creates the :class:`Target`, otherwise the task
-  is created instantly. '''
+  is created instantly.
+
+  .. code-block:: python
+
+    @task
+    def hello(_, _):
+      info("Hello, World!")
+
+    @task(inputs = another_target, outputs = 'some/output/file')
+    def make_some_output_file(inputs, outputs):
+      # ...
+
+    yat = task(some_function, inputs = yet_another_target,
+               name = 'yet_another_task')
+
+  :param func: The callable function to create the RTS target
+    with or None if you want to use this function as a decorator.
+  :param args: Additional args for the :class:`Target` constructor.
+  :param kwargs: Additional kwargs for the :class:`Target` constructor.
+  :return: :class:`Target` or a decorator that returns :class:`Target`
+  '''
 
   def wrapper(func):
     return Target(func, *args, **kwargs)
