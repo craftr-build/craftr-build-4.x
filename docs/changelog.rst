@@ -21,6 +21,9 @@ v1.1.0 (unreleased)
 * add support for ``msvc_runtime_library_option`` which can have the
   value ``'dynamic'`` or ``'static'``
 * ``setup.py`` now uses ``entry_points`` to install console scripts (issue #94)
+* add ``craftr.shell.format()`` and ``~.join()`` functions
+* ``craftr.shell.run()`` now splits strings into a command list if
+  the *shell* argument is False
 
 v1.0.0
 ------

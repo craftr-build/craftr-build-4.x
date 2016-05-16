@@ -52,6 +52,18 @@ def quote(s):
     return shlex.quote(s)
 
 
+def format(fmt, *args, **kwargs):
+  ''' Similar to :meth:`str.format`, but this function will escape all
+  arguments with the :func:`quote` function. '''
+
+  return fmt.format(*map(quote, args), **{k: quote(v) for k, v in kwargs.items()})
+
+
+def join(cmd):
+  ''' Join a list of strings to a single command. '''
+
+  return ' '.join(map(quote, cmd))
+
 class _ProcessError(Exception):
   ''' Base class that implements the attributes and behaviour of errors
   that will inherit from this exception class. '''
@@ -154,7 +166,9 @@ def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
   '''
 
   if shell and not isinstance(cmd, str):
-    cmd = ' '.join(map(quote, cmd))
+    cmd = join(cmd)
+  elif not shell and isinstance(cmd, str):
+    cmd = split(cmd)
 
   try:
     popen = subprocess.Popen(
