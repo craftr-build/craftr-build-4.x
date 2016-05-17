@@ -111,7 +111,7 @@ def main():
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
   parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
   parser.add_argument('--rc', help='Execute the specified Craftr startup file. CAN be paired with --no-rc')
-  parser.add_argument('--strace-depth', type=int, default=3, help='Depth of logging stack trace. Defaults to 3')
+  parser.add_argument('--strace-depth', type=int, default=5, help='Depth of logging stack trace. Defaults to 5')
   parser.add_argument('--rts', action='store_true', help='If this option is specified, the Craftr runtime server will serve forever.')
   parser.add_argument('--rts-at', type=craftr.rts.parse_uri, help='Manually specify the host:port for the Craftr runtime server.')
   parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
