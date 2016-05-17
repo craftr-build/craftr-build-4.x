@@ -270,6 +270,14 @@ class Target(object):
   corresponding in- and output files. Will be rendered into a ``rule``
   and one or many ``build`` statements in the Ninja manifest.
 
+  *New in v1.1.0*:
+  A target object can also represent a Python function as a target
+  in the Ninja manifest. This is called an RTS task. Use the
+  :func:`task` function to create tasks or pass a function for the
+  *command* parameter of the :class:`Target` constructor. The
+  function must accept no parameters if :attr:`inputs` and :attr:`outputs`
+  are **both** :const:`None` or accept these two values as parameters.
+
   .. attribute:: name
 
     The name of the target. This is usually deduced from the
@@ -290,10 +298,6 @@ class Target(object):
     A list of strings that represents the command to execute. A string
     can be passed to the constructor in which case it is parsed with
     :func:`shell.split`.
-
-    *New in v1.1.0*: If you pass a function object as the :attr:`command`,
-    the target will be invoked via the Craftr RTS and calls that function
-    with two parameters: The :attr:`inputs` and :attr:`outputs`.
 
   .. attribute:: inputs
 
@@ -493,6 +497,20 @@ class Target(object):
       return self.module.project_name + '.' + self.name
     else:
       return self.name
+
+  def execute_task(self):
+    ''' Execute the :attr:`rts_func` of the target. This calls the
+    function with the inputs and outputs of the target (if any of
+    these are not None) or with no arguments (if both is None).
+
+    :raise RuntimeError: If the target is not an RTS task. '''
+
+    if not self.rts_func:
+      raise RuntimeError('target is not an RTS task: {!r}'.format(self.fullname))
+    if self.inputs is None and self.outputs is None:
+      self.rts_func()
+    else:
+      self.rts_func(self.inputs, self.outputs)
 
 
 class TargetBuilder(object):

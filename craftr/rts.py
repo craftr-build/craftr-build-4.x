@@ -23,13 +23,14 @@ Python functions from the servers process. If this file is executed as a
 script, it provides a client to call a function on the server. The server
 location is read from the `CRAFTR_RTS` environment variable. '''
 
-from craftr import environ, shell, info, warn, error
+from craftr import environ, shell, magic, info, warn, error
 from collections import deque
 from functools import partial
 
 import argparse
 import codecs
 import contextlib
+import craftr
 import io
 import os
 import urllib.parse
@@ -295,8 +296,6 @@ class _RequestHandler(object):
         self.send_text(MSG_INVALID_REQUEST, '{0!r} is not an RTS target'.format(command))
         return
 
-      func = target.rts_func
-
       # xxx does it make sense to use the _RequestHandler.lock
       # to synchronize read/write from/to the streams?
       self.stdin = RWFile(io.BytesIO(), lock=self.lock)
@@ -314,7 +313,7 @@ class _RequestHandler(object):
           thread_stdin.dest_file = io.TextIOWrapper(io.BufferedReader(self.stdin))
           thread_stdout.dest_file = io.TextIOWrapper(io.BufferedWriter(self.stdout))
           thread_stderr.dest_file = thread_stdout.dest_file  # io.TextIOWrapper(io.BufferedWriter(self.stderr))
-          result = func(target.inputs, target.outputs)
+          result = target.execute_task()
           if result is None:
             result = 0
           elif not isinstance(result, int):
@@ -334,9 +333,13 @@ class _RequestHandler(object):
             # reset()
             #traceback.print_exc()
 
+      def context_enterer():
+        with magic.enter_context(craftr.module, target.module):
+          return wrapper()
+
       self.info('@@ {0}()'.format(command))
       with self.lock:
-        self.thread = threading.Thread(target=wrapper)
+        self.thread = threading.Thread(target=context_enterer)
         self.thread.start()
         self.result = None
       self.send_message(MSG_NOOP)

@@ -377,7 +377,7 @@ variable to ``false`` instead. For any other value, default behaviour applies.
 Debugging
 ---------
 
-Not only can you debug your Craftr build scripts with the :mod`pdb`
+Not only can you debug your Craftr build scripts with the :mod:`pdb`
 module, but you can also increase the verbosity level to increase
 the output detail. By default, Craftr already shows the module and
 line number when using the :func:`craftr.info`, :func:`craftr.warn`

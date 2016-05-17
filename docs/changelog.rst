@@ -37,6 +37,8 @@ v1.1.0 (unreleased)
   on the command-line just like normal targets
 * remove ``craftr.ext.rules.PythonTool`` and rewrite ``~.render_template()``
   since they are no longer necessary with the new ``task()`` decorator
+* add ``Target.execute_task()``
+* module context is now available when a task is executed (issue #99)
 
 v1.0.0
 ------
