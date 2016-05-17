@@ -258,14 +258,7 @@ def main():
         return errno.ENOENT
 
       if args.e:
-        # Are there any targets that use the RTS feature? If so,
-        # we must create a flag file so Craftr knows RTS is required
-        # for subsequent invokations without the -e option.
-        if session.has_rts_targets():
-          open('.craftr-rts', 'w').close()
-          debug('Created .craftr-rts flag file')
-
-        # Create a new cache.
+        # Create a new cache from the current session data.
         cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
 
         # Export a ninja manifest.
