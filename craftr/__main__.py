@@ -35,8 +35,6 @@ import sys
 
 from functools import partial
 
-MANIFEST = 'build.ninja'
-
 
 def _set_env(defs, main_module_name):
   ''' This function updates the environment variables based on a list
@@ -170,7 +168,7 @@ def main():
   if os.getcwd() != path.normpath(args.d):
     started_from_build_dir = False
     os.chdir(args.d)
-    info('Changed directory to "{0}"'.format(args.d))
+    info('cd "{0}"'.format(args.d))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
@@ -180,39 +178,40 @@ def main():
     if not build_dir_exists and not os.listdir(args.d):
       os.rmdir(args.d)
 
-  # Delete the .craftr-rts file that indicates that the project used
-  # the RTS feature. It will be re-created if the project still uses it.
-  if args.e and path.exists('.craftr-rts'):
-    os.remove('.craftr-rts')
-    debug('Removed .craftr-rts flag file')
+  cache = None
+  do_run = bool(args.e or args.rts)
+  if args.e:
+    # Remove files/directories we'll create again eventually.
+    path.silent_remove(craftr.MANIFEST)
+    path.silent_remove(craftr.CMDDIR, is_dir=True)
+  elif not path.isfile(craftr.MANIFEST):
+    error("'build.ninja' does not exist, please use -e to export a manifest")
+    return 1
+  else:
+    # If we're not going to export a manifest, read the cached
+    # data from the Ninja manifest.
+    cache = craftr.ninja.CraftrCache.read()
 
-  # Delete the .cmd directory that eventually contains files with
-  # command-line arguments in it. Only when we would re-generate
-  # these files.
-  if args.e and path.exists('.cmd'):
-    debug('Removing build .cmd directory (command-line files)')
-    shutil.rmtree('.cmd')
+    # If any of the targets require the RTS feature, we still need
+    # to execute the Craftr module.
+    if cache.check_rts(args.targets):
+      info('can not skip execution phase as one or more target(s) need RTS')
+      do_run = True
+    else:
+      info('skipping execution phase')
 
-  # Check if we should omit the execution step. This is possile when
-  # we the -b option is specified and NOT -c == 1, -e
-  do_run = any([args.e, args.rts])
-  if not do_run and not args.b:
-    # Do nothing at all? Then do the execution step.
-    do_run = True
+    # Prepend the options that were specified when the manifest
+    # was exported.
+    if cache.options:
+      info('prepending cached options:', ' '.join(
+        shell.quote('-D' + x) for x in cache.options))
+      args.D = cache.options + args.D
 
-  if not do_run and path.exists('.craftr-rts'):
-    info('Can not skip execution phase, RTS feature required')
-    do_run = True
-  elif not do_run:
-    info("Skipping execution phase")
-
-  if not args.e and path.isfile(MANIFEST):
-    # If we're not exporting the Ninja build definitions again, we'll
-    # read the ones cached in the Ninja manifest (if it exists).
-    cached_defs = craftr.ninja.extract_defs(MANIFEST)
-    if cached_defs:
-      info('Prepending cached options:', ' '.join(shell.quote(x) for x in cached_defs))
-    args.D = cached_defs + args.D
+    # Same for the search path.
+    if cache.path:
+      info('prepending cached search path:', ' '.join(
+        shell.quote('-I' + x) for x in cache.path))
+      args.I = cache.path + args.I
 
   session = craftr.Session(
     cwd=old_cwd,
@@ -266,9 +265,12 @@ def main():
           open('.craftr-rts', 'w').close()
           debug('Created .craftr-rts flag file')
 
+        # Create a new cache.
+        cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
+
         # Export a ninja manifest.
-        with open(MANIFEST, 'w') as fp:
-          craftr.ninja.export(fp, module, args.D)
+        with open(craftr.MANIFEST, 'w') as fp:
+          craftr.ninja.export(fp, module, cache)
     else:
       _set_env(args.D, args.m)
       _abs_env(old_cwd)

@@ -27,6 +27,7 @@ import ctypes
 import errno
 import glob2
 import os
+import shutil
 import sys
 
 
@@ -374,16 +375,22 @@ def get_long_path_name(path):
     return path
 
 
-
-def silent_remove(filename):
+def silent_remove(filename, is_dir=False):
   ''' Remove the file *filename* if it exists and be silent if it
   does not. Returns True if the file was removed, False if it did
-  not exist. Raises an error in all other cases. '''
+  not exist. Raises an error in all other cases.
+
+  :param filename: The path to the file or directory to remove.
+  :param is_dir: If True, remove recursive (for directories). '''
 
   try:
-    os.remove(filename)
-    return True
+    if is_dir:
+      shutil.rmtree(filename)
+    else:
+      os.remove(filename)
   except OSError as exc:
     if exc.errno != errno.ENOENT:
       raise
-  return False
+    return False
+  else:
+    return True

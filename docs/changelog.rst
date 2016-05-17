@@ -43,6 +43,10 @@ v1.1.0 (unreleased)
   called the function with a verbosity level ``> 0``
 * removed ``-f`` and ``-F`` command-line options completely
 * add ``Session.check_rts()`` and ``~.find_target_for_file()``
+* sophisticated target check on build-only invokation if RTS is required
+  (and thus the execution step can not be skipped) (issue #98)
+* new Craftr data caching method using JSON in the Ninja build manifest
+  (also fixes #100) (issue #101)
 
 v1.0.0
 ------
