@@ -49,7 +49,6 @@ Built-in Craftr extension modules
   ext/archive
   ext/compiler
   ext/git
-  ext/options
   ext/platform
   ext/rules
   ext/unix
@@ -57,7 +56,7 @@ Built-in Craftr extension modules
 Platform Abstraction Interface
 ------------------------------
 
-.. todo::
+.. todo:: Documentation
 
 .. _compiler_abstraction:
 
@@ -107,4 +106,4 @@ Example:
   Link the *inputs* into the file specified by *output*. The *output_type*
   defines whether an executable or shared library is created.
 
-.. todo::
+.. todo:: Documentation

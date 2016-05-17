@@ -18,7 +18,7 @@ Getting Started
 Craftr is built around Python-ish modules that we call Craftr modules or
 scripts. There are two ways a Craftr module can be created:
 
-1. A file named ``Craftfile.py`` with a ``# craftr_module(...)` declaration
+1. A file named ``Craftfile.py`` with a ``# craftr_module(...)`` declaration
 2. A file named ``craftr.ext.<module_name>.py``
 
 By default, Craftr will execute the ``Craftfile.py`` from the current
@@ -117,20 +117,14 @@ you can still use it and hard-code the command line.
   )
 
 This creates a Target called ``example.main`` that you can now export and
-execute with `Ninja`_.
+execute with `Ninja`_. Note that you can use the full target specifier that
+was mentioned before or a relative target specified like ``.main``.
 
 ::
 
   $ craftr -eb .main
   [1/1] gcc /home/niklas/Desktop/example/src/main....til.c -o /home/niklas/Desktop/example/build/main
 
-.. note:: The ``.main`` argument is a relative target reference. You can also
-  pass the full target name ``example.main`` instead or just omitt the argument
-  completely if you want to build just everything.
-
-  Also, :ref:`Craftr always switches to the build directory<BuildDirSwitch>`,
-  which is why we use the :func:`path.local()<craftr.path.local>` function to
-  create a path relative to the "Craftfile.py" directory.
 
 Rules
 -----
@@ -193,42 +187,74 @@ and environment. Go to :ref:`compiler_abstraction` for more information.
 Frameworks
 ----------
 
-.. todo::
+The :class:`craftr.Framework` is in fact just a dictionary (with an
+additional :attr:`name<craftr.Framework>` attribute) that represents
+a set of options for anything build related. How the data in a framework
+is interpreted depends on the rule that interprets it.
+
+The easiest way to use frameworks and to demonstrate their usefulness
+is with the Craftr module for a very simple C++ library, in this case
+the header-only `nr_matrix`_ library.
+
+.. code-block:: python
+
+    # craftr_module(libs.nr_matrix)
+
+    from craftr import Framework, path
+    from craftr.ext.libs.nr_iterator import nr_iterator
+
+    nr_matrix = Framework(
+      include = [path.local('include')],
+      frameworks = [nr_iterator],
+    )
+
+Rule functions like the ``compile()`` methods of the C++ compiler
+implementations will usually accumulate all ``include`` values to
+generate a list of include paths, the same for the ``defines`` etc.
+
+Frameworks are usually passed to a rule function with the ``frameworks``
+keyword parameter, however there are additional places where they could
+be coming from.
+
+1. Nested frameworks: As you can see above, the ``nr_matrix`` framework
+   specifies ``nr_iterator`` as an additional required framework
+2. Target frameworks: All the frameworks that were used to generate a
+   target are transfered to the :attr:`craftr.Target.frameworks`
+   attribute and are taken into consideration when passing a target as
+   input to rule functions, eg:
+
+   .. code-block:: python
+
+      from craftr.ext.platform import cxx, ld
+      from craftr.ext.libs.some_cool_library import some_cool_library
+
+      obj = cxx.compile(
+        sources = path.glob('src/*.cpp'),
+        frameworks = [some_cool_library],
+        std = 'c++11',
+      )
+
+      bin = ld.link(
+        output = 'main',
+        inputs = obj,    # Here, the frameworks that were used for "obj" will
+                         # automatically be passed on to the link() rule
+      )
+
+~~~~~~~~~~~~~~~~~
+
+The :class:`craftr.TargetBuilder` does a lot of convenient things
+for rule functions. Frameworks exist not only so they can be included
+in other frameworks
 
 
 Tasks
 -----
 
-You can run any Python function of a Craftr module from the command-line
-with the ``-f`` (before build) and/or ``-F`` (after build) option. A simple
-example is a function to upload a build product to a server.
+Craftr allows you to embedd arbitrary Python procedures into the Ninja
+manifest and thus the dependency graph and build process with the
+:func:`craftr.task` decorator.
 
-.. code-block:: python
-
-  # -*- mode: python; -*-
-  # craftr_module(awesome.app)
-
-  from craftr import *
-  from craftr.ext.archive import Archive
-  from craftr.ext.git import Git
-  from craftr.ext.platform import cxx, ld
-
-  objects = cxx.compile(sources = path.glob('src/*.c'))
-  program = ld.link(output = 'main', inputs = objects)
-
-  def upload():
-    info('creating archive ...')
-    git = Git(project_dir)
-    archive = Archive(prefix = '{0}-{1}'.format(project_name, git.describe()))
-    archive.add('res')
-    archive.add(program.outputs, parts = 1)
-    archive.save()
-
-    info('uploading ...')
-    shell.run(['scp', archive.name, 'my-host:./uploads'], check=True)
-
-This can now be run with ``craftr -ebF upload``. You can omit the ``-e`` and
-``-b`` option if you don't need them!
+For more information, see :doc:`rts`.
 
 Command Line Interface
 ----------------------
@@ -433,3 +459,4 @@ Indices and tables
 .. _craftr.ext.qt5: https://github.com/craftr-build/qt5
 .. _Craftr extension modules: https://github.com/craftr-build/craftr/wiki/Craftr-Extensions
 .. _Projects using Craftr: https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr
+.. _nr_matrix: https://github.com/NiklasRosenstein/nr_matrix
