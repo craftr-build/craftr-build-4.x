@@ -1125,12 +1125,18 @@ def task(func=None, *args, **kwargs):
     Be aware that tasks executed through Ninja (and thus via RTS)
     are executed in a seperate thread!
 
+  Note that unlike normal targets, a task is explicit by default,
+  meaning that it must explicitly be specified on the command line
+  or be required as an input to another target to be executed.
+
   :param func: The callable function to create the RTS target
     with or None if you want to use this function as a decorator.
   :param args: Additional args for the :class:`Target` constructor.
   :param kwargs: Additional kwargs for the :class:`Target` constructor.
   :return: :class:`Target` or a decorator that returns :class:`Target`
   '''
+
+  kwargs.setdefault('explicit', True)
 
   def wrapper(func):
     return Target(func, *args, **kwargs)
