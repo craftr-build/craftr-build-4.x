@@ -226,7 +226,7 @@ be coming from.
    .. code-block:: python
 
       from craftr.ext.platform import cxx, ld
-      from craftr.ext.libs.some_cool_library import some_cool_library
+      from craftr.ext.libs.some_cool_library import some_cool_library  # a Framework
 
       obj = cxx.compile(
         sources = path.glob('src/*.cpp'),
@@ -239,13 +239,6 @@ be coming from.
         inputs = obj,    # Here, the frameworks that were used for "obj" will
                          # automatically be passed on to the link() rule
       )
-
-~~~~~~~~~~~~~~~~~
-
-The :class:`craftr.TargetBuilder` does a lot of convenient things
-for rule functions. Frameworks exist not only so they can be included
-in other frameworks
-
 
 Tasks
 -----
