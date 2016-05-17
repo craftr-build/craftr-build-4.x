@@ -35,7 +35,7 @@ v1.1.0 (unreleased)
 * removed ``MSG_ARGUMENT`` from the Craftr RTS spec
 * functions wrapped with the ``task()`` decorator can now be specified
   on the command-line just like normal targets
-* remove ``craftr.ext.rules.PythonTool`` and ``~.render_template``
+* remove ``craftr.ext.rules.PythonTool`` and rewrite ``~.render_template()``
   since they are no longer necessary with the new ``task()`` decorator
 
 v1.0.0

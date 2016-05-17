@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['run', 'PythonTool', 'render_template']
+__all__ = ['run', 'render_template']
 
 from os import environ
 from craftr import *
@@ -110,3 +110,51 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
 
   inputs = builder.inputs or program
   return builder.create_target(command, inputs, outputs, pool=pool, description=description)
+
+
+def render_template(template, output, context, env = None, target_name = None):
+  ''' Creates a :func:`task` that renders the file *template*
+  using Jinja2 with the specified *context* to the *output* file.
+
+  .. code-block:: python
+
+    # craftr_module(my_project)
+
+    import jinja2
+    from craftr import path
+    from craftr.ext import rules
+
+    # We can use the render_template() task factory to render
+    # a Jinja2 template that outputs a linker script.
+    ld_script = rules.render_template(
+      template = path.local('my_project.ld.jinja2'),
+      output = 'test.html',
+      env = jinja2.Environment(
+        variable_start_string = '{$',
+        variable_end_string = '$}',
+      ),
+      context = dict(
+        # Context variables here
+      )
+    )
+
+  :param template: Filename of a Jinja template.
+  :param output: Output filename.
+  :param context: Context dictionary.
+  :param env: A :class:`jinja2.Environment` object.
+  :param target_name: Optional target name. Automatically deduced
+    from the assigned variable if omitted.
+  '''
+
+  import jinja2
+  builder = TargetBuilder([template], [], {}, name = target_name)
+  if not env:
+    env = jinja2.Environment()
+
+  def _render(_inputs, _outputs):
+    with open(template) as fp:
+      tobj = env.from_string(fp.read())
+    with open(output, 'w') as fp:
+      fp.write(tobj.render(context))
+
+  return builder.create_target(_render, inputs = [template], outputs = [output])
