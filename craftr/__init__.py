@@ -398,6 +398,25 @@ class Target(object):
 
     See "Order-only dependencies" in the `Ninja Manual`_.
 
+  .. attribute:: requires
+
+    A list of targets that are to be built before this target is.
+    This is useful for speciying task dependencies that don't have
+    input and/or output files.
+
+    The constructor accepts None, a :class:`Target` object or a
+    list of targets and will convert it to a list of targets.
+
+    .. code-block:: python
+
+      @task
+      def hello():
+        info("Hello!")
+
+      @task(requires = [hello])
+      def ask_name():
+        info("What's your name?")
+
   .. attribute:: foreach
 
     If this is set to True, the number of :attr:`inputs` must match
@@ -460,8 +479,8 @@ class Target(object):
   '''
 
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
-      order_only_deps=None, foreach=False, description=None, pool=None,
-      var=None, deps=None, depfile=None, msvc_deps_prefix=None,
+      order_only_deps=None, requires=None, foreach=False, description=None,
+      pool=None, var=None, deps=None, depfile=None, msvc_deps_prefix=None,
       explicit=False, frameworks=None, meta=None, module=None, name=None):
 
     if callable(command):
@@ -481,6 +500,15 @@ class Target(object):
       module = craftr.module()
     if not name:
       name = Target._get_name(module)
+
+    if requires is not None:
+      if isinstance(requires, Target):
+        requires = [requires]
+      else:
+        requires = list(requires)
+        for obj in requires:
+          if not isinstance(obj, Target):
+            raise TypeError('requires must contain only Target objects')
 
     def _expand(x, name):
       if x is None: return None
@@ -516,6 +544,7 @@ class Target(object):
     self.outputs = outputs
     self.implicit_deps = implicit_deps or []
     self.order_only_deps = order_only_deps or []
+    self.requires = requires or []
     self.foreach = foreach
     self.pool = pool
     self.description = description

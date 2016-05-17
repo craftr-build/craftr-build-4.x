@@ -99,6 +99,7 @@ def export(fp, main_module, cache):
 
     inputs = path.normpath(target.inputs or [])
     outputs = path.normpath(target.outputs) if target.outputs is not None else [target.fullname]
+    implicit_deps = path.normpath(target.implicit_deps) + [x.fullname for x in target.requires]
     if target.foreach:
       assert target.inputs is not None and target.outputs is not None
       assert len(inputs) == len(outputs)
@@ -107,14 +108,14 @@ def export(fp, main_module, cache):
           [path.normpath(outfile)],
           target.fullname,
           [path.normpath(infile)],
-          implicit=path.normpath(target.implicit_deps),
+          implicit=implicit_deps,
           order_only=path.normpath(target.order_only_deps))
     else:
       writer.build(
         outputs,
         target.fullname,
         path.normpath(inputs),
-        implicit=path.normpath(target.implicit_deps),
+        implicit=implicit_deps,
         order_only=path.normpath(target.order_only_deps))
 
     if target.fullname not in outputs:
