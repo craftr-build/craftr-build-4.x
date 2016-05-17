@@ -38,7 +38,7 @@ v1.1.0 (unreleased)
 * remove ``craftr.ext.rules.PythonTool`` and rewrite ``~.render_template()``
   since they are no longer necessary with the new ``task()`` decorator
 * add ``Target.execute_task()``
-* module context is now available when a task is executed (issue #99)
+* module and session context is now available when a task is executed (issue #99)
 * ``info()``, ``warn()`` and ``error()`` only display the module that
   called the function with a verbosity level ``> 0``
 * removed ``-f`` and ``-F`` command-line options completely

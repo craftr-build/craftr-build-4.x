@@ -334,8 +334,9 @@ class _RequestHandler(object):
             #traceback.print_exc()
 
       def context_enterer():
-        with magic.enter_context(craftr.module, target.module):
-          return wrapper()
+        with magic.enter_context(craftr.session, self.session, secret=True):
+          with magic.enter_context(craftr.module, target.module):
+            return wrapper()
 
       self.info('@@ {0}()'.format(command))
       with self.lock:

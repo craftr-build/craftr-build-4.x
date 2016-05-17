@@ -58,23 +58,29 @@ def new_context(context_name):
 
 
 @contextmanager
-def enter_context(context_proxy, context_obj):
+def enter_context(context_proxy, context_obj, secret=False):
   ''' Contextmanager that pushes the *context_obj* on the context stack
   of the specified *context_proxy* and pops it on exit. If the context
   object supports it, the methods `context_obj.on_context_enter()` and
-  `context_obj.on_context_leave()` will be called. '''
+  `context_obj.on_context_leave()` will be called.
+
+  :param context_proxy: The :class:`Proxy` returned by :func:`new_context`
+  :param context_obj: The object to put on the context proxy stack.
+  :param secret: False by default. If True, skip ``on_context_enter()``
+    and ``on_context_leave()`` callbacks on the *context_proxy*.
+  '''
 
   assert isinstance(context_proxy, Proxy)
   stack = object.__getattribute__(context_proxy, '_proxy_localstack')
   prev = stack.top
   stack.push(context_obj)
   try:
-    if hasattr(context_obj, 'on_context_enter'):
+    if not secret and hasattr(context_obj, 'on_context_enter'):
       context_obj.on_context_enter(prev)
     yield
   finally:
     try:
-      if hasattr(context_obj, 'on_context_leave'):
+      if not secret and hasattr(context_obj, 'on_context_leave'):
         context_obj.on_context_leave()
     finally:
       assert stack.pop() is context_obj
