@@ -1002,14 +1002,21 @@ def task(func=None, *args, **kwargs):
   that finally creates the :class:`Target`, otherwise the task
   is created instantly.
 
+  The wrapped function must either
+
+  * take no parameters, this is when both the *inputs* and
+    *outputs* of the task are :const:`None`, or
+  * take two parameters being the *inputs* and *outputs* of the
+    task
+
   .. code-block:: python
 
     @task
-    def hello(_, _):
+    def hello():  # note: no parameters
       info("Hello, World!")
 
     @task(inputs = another_target, outputs = 'some/output/file')
-    def make_some_output_file(inputs, outputs):
+    def make_some_output_file(inputs, outputs):  # note: two parameters!
       # ...
 
     yat = task(some_function, inputs = yet_another_target,

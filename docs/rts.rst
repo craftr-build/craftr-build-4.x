@@ -10,6 +10,8 @@ Getting Started
 ---------------
 
 Below you can find the simplest possible task that says hello to you!
+The function needs to be wrapped with the :func:`task()<craftr.task>`
+function.
 
 .. code-block:: python
 
@@ -17,7 +19,7 @@ Below you can find the simplest possible task that says hello to you!
     from craftr import task, info
 
     @task
-    def hello(inputs, outputs):
+    def hello():
       info("hello!")
 
 Now that's not really interesting. But lets consider you want the task
