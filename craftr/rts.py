@@ -340,9 +340,9 @@ class _RequestHandler(object):
 
       self.info('@@ {0}()'.format(command))
       with self.lock:
+        self.result = None
         self.thread = threading.Thread(target=context_enterer)
         self.thread.start()
-        self.result = None
       self.send_message(MSG_NOOP)
       return
 

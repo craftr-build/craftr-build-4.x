@@ -85,6 +85,16 @@ class Session(object):
     is created, a ``clean`` Target which calls ``ninja -t clean`` is
     always created automatically.
 
+  .. attribute:: files_to_targets
+
+    *New in v1.1.0* Maps the files produced by all targets to
+    their producing :class:`Target` object. This dictionary is
+    used for speeding up :meth:`find_target_for_file` and to
+    check if any file would be produced by multiple targets.
+
+    All keys in this dictionary are absolute filenames normalized
+    with :func:`path.normpath`.
+
   .. attribute:: server
 
     An :class:`rts.CraftrRuntimeServer` object that is started when
@@ -136,6 +146,7 @@ class Session(object):
     self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
     self.modules = {}
     self.targets = {}
+    self.files_to_targets = {}
     self.var = {}
     self.verbosity = verbosity
     self.strace_depth = strace_depth
@@ -151,6 +162,34 @@ class Session(object):
       name = 'clean',
       module = None,
       explicit = True)
+
+  def register_target(self, target):
+    ''' This function is used by the :class:`Target` constructor
+    to register itself to the :class:`Session`. This will add the
+    target to the :attr:`target` dictionary and also update the
+    :attr:`files_to_targets` mapping.
+
+    :param target: A :class:`Target` object
+    :raise ValueError: If the name of the target is already reserved.
+    :raise RuntimeError: If this target produces a file that is
+      already produced by another arget.
+    '''
+
+    files = []
+    if target.outputs:
+      # Check if any of the output files are already produced
+      # by another target.
+      for fn in target.outputs:
+        if fn in self.files_to_targets:
+          msg = '{!r} is already produced by another target: {!r}'
+          raise RuntimeError(msg.format(fn, self.files_to_targets[fn].fullname))
+        files.append(path.normpath(fn))
+
+    if target.fullname in self.targets:
+      raise ValueError('target name already reserved: {!r}'.format(target.fullname))
+    self.targets[target.fullname] = target
+    for fn in files:
+      self.files_to_targets[fn] = target
 
   def has_rts_targets(self):
     ''' Returns True if there is any registered :class:`Target` in the
@@ -181,15 +220,10 @@ class Session(object):
   def find_target_for_file(self, filename):
     ''' Finds a target that outputs the specified *filename*. '''
 
-    # xxx: Optimize this method with a dictionary lookup.
-
-    filename = path.normpath(filename)
-    for target in self.targets.values():
-      if target.outputs:
-        for fn in target.outputs:
-          if path.normpath(fn) == filename:
-            return target
-    return None
+    try:
+      return self.files_to_targets[path.normpath(filename)]
+    except KeyError:
+      return None
 
   def exec_if_exists(self, filename):
     ''' Executes *filename* if it exists. Used for running the Craftr
@@ -342,12 +376,16 @@ class Target(object):
     also accepts a single filename, Target or a list with Targets
     and/or filenames.
 
+    This attribute can also be None.
+
   .. attribute:: outputs
 
     A list of filenames that are listed as outputs of the target and
     that are substituted for ``$out`` during the Ninja execution.
     Can be None. The :class:`Target` constructor accepts a list of
     filenames or a single filename for this attribute.
+
+    This attribute can also be None.
 
   .. attribute:: implicit_deps
 
@@ -489,10 +527,7 @@ class Target(object):
     self.meta = meta
 
     if module:
-      targets = module.__session__.targets
-      if self.fullname in targets:
-        raise ValueError('target {0!r} already exists'.format(self.fullname))
-      targets[self.fullname] = self
+      module.__session__.register_target(self)
 
   def __repr__(self):
     pool = ' in "{0}"'.format(self.pool) if self.pool else ''
@@ -1055,6 +1090,11 @@ def task(func=None, *args, **kwargs):
 
     yat = task(some_function, inputs = yet_another_target,
                name = 'yet_another_task')
+
+  .. important::
+
+    Be aware that tasks executed through Ninja (and thus via RTS)
+    are executed in a seperate thread!
 
   :param func: The callable function to create the RTS target
     with or None if you want to use this function as a decorator.

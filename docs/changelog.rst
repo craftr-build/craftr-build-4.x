@@ -47,6 +47,7 @@ v1.1.0 (unreleased)
   (and thus the execution step can not be skipped) (issue #98)
 * new Craftr data caching method using JSON in the Ninja build manifest
   (also fixes #100) (issue #101)
+* add ``Session.files_to_targets`` dictionary
 
 v1.0.0
 ------
