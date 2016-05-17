@@ -42,6 +42,7 @@ v1.1.0 (unreleased)
 * ``info()``, ``warn()`` and ``error()`` only display the module that
   called the function with a verbosity level ``> 0``
 * removed ``-f`` and ``-F`` command-line options completely
+* add ``Session.check_rts()`` and ``~.find_target_for_file()``
 
 v1.0.0
 ------
