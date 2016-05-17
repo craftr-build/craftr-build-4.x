@@ -39,6 +39,8 @@ v1.1.0 (unreleased)
   since they are no longer necessary with the new ``task()`` decorator
 * add ``Target.execute_task()``
 * module context is now available when a task is executed (issue #99)
+* ``info()``, ``warn()`` and ``error()`` only display the module that
+  called the function with a verbosity level ``> 0``
 
 v1.0.0
 ------

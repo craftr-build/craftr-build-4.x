@@ -59,7 +59,7 @@ def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs)
   prefix = 'craftr: ' + meta['fg'] + '[{0:<5}]'.format(level.upper())
   if not module_name and module:
     module_name = module.project_name
-  if module_name:
+  if module_name and session.verbosity > 0:
     prefix += ' (' + module_name
     if module:
       prefix += '|L' + str(magic.get_module_frame(module).f_lineno)
