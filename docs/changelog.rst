@@ -41,6 +41,7 @@ v1.1.0 (unreleased)
 * module context is now available when a task is executed (issue #99)
 * ``info()``, ``warn()`` and ``error()`` only display the module that
   called the function with a verbosity level ``> 0``
+* removed ``-f`` and ``-F`` command-line options completely
 
 v1.0.0
 ------

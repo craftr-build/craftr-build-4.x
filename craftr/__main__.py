@@ -92,32 +92,6 @@ def _abs_env(cwd=None):
     environ[key] = value
 
 
-def _run_func(main_module, name, args):
-  ''' Called to run a function with the specified *name* and passes
-  it *args* as its positional arguments. If *name* is a relative
-  identifier, it will be searched relative to the *main_module* name. '''
-
-  if '.' not in name:
-    name = main_module + '.' + name
-  module_name, func_name = name.rsplit('.', 1)
-  if module_name not in session.modules:
-    error('no module "{0}" was loaded'.format(module_name))
-    return errno.ENOENT
-  module = session.modules[module_name]
-  if not hasattr(module, func_name):
-    error('module "{0}" has no member "{1}"'.format(module_name, func_name))
-    return errno.ENOENT
-  func = getattr(module, func_name)
-  if not callable(func):
-    error('"{0}" is not callable'.format(name))
-    return errno.ENOENT
-  try:
-    func(*args)
-  except SystemExit as exc:
-    return exc.errno
-  return 0
-
-
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-V', action='store_true', help='Print version and exit.')
@@ -133,8 +107,6 @@ def main():
     'string "true". -D<key>= will delete the variable, if present. -D<key>=<value> '
     'will set the variable <key> to the string <value>. <key> can be prefixed with '
     'a dot, in which case it is prefixed with the current main modules name.')
-  parser.add_argument('-f', nargs='+', help='The name of a function to execute.')
-  parser.add_argument('-F', nargs='+', help='The name of a function to execute, AFTER the build process if any.')
   parser.add_argument('-I', default=[], action='append', help='Add a path to the Craftr extension module search path.')
   parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
   parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
@@ -142,7 +114,7 @@ def main():
   parser.add_argument('--strace-depth', type=int, default=3, help='Depth of logging stack trace. Defaults to 3')
   parser.add_argument('--rts', action='store_true', help='If this option is specified, the Craftr runtime server will serve forever.')
   parser.add_argument('--rts-at', type=craftr.rts.parse_uri, help='Manually specify the host:port for the Craftr runtime server.')
-  parser.add_argument('targets', nargs='*', default=[])
+  parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
   args = parser.parse_args()
 
   # The verbosity level can not be read at some levels, that' why we
@@ -222,8 +194,8 @@ def main():
     shutil.rmtree('.cmd')
 
   # Check if we should omit the execution step. This is possile when
-  # we the -b option is specified and NOT -c == 1, -e, -f or -F.
-  do_run = any([args.e, args.f, args.F, args.rts])
+  # we the -b option is specified and NOT -c == 1, -e
+  do_run = any([args.e, args.rts])
   if not do_run and not args.b:
     # Do nothing at all? Then do the execution step.
     do_run = True
@@ -306,11 +278,6 @@ def main():
     if args.rts or session.has_rts_targets():
       session.start_server()
 
-    # Pre-build function.
-    if args.f:
-      with craftr.magic.enter_context(craftr.module, module):
-        _run_func(args.m, args.f[0], args.f[1:])
-
     # Perform a full or rule-based clean.
     if args.c:
       cmd = ['ninja', '-t', 'clean']
@@ -328,12 +295,6 @@ def main():
       ret = shell.run(cmd, shell=True, check=False).returncode
       if ret != 0:
         return ret
-
-    # Post-build function.
-    if args.F:
-      assert do_run
-      with craftr.magic.enter_context(craftr.module, module):
-        _run_func(args.m, args.F[0], args.F[1:])
 
     if args.rts:
       try:
