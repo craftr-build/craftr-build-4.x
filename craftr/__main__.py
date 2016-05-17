@@ -168,9 +168,7 @@ def main():
   if not args.m:
     cfile = path.join(args.p, 'Craftfile.py')
     if not path.isfile(cfile):
-      cfile = path.join(args.p, 'Craftfile')
-    if not path.isfile(cfile):
-      error('{0!r}[.py] does not exist'.format(path.relpath(cfile)))
+      error('{0!r} does not exist'.format(path.relpath(cfile)))
       return errno.ENOENT
     args.m = craftr.ext.get_module_ident(cfile)
     if not args.m:
