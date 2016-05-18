@@ -28,22 +28,25 @@ import traceback
 # Log-level metadata about the minimum required verbosity level for
 # printing a stack-trace and the colors for colorized output.
 LOG_METADATA = {
-  'debug': {'strace_min_verbosity': 3, 'fg': tty.compile('yellow', attrs='bold')},
-  'info':  {'strace_min_verbosity': 2, 'fg': tty.compile('cyan', attrs='bold')},
-  'warn':  {'strace_min_verbosity': 2, 'fg': tty.compile('magenta', attrs='bold')},
+  'debug': {'strace_min_verbosity': 3, 'fg': tty.compile('grey', attrs='bold')},
+  'info':  {'strace_min_verbosity': 2, 'fg': tty.compile('white')},
+  'warn':  {'strace_min_verbosity': 2, 'fg': tty.compile('magenta')},
   'error': {'strace_min_verbosity': 1, 'fg': tty.compile('red', attrs='bold')},
 }
 
 
-def _walk_frames(start_frame=None, stacklevel=1, max_frames=0):
+def _walk_frames(start_frame=None, stacklevel=1, max_frames=0, skip_builtins=True):
   if start_frame is None:
     start_frame = magic.get_frame(stacklevel)
   frame = start_frame
   count = 0
   while frame and (max_frames == 0 or count < max_frames):
-    yield frame
+    if skip_builtins and frame.f_code.co_filename.startswith('<'):
+      pass
+    else:
+      yield frame
+      count += 1
     frame = frame.f_back
-    count += 1
 
 
 def debug(*args, stacklevel=1, verbosity=None, **kwargs):
@@ -55,45 +58,44 @@ def debug(*args, stacklevel=1, verbosity=None, **kwargs):
 
 
 def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs):
-  meta = LOG_METADATA[level]
-  prefix = 'craftr: ' + meta['fg'] + '[{0:<5}]'.format(level.upper())
+  levelinfo = LOG_METADATA[level]
+  prefix = levelinfo['fg']
   if not module_name and module:
     module_name = module.project_name
   if module_name and session.verbosity > 0:
-    prefix += ' (' + module_name
+    prefix += '(craftr.ext.' + module_name
     if module:
-      prefix += '|L' + str(magic.get_module_frame(module).f_lineno)
-    prefix += ')'
-  prefix += ': ' +  tty.reset
-  kwargs.setdefault('file', sys.stderr)
+      prefix += ', line ' + str(magic.get_module_frame(module).f_lineno)
+    prefix += '): '
+
   end = kwargs.pop('end', '\n')
-  kwargs['file'].write(prefix)
-  print(*args, end='', **kwargs)
-  kwargs['file'].write(tty.reset)
-  kwargs['file'].write(end)
+  file = kwargs.pop('file', sys.stderr)
+  file.write(prefix)
+  print(*args, end='', file=file, **kwargs)
+  file.write(tty.reset)
+  file.write(end)
+
   if show_trace is None:
-    show_trace = bool(session and module and session.verbosity >= meta['strace_min_verbosity'])
+    show_trace = bool(session and module and session.verbosity >= levelinfo['strace_min_verbosity'])
   if show_trace:
     max_frames = session.strace_depth
     frames = list(_walk_frames(stacklevel=(stacklevel + 1), max_frames=max_frames))
     for frame in reversed(frames):
       fn = frame.f_code.co_filename
-      if fn.startswith('<'):
-        fn = tty.colored(fn, 'yellow', attrs='bold')
-      else:
+      if not fn.startswith('<'):  # not built-in module filename
         fn = path.relpath(fn, session.cwd, only_sub=True)
-        fn = tty.colored(fn, 'red', attrs='bold')
+      fn = tty.colored(fn, 'red', attrs='bold')
 
       func = frame.f_code.co_name
       if func == '<module>' and 'project_name' in frame.f_globals:
         func = '<craftr.ext.{0}>'.format(frame.f_globals['project_name'])
       if func.startswith('<'):
-        func = tty.colored(func, 'yellow', attrs='bold')
+        func = tty.colored(func, 'blue', attrs='bold')
       else:
         func = tty.colored(func + '()', 'blue', attrs='bold')
 
       lineno = frame.f_lineno
-      print('  In', func, '[{0}|L{1}]'.format(fn, lineno))
+      print('  In', func, '({0}, line {1})'.format(fn, lineno), file=file)
 
 
 def info(*args, stacklevel=1, **kwargs):

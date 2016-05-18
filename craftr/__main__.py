@@ -158,7 +158,7 @@ def main():
   except OSError as exc:
     error('Ninja could not be found. Goto https://ninja-build.org/')
     return errno.ENOENT
-  debug('Detected ninja v{0}'.format(ninja_ver))
+  debug('detected ninja v{0}'.format(ninja_ver))
 
   # Convert relative to absolute target names.
   mkabst = lambda x: ((args.m + x) if (x.startswith('.')) else x).replace(':', '.')
@@ -168,7 +168,7 @@ def main():
   if os.getcwd() != path.normpath(args.d):
     started_from_build_dir = False
     os.chdir(args.d)
-    info('cd "{0}"'.format(args.d))
+    debug('cd "{0}"'.format(args.d))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
@@ -250,14 +250,14 @@ def main():
         if not args.targets:
           # Load the main craftr module specified via the -m option
           # or the "Craftfile.py" of the original cwd.
-          info('load {!r}'.format('craftr.ext.' + args.m))
+          debug('load {!r}'.format('craftr.ext.' + args.m))
           importlib.import_module('craftr.ext.' + args.m)
         else:
           # Load the targets specified on the command-line.
           for tname in args.targets:
             mname = tname.rpartition('.')[0]
             if mname and mname not in session.modules:
-              info('load {!r}'.format('craftr.ext.' + mname))
+              debug('load {!r}'.format('craftr.ext.' + mname))
               importlib.import_module('craftr.ext.' + mname)
       except craftr.ModuleError as exc:
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
@@ -280,8 +280,6 @@ def main():
       if export_if_required and rts_mode != Target.RTS_Plain:
         warn('"build.ninja" does not exist but is required by selected targets, forcing "-e"')
         args.e = 1
-      elif export_if_required:
-        debug('"build.ninja" does not exist and is not required by the selected targets')
 
       if args.e > 0:
         # Export a ninja manifest.

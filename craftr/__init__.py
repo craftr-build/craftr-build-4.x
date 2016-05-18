@@ -260,7 +260,7 @@ class Session(object):
       self.server.bind()
     self.server.serve_forever_async()
     environ['CRAFTR_RTS'] = '{0}:{1}'.format(self.server.host, self.server.port)
-    debug('Started Craftr RTS at {0}:{1}'.format(self.server.host, self.server.port))
+    debug('rts listening at {0}:{1}'.format(self.server.host, self.server.port))
 
   def _stop_server(self):
     if self.server.running:

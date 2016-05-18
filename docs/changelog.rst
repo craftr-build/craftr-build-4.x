@@ -32,8 +32,6 @@ v1.1.0 (unreleased)
 
 * Behaviour changes
 
-  * ``info()``, ``warn()`` and ``error()`` only display the module that
-    called the function with a verbosity level ``> 0``
   * automatically import targets specified on the command-line (issue #96)
   * catch possible PermissionError in ``CraftrImporter._rebuild_cache()``
     (sha 16a6e307)
@@ -90,6 +88,13 @@ v1.1.0 (unreleased)
   * ``craftr.shell.run()`` now splits strings into a command list if
     the *shell* argument is False
 
+* Logging
+
+  * removed the ``craftr: [INFO ]:`` prefix stuff
+  * logging functions only display the source module when at least ``-v``
+    is specified
+  * updated output coloring and debug message strings
+  * stracktrace for log entries now skips builtin modules
 
 v1.0.0
 ------

@@ -39,7 +39,7 @@ requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
   name='craftr-build',
-  version='1.0.0',
+  version='1.1.0-dev',
   description='build system based on Ninja and Python 3.4+',
   author='Niklas Rosenstein',
   author_email='rosensteinniklas(at)gmail.com',
