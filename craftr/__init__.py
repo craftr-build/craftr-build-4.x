@@ -155,13 +155,13 @@ class Session(object):
     if path is not None:
       self.path.extend(path)
 
-    self.targets['clean'] = Target(
+    self.register_target(Target(
       command = 'ninja -t clean',
       inputs = None,
       outputs = None,
       name = 'clean',
       module = None,
-      explicit = True)
+      explicit = True))
 
   def register_target(self, target):
     ''' This function is used by the :class:`Target` constructor

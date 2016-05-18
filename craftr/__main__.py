@@ -97,9 +97,9 @@ def main():
   parser.add_argument('-m', help='The name of a Craftr module to run.')
   parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
   parser.add_argument('-b', action='store_true', help='Build all or the specified targets. Note that no Craftr modules are executed, if that is not required by other options.')
-  parser.add_argument('-c', default=0, action='count', help='Clean the targets before building. Clean recursively on -cc')
-  parser.add_argument('-d', help='The build directory. Defaults to "build". Can be out of tree.')
-  parser.add_argument('-p', help='Specify the main directory (eventually to load the Craftfile from). If -d is not specified, the CWD is build directory.')
+  parser.add_argument('-c', default=0, action='count', help='Clean the specicied targets. Clean recursively on -cc')
+  parser.add_argument('-d', help='The build directory. Defaults to "./build". If omitted and -p is specified, defaults to the current working directory.')
+  parser.add_argument('-p', help='Specify the main directory (eventually to load the Craftfile from). Defaults to the current working directory.')
   parser.add_argument('-D', default=[], action='append',
     help='Set an option (environment variable). -D<key> will set <key> to the '
     'string "true". -D<key>= will delete the variable, if present. -D<key>=<value> '
@@ -114,9 +114,6 @@ def main():
   parser.add_argument('--rts-at', type=craftr.rts.parse_uri, help='Manually specify the host:port for the Craftr runtime server.')
   parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
   args = parser.parse_args()
-
-  # The verbosity level can not be read at some levels, that' why we
-  # have to always pass it to the debug() function.
   debug = partial(craftr.debug, verbosity=args.v)
 
   if args.V:
@@ -125,7 +122,7 @@ def main():
 
   if not args.d:
     if args.p:
-      debug('Using "." as build directory (-p)')
+      debug('using "." as build directory (-p)')
       args.d = os.getcwd()
     else:
       args.d = 'build'
@@ -249,7 +246,8 @@ def main():
       # line, and we need to make sure these are imported as well.
       for tname in args.targets:
         mname = tname.rpartition('.')[0]
-        importlib.import_module('craftr.ext.' + mname)
+        if mname:
+          importlib.import_module('craftr.ext.' + mname)
 
       try:
         targets = [session.targets[x] for x in args.targets]
