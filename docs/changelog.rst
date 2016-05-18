@@ -60,7 +60,9 @@ v1.1.0 (unreleased)
     tasks that do not depend on normal targets can be executed without
     Ninja, see #103)
   * deprecated ``-b`` flag, the build step is now always executed by default
-  * ``-e`` is now a countable argument, ``-ee`` will export only and skip the build step
+  * add ``-n`` flag which is the inverse of the old ``-b`` flag, skip the
+    build phase if specified
+  * updated command help
 
 * API Changes
 

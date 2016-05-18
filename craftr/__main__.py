@@ -28,6 +28,7 @@ import atexit
 import errno
 import importlib
 import os
+import textwrap
 import time
 import shutil
 import subprocess
@@ -91,27 +92,35 @@ def _abs_env(cwd=None):
 
 
 def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-V', action='store_true', help='Print version and exit.')
-  parser.add_argument('-v', action='count', default=0, help='Increase the verbosity level.')
-  parser.add_argument('-m', help='The name of a Craftr module to run.')
-  parser.add_argument('-e', default=0, action='count', help='Export the Ninja manifest and all data required to execute the build. Use -ee to only export and not build.')
-  parser.add_argument('-b', action='store_true', help='Deprecated since v1.1.0. Formerly used to execute the build step for the specified targets.')
-  parser.add_argument('-c', default=0, action='count', help='Clean the specicied targets. Clean recursively on -cc')
-  parser.add_argument('-d', help='The build directory. Defaults to "./build". If omitted and -p is specified, defaults to the current working directory.')
-  parser.add_argument('-p', help='Specify the main directory (eventually to load the Craftfile from). Defaults to the current working directory.')
-  parser.add_argument('-D', default=[], action='append',
-    help='Set an option (environment variable). -D<key> will set <key> to the '
-    'string "true". -D<key>= will delete the variable, if present. -D<key>=<value> '
-    'will set the variable <key> to the string <value>. <key> can be prefixed with '
-    'a dot, in which case it is prefixed with the current main modules name.')
-  parser.add_argument('-I', default=[], action='append', help='Add a path to the Craftr extension module search path.')
-  parser.add_argument('-N', nargs='...', default=[], help='Additional args to pass to ninja')
-  parser.add_argument('--no-rc', action='store_true', help='Do not run Craftr startup files.')
-  parser.add_argument('--rc', help='Execute the specified Craftr startup file. CAN be paired with --no-rc')
-  parser.add_argument('--strace-depth', type=int, default=5, help='Depth of logging stack trace. Defaults to 5')
-  parser.add_argument('--rts', action='store_true', help='If this option is specified, the Craftr runtime server will serve forever.')
-  parser.add_argument('--rts-at', type=craftr.rts.parse_uri, help='Manually specify the host:port for the Craftr runtime server.')
+  parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent('''
+    Craftr v{}
+    -----------------
+
+    Craftr is the next generation build system based on Ninja and Python.
+
+    https://github.com/craftr-build/craftr
+    '''.format(craftr.__version__)))
+  parser.add_argument('-V', action='store_true', help='print version and exit ({})'.format(craftr.__version__))
+  parser.add_argument('-v', action='count', default=0, help='increase the verbosity level')
+  parser.add_argument('-m', metavar='MODULE', help='name of the main Craftr module to take relative target references for or the module to load if no targets are specified on the command-line')
+  parser.add_argument('-n', action='store_true', help='skip the build step')
+  parser.add_argument('-e', action='store_true', help='(re-)export the Ninja manifest')
+  parser.add_argument('-b', action='store_true', help='deprecated since v1.1.0')
+  parser.add_argument('-c', default=0, action='count', help='clean the specified target(s), or clean everything with -cc')
+  parser.add_argument('-d', metavar='BUILDDIR', help='build directory, defaults to "./build" or the cwd if -p is used (conflicts with -p)')
+  parser.add_argument('-p', metavar='PROJECTDIR', help='inverse of -b, use the specified directory as the main project directory and the cwd for -b')
+  parser.add_argument('-D', metavar='<key>[=<value>]', default=[], action='append',
+    help='set an option in the environment variable, <key> may be relative, '
+    '=<value> can be omitted')
+  parser.add_argument('-I', metavar='PATH', default=[], action='append', help='additional Craftr module search path')
+  parser.add_argument('-N', nargs='...', default=[], help='additional args passed to the Ninja command-line')
+  parser.add_argument('--no-rc', action='store_true', help='skip running craftrc.py files')
+  parser.add_argument('--rc', metavar='.PY', help='run the specified Python file before anything else, CAN be paired with --no-rc')
+  parser.add_argument('--strace-depth', metavar='INT', type=int, default=5, help='depth of the logging stacktrace, default is 5')
+  parser.add_argument('--rts', action='store_true', help='keep alive the runtime server')
+  parser.add_argument('--rts-at', metavar='HOST:PORT', type=craftr.rts.parse_uri, help='override the runtime server\'s host:port')
   parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
   args = parser.parse_args()
   debug = partial(craftr.debug, verbosity=args.v)
@@ -180,9 +189,9 @@ def main():
 
   rts_mode = None
   cache = None
-  do_run = bool(args.e > 0 or args.rts)
+  do_run = bool(args.e or args.rts)
   export_if_required = False
-  if args.e > 0:
+  if args.e:
     # Remove files/directories we'll create again eventually.
     path.silent_remove(craftr.MANIFEST)
     path.silent_remove(craftr.CMDDIR, is_dir=True)
@@ -228,7 +237,7 @@ def main():
     server_bind=args.rts_at,
     verbosity=args.v,
     strace_depth=args.strace_depth,
-    export=args.e > 0)
+    export=args.e)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
 
@@ -278,11 +287,12 @@ def main():
         rts_mode = cache.get_rts_mode(args.targets)
 
       if export_if_required and rts_mode != Target.RTS_Plain:
-        warn('"build.ninja" does not exist but is required by selected targets, forcing "-e"')
-        args.e = 1
+        warn('{!r} does not exist but is required by selected targets, forcing "-e"'.format(craftr.MANIFEST))
+        args.e = True
 
-      if args.e > 0:
+      if args.e:
         # Export a ninja manifest.
+        debug('exporting {!r}'.format(craftr.MANIFEST))
         with open(craftr.MANIFEST, 'w') as fp:
           craftr.ninja.export(fp, cache)
     else:
@@ -304,12 +314,13 @@ def main():
         # Non-recursive clean.
         cmd.append('-r')
       cmd += (t for t in args.targets)
+      debug("$", shell.join(cmd))
       ret = shell.run(cmd, shell=True, check=False).returncode
       if ret != 0:
         return ret
 
     # Perform the build.
-    if args.e <= 1:
+    if not args.n:
       if rts_mode == Target.RTS_Plain:
         debug("the specified targets can be executed in plain Python-space")
         state = {}

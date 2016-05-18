@@ -259,48 +259,48 @@ Command Line Interface
 
 ::
 
-    usage: craftr [-h] [-V] [-v] [-m M] [-e] [-b] [-c] [-d D] [-p P]
-                  [-D D] [-I I] [-N ...] [--no-rc] [--rc RC]
-                  [--strace-depth STRACE_DEPTH] [--rts]
-                  [--rts-at RTS_AT]
-                  [targets [targets ...]]
+  usage: craftr [-h] [-V] [-v] [-m MODULE] [-n] [-e] [-b] [-c]
+                [-d BUILDDIR] [-p PROJECTDIR] [-D <key>[=<value>]]
+                [-I PATH] [-N ...] [--no-rc] [--rc .PY]
+                [--strace-depth INT] [--rts] [--rts-at HOST:PORT]
+                [targets [targets ...]]
 
-    positional arguments:
-      targets               zero or more target/task names to build/execute
+  Craftr v1.1.0-dev
+  -----------------
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -V                    Print version and exit.
-      -v                    Increase the verbosity level.
-      -m M                  The name of a Craftr module to run.
-      -e                    Export the build definitions to build.ninja
-      -b                    Build all or the specified targets. Note that no
-                            Craftr modules are executed, if that is not required
-                            by other options.
-      -c                    Clean the targets before building. Clean recursively
-                            on -cc
-      -d D                  The build directory. Defaults to "build". Can be out
-                            of tree.
-      -p P                  Specify the main directory (eventually to load the
-                            Craftfile from). If -d is not specified, the CWD is
-                            build directory.
-      -D D                  Set an option (environment variable). -D<key> will set
-                            <key> to the string "true". -D<key>= will delete the
-                            variable, if present. -D<key>=<value> will set the
-                            variable <key> to the string <value>. <key> can be
-                            prefixed with a dot, in which case it is prefixed with
-                            the current main modules name.
-      -I I                  Add a path to the Craftr extension module search path.
-      -N ...                Additional args to pass to ninja
-      --no-rc               Do not run Craftr startup files.
-      --rc RC               Execute the specified Craftr startup file. CAN be
-                            paired with --no-rc
-      --strace-depth STRACE_DEPTH
-                            Depth of logging stack trace. Defaults to 3
-      --rts                 If this option is specified, the Craftr runtime server
-                            will serve forever.
-      --rts-at RTS_AT       Manually specify the host:port for the Craftr runtime
-                            server.
+  Craftr is the next generation build system based on Ninja and Python.
+
+  https://github.com/craftr-build/craftr
+
+  positional arguments:
+    targets             zero or more target/task names to build/execute
+
+  optional arguments:
+    -h, --help          show this help message and exit
+    -V                  print version and exit (1.1.0-dev)
+    -v                  increase the verbosity level
+    -m MODULE           name of the main Craftr module to take relative target
+                        references for or the module to load if no targets are
+                        specified on the command-line
+    -n                  skip the build step
+    -e                  (re-)export the Ninja manifest
+    -b                  deprecated since v1.1.0
+    -c                  clean the specified target(s), or clean everything with
+                        -cc
+    -d BUILDDIR         build directory, defaults to "./build" or the cwd if -p
+                        is used (conflicts with -p)
+    -p PROJECTDIR       inverse of -b, use the specified directory as the main
+                        project directory and the cwd for -b
+    -D <key>[=<value>]  set an option in the environment variable, <key> may be
+                        relative, =<value> can be omitted
+    -I PATH             additional Craftr module search path
+    -N ...              additional args passed to the Ninja command-line
+    --no-rc             skip running craftrc.py files
+    --rc .PY            run the specified Python file before anything else, CAN
+                        be paired with --no-rc
+    --strace-depth INT  depth of the logging stacktrace, default is 5
+    --rts               keep alive the runtime server
+    --rts-at HOST:PORT  override the runtime server's host:port
 
 .. note::
 
