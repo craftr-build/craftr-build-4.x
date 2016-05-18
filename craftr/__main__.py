@@ -30,6 +30,7 @@ import importlib
 import os
 import textwrap
 import time
+import traceback
 import shutil
 import subprocess
 import sys
@@ -272,8 +273,14 @@ def main():
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
       except ImportError as exc:
-        error(exc)
-        return errno.ENOENT
+        if exc.name and exc.name.startswith('craftr.ext.') and args.v == 0:
+          error(exc)
+        else:
+          traceback.print_exc()
+        return 1
+      except BaseException as exc:
+        traceback.print_exc()
+        return 1
 
       try:
         targets = [session.targets[x] for x in args.targets]
