@@ -52,6 +52,9 @@ v1.1.0 (unreleased)
   * if all targets specified on the command-line are tasks and do not
     depend on Ninja-buildable targets, the task(s) will be executed
     without Ninja (issue #103)
+  * if ``-e`` is not specified but the manifest does not exist, export
+    will be forced unless the specified targets do not require it (ie.
+    are plain tasks) (see #103)
 
 * Command-line changes
 

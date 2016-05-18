@@ -168,7 +168,7 @@ def main():
   if os.getcwd() != path.normpath(args.d):
     started_from_build_dir = False
     os.chdir(args.d)
-    info('> cd "{0}"'.format(args.d))
+    info('cd "{0}"'.format(args.d))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
@@ -181,13 +181,14 @@ def main():
   rts_mode = None
   cache = None
   do_run = bool(args.e > 0 or args.rts)
+  export_if_required = False
   if args.e > 0:
     # Remove files/directories we'll create again eventually.
     path.silent_remove(craftr.MANIFEST)
     path.silent_remove(craftr.CMDDIR, is_dir=True)
   elif not path.isfile(craftr.MANIFEST):
-    error("'build.ninja' does not exist, please use -e to export a manifest")
-    return errno.ENOENT
+    # We need to export a manifest if its required by the selected targets.
+    export_if_required = do_run = True
   else:
     # If we're not going to export a manifest, read the cached
     # data from the Ninja manifest.
@@ -249,14 +250,14 @@ def main():
         if not args.targets:
           # Load the main craftr module specified via the -m option
           # or the "Craftfile.py" of the original cwd.
-          info('> load {!r}'.format('craftr.ext.' + args.m))
+          info('load {!r}'.format('craftr.ext.' + args.m))
           importlib.import_module('craftr.ext.' + args.m)
         else:
           # Load the targets specified on the command-line.
           for tname in args.targets:
             mname = tname.rpartition('.')[0]
             if mname and mname not in session.modules:
-              info('> load {!r}'.format('craftr.ext.' + mname))
+              info('load {!r}'.format('craftr.ext.' + mname))
               importlib.import_module('craftr.ext.' + mname)
       except craftr.ModuleError as exc:
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
@@ -272,10 +273,17 @@ def main():
         return errno.ENOENT
 
       session.finalize()
-      if args.e > 0:
-        # Create a new cache from the current session data.
-        cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
+      cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
+      if rts_mode is None:
+        rts_mode = cache.get_rts_mode(args.targets)
 
+      if export_if_required and rts_mode != Target.RTS_Plain:
+        warn('"build.ninja" does not exist but is required by selected targets, forcing "-e"')
+        args.e = 1
+      elif export_if_required:
+        debug('"build.ninja" does not exist and is not required by the selected targets')
+
+      if args.e > 0:
         # Export a ninja manifest.
         with open(craftr.MANIFEST, 'w') as fp:
           craftr.ninja.export(fp, cache)
