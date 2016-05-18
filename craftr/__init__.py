@@ -630,6 +630,7 @@ class Target(object):
     for fn in self.outputs or ():
       dep = session.find_target_for_file(fn)
       if dep: self.graph.outputs.add(dep)
+    self.graph.inputs.update(self.requires)
 
   def check_rts(self):
     ''' Returns True if this target or any of its inputs is a
