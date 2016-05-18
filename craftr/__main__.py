@@ -168,7 +168,7 @@ def main():
   if os.getcwd() != path.normpath(args.d):
     started_from_build_dir = False
     os.chdir(args.d)
-    debug('cd "{0}"'.format(args.d))
+    debug('$ cd "{0}"'.format(args.d))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
@@ -321,6 +321,7 @@ def main():
           return exc.result
       else:
         cmd = ['ninja'] + [t for t in args.targets] + args.N
+        debug("$", shell.join(cmd))
         ret = shell.run(cmd, shell=True, check=False).returncode
         if ret != 0:
           return ret
