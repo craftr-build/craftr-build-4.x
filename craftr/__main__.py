@@ -175,6 +175,7 @@ def main():
     if not build_dir_exists and not os.listdir(args.d):
       os.rmdir(args.d)
 
+  rts_mode = None
   cache = None
   do_run = bool(args.e or args.rts)
   if args.e:
@@ -197,7 +198,8 @@ def main():
 
     # If any of the targets require the RTS feature, we still need
     # to execute the Craftr module.
-    if cache.get_rts_mode(args.targets) != Target.RTS_None:
+    rts_mode = cache.get_rts_mode(args.targets)
+    if rts_mode != Target.RTS_None:
       info('can not skip execution, one or more targets are tasks')
       do_run = True
     else:
@@ -273,9 +275,12 @@ def main():
       _set_env(args.D, args.m)
       _abs_env(old_cwd)
 
+    if rts_mode is None:
+      rts_mode = cache.get_rts_mode(args.targets)
+
     # If the session has targets that require the RTS feature or
     # if the --rts flag was specified, start the RTS server.
-    if args.rts or cache.get_rts_mode(args.targets) != Target.RTS_None:
+    if args.rts or rts_mode != Target.RTS_None:
       session.start_server()
 
     # Perform a full or rule-based clean.
@@ -291,10 +296,20 @@ def main():
 
     # Perform the build.
     if args.b:
-      cmd = ['ninja'] + [t for t in args.targets] + args.N
-      ret = shell.run(cmd, shell=True, check=False).returncode
-      if ret != 0:
-        return ret
+      if rts_mode == Target.RTS_Plain:
+        debug("the specified targets can be executed in plain Python-space")
+        state = {}
+        try:
+          for target in args.targets:
+            session.targets[target].execute_task(state)
+        except craftr.TaskError as exc:
+          error(exc)
+          return exc.result
+      else:
+        cmd = ['ninja'] + [t for t in args.targets] + args.N
+        ret = shell.run(cmd, shell=True, check=False).returncode
+        if ret != 0:
+          return ret
 
     if args.rts:
       try:

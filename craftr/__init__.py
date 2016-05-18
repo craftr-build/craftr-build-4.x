@@ -43,6 +43,7 @@ import functools
 import itertools
 import os
 import stat
+import traceback
 import types
 import warnings
 
@@ -607,19 +608,44 @@ class Target(object):
   def finalized(self):
     return self.graph is not None
 
-  def execute_task(self):
+  def execute_task(self, exec_state=None):
     ''' Execute the :attr:`rts_func` of the target. This calls the
     function with the inputs and outputs of the target (if any of
     these are not None) or with no arguments (if both is None).
 
-    :raise RuntimeError: If the target is not an RTS task. '''
+    This function catches all exceptions that the wrapped function
+    might raise and prints the traceback to stdout and raises a
+    :class:`TaskError` with status-code 1.
+
+    :param exec_state: If this parameter is not None, it must be
+      a dictionary where the task can check if it already executed.
+      Also, inputs of this target will be executed if the parameter
+      is a dictionary.
+    :raise RuntimeError: If the target is not an RTS task.
+    :raise TaskError: If this task (or any of the dependent tasks,
+      only if *exec_state* is not None) exits with a not-None,
+      non-zero exit code. '''
 
     if not self.rts_func:
       raise RuntimeError('target is not an RTS task: {!r}'.format(self.fullname))
-    if self.inputs is None and self.outputs is None:
-      self.rts_func()
-    else:
-      self.rts_func(self.inputs, self.outputs)
+    if exec_state is not None and exec_state.get(self.fullname):
+      return  # already executed
+    if exec_state is not None:
+      exec_state[self.fullname] = True
+      for dep in self.graph.inputs:
+        dep.execute_task(exec_state)
+    try:
+      with magic.enter_context(craftr.module, self.module):
+        if self.inputs is None and self.outputs is None:
+          result = self.rts_func()
+        else:
+          result = self.rts_func(self.inputs, self.outputs)
+    except BaseException as exc:
+      traceback.print_exc()
+      raise TaskError(self, 1) from None
+
+    if result is not None and result != 0:
+      raise TaskError(self, result)
 
   def finalize(self, session):
     ''' Gather the inputs and outputs of the target and create a
@@ -1076,6 +1102,18 @@ class ModuleError(RuntimeError):
 
 class ModuleReturn(Exception):
   pass
+
+
+class TaskError(Exception):
+  ''' Raised from :meth:`Target.execute_task()`. '''
+
+  def __init__(self, task, result):
+    self.task = task
+    self.result = result
+
+  def __str__(self):
+    return 'task {!r} returned with result code {!r}'.format(
+      self.task.fullname, self.result)
 
 
 def return_():

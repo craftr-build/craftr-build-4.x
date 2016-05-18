@@ -49,14 +49,20 @@ v1.1.0 (unreleased)
   * functions wrapped with the ``task()`` decorator can now be specified
     on the command-line just like normal targets (due to the fact that
     they are real targets also exported to the Ninja manifest)
+  * if all targets specified on the command-line are tasks and do not
+    depend on Ninja-buildable targets, the task(s) will be executed
+    without Ninja (issue #103)
 
 * Command-line changes
 
-  * removed ``-f`` and ``-F`` command-line options completely
+  * removed ``-f`` and ``-F`` command-line options completely (instead,
+    tasks that do not depend on normal targets can be executed without
+    Ninja, see #103)
 
 * API Changes
 
   * add ``task()`` decorator function
+  * add ``TaskError`` exception class
 
   * removed ``Session.rts_funcs``
   * add ``Session.files_to_targets``

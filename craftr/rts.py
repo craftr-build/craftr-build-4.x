@@ -313,7 +313,11 @@ class _RequestHandler(object):
           thread_stdin.dest_file = io.TextIOWrapper(io.BufferedReader(self.stdin))
           thread_stdout.dest_file = io.TextIOWrapper(io.BufferedWriter(self.stdout))
           thread_stderr.dest_file = thread_stdout.dest_file  # io.TextIOWrapper(io.BufferedWriter(self.stderr))
-          result = target.execute_task()
+          try:
+            result = target.execute_task()
+          except craftr.TaskError as exc:
+            error(str(exc))
+            result = exc.result
           if result is None:
             result = 0
           elif not isinstance(result, int):
@@ -335,8 +339,7 @@ class _RequestHandler(object):
 
       def context_enterer():
         with magic.enter_context(craftr.session, self.session, secret=True):
-          with magic.enter_context(craftr.module, target.module):
-            return wrapper()
+          return wrapper()
 
       self.info('@@ {0}()'.format(command))
       with self.lock:
