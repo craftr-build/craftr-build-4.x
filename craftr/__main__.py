@@ -95,8 +95,8 @@ def main():
   parser.add_argument('-V', action='store_true', help='Print version and exit.')
   parser.add_argument('-v', action='count', default=0, help='Increase the verbosity level.')
   parser.add_argument('-m', help='The name of a Craftr module to run.')
-  parser.add_argument('-e', action='store_true', help='Export the build definitions to build.ninja')
-  parser.add_argument('-b', action='store_true', help='Build all or the specified targets. Note that no Craftr modules are executed, if that is not required by other options.')
+  parser.add_argument('-e', default=0, action='count', help='Export the Ninja manifest and all data required to execute the build. Use -ee to only export and not build.')
+  parser.add_argument('-b', action='store_true', help='Deprecated since v1.1.0. Formerly used to execute the build step for the specified targets.')
   parser.add_argument('-c', default=0, action='count', help='Clean the specicied targets. Clean recursively on -cc')
   parser.add_argument('-d', help='The build directory. Defaults to "./build". If omitted and -p is specified, defaults to the current working directory.')
   parser.add_argument('-p', help='Specify the main directory (eventually to load the Craftfile from). Defaults to the current working directory.')
@@ -115,6 +115,9 @@ def main():
   parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
   args = parser.parse_args()
   debug = partial(craftr.debug, verbosity=args.v)
+
+  if args.b:
+    warn('"-b" option is deprecated (since v1.1.0)')
 
   if args.V:
     print('craftr {0}'.format(craftr.__version__))
@@ -165,7 +168,7 @@ def main():
   if os.getcwd() != path.normpath(args.d):
     started_from_build_dir = False
     os.chdir(args.d)
-    info('cd "{0}"'.format(args.d))
+    info('> cd "{0}"'.format(args.d))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
@@ -177,8 +180,8 @@ def main():
 
   rts_mode = None
   cache = None
-  do_run = bool(args.e or args.rts)
-  if args.e:
+  do_run = bool(args.e > 0 or args.rts)
+  if args.e > 0:
     # Remove files/directories we'll create again eventually.
     path.silent_remove(craftr.MANIFEST)
     path.silent_remove(craftr.CMDDIR, is_dir=True)
@@ -224,7 +227,7 @@ def main():
     server_bind=args.rts_at,
     verbosity=args.v,
     strace_depth=args.strace_depth,
-    export=args.e)
+    export=args.e > 0)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
 
@@ -242,20 +245,25 @@ def main():
       _set_env(args.D, args.m)
       _abs_env(old_cwd)
 
-      # Load the main craftr module specified via the -m option
-      # or the "Craftfile.py" of the original cwd.
       try:
-        module = importlib.import_module('craftr.ext.' + args.m)
+        if not args.targets:
+          # Load the main craftr module specified via the -m option
+          # or the "Craftfile.py" of the original cwd.
+          info('> load {!r}'.format('craftr.ext.' + args.m))
+          importlib.import_module('craftr.ext.' + args.m)
+        else:
+          # Load the targets specified on the command-line.
+          for tname in args.targets:
+            mname = tname.rpartition('.')[0]
+            if mname and mname not in session.modules:
+              info('> load {!r}'.format('craftr.ext.' + mname))
+              importlib.import_module('craftr.ext.' + mname)
       except craftr.ModuleError as exc:
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
-
-      # We can reference completely external targets from the command
-      # line, and we need to make sure these are imported as well.
-      for tname in args.targets:
-        mname = tname.rpartition('.')[0]
-        if mname:
-          importlib.import_module('craftr.ext.' + mname)
+      except ImportError as exc:
+        error(exc)
+        return errno.ENOENT
 
       try:
         targets = [session.targets[x] for x in args.targets]
@@ -264,13 +272,13 @@ def main():
         return errno.ENOENT
 
       session.finalize()
-      if args.e:
+      if args.e > 0:
         # Create a new cache from the current session data.
         cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
 
         # Export a ninja manifest.
         with open(craftr.MANIFEST, 'w') as fp:
-          craftr.ninja.export(fp, module, cache)
+          craftr.ninja.export(fp, cache)
     else:
       _set_env(args.D, args.m)
       _abs_env(old_cwd)
@@ -295,7 +303,7 @@ def main():
         return ret
 
     # Perform the build.
-    if args.b:
+    if args.e <= 1:
       if rts_mode == Target.RTS_Plain:
         debug("the specified targets can be executed in plain Python-space")
         state = {}

@@ -58,6 +58,8 @@ v1.1.0 (unreleased)
   * removed ``-f`` and ``-F`` command-line options completely (instead,
     tasks that do not depend on normal targets can be executed without
     Ninja, see #103)
+  * deprecated ``-b`` flag, the build step is now always executed by default
+  * ``-e`` is now a countable argument, ``-ee`` will export only and skip the build step
 
 * API Changes
 
