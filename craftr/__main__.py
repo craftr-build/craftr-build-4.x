@@ -255,6 +255,7 @@ def main():
         error('Target {0} does not exist'.format(key))
         return errno.ENOENT
 
+      session.finalize()
       if args.e:
         # Create a new cache from the current session data.
         cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
@@ -268,7 +269,7 @@ def main():
 
     # If the session has targets that require the RTS feature or
     # if the --rts flag was specified, start the RTS server.
-    if args.rts or session.has_rts_targets():
+    if args.rts or cache.check_rts(None):
       session.start_server()
 
     # Perform a full or rule-based clean.

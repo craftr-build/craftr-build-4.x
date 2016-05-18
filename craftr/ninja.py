@@ -139,14 +139,13 @@ class CraftrCache(object):
     the *targets* dictionary from the targets in the session.
   '''
 
-
   def __init__(self, options=None, path=None, targets=None, session=None):
     if targets is None and session:
       # Generate the targets data from the session.
       targets = {}
       for name, target in session.targets.items():
         targets[name] = {
-          'rts': session.check_rts(target),
+          'rts': target.check_rts(),
           'explicit': target.explicit
         }
 
