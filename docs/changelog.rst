@@ -68,6 +68,7 @@ v1.1.0 (unreleased)
 
   * add ``task()`` decorator function
   * add ``TaskError`` exception class
+  * ``TargetBuilder()`` now accepts None for its *inputs* parameter
 
   * removed ``Session.rts_funcs``
   * add ``Session.files_to_targets``

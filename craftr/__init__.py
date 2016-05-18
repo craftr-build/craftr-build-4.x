@@ -747,7 +747,10 @@ class TargetBuilder(object):
     self.meta = meta
     self.caller = magic.get_caller(stacklevel + 1)
     frameworks = list(frameworks)
-    self.inputs = expand_inputs(inputs, frameworks)
+
+    if inputs is not None:
+      inputs = expand_inputs(inputs, frameworks)
+    self.inputs = inputs
     self.frameworks = expand_frameworks(frameworks)
     self.kwargs = kwargs
     self.options = FrameworkJoin(Framework(self.caller, kwargs), *self.frameworks)
