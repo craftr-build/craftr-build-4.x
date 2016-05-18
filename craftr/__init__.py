@@ -480,6 +480,10 @@ class Target(object):
 
   Graph = collections.namedtuple('Graph', 'inputs outputs')
 
+  RTS_None = 'none'
+  RTS_Mixed = 'mixd'
+  RTS_Plain = 'plain'
+
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, requires=None, foreach=False, description=None,
       pool=None, var=None, deps=None, depfile=None, msvc_deps_prefix=None,
@@ -632,19 +636,22 @@ class Target(object):
       if dep: self.graph.outputs.add(dep)
     self.graph.inputs.update(self.requires)
 
-  def check_rts(self):
-    ''' Returns True if this target or any of its inputs is a
-    task, False otherwise. Requires the Session and this Target
-    to be finalized. '''
+  def get_rts_mode(self):
+    ''' Returns the RTS information for this target:
+
+    * :data:`RTS_None` if this target and none of its dependencies
+    * :data:`RTS_Plain` if this target and all of its dependencies are tasks
+    * :data:`RTS_Mixed` if this target or any of its dependencies are tasks
+      but there is at least one normal target '''
 
     if not self.finalized:
       raise RuntimeError('not finalized')
-    if self.rts_func:
-      return True
+    mode = self.RTS_Plain if self.rts_func else self.RTS_None
     for dep in self.graph.inputs:
-      if dep.check_rts():
-        return True
-    return False
+      dep_mode = dep.get_rts_mode()
+      if dep_mode == self.RTS_Mixed or dep_mode != mode:
+        mode = self.RTS_Mixed
+    return mode
 
 
 class TargetBuilder(object):

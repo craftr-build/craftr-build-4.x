@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 import craftr
-from craftr import path, shell, warn, session
+from craftr import path, shell, warn, session, Target
 from craftr import __version__ as craftr_version
 from craftr.utils import find_program
 
@@ -145,28 +145,34 @@ class CraftrCache(object):
       targets = {}
       for name, target in session.targets.items():
         targets[name] = {
-          'rts': target.check_rts(),
-          'explicit': target.explicit
+          'rts': target.get_rts_mode(),
+          'explicit': target.explicit,
         }
 
     self.options = options or []
     self.path = path or []
     self.targets = targets or {}
 
-  def check_rts(self, target_names):
-    ''' Checks if the target with the specified *target_name*
-    requires the RTS feature from the information we have in the
-    cache.
+  def get_rts_mode(self, target_names):
+    ''' Same as :meth:`Target.get_rts_mode()` only that it checks
+    the cached data of the specified *target_names*.
 
     :param target_names: A list of target names. If the list is
       empty, checks all targets, however ignore targets that are
-      not included by the default phony target. '''
+      not included by the default phony target.
+    :return: Either of
+
+      * :data:`Target.RTS_None`
+      * :data:`Target.RTS_Mixed`
+      * :data:`Target.RTS_Plain`
+    '''
 
     explicit = True
     if not target_names:
       explicit = False
       target_names = self.targets.keys()
 
+    mode = None
     for name in target_names:
       try:
         info = self.targets[name]
@@ -175,10 +181,13 @@ class CraftrCache(object):
       if info['explicit'] and not explicit:
         # Ignore explicit targets if we're targeting the default phony.
         continue
-      if info['rts']:
-        return True
+      if mode is None or info['rts'] == Target.RTS_Mixed:
+        mode = info['rts']
+      elif mode != info['rts']:
+        mode = Target.RTS_Mixed
 
-    return False
+    return mode or Target.RTS_None
+
 
   def write(self, writer):
     writer.comment('@craftr.options: ' + json.dumps(self.options))

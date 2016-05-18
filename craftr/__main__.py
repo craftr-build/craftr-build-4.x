@@ -197,7 +197,7 @@ def main():
 
     # If any of the targets require the RTS feature, we still need
     # to execute the Craftr module.
-    if cache.check_rts(args.targets):
+    if cache.get_rts_mode(args.targets) != Target.RTS_None:
       info('can not skip execution, one or more targets are tasks')
       do_run = True
     else:
@@ -275,7 +275,7 @@ def main():
 
     # If the session has targets that require the RTS feature or
     # if the --rts flag was specified, start the RTS server.
-    if args.rts or cache.check_rts(None):
+    if args.rts or cache.get_rts_mode(args.targets) != Target.RTS_None:
       session.start_server()
 
     # Perform a full or rule-based clean.

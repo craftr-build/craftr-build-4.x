@@ -69,7 +69,7 @@ v1.1.0 (unreleased)
   * add ``Target.graph``
   * add ``Target.finalize``
   * add ``Target.finalized`` property
-  * add ``Target.check_rts()``
+  * add ``Target.get_rts_mode()``
   * add ``Target.execute_task()``
   * Targets can now also be tasks which will be executed through Craftr
     RTS by passing a callable to the constructor for the *command* argument
