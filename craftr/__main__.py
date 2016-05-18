@@ -183,16 +183,22 @@ def main():
     path.silent_remove(craftr.CMDDIR, is_dir=True)
   elif not path.isfile(craftr.MANIFEST):
     error("'build.ninja' does not exist, please use -e to export a manifest")
-    return 1
+    return errno.ENOENT
   else:
     # If we're not going to export a manifest, read the cached
     # data from the Ninja manifest.
     cache = craftr.ninja.CraftrCache.read()
 
+    # Make sure all targets exist in the cache.
+    for target in args.targets:
+      if target not in cache.targets:
+        error('target {!r} does not exist in cache'.format(target))
+        return errno.ENOENT
+
     # If any of the targets require the RTS feature, we still need
     # to execute the Craftr module.
     if cache.check_rts(args.targets):
-      info('can not skip execution phase as one or more target(s) need RTS')
+      info('can not skip execution, one or more targets are tasks')
       do_run = True
     else:
       info('skipping execution phase')
