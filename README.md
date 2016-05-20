@@ -68,7 +68,7 @@ more detailed output. What you see below is an example run on Windows:
 
 #### Additional Links
 
-* [Changelog](docs/changelog.rst)
+* [Changelog][]
 * [Documentation](http://craftr.readthedocs.org/en/latest/?badge=latest)
 * [Craftr extension build modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
 * [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
@@ -96,6 +96,11 @@ Craftr by simply pulling the latest changes from the remote repository.
     git clone https://github.com/craftr-build/craftr.git && cd craftr
     pip install -e .
 
+> **Note**: The current development version of Craftr (`v1.1.0-dev`) 
+> contains some severe changes to the Craftr ecosystem and API. Please
+> take a look at the [Changelog][] and consider familiarizing yourself
+> with the latest version from the `master` branch.
+
 ----
 
 <p align="center">MIT Licensed &ndash; Copyright &copy; 2016  Niklas Rosenstein</p>
@@ -106,3 +111,4 @@ Craftr by simply pulling the latest changes from the remote repository.
   [Ninja]: https://github.com/ninja-build/ninja
   [Python]: https://www.python.org
   [Pandoc]: http://pandoc.org
+  [Changelog]: docs/changelog.rst
