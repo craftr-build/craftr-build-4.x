@@ -55,6 +55,8 @@ v1.1.0 (unreleased)
   * if ``-e`` is not specified but the manifest does not exist, export
     will be forced unless the specified targets do not require it (ie.
     are plain tasks) (see #103)
+  * calling ``Session.update()`` after altering ``Session.path`` is
+    no longer necessary (issue #108)
 
 * Command-line changes
 
@@ -75,6 +77,7 @@ v1.1.0 (unreleased)
   * removed ``options.get_option()``
   * ``options.get()`` now accepts a *default* parameter, updated its docstrings
 
+  * removed ``Session.update()`` (see issue #108)
   * removed ``Session.rts_funcs``
   * add ``Session.files_to_targets``
   * add ``Session.finalized``

@@ -64,6 +64,7 @@ class CraftrImporter(object):
   def __init__(self, session):
     super().__init__()
     self._cache = {}
+    self._cache_path_hash = None  # such rhyme, much wow
     self.session = session
 
   def _check_file(self, filename):
@@ -85,8 +86,19 @@ class CraftrImporter(object):
     self._cache[ident] = filename
     return ident
 
-  def _rebuild_cache(self):
-    ''' Rebuilds the importer cache for craftr modules. '''
+  def _rebuild_cache(self, force=False):
+    ''' Rebuilds the importer cache for craftr modules. If *force*
+    is not True, the function will first check if the search path
+    has changed since the last time the cache was built and skip
+    if it hasn't.
+
+    Returns True if the cache has been rebuilt, False if it was
+    left unchanged. '''
+
+    path_hash = sum(map(hash, self.session.path))
+    if not force and path_hash == self._cache_path_hash:
+      return False  # nothing changed
+    self._cache_path_hash = path_hash
 
     def check_dir(dirname):
       self._check_file(path.join(dirname, 'Craftfile.py'))
@@ -107,6 +119,7 @@ class CraftrImporter(object):
       for subdir in path.listdir(dirname):
         if path.isdir(subdir):
           check_dir(subdir)
+    return True
 
   def _get_module_info(self, fullname):
     ''' Returns a tuple that contains information about a craftr module
@@ -128,14 +141,18 @@ class CraftrImporter(object):
         return ('namespace', None)
     return (None, None)
 
-  def update(self):
+  def update(self, force=False):
     ''' Should be called if `sys.path` or `Session.path` has been
     changed to rebuild the module cache and delay-load virtual modules
     if a physical was found. '''
 
     assert craftr.session == self.session
 
-    self._rebuild_cache()
+    if not self._rebuild_cache(force) and not force:
+      # nothing has changed, so we need not update
+      # the virtual parent modules.
+      return
+
     for key, module in list(self.session.modules.items()):
       # Virtual modules have no __file__ member.
       if not hasattr(module, '__file__'):
@@ -177,6 +194,8 @@ class CraftrImporter(object):
     assert craftr.session == self.session
     if not fullname.startswith('craftr.ext.'):
       return None
+
+    self.update()
 
     # xxx: take the *path* argument into account?
     name = fullname[11:]
