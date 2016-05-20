@@ -23,7 +23,7 @@ __all__ = ['CythonCompiler']
 
 from craftr import *
 
-from craftr.ext.compiler import gen_objects, BaseCompiler
+from craftr.ext.compiler import gen_output_dir, gen_objects, BaseCompiler
 import craftr
 import re
 
@@ -77,6 +77,10 @@ class CythonCompiler(BaseCompiler):
     :param additional_flags: List of additional flags for the Cython command.
     :param python_version: The Python version to build for (2 or 3).
       Defaults to 3.
+
+    Produces the following meta variables in the returned target:
+
+    * cython_outdir -- The common output directory of the Cython source files
     '''
 
     builder = self.builder(py_sources, frameworks, kwargs, name=target_name)
@@ -99,6 +103,7 @@ class CythonCompiler(BaseCompiler):
 
     # xxx: Determine the Python Framework and add it to the target!
 
+    builder.meta['cython_outdir'] = gen_output_dir('cython')
     return builder.create_target(command, outputs=outputs, foreach=True)
 
 
