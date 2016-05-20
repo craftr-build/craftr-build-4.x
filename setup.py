@@ -48,7 +48,7 @@ requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
   name='craftr-build',
-  version='1.0.2',
+  version='1.0.3',
   author='Niklas Rosenstein',
   author_email='rosensteinniklas(at)gmail.com',
   url='https://github.com/craftr-build/craftr',
