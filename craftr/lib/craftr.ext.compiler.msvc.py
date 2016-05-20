@@ -259,6 +259,7 @@ class MsvcLinker(BaseCompiler):
     '''
     Supported options:
 
+      * keep_suffix
       * libpath
       * libs
       * msvc_libs
@@ -280,7 +281,9 @@ class MsvcLinker(BaseCompiler):
 
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
-    output = gen_output(output, suffix=getattr(platform, output_type))
+    keep_suffix = builder.get('keep_suffix', False)
+    do_suffix = None if keep_suffix else getattr(platform, output_type)
+    output = gen_output(output, suffix=do_suffix)
 
     libpath = builder.merge('libpath')
     libs = builder.merge('libs')
