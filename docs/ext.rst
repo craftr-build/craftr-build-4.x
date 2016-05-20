@@ -1,109 +1,55 @@
-Extension Modules
-=================
+Craftr Extension Modules
+========================
 
-Actually, every Craftr module is an "extension module". Every Craftfile
-can be imported from another Craftfile, given that it can be found by the
-:class:`craftr.ext.CraftrImporter` (which searches in the :attr:`craftr.Session.path`
-list). Extension modules can be imported from the ``craftr.ext`` package. Craftr
-will look into the search path for a Craftfile with a ``# craftr_module(<name>)``
-declaration or a ``<name>.craftr`` file (that does need such a declaration). Note
-that it will also look in *all* first-level sub directories!
+Craftr comes with a set of builtin modules that contain useful functionality
+to quickly write powerful Craftfiles. Most of the modules contain compiler
+classes which in turn expose rule functions (ie. functions with a high level
+interface that produce low-level targets). For more information on the
+standard library, see :doc:`stl`.
 
-For example, your project structure might look like this:
+A primer on Craftr modules
+--------------------------
+
+While Craftr modules can be imported from a Craftfile like any other
+Python module, they are sligthly different in the file structure to make
+them easier to use for common build scenarios. There are two ways to
+create a Craftr module:
+
+1. A ``Craftfile.py`` file with a ``#craftr_module(<module_name>)``
+   declaration  at the top of the file
+2. A ``craftr.ext.<module_name>.py`` file
+
+While 2) is used more commonly for pure extension modules (eg. the whole
+standard library of Craftr is built of those files), 1) is preferred for
+the main build module of a project. There is no technical difference
+between these two types of files though.
+
+Importing Craftr Modules
+------------------------
+
+The :class:`craftr.Session` object manages a list of search paths for
+Craftr modules. It is important to note that the Craftr modules in this
+search path must **not** be directly inside the listed directories, but
+they are additionally searched for one level deeper in the folder structure.
+
+Consider the following project structure:
 
 ::
 
-  awesome.app/
+  my_project/
     Craftfile.py
     src/
-      ...
     vendor/
       qt5/
-        qt5.craftr
+        craftr.ext.qt5.py
 
-To import the ``craftr.ext.qt5`` module, you first need to add ``vendor/``
-to the :attr:`craftr.Session.path`. You can do this from a ``craftrc.py`` file
-or directly in your Craftfile. Note that you need to call the :func:`update()
-<craftr.Session.update>` method, otherwise you still will not be able to
-import the ``qt5`` module.
+In order to be able to import the Qt5 module, you only need to add the
+``vendor/`` directory to the search path! This is a design decision that
+was made for plain convenience.
 
-.. code-block:: python
+.. code::
 
+  #craftr_module(my_project)
   from craftr import *
   session.path.append(path.local('vendor'))
-  session.update()
-
   from craftr.ext import qt5
-
-.. toctree::
-  :maxdepth: 1
-
-  self
-
-Built-in Craftr extension modules
----------------------------------
-
-.. toctree::
-  :maxdepth: 2
-
-  ext/archive
-  ext/compiler
-  ext/git
-  ext/platform
-  ext/rules
-  ext/unix
-
-Platform Abstraction Interface
-------------------------------
-
-.. todo:: Documentation
-
-.. _compiler_abstraction:
-
-C/C++ Compiler Abstraction Interface
-------------------------------------
-
-This section only describes the interface for C/C++ compiler
-implementations. Other compiler modules are described in their
-respective module. See `Built-in Craftr extension modules`_. There are
-implementations available for MSVC, LLVM and GCC (which currently inherits
-the LLVM implementation).
-
-Example:
-
-.. code-block:: python
-
-  # craftr_module(example)
-  from craftr import *
-  from craftr.ext.platform import cc, cxx, ld, ar
-
-  some_library = ar.staticlib(
-    inputs = cc.compile(
-      sources = path.glob('some-library/*.c')
-    )
-  )
-
-  objects = cxx.compile(
-    sources = path.glob('src/*.cpp')
-  )
-
-  main = ld.link(
-    inputs = [some_library, sources]
-  )
-
-  # You can read additional properties from the Target.meta dictionary
-  info('static library path:', some_library.meta['staticlib_output'])
-  info('main path:', some_library.meta['link_output'])
-
-.. function:: cc.compile(source, frameworks=(), target_name=None, meta=None, **kwargs)
-              cxx.compile(source, frameworks=(), target_name=None, meta=None, **kwargs)
-
-  Compile the C/C++ *sources* into object files. The object files
-  are generated using :func:`~craftr.ext.compiler.gen_objects`.
-
-.. function:: ld.link(output, inputs, output_type='bin', frameworks=(), target_name=None, meta=None, **kwargs)
-
-  Link the *inputs* into the file specified by *output*. The *output_type*
-  defines whether an executable or shared library is created.
-
-.. todo:: Documentation

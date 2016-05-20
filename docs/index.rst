@@ -12,6 +12,25 @@ Craftr is the build system of the future based on `Ninja`_ and `Python`_.
   MSVC, Clang, GCC, Java, Protobuf, Yacc, Cython, Flex, NVCC
 * **Consequent** out-of-tree builds
 
+Requirements
+------------
+
+- `Ninja`_
+- `Python`_ 3.4 or newer
+
+Contents
+--------
+
+.. toctree::
+  :maxdepth: 1
+
+  changelog
+  api
+  stl
+  ext
+  rts
+  magic
+
 Getting Started
 ---------------
 
@@ -67,24 +86,6 @@ more detailed output. What you see below is an example run on Windows:
   build\my_project\:
   main.exe*  obj/
 
-Requirements
-------------
-
-- `Ninja`_
-- `Python`_ 3.4 or newer
-
-Contents
---------
-
-.. toctree::
-  :maxdepth: 1
-
-  self
-  ext
-  api
-  rts
-  magic
-  changelog
 
 Installation
 ------------

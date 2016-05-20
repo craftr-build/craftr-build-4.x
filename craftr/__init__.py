@@ -242,12 +242,6 @@ class Session(object):
 
     return temp_mod
 
-  def update(self):
-    ''' Alias for :meth:`Session.ext_importer.update()<
-    ext.CraftrImporter.update>`. '''
-
-    self.ext_importer.update()
-
   def start_server(self):
     ''' Start the Craftr RTS server (see :attr:`Session.server`). It
     will automatically be stopped when the session context is exited. '''
@@ -293,7 +287,6 @@ class Session(object):
     self.env = environ
 
     sys.meta_path.append(self.ext_importer)
-    self.update()
 
   def on_context_leave(self):
     ''' Called when the context manager entered with
