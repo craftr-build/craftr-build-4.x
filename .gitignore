@@ -1,7 +1,9 @@
+README.rst
 *.py[cod]
 *.egg
 *.egg-info
 test/
+dist/
 build/
 docs/_build/
 

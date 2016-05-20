@@ -27,33 +27,63 @@ import shutil
 import sys
 
 if sys.version < '3.4':
-  sys.exit("Craftr requires Python 3.4 or greater.")
+  sys.exit("Craftr requires Python 3.4 or greater")
+
+# Convert README.md to reST.
+if os.path.isfile('README.md'):
+  if os.system('pandoc -s README.md -o README.rst') == 0:
+    print('WARNING: README.rst could not be generated, pandoc command failed')
 
 # parse_requirements() interface has changed in Pip 6.0
 from pip.req import parse_requirements
 if pip.__version__ >= '6.0':
   parse_requirements = partial(parse_requirements, session=pip.download.PipSession())
 
+if os.path.isfile('README.rst'):
+  with open('README.rst', encoding='utf8') as fp:
+    long_description = fp.read()
+else:
+  long_description = None
+
 # Parse the requirements from requirements.txt
 requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
-  name='craftr-build',
-  version='1.1.0-dev',
-  description='build system based on Ninja and Python 3.4+',
-  author='Niklas Rosenstein',
-  author_email='rosensteinniklas(at)gmail.com',
-  url='https://github.com/craftr-build/craftr',
-  install_requires=requirements,
-  entry_points=dict(
-    console_scripts=[
+  name = 'craftr-build',
+  version = '1.1.0-dev',
+  description = 'next generation build system based on Ninja and Python',
+  long_description = long_description,
+  classifiers = [
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: Unix",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: MacOS :: MacOS X",
+    "License :: OSI Approved :: MIT License"
+  ],
+
+  license = 'MIT',
+  author = 'Niklas Rosenstein',
+  author_email = 'rosensteinniklas(at)gmail.com',
+  url = 'https://github.com/craftr-build/craftr',
+
+  entry_points = dict(
+    console_scripts = [
       "craftr = craftr.__main__:main",
       "craftr-rts-invoke = craftr.rts:client_main",
     ]
   ),
-  packages=find_packages('.'),
-  package_dir={'': '.'},
-  package_data={
+
+  packages = find_packages('.'),
+  package_dir = {'': '.'},
+  package_data = {
     'craftr': ['lib/*.craftr']
   },
+  install_requires = requirements,
 )

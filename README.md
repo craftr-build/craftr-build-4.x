@@ -69,6 +69,7 @@ open a [new issue][]!
 - [Ninja][]
 - [Python][] 3.4 or higher
 - see [requirements.txt](requirements.txt)
+* [Pandoc][] when installing from the Git repository
 
 ### Installation
 
@@ -88,4 +89,5 @@ Craftr by simply pulling the latest changes from the remote repository.
   [@rosensteinn]: https://twitter.com/rosensteinn
   [mail]: mailto:rosensteinniklas@gmail.com
   [Ninja]: https://github.com/ninja-build/ninja
-  [Python]: https://www.python.org/
+  [Python]: https://www.python.org
+  [Pandoc]: http://pandoc.org
