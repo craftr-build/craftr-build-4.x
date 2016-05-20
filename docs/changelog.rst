@@ -25,6 +25,8 @@ v1.1.0 (unreleased)
   * add support for ``msvc_runtime_library_option`` which can have the
     value ``'dynamic'`` or ``'static'``
   * remove ``craftr.ext.rules.PythonTool`` and rewrite ``~.render_template()``
+  * update ``compiler.cython`` documentation
+  * fix missing ``foreach=True`` in ``CythonCompiler.compile()``
 
 * General
 

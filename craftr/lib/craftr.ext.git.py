@@ -21,6 +21,8 @@
 '''
 A very small interface for querying information about a Git repository.
 
+.. code:: python
+
     git = load_module('git').Git(project_dir)
     info('Current Version:', git.describe())
     if git.status(exclude='??'):

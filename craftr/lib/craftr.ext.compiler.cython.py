@@ -29,7 +29,19 @@ import re
 
 
 class CythonCompiler(BaseCompiler):
-  ''' Interface for Cython. '''
+  ''' Compiler interface for Cython. A small example:
+
+  .. code:: python
+    from craftr import path, options
+    from craftr.ext.compiler.cython import cythonc
+
+    c_files = cythonc.compile(
+      py_sources = path.glob('mymodule/**/*.pyx'),
+      python_version = int(options.get('python_version', 3)),
+      fast_fail = True,
+      cpp = True,
+    )
+  '''
 
   name = 'Cython'
 
@@ -43,6 +55,21 @@ class CythonCompiler(BaseCompiler):
         self.version = match.group(1)
 
   def compile(self, py_sources, outputs=None, frameworks=(), target_name=None, **kwargs):
+    ''' Compile the specified *py_sources* files to C or C++ source files.
+
+    :param py_sources: A list of ``.pyx`` or ``.py`` files.
+    :param outputs: Override the output filenames. If omitted, default
+      output filenames are generated.
+    :param frameworks: List of additional frameworks.
+    :param target_name: Alternative target name.
+    :param include: Additional include directories for Cython.
+    :param fast_fail: True to enable the ``--fast-fail`` flag.
+    :param cpp: True to translate to C++ source files.
+    :param additional_flags: List of additional flags for the Cython command.
+    :param python_version: The Python version to build for (2 or 3).
+      Defaults to 3.
+    '''
+
     builder = self.builder(py_sources, frameworks, kwargs, name=target_name)
 
     cpp = builder.get('cpp', False)
@@ -63,7 +90,7 @@ class CythonCompiler(BaseCompiler):
 
     # xxx: Determine the Python Framework and add it to the target!
 
-    return builder.create_target(command, outputs=outputs)
+    return builder.create_target(command, outputs=outputs, foreach=True)
 
 
 cythonc = CythonCompiler()
