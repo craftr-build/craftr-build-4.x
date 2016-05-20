@@ -67,6 +67,7 @@ setup(
     "Operating System :: MacOS :: MacOS X",
     "License :: OSI Approved :: MIT License"
   ],
+  platforms = ['Windows', 'Mac OS', 'Linux'],
 
   license = 'MIT',
   author = 'Niklas Rosenstein',
