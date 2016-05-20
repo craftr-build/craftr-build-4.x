@@ -45,23 +45,27 @@ on any platform (that is supported by the Craftr STL).
     inputs = obj
   )
 
-Now you can run Craftr with the ``-e`` flag to export a Ninja manifest
-and the ``-b`` flag to trigger a build. Since we want to build everything,
-we need not specify any target on the command-line.
-
-.. note:: The ``-N -v`` passes the ``-v`` flag to Ninja!
+To get you an idea of what's going on, we pass the `-v` flag to enable
+more detailed output. What you see below is an example run on Windows:
 
 ::
 
-    niklas ~/Desktop/test $ craftr -eb -N -v
-    craftr: [INFO ]: Changed directory to "build"
-    [1/3] clang++ -x c++ -c /Users/niklas/Desktop/test/src/main.cpp -o /Users/niklas/Desktop/test/build/my_project/obj/main.o -stdlib=libc++ -Wall -O0 -MD -MP -MF /Users/niklas/Desktop/test/build/my_project/obj/main.o.d
-    [2/3] clang++ -x c++ -c /Users/niklas/Desktop/test/src/foo.cpp -o /Users/niklas/Desktop/test/build/my_project/obj/foo.o -stdlib=libc++ -Wall -O0 -MD -MP -MF /Users/niklas/Desktop/test/build/my_project/obj/foo.o.d
-    [3/3] clang /Users/niklas/Desktop/test/build/my_project/obj/foo.o /Users/niklas/Desktop/test/build/my_project/obj/main.o -lc++ -o /Users/niklas/Desktop/test/build/my_project/main
-    niklas ~/Desktop/test $ ls build
-    build.ninja my_project
-    niklas ~/Desktop/test $ ls build/my_project/
-    main obj
+  λ craftr -ev
+  detected ninja v1.6.0
+  $ cd "build"
+  load 'craftr.ext.my_project'
+  (craftr.ext.my_project, line 9): unused options for compile(): {'std'}
+  exporting 'build.ninja'
+  $ ninja -v
+  [1/2] cl /nologo /c c:\users\niklas\desktop\test\src\main.cpp /Foc:\users\niklas\desktop\test\build\my_project\obj\main.obj /EHsc /W4 /Od /showIncludes
+  [2/2] link /nologo c:\users\niklas\desktop\test\build\my_project\obj\main.obj /OUT:c:\users\niklas\desktop\test\build\my_project\main.exe
+
+  λ ls build build\my_project\
+  build:
+  build.ninja  my_project/
+
+  build\my_project\:
+  main.exe*  obj/
 
 Requirements
 ------------

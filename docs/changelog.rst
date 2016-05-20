@@ -63,6 +63,7 @@ v1.1.0 (unreleased)
   * add ``-n`` flag which is the inverse of the old ``-b`` flag, skip the
     build phase if specified
   * updated command help
+  * passing ``-v`` will automatically add ``-v`` to the Ninja invokation
 
 * API Changes
 

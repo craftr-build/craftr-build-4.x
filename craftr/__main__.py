@@ -320,6 +320,8 @@ def main():
       if args.c == 1:
         # Non-recursive clean.
         cmd.append('-r')
+      if args.v:
+        cmd.append('-v')
       cmd += (t for t in args.targets)
       debug("$", shell.join(cmd))
       ret = shell.run(cmd, shell=True, check=False).returncode
@@ -339,6 +341,8 @@ def main():
           return exc.result
       else:
         cmd = ['ninja'] + [t for t in args.targets] + args.N
+        if args.v and '-v' not in args.N:
+          cmd.append('-v')
         debug("$", shell.join(cmd))
         ret = shell.run(cmd, shell=True, check=False).returncode
         if ret != 0:
