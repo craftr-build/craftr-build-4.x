@@ -34,11 +34,11 @@ from pip.req import parse_requirements
 if pip.__version__ >= '6.0':
   parse_requirements = partial(parse_requirements, session=pip.download.PipSession())
 
-scripts = ['bin/craftr', 'bin/craftr-rts-invoke']
+scripts = ['bin/craftr.py', 'bin/craftr-rts-invoke.py']
 
 # On Windows, we need this scripts with a .py suffix.
-if os.name == 'nt':
-  new_scripts = [x + '.py' for x in scripts]
+if os.name != 'nt':
+  new_scripts = [x[:-3] for x in scripts]
   for src, dst in zip(scripts, new_scripts):
     shutil.copy2(src, dst)
   scripts = new_scripts
@@ -48,7 +48,7 @@ requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
   name='craftr-build',
-  version='1.0.1',
+  version='1.0.2',
   author='Niklas Rosenstein',
   author_email='rosensteinniklas(at)gmail.com',
   url='https://github.com/craftr-build/craftr',
