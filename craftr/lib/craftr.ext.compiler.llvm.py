@@ -40,12 +40,12 @@ def detect(program):
   determines meta information about it. The returned dictionary contains
   the following keys:
 
-  * version
-  * version_str
-  * name
-  * target
-  * thread_model
-  * cpp_stdlib (only present for Clang++)
+  :param version:
+  :param version_str:
+  :param name:
+  :param target:
+  :param thread_model:
+  :param cpp_stdlib: (only present for Clang++)
 
   :raise OSError: If *program* can not be executed (eg. if it does not exist).
   :raise ToolDetectionError: If *program* is not Clang or Clang++. '''
@@ -122,34 +122,41 @@ class LlvmCompiler(BaseCompiler):
     self.name = desc['name']
     assert self.name in ('gcc', 'clang', 'llvm'), self.name
 
-  def compile(self, sources, frameworks=(), target_name=None, meta=None, **kwargs):
+  def compile(self, sources, frameworks=(), target_name=None,  **kwargs):
     '''
-    Supported options:
+    :param sources: A list of input source files.
+    :param frameworks: List of :class:`Framework` objects.
+    :param target_name: Override target name.
 
-      * include
-      * defines
-      * language
-      * debug
-      * std
-      * pedantic
-      * pic
-      * warn
-      * optimize
-      * autodeps
-      * description
-      * osx_fwpath
-      * osx_frameworks
-      * program
-      * additional_flags
-      * gcc_additional_flags
-      * gcc_compile_additional_flags
-      * llvm_additional_flags
-      * llvm_compile_additional_flags
+    Supported framework options:
 
-    Target meta variables: *none*
+    :param include: Additional include directories.
+    :param defines: Preprocessor definitions.
+    :param language: Override compilation language. Choices are
+      ``'c'``, ``'cpp'``, ``'asm'``
+    :param debug: True ot disable optimizations and enable debugging symbols.
+    :param std: Set the C/C++ standard (``--std`` argument)
+    :param pedantic: Enable the ``--pedantic`` flag
+    :param pic: Enable position independent code.
+    :param warn: Warning level. Choices are ``'all'``, ``'none'`` and
+      :const:`None` (latter is different in that it adds no warning related
+      compiler flag at all).
+    :param optimize: Optimization level. Choices are ``'debug'``, ``'speed'``,
+      ``'size'``, ``'none'`` and :const:`None`
+    :param autodeps: True if automatic dependencies should be enabled
+      (for recompiles when only headers change). Default is True.
+    :param description: Target description (shown during Ninja build).
+    :param osx_fwpath: Additional search path for OSX frameworks.
+    :param osx_frameworks: OSX frameworks to take into account.
+    :param program: Override the compiler command.
+    :param additional_flags: Additional flags for the compiler command-
+    :param gcc_additional_flags: Additional flags (GCC only).
+    :param gcc_compile_additional_flags: Additional flags (GCC only).
+    :param llvm_additional_flags: Additional flags (LLVM only).
+    :param llvm_compile_additional_flags: Additional flags (LLVM only).
     '''
 
-    builder = self.builder(sources, frameworks, kwargs, name=target_name, meta=meta)
+    builder = self.builder(sources, frameworks, kwargs, name=target_name)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
     fw = builder.add_framework(builder.name)
 
@@ -241,40 +248,54 @@ class LlvmCompiler(BaseCompiler):
       description=description)
 
   def link(self, output, inputs, output_type='bin', frameworks=(),
-      target_name=None, meta=None, **kwargs):
+      target_name=None, **kwargs):
     '''
-    Supported options:
 
-      * debug
-      * lib
-      * gcc_libs
-      * llvm_libs
-      * linker_args
-      * gcc_linker_args
-      * llvm_linker_args
-      * linker_script
-      * libpath
-      * external_libs
-      * osx_fwpath
-      * osx_frameworks
-      * description
-      * program
-      * additional_flags
-      * gcc_additional_flags
-      * gcc_link_additional_flags
-      * llvm_additional_flags
-      * llvm_link_additional_flags
+    :param output: The name of the output file. The platform-dependent
+      appropriate suffix is automatically appended unless *keep_suffix*
+      is True.
+    :param inputs: A list of input files/targets.
+    :param output_type: The output type. Can be ``'bin'`` or ``'dll'``
+    :param frameworks: List of additional :class:`Framework` objects.
+      Note that the frameworks of :class:`Target` objects listed in
+      *inputs* are taken into account automatically.
+    :param target_name: Override target name.
 
-    Target meta variables:
+    Supported framework options:
 
-      * link_output -- The output filename of the link operation.
+    :param keep_suffix: Do not replace the suffix of the specified *output* files.
+    :param debug: True to enable debug symbols and disable optimization.
+    :param libs: Additional library names to link with.
+    :param gcc_libs: Additional library names to link with (GCC only).
+    :param llvm_libs: Additional library names to link with (LLVM only).
+    :param linker_args: Additional linker aguments.
+    :param gcc_linker_args: Additional linker aguments (GCC only).
+    :param llvm_linker_args: Additional linker aguments (LLVM only).
+    :param linker_script: Linker script input file.
+    :param libpath: Additional search directory to search for libraries.
+    :param external_libs: Absolute paths of additional libraries to link with.
+    :param osx_fwpath: Additional search path for frameworks (OSX only).
+    :param osx_frameworks: Frameworks to link with (OSX only).
+    :param description: Target description (displayed during Ninja build).
+    :param program: Override the linker program to incoke.
+    :param additional_flags: Additional flags for the linker.
+    :param gcc_additional_flags: Additional flags for the linker (GCC only).
+    :param llvm_additional_flags: Additional flags for the linker (LLVM only).
+    :param gcc_link_additional_flags: Additional flags for the linker (GCC only).
+    :param llvm_link_additional_flags: Additional flags for the linker (LLVM only).
+
+    :attr:`Target.meta` variables:
+
+    :param link_output: The output filename of the link operation.
     '''
 
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
 
     if output_type not in ('bin', 'dll'):
       raise ValueError('invalid output_type: {0!r}'.format(output_type))
-    output = gen_output(output, suffix=getattr(platform, output_type))
+    keep_suffix = builder.get('keep_suffix', False)
+    do_suffix = None if keep_suffix else getattr(platform, output_type)
+    output = gen_output(output, suffix=do_suffix)
     implicit_deps = []
 
     debug = builder.get('debug', False)
