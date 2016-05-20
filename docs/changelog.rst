@@ -70,6 +70,8 @@ v1.1.0 (unreleased)
   * add ``task()`` decorator function
   * add ``TaskError`` exception class
   * ``TargetBuilder()`` now accepts None for its *inputs* parameter
+  * removed ``options.get_option()``
+  * ``options.get()`` now accepts a *default* parameter, updated its docstrings
 
   * removed ``Session.rts_funcs``
   * add ``Session.files_to_targets``

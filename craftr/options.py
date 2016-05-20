@@ -20,29 +20,38 @@
 # THE SOFTWARE.
 ''' Utility functions to read options from the environment. '''
 
-__all__ = ['get_option']
+__all__ = []
 
 from craftr import module, environ
 
 
-def get_option(name, inherit_global = True):
-  ''' Reads the option *name* prefixed with the current module's
-  identifier from the environment and returns its value. If the option
-  is not set and *inherit_global* is True, it will also try to find
-  *name* without the module's prefix. Returns None if the option does
-  not exist at all.
+def get(name, default=None, inherit_global=True):
+  ''' Reads an option value from the environment variables.
+  The option name will be prefixed by the identifier of the
+  module that is currently executed, eg:
 
-  This function has an alias :meth:`get`. '''
+  .. code:: python
+
+    # craftr_module(test)
+    from craftr import options, environ
+    value = options.get('debug', inherit_global=False)
+    # is equal to
+    value = environ.get('test.debug')
+
+  :param name: The name of the option.
+  :param default: The default value that is returned if the
+    option is not set in the environment.
+  :param inherit_global: If this is True, the option is also
+    searched globally (ie. *name* without the prefix of the
+    currently executed module).
+  '''
 
   full_name = module.project_name + '.' + name
   try:
     value = environ[full_name]
   except KeyError:
     if inherit_global:
-      value = environ.get(name, None)
+      value = environ.get(name, default)
     else:
-      value = None
+      value = default
   return value
-
-
-get = get_option
