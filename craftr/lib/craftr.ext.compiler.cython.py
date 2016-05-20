@@ -54,10 +54,14 @@ class CythonCompiler(BaseCompiler):
     super().__init__(program=program, **kwargs)
     self.version = None
     if detect:
-      output = craftr.shell.pipe([program, '-V']).output
-      match = re.match(r'cython\s+version\s+([\d\.]+)', output, re.I)
-      if match:
-        self.version = match.group(1)
+      try:
+        output = craftr.shell.pipe([program, '-V']).output
+      except OSError as exc:
+        pass
+      else:
+        match = re.match(r'cython\s+version\s+([\d\.]+)', output, re.I)
+        if match:
+          self.version = match.group(1)
 
   def compile(self, py_sources, outputs=None, frameworks=(), target_name=None, **kwargs):
     ''' Compile the specified *py_sources* files to C or C++ source files.

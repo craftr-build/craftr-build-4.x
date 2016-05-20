@@ -81,7 +81,10 @@ setup(
     ]
   ),
 
-  packages = find_packages('.'),
+  # Although craftr.lib is not a real package, we need to include it
+  # as otherwise Python Eggs of Craftr will not contain the files of
+  # the craftr/lib directory.
+  packages = ['craftr', 'craftr.lib'],
   package_dir = {'': '.'},
   package_data = {
     'craftr': ['lib/*.craftr']
