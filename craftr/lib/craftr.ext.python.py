@@ -29,7 +29,7 @@ __all__ = ['get_python_config_vars', 'get_python_framework']
 
 from craftr import *
 from craftr.ext import platform
-import json
+import json, re
 
 
 
@@ -61,7 +61,16 @@ def get_python_framework(python_bin):
   if platform.name == 'win' and 'LIBDIR' not in config:
     config['LIBDIR'] = path.join(config['prefix'], 'libs')
 
-  return Framework(python_bin,
+  fw = Framework(python_bin,
     include = [config['INCLUDEPY']],
-    libpath = [config['LIBDIR']]
+    libpath = [config['LIBDIR']],
   )
+
+  # The name of the Python library is something like "libpython2.7.a",
+  # but we only want the "python2.7" part.
+  if 'LIBRARY' in config:
+    lib = re.search('python\d\.\d', config['LIBRARY'])
+    if lib:
+      fw['libs'] = [lib.group(0)]
+
+  return fw
