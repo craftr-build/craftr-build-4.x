@@ -8,6 +8,7 @@ The Craftr standard library
   stl/compiler
   stl/git
   stl/platform
+  stl/python
   stl/rules
   stl/unix
 

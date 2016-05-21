@@ -27,6 +27,7 @@ v1.1.0 (unreleased)
   * remove ``craftr.ext.rules.PythonTool`` and rewrite ``~.render_template()``
   * update ``compiler.cython`` documentation
   * fix missing ``foreach=True`` in ``CythonCompiler.compile()``
+  * add :mod:`craftr.ext.python` module
 
 * General
 
