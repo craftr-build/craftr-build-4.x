@@ -69,7 +69,7 @@ def get_python_framework(python_bin):
   # The name of the Python library is something like "libpython2.7.a",
   # but we only want the "python2.7" part.
   if 'LIBRARY' in config:
-    lib = re.search('python\d\.\d', config['LIBRARY'])
+    lib = re.search('python\d\.\dm?', config['LIBRARY'])
     if lib:
       fw['libs'] = [lib.group(0)]
 
