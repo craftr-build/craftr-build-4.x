@@ -337,7 +337,7 @@ class LlvmCompiler(BaseCompiler):
     command += ['-l' + x for x in utils.unique(libs)]
     command += ['-L' + x for x in utils.unique(libpath)]
     command += utils.unique(external_libs)
-    command += ['-dynamic'] if output_type == 'dll' else []
+    command += ['-shared'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
     command += utils.flatten(['-framework', x] for x in osx_frameworks)
     if linker_args:
