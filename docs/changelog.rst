@@ -28,6 +28,9 @@ v1.1.0 (unreleased)
   * update ``compiler.cython`` documentation
   * fix missing ``foreach=True`` in ``CythonCompiler.compile()``
   * add :mod:`craftr.ext.python` module
+  * fix ``-shared`` argument to LLVM/GCC ``.link()`` rule (fix #109)
+  * MSVC C++ compiler is now read from ``CXX`` variable instead of ``CC``
+  * Linux linker is now read from ``CC`` variable instead of ``CCLD``
 
 * General
 

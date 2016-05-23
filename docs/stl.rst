@@ -1,8 +1,11 @@
 The Craftr standard library
 ===========================
 
+Standard Library Modules
+------------------------
+
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
   stl/archive
   stl/compiler
@@ -12,56 +15,112 @@ The Craftr standard library
   stl/rules
   stl/unix
 
-Platform Abstraction Interface
-------------------------------
+.. _platform_interface:
 
-.. todo:: Documentation
+Platform Interface
+------------------
 
-.. _compiler_abstraction:
+.. data:: platform.name
 
-C/C++ Compiler Abstraction Interface
-------------------------------------
+A string identifier of the platform. Currently implemented values are
 
-This section only describes the interface for C/C++ compiler
-implementations. Other compiler modules are described in their
-respective module. There are implementations available for MSVC, LLVM and
-GCC (which currently inherits the LLVM implementation).
+* ``'win'``
+* ``'cygwin'``
+* ``'linux''``
+* ``'darwin'``
 
-Example:
+.. data:: platform.standard
 
-.. code-block:: python
+A string identifier of the platform standard. Currently implemented values are
 
-  # craftr_module(example)
-  from craftr import *
-  from craftr.ext.platform import cc, cxx, ld, ar
+* ``'nt'``
+* ``'posix'``
 
-  some_library = ar.staticlib(
-    inputs = cc.compile(
-      sources = path.glob('some-library/*.c')
-    )
-  )
+.. function:: platform.obj(x)
 
-  objects = cxx.compile(
-    sources = path.glob('src/*.cpp')
-  )
+Given a filename or list of filenames, replaces all suffixes with the
+appropriate suffix for compiled object files for the platform.
 
-  main = ld.link(
-    inputs = [some_library, sources]
-  )
+.. function:: platform.bin(x)
 
-  # You can read additional properties from the Target.meta dictionary
-  info('static library path:', some_library.meta['staticlib_output'])
-  info('main path:', some_library.meta['link_output'])
+Given a filename or list of filenames, replaces all suffixes with the
+appropriate suffix for binary executable files for the platform.
 
-.. function:: cc.compile(source, frameworks=(), target_name=None, meta=None, **kwargs)
-              cxx.compile(source, frameworks=(), target_name=None, meta=None, **kwargs)
+.. function:: platform.dll(x)
 
-  Compile the C/C++ *sources* into object files. The object files
-  are generated using :func:`~craftr.ext.compiler.gen_objects`.
+Given a filename or list of filenames, replaces all suffixes with the
+appropriate suffix for shared library files for the platform.
 
-.. function:: ld.link(output, inputs, output_type='bin', frameworks=(), target_name=None, meta=None, **kwargs)
+.. function:: platform.lib(x)
 
-  Link the *inputs* into the file specified by *output*. The *output_type*
-  defines whether an executable or shared library is created.
+Given a filename or list of filenames, replaces all suffixes with the
+appropriate suffix for static library files for the platform.
 
-.. todo:: Documentation
+.. function:: platform.get_tool(name)
+
+Given the name of a tool, returns an object that implements the respective
+tools interface. The returned object may already consider environment
+variables like ``CC`` and ``CXX``. Possible values for *name* are
+
+.. csv-table::
+  :header: "Name", "Description"
+  :widths: 10, 90
+
+  ``'c'``, C Compiler (see :ref:`compiler_interface`)
+  ``'cpp'``, C++ Compiler (see :ref:`compiler_interface`)
+  ``'ld'``, Linker (usually the same as C compiler on Linux/Mac OS) (see :ref:`linker_interface`)
+  ``'ar'``, Static libary generator (archiver) (see :ref:`archiver_interface`)
+
+.. _compiler_interface:
+
+C/C++ Compiler Interface
+------------------------
+
+.. function:: compiler.compile(sources, frameworks=(), target_name=None, **kwargs)
+
++----------------------------------------------------------+
+|:attr:`Target.meta<craftr.Target.meta>` output variables: |
++-----------------------+----------------------------------+
+| None                  |                                  |
++-----------------------+----------------------------------+
+
+**Known Implementations**
+
+* :meth:`craftr.ext.compiler.msvc.MsvcCompiler.compile`
+* :meth:`craftr.ext.compiler.llvm.LlvmCompiler.compile`
+
+.. _linker_interface:
+
+Linker Interface
+----------------
+
+.. function:: linker.link(output, inputs, output_type='bin', frameworks=(), target_name=None, **kwargs)
+
++----------------------------------------------------------+
+|:attr:`Target.meta<craftr.Target.meta>` output variables: |
++-----------------------+----------------------------------+
+|``'link_output'``      | Absolute output filename         |
++-----------------------+----------------------------------+
+
+**Known Implementations**
+
+* :meth:`craftr.ext.compiler.msvc.MsvcLinker.link`
+* :meth:`craftr.ext.compiler.llvm.LlvmCompiler.link`
+
+.. _archiver_interface:
+
+Archiver Interface
+------------------
+
+.. function:: archiver.staticlib(output, inputs, target_name=None, **kwargs)
+
++----------------------------------------------------------+
+|:attr:`Target.meta<craftr.Target.meta>` output variables: |
++-----------------------+----------------------------------+
+|``'staticlib_output'`` | Absolute output filename         |
++-----------------------+----------------------------------+
+
+**Known Implementations**
+
+* :meth:`craftr.ext.compiler.msvc.MsvcAr.staticlib`
+* :meth:`craftr.ext.unix.Ar.staticlib`

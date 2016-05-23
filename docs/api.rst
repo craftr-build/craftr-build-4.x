@@ -76,3 +76,5 @@ The ``options`` module
 
 .. automodule:: craftr.options
   :members:
+
+.. autofunction:: craftr.options.get
