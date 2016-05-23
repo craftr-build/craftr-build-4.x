@@ -42,7 +42,7 @@ def get_tool(name):
   if name == 'cc':
     return msvc.Compiler(environ.get('CC', 'cl'), 'c')
   elif name == 'cxx':
-    return msvc.Compiler(environ.get('CC', 'cl'), 'c++')
+    return msvc.Compiler(environ.get('CXX', 'cl'), 'c++')
   elif name == 'ld':
     return msvc.Linker('link')
   elif name == 'ar':

@@ -43,7 +43,7 @@ def get_tool(name):
   elif name == 'cxx':
     return detect_compiler(environ.get('CXX', 'g++'), 'c++')
   elif name == 'ld':
-    return detect_compiler(environ.get('CCLD', 'gcc'), 'c')
+    return detect_compiler(environ.get('CC', 'gcc'), 'c')
   elif name ==  'ar':
     return craftr.ext.unix.Ar(environ.get('AR', 'ar'))
   else:
