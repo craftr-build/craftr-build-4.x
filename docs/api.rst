@@ -6,14 +6,11 @@ API Documentation
 This part of the documentation contains the API reference of the functions
 and classes that can be used in Craftfiles.
 
-Functions
----------
 
-.. autofunction:: return_
-.. autofunction:: expand_inputs
-.. autofunction:: expand_frameworks
-.. autofunction:: import_file
-.. autofunction:: import_module
+Logging & Version Check
+-----------------------
+
+The logging functions implement the :func:`print` interface.
 
 .. autofunction:: debug
 .. autofunction:: info
@@ -21,7 +18,19 @@ Functions
 .. autofunction:: error
 .. autofunction:: craftr_min_version
 
+Tasks
+-----
+
 .. autofunction:: task
+
+Helpers
+-------
+
+.. autofunction:: return_
+.. autofunction:: expand_inputs
+.. autofunction:: expand_frameworks
+.. autofunction:: import_file
+.. autofunction:: import_module
 
 Session Objects
 ---------------
