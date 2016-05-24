@@ -264,11 +264,11 @@ Command Line Interface
 
 ::
 
-  usage: craftr [-h] [-V] [-v] [-m MODULE] [-n] [-e] [-b] [-c]
-                [-d BUILDDIR] [-p PROJECTDIR] [-D <key>[=<value>]]
-                [-I PATH] [-N ...] [--no-rc] [--rc .PY]
-                [--strace-depth INT] [--rts] [--rts-at HOST:PORT]
-                [targets [targets ...]]
+  craftr [-h] [-V] [-v] [-m MODULE] [-n] [-e] [-b] [-c]
+         [-d PATH] [-p PATH] [-D <key>[=<value>]] [-I PATH]
+         [-N ...] [--no-rc] [--rc PYFILE] [--strace-depth INT]
+         [--rts] [--rts-at HOST:PORT]
+         [targets [targets ...]]
 
   Craftr v1.1.0-dev
   -----------------
@@ -278,34 +278,40 @@ Command Line Interface
   https://github.com/craftr-build/craftr
 
   positional arguments:
-    targets             zero or more target/task names to build/execute
+    targets               zero or more target/task names to build/execute
 
   optional arguments:
-    -h, --help          show this help message and exit
-    -V                  print version and exit (1.1.0-dev)
-    -v                  increase the verbosity level
-    -m MODULE           name of the main Craftr module to take relative target
-                        references for or the module to load if no targets are
-                        specified on the command-line
-    -n                  skip the build step
-    -e                  (re-)export the Ninja manifest
-    -b                  deprecated since v1.1.0
-    -c                  clean the specified target(s), or clean everything with
-                        -cc
-    -d BUILDDIR         build directory, defaults to "./build" or the cwd if -p
-                        is used (conflicts with -p)
-    -p PROJECTDIR       inverse of -b, use the specified directory as the main
-                        project directory and the cwd for -b
-    -D <key>[=<value>]  set an option in the environment variable, <key> may be
-                        relative, =<value> can be omitted
-    -I PATH             additional Craftr module search path
-    -N ...              additional args passed to the Ninja command-line
-    --no-rc             skip running craftrc.py files
-    --rc .PY            run the specified Python file before anything else, CAN
-                        be paired with --no-rc
-    --strace-depth INT  depth of the logging stacktrace, default is 5
-    --rts               keep alive the runtime server
-    --rts-at HOST:PORT  override the runtime server's host:port
+    -h, --help            show this help message and exit
+    -V, --version         print version and exit (1.1.0-dev)
+    -v, --verbose         increase the verbosity level
+    -m MODULE, --module MODULE
+                          name of the main Craftr module to take relative target
+                          references for or the module to load if no targets are
+                          specified on the command-line
+    -n, --no-build        skip the build step
+    -e, --export          (re-)export the Ninja manifest
+    -b                    deprecated since v1.1.0
+    -c, --clean           clean the specified target(s), specify twice for
+                          recursive clean
+    -d PATH, --build-dir PATH
+                          build directory, defaults to "./build" or the cwd if
+                          -p is used (conflicts with -p)
+    -p PATH, --project-dir PATH
+                          inverse of -b, use the specified directory as the main
+                          project directory and the cwd for -b
+    -D <key>[=<value>], --define <key>[=<value>]
+                          set an option in the environment variable, <key> may
+                          be relative, =<value> can be omitted
+    -I PATH, --search-path PATH
+                          additional Craftr module search path
+    -N ..., --ninja-args ...
+                          additional args passed to the Ninja command-line
+    --no-rc               skip running craftrc.py files
+    --rc PYFILE           run the specified Python file before anything else,
+                          CAN be paired with --no-rc
+    --strace-depth INT    depth of the logging stacktrace, default is 5
+    --rts                 keep alive the runtime server
+    --rts-at HOST:PORT    override the runtime server's host:port
 
 .. note::
 
