@@ -124,43 +124,43 @@ def main():
   parser.add_argument('--rts-at', metavar='HOST:PORT', type=craftr.rts.parse_uri, help='override the runtime server\'s host:port')
   parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
   args = parser.parse_args()
-  debug = partial(craftr.debug, verbosity=args.v)
+  debug = partial(craftr.debug, verbosity=args.verbose)
 
   if args.b:
     warn('"-b" option is deprecated (since v1.1.0)')
 
-  if args.V:
+  if args.version:
     print('craftr {0}'.format(craftr.__version__))
     return 0
 
-  if not args.d:
-    if args.p:
+  if not args.build_dir:
+    if args.project_dir:
       debug('using "." as build directory (-p)')
-      args.d = os.getcwd()
+      args.build_dir = os.getcwd()
     else:
-      args.d = 'build'
-  if not args.p:
-    args.p = os.getcwd()
+      args.build_dir = 'build'
+  if not args.project_dir:
+    args.project_dir = os.getcwd()
 
   # Normalize the search path directories.
-  args.I = path.normpath(args.I)
+  args.search_path = path.normpath(args.search_path)
 
-  if not args.m:
-    cfile = path.join(args.p, 'Craftfile.py')
+  if not args.module:
+    cfile = path.join(args.project_dir, 'Craftfile.py')
     if not path.isfile(cfile):
       error('{0!r} does not exist'.format(path.relpath(cfile)))
       return errno.ENOENT
-    args.m = craftr.ext.get_module_ident(cfile)
-    if not args.m:
+    args.module = craftr.ext.get_module_ident(cfile)
+    if not args.module:
       error('{0!r} has no or an invalid craftr_module(...) declaration'.format(
         path.relpath(cfile)))
       return errno.ENOENT
 
-  build_dir_exists = os.path.isdir(args.d)
-  if not path.exists(args.d):
-    os.makedirs(args.d)
-  elif not path.isdir(args.d):
-    error('"{0}" is not a directory'.format(args.d))
+  build_dir_exists = os.path.isdir(args.build_dir)
+  if not path.exists(args.build_dir):
+    os.makedirs(args.build_dir)
+  elif not path.isdir(args.build_dir):
+    error('"{0}" is not a directory'.format(args.build_dir))
     return errno.ENOTDIR
 
   try:
@@ -171,28 +171,28 @@ def main():
   debug('detected ninja v{0}'.format(ninja_ver))
 
   # Convert relative to absolute target names.
-  mkabst = lambda x: ((args.m + x) if (x.startswith('.')) else x).replace(':', '.')
+  mkabst = lambda x: ((args.module + x) if (x.startswith('.')) else x).replace(':', '.')
   args.targets = [mkabst(x) for x in args.targets]
 
-  old_cwd = path.normpath(args.p)
-  if os.getcwd() != path.normpath(args.d):
+  old_cwd = path.normpath(args.project_dir)
+  if os.getcwd() != path.normpath(args.build_dir):
     started_from_build_dir = False
-    os.chdir(args.d)
-    debug('$ cd "{0}"'.format(args.d))
+    os.chdir(args.build_dir)
+    debug('$ cd "{0}"'.format(args.build_dir))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.
   @atexit.register
   def _delete_build_dir():
     os.chdir(old_cwd)
-    if not build_dir_exists and not os.listdir(args.d):
-      os.rmdir(args.d)
+    if not build_dir_exists and not os.listdir(args.build_dir):
+      os.rmdir(args.build_dir)
 
   rts_mode = None
   cache = None
-  do_run = bool(args.e or args.rts)
+  do_run = bool(args.export or args.rts)
   export_if_required = False
-  if args.e:
+  if args.export:
     # Remove files/directories we'll create again eventually.
     path.silent_remove(craftr.MANIFEST)
     path.silent_remove(craftr.CMDDIR, is_dir=True)
@@ -224,21 +224,21 @@ def main():
     if cache.options:
       info('prepending cached options:', ' '.join(
         shell.quote('-D' + x) for x in cache.options))
-      args.D = cache.options + args.D
+      args.define = cache.options + args.define
 
     # Same for the search path.
     if cache.path:
       info('prepending cached search path:', ' '.join(
         shell.quote('-I' + x) for x in cache.path))
-      args.I = cache.path + args.I
+      args.search_path = cache.path + args.search_path
 
   session = craftr.Session(
     cwd=old_cwd,
-    path=[old_cwd] + args.I,
+    path=[old_cwd] + args.search_path,
     server_bind=args.rts_at,
-    verbosity=args.v,
+    verbosity=args.verbose,
     strace_depth=args.strace_depth,
-    export=args.e)
+    export=args.export)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
 
@@ -253,15 +253,15 @@ def main():
           error('--rc {0!r} does not exist'.format(args.rc))
           return errno.ENOENT
 
-      _set_env(args.D, args.m)
+      _set_env(args.define, args.module)
       _abs_env(old_cwd)
 
       try:
         if not args.targets:
           # Load the main craftr module specified via the -m option
           # or the "Craftfile.py" of the original cwd.
-          debug('load {!r}'.format('craftr.ext.' + args.m))
-          importlib.import_module('craftr.ext.' + args.m)
+          debug('load {!r}'.format('craftr.ext.' + args.module))
+          importlib.import_module('craftr.ext.' + args.module)
         else:
           # Load the targets specified on the command-line.
           for tname in args.targets:
@@ -273,7 +273,7 @@ def main():
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
       except ImportError as exc:
-        if exc.name and exc.name.startswith('craftr.ext.') and args.v == 0:
+        if exc.name and exc.name.startswith('craftr.ext.') and args.verbose == 0:
           error(exc)
         else:
           traceback.print_exc()
@@ -289,21 +289,21 @@ def main():
         return errno.ENOENT
 
       session.finalize()
-      cache = craftr.ninja.CraftrCache(args.D, args.I, session=session)
+      cache = craftr.ninja.CraftrCache(args.define, args.search_path, session=session)
       if rts_mode is None:
         rts_mode = cache.get_rts_mode(args.targets)
 
       if export_if_required and rts_mode != Target.RTS_Plain:
         warn('{!r} does not exist but is required by selected targets, forcing "-e"'.format(craftr.MANIFEST))
-        args.e = True
+        args.export = True
 
-      if args.e:
+      if args.export:
         # Export a ninja manifest.
         debug('exporting {!r}'.format(craftr.MANIFEST))
         with open(craftr.MANIFEST, 'w') as fp:
           craftr.ninja.export(fp, cache)
     else:
-      _set_env(args.D, args.m)
+      _set_env(args.define, args.module)
       _abs_env(old_cwd)
 
     if rts_mode is None:
@@ -315,13 +315,11 @@ def main():
       session.start_server()
 
     # Perform a full or rule-based clean.
-    if args.c:
+    if args.clean:
       cmd = ['ninja', '-t', 'clean']
-      if args.c == 1:
+      if args.clean == 1:
         # Non-recursive clean.
         cmd.append('-r')
-      if args.v:
-        cmd.append('-v')
       cmd += (t for t in args.targets)
       debug("$", shell.join(cmd))
       ret = shell.run(cmd, shell=True, check=False).returncode
@@ -329,7 +327,7 @@ def main():
         return ret
 
     # Perform the build.
-    if not args.n:
+    if not args.no_build:
       if rts_mode == Target.RTS_Plain:
         debug("the specified targets can be executed in plain Python-space")
         state = {}
@@ -340,8 +338,8 @@ def main():
           error(exc)
           return exc.result
       else:
-        cmd = ['ninja'] + [t for t in args.targets] + args.N
-        if args.v and '-v' not in args.N:
+        cmd = ['ninja'] + [t for t in args.targets] + args.ninja_args
+        if args.verbose and '-v' not in args.ninja_args:
           cmd.append('-v')
         debug("$", shell.join(cmd))
         ret = shell.run(cmd, shell=True, check=False).returncode
