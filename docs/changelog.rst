@@ -70,6 +70,8 @@ v1.1.0 (unreleased)
     build phase if specified
   * updated command help
   * passing ``-v`` will automatically add ``-v`` to the Ninja invokation
+  * add ``--buildtype`` option for which you can choose to pass the value
+    ``standard`` (default) or ``external``
 
 * API Changes
 
@@ -85,6 +87,7 @@ v1.1.0 (unreleased)
   * add ``Session.finalized``
   * add ``Session.finalize()``
   * add ``Session.find_target_for_file()``
+  * add ``Session.buildtype``
 
   * add ``Target.rts_func``
   * add ``Target.requires``

@@ -117,6 +117,9 @@ def main():
     '=<value> can be omitted')
   parser.add_argument('-I', '--search-path', metavar='PATH', default=[], action='append', help='additional Craftr module search path')
   parser.add_argument('-N', '--ninja-args', nargs='...', default=[], help='additional args passed to the Ninja command-line')
+  parser.add_argument('--buildtype', choices=['standard', 'external'], default='standard',
+    help='choose the buildtype, this option does not necessarily have any influence '
+         'on the build, it must be respected by the Craftfile/rule functions in use')
   parser.add_argument('--no-rc', action='store_true', help='skip running craftrc.py files')
   parser.add_argument('--rc', metavar='PYFILE', help='run the specified Python file before anything else, CAN be paired with --no-rc')
   parser.add_argument('--strace-depth', metavar='INT', type=int, default=5, help='depth of the logging stacktrace, default is 5')
@@ -238,7 +241,8 @@ def main():
     server_bind=args.rts_at,
     verbosity=args.verbose,
     strace_depth=args.strace_depth,
-    export=args.export)
+    export=args.export,
+    buildtype=args.buildtype)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
 

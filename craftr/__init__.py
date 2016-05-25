@@ -135,14 +135,27 @@ class Session(object):
     projects eventually need to export additional files before running
     Ninja, for example with :meth:`TargetBuilder.write_command_file`.
 
+  .. attribute:: buildtype
+
+    The buildtype that was specified with the ``--buildtype``
+    command-line option. This attribute has two possible values:
+    ``'standard'`` and ``'external'``. Craftfiles and rule functions
+    must take the buildtype into consideration. In ``'external'``
+    mode, rule functions should consider external options wherever
+    applicable, for example the ``CFLAGS`` environment variables
+    instead or additionally to the standard flags for C source file
+    compilation.
+
   .. attribute:: finalized
 
     True if the Session was finalized with :meth:`finalize`.
   '''
 
   def __init__(self, cwd=None, path=None, server_bind=None, verbosity=0,
-      strace_depth=3, export=False):
+      strace_depth=3, export=False, buildtype='standard'):
     super().__init__()
+    if buildtype not in ('standard', 'external'):
+      raise ValueError('invalid buildtype: {!r}'.format(buildtype))
     self.cwd = cwd or os.getcwd()
     self.env = environ.copy()
     self.server = rts.CraftrRuntimeServer(self)
@@ -156,6 +169,7 @@ class Session(object):
     self.verbosity = verbosity
     self.strace_depth = strace_depth
     self.export = export
+    self.buildtype = buildtype
     self.finalized = False
 
     if path is not None:
