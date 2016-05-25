@@ -106,7 +106,6 @@ def detect_cpp_stdlib(program):
   return None
 
 
-
 class LlvmCompiler(BaseCompiler):
   ''' Interface for the LLVM compiler. '''
 
@@ -244,6 +243,12 @@ class LlvmCompiler(BaseCompiler):
     else:
       assert False, self.name
 
+    if session.buildtype == 'external':
+      if language == 'c':
+        command += shell.split(options.get('CFLAGS', ''))
+      elif language == 'c++':
+        command += shell.split(options.get('CPPFLAGS', ''))
+
     return builder.create_target(command, outputs=objects, foreach=True,
       description=description)
 
@@ -352,6 +357,16 @@ class LlvmCompiler(BaseCompiler):
     else:
       assert False, self.name
     command += ['-o', '$out']
+
+    if session.buildtype == 'external':
+      # TODO: (craftr/craftr-build#111) should we assume that
+      # LDFLAGS is already in -Wl, format? Or should we detected
+      # the format and accept both?
+
+      # Read the LDFLAGS and convert them to -Wl, format so we
+      # can pass them to the linker via the compiler's command line.
+      flags = shell.split(options.get('LDFLAGS', '').strip())
+      command += ['-Wl,' + ','.join(flags)]
 
     builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output],
