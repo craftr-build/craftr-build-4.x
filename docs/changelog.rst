@@ -29,6 +29,7 @@ v1.1.0 (unreleased)
   * fix ``-shared`` argument to LLVM/GCC ``.link()`` rule (fix #109)
   * MSVC C++ compiler is now read from ``CXX`` variable instead of ``CC``
   * Linux linker is now read from ``CC`` variable instead of ``CCLD``
+  * support for ``CFLAGS``, ``CPPFLAGS`` and ``LDFLAGS`` (see issue #111)
 
 * General
 
