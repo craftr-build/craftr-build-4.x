@@ -19,9 +19,7 @@ v1.1.0 (unreleased)
 
 * Standard Library
 
-  * deprecated ``craftr.ext.options`` module and moved it to ``craftr.options``,
-    the module is now also automatically imported with ``from craftr import *``
-    (issue #97)
+  * remove ``craftr.ext.options`` module, use ``craftr.options`` instead (issue #97)
   * add support for ``msvc_runtime_library_option`` which can have the
     value ``'dynamic'`` or ``'static'``
   * remove ``craftr.ext.rules.PythonTool`` and rewrite ``~.render_template()``
