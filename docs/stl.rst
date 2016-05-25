@@ -67,7 +67,7 @@ variables like ``CC`` and ``CXX``. Possible values for *name* are
   :widths: 10, 90
 
   ``'c'``, C Compiler (see :ref:`compiler_interface`)
-  ``'cpp'``, C++ Compiler (see :ref:`compiler_interface`)
+  ``'c++'``, C++ Compiler (see :ref:`compiler_interface`)
   ``'ld'``, Linker (usually the same as C compiler on Linux/Mac OS) (see :ref:`linker_interface`)
   ``'ar'``, Static libary generator (archiver) (see :ref:`archiver_interface`)
 
