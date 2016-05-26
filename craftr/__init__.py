@@ -25,7 +25,7 @@ __version__ = '1.1.0-dev'
 import os
 import sys
 if sys.version < '3.4':
-  raise EnvironmentError('craftr requires Python3.4')
+  raise EnvironmentError('Craftr minimum Python version is 3.4')
 
 from os import environ
 from craftr import magic
@@ -68,7 +68,7 @@ class Session(object):
     A dictionary of environment variables, initialized as a copy of
     :data:`os.environ`. In a Craftfile, you can use :data:`os.environ`
     or the alias :data:`craftr.environ` instead, which is more convenient
-    that accessing ``session.env``.
+    than accessing ``session.env``.
 
   .. attribute:: path
 
@@ -122,7 +122,7 @@ class Session(object):
     The logging verbosity level. Defaults to 0. Used by the logging
     functions :func:`debug`, :func:`info`, :func:`warn` and :func:`error`.
 
-  .. attribute:: strace_depth:
+  .. attribute:: strace_depth
 
     The logging functions may print a stack trace of the log call when
     the verbosity is high enough. This defines the depth of the stack
@@ -153,7 +153,6 @@ class Session(object):
 
   def __init__(self, cwd=None, path=None, server_bind=None, verbosity=0,
       strace_depth=3, export=False, buildtype='standard'):
-    super().__init__()
     if buildtype not in ('standard', 'external'):
       raise ValueError('invalid buildtype: {!r}'.format(buildtype))
     self.cwd = cwd or os.getcwd()
@@ -1001,7 +1000,6 @@ class Framework(dict):
   :param kwargs: Additional key/value pairs for the Framework. '''
 
   def __init__(self, __fw_name=None, __init_dict=None, **kwargs):
-    super().__init__()
     if not __fw_name:
       __fw_name = Target._get_name(module())
     if __init_dict is not None:
@@ -1047,7 +1045,6 @@ class FrameworkJoin(object):
   '''
 
   def __init__(self, *frameworks):
-    super().__init__()
     self.used_keys = set()
     self.frameworks = []
     self += frameworks
