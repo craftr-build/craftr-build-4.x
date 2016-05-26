@@ -74,7 +74,6 @@ def glob(*patterns, exclude=None, parent=None):
       if not isabs(pattern):
         pattern = join(parent, pattern)
       if not isglob(pattern):
-        print('>>>', normpath(pattern), result)
         result.remove(normpath(pattern))
       else:
         for item in glob2.glob(normpath(pattern)):
