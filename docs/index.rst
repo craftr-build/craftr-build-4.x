@@ -70,7 +70,7 @@ more detailed output. What you see below is an example run on Windows:
 
 ::
 
-  λ craftr -ev
+  λ craftr -v
   detected ninja v1.6.0
   $ cd "build"
   load 'craftr.ext.my_project'
@@ -128,7 +128,7 @@ was mentioned before or a relative target specified like ``.main``.
 
 ::
 
-  $ craftr -eb .main
+  $ craftr .main
   [1/1] gcc /home/niklas/Desktop/example/src/main....til.c -o /home/niklas/Desktop/example/build/main
 
 
@@ -254,84 +254,6 @@ manifest and thus the dependency graph and build process with the
 :func:`craftr.task` decorator.
 
 For more information, see :doc:`rts`.
-
-Command Line Interface
-----------------------
-
-.. note:: Craftr exports `Ninja`_ build definitions but also acts as a wrapper
-  for calling it. While you can just export the Ninja manifest and run invoke
-  ``ninja`` manually, it is usually much more convenient to do so through
-  Craftr.
-
-::
-
-  craftr [-h] [-V] [-v] [-m MODULE] [-n] [-e] [-b] [-c]
-         [-d PATH] [-p PATH] [-D <key>[=<value>]] [-I PATH]
-         [-N ...] [--no-rc] [--rc PYFILE] [--strace-depth INT]
-         [--rts] [--rts-at HOST:PORT]
-         [targets [targets ...]]
-
-  Craftr v1.1.0-dev
-  -----------------
-
-  Craftr is the next generation build system based on Ninja and Python.
-
-  https://github.com/craftr-build/craftr
-
-  positional arguments:
-    targets               zero or more target/task names to build/execute
-
-  optional arguments:
-    -h, --help            show this help message and exit
-    -V, --version         print version and exit (1.1.0-dev)
-    -v, --verbose         increase the verbosity level
-    -m MODULE, --module MODULE
-                          name of the main Craftr module to take relative target
-                          references for or the module to load if no targets are
-                          specified on the command-line
-    -n, --no-build        skip the build step
-    -e, --export          (re-)export the Ninja manifest
-    -b                    deprecated since v1.1.0
-    -c, --clean           clean the specified target(s), specify twice for
-                          recursive clean
-    -d PATH, --build-dir PATH
-                          build directory, defaults to "./build" or the cwd if
-                          -p is used (conflicts with -p)
-    -p PATH, --project-dir PATH
-                          inverse of -b, use the specified directory as the main
-                          project directory and the cwd for -b
-    -D <key>[=<value>], --define <key>[=<value>]
-                          set an option in the environment variable, <key> may
-                          be relative, =<value> can be omitted
-    -I PATH, --search-path PATH
-                          additional Craftr module search path
-    -N ..., --ninja-args ...
-                          additional args passed to the Ninja command-line
-    --no-rc               skip running craftrc.py files
-    --rc PYFILE           run the specified Python file before anything else,
-                          CAN be paired with --no-rc
-    --strace-depth INT    depth of the logging stacktrace, default is 5
-    --rts                 keep alive the runtime server
-    --rts-at HOST:PORT    override the runtime server's host:port
-
-.. note::
-
-  Craftr will try to skip the phase of executing the Craftfile if possible.
-  For example, if you only use the ``-b`` option to invoke Ninja, Craftr
-  will inform you that the execution phase is skipped.
-
-  Also, to ensure consistency of the environment variables when building
-  with Craftr, options that are specified with the ``-D`` option are written
-  into the Ninja manifest. If ``-e`` is *not* passed, Craftr will read these
-  cached options and *prepend* them to the list of ``-D`` options.
-
-  ::
-
-    $ craftr -e -Ddebug
-    $ craftr -b
-    craftr: [INFO ]: skipping execution phase.
-    craftr: [INFO ]: prepending cached options: -Ddebug
-
 
 Target References & Build Options
 ---------------------------------
