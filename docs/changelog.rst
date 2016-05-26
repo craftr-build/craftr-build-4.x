@@ -84,6 +84,8 @@ v1.1.0 (unreleased)
   * add ``task()`` decorator function
   * add ``TaskError`` exception class
   * ``TargetBuilder()`` now accepts None for its *inputs* parameter
+  * ``TargetBuilder()`` now has default values for the *frameworks* and
+    *kwargs* parameters
   * removed ``options.get_option()``
   * ``options.get()`` now accepts a *default* parameter, updated its docstrings
 

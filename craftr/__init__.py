@@ -278,14 +278,12 @@ class Session(object):
     ''' Called when entering the Session context with
     :func:`magic.enter_context`. Does the following things:
 
-    * Sets up the :data`os.environ` with the values from :attr:`Session.env`
+    * Sets up the :data:`os.environ` with the values from :attr:`Session.env`
     * Adds the :attr:`Session.ext_importer` to :data:`sys.meta_path`
-    * Starts the Craftr Runtime Server (:attr:`Session.server`) and sets
-      the ``CRAFTR_RTS`` environment variable
 
     .. note:: A copy of the original :data:`os.environ` is saved and later
       restored in :meth:`on_context_leave`. The :data:`os.environ` object
-      can not be replaced by another object, that is why we change its
+      *can not* be replaced by another object, that is why we change its
       values in-place.
     '''
 
@@ -306,7 +304,7 @@ class Session(object):
     :func:`magic.enter_context` is exited. Undos all of the stuff
     that :meth:`on_context_enter` did and more.
 
-    * Stop the Craftr Runtime Server
+    * Stop the Craftr Runtime Server if it was started
     * Restore the :data:`os.environ` dictionary
     * Removes all ``craftr.ext.`` modules from :data:`sys.modules` and
       ensures they are in :attr:`Session.modules` (they are expected to
@@ -485,11 +483,10 @@ class Target(object):
   .. _Ninja Manual: https://ninja-build.org/manual.html
   '''
 
-  Graph = collections.namedtuple('Graph', 'inputs outputs')
-
-  RTS_None = 'none'
-  RTS_Mixed = 'mixd'
-  RTS_Plain = 'plain'
+  Graph = collections.namedtuple('Graph', 'inputs outputs') #: Type for :attr:`Target.graph`
+  RTS_None = 'none'   #: The target and its dependencies are plain command-line targets
+  RTS_Mixed = 'mixd'  #: The target and/or its dependencies are a mix of command-line targets and tasks
+  RTS_Plain = 'plain' #: The target and all its dependencies are plain task targets
 
   def __init__(self, command, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, requires=None, foreach=False, description=None,
@@ -693,25 +690,88 @@ class TargetBuilder(object):
   rule-level settings and :class:`Frameworks<Framework>`. The TargetBuilder
   takes all of this into account and prepares the data conveniently.
 
-  :param inputs: Inputs for the target. Processed by :func:`expand_inputs`.
-    Use :attr:`TargetBuilder.inputs` instead of the argument you passed
-    here to access the inputs. Must be a string, :class:`Target`, list or None.
-  :param frameworks: A list of frameworks to take into account.
-  :param kwargs: Additional keyword-arguments that have been passed to the
-    rule-function. These will be turned into a new :class:`Framework` object.
-    :meth:`create_target` will check if all arguments of this dictionary
-    have been taken into account and will yield a warning if not.
-  :param module:
-  :param name:
-  :param stacklevel:
+  The following example shows how to make a simple rule function that
+  compiles C/C++ source files into object files with GCC. The actual
+  compiler name can be overwritten and additional flags can be specified
+  by passing them directly to the rule function or via frameworks
+  (accumulative).
+
+  .. code:: python
+
+    #craftr_module(test)
+
+    from craftr import TargetBuilder, Framework, path
+    from craftr.ext import platform
+    from craftr.ext.compiler import gen_output
+
+    def compile(sources, frameworks=(), **kwargs):
+      """
+      Simple rule to compile a number of source files into an
+      object files using GCC.
+      """
+
+      builder = TargetBuilder(sources, frameworks, kwargs)
+      outputs = gen_output(builder.inputs, suffix = platform.obj)
+      command = [builder.get('program', 'gcc'), '-c', '$in', '-o', '$out']
+      command += builder.merge('additional_flags')
+      return builder.create_target(command, outputs = outputs)
+
+    copts = Framework(
+      additional_flags = ['-pedantic', '-Wall'],
+    )
+
+    objects = compile(
+      sources = path.glob('src/**/*.c'),
+      frameworks = [copts],
+      additional_flags = ['-std=c11'],
+    )
+
+  :param inputs: Inputs for the target. Processed by :func:`expand_inputs`,
+    the resulting frameworks are then processed by :func:`expand_frameworks`.
+    The expanded inputs are saved in the :attr:`inputs` attribute of the
+    :class:`TargetBuilder`. Use this attribute instead of the original value
+    passed to this parameter! It is guaruanteed to be a list of filenames
+    only.
+  :param frameworks: A list of frameworks to take into account additionally.
+  :param kwargs: Additional options that will be turned into their own
+    :class:`Framework` object, but it will *not* be passed to the Target
+    that is created with :meth:`create_target` as these options should not
+    be inherited by rules that will receive the target as input.
+  :param module: Override the module that will receive the target.
+  :param name: Override the target name. If not specified, the target
+    name is retrieved using Craftr's target name deduction from the name
+    the target is assigned to.
+  :param stacklevel: The stacklevel which the calling rule function is at.
+    This defaults to 1, which is fine for rule functions that directly
+    create the :class:`TargetBuilder`.
 
   .. attribute:: caller
 
+    Name of the calling function.
+
+    .. code:: python
+
+      def my_rule(*args, **kwargs):
+        builder = TargetBuilder(None)
+        assert builder.caller == 'my_rule'
+
   .. attribute:: inputs
+
+    :const:`None` or a pure list of filenames that have been passed
+    via the *inputs* parameter of the TargetBuilder.
 
   .. attribute:: frameworks
 
+    A list of frameworks compiled from the frameworks of :class:`Target`
+    objects in the *inputs* parameter of the constructor and the frameworks
+    that have been specified directly with the *frameworks* parameter.
+
   .. attribute:: kwargs
+
+    The additional options that have been passed with the *kwargs* argument.
+    These are turned into their own :class:`Framework` which is only taken
+    into account for the :attr:`options` but it is not passed to the
+    :class:`Target`  created with :meth:`create_target`.
 
   .. attribute:: options
 
@@ -737,15 +797,13 @@ class TargetBuilder(object):
     Meta data for the Target that is passed directly to
     :attr:`Target.meta`.
 
-    .. note:: If the *meta* parameter to the constructor
-      is None, it will be read from the *kwargs* dictionary
-      (thus inheriting the option from the called rule function).
-
   .. automethod:: TargetBuilder.__getitem__
   '''
 
-  def __init__(self, inputs, frameworks, kwargs, meta=None,
+  def __init__(self, inputs, frameworks=(), kwargs=None, meta=None,
       module=None, name=None, stacklevel=1):
+    if kwargs is None:
+      kwargs = {}
     if meta is None:
       meta = {}
     if not isinstance(meta, dict):
@@ -794,7 +852,7 @@ class TargetBuilder(object):
     return self.target_attrs
 
   def __getitem__(self, key):
-    ''' Alias for :meth:`FrameworkJoin.__getitem__`. '''
+    ''' Alias for :meth:`FrameworkJoin.__getitem__` on the :attr:`options`. '''
 
     return self.options[key]
 
@@ -1237,7 +1295,9 @@ def task(func=None, *args, **kwargs):
 
 
 def import_file(filename):
-  ''' Import a Craftr module by filename. '''
+  ''' Import a Craftr module by filename. The Craftr module identifier
+  must be determinable from this file either by its ``#craftr_module(..)``
+  identifier or filename. '''
 
   if not path.isabs(filename):
     filename = path.local(filename)
@@ -1245,11 +1305,12 @@ def import_file(filename):
 
 
 def import_module(modname, globals=None, fromlist=None):
-  ''' Similar to `importlib.import_module()`, but this function can
-  also improt contents of *modname* into *globals*. If *globals* is
+  ''' Similar to :func:`importlib.import_module()`, but this function can
+  also imports contents of *modname* into *globals*. If *globals* is
   specified, the module will be directly imported into the dictionary.
-  If *fromlist* list `*`, a wildcard import into *globals* will be
-  perfromed. *fromlist* can also be a list of names to import.
+  If *fromlist* list is ``*``, a wildcard import into *globals* will be
+  performed, otherwise *fromlist* must be :class:`None` or a list of
+  names to import.
 
   This function always returns the root module. '''
 

@@ -206,7 +206,7 @@ class CraftrImporter(object):
 
 
 class CraftrLoader(object):
-  ''' Loader class created by the `CraftrImporter`. '''
+  ''' Loader class created by the :class:``CraftrImporter``. '''
 
   def __init__(self, kind, filename, session):
     super().__init__()
