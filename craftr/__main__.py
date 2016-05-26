@@ -107,7 +107,7 @@ def main():
   parser.add_argument('-D', '--define', metavar='<key>[=<value>]', default=[], action='append')
   parser.add_argument('-I', '--search-path', metavar='PATH', default=[], action='append')
   parser.add_argument('-N', '--ninja-args', nargs='...', default=[])
-  parser.add_argument('--buildtype', choices=['standard', 'external'], default='standard')
+  parser.add_argument('-t', '--buildtype', choices=['standard', 'external'], default='standard')
   parser.add_argument('--no-rc', action='store_true')
   parser.add_argument('--rc', metavar='FILE')
   parser.add_argument('--strace-depth', metavar='INT', type=int, default=5)

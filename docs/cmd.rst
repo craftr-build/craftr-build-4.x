@@ -12,37 +12,36 @@ Synopsis
 
 ::
 
-  usage: craftr [-h] [-V] [-v] [-m MODULE] [-b] [-e] [-c] [-d PATH] [-p PATH]
-                [-D <key>[=<value>]] [-I PATH] [-N ...]
-                [--buildtype {standard,external}] [--no-rc] [--rc FILE]
-                [--strace-depth INT] [--rts] [--rts-at HOST:PORT]
-                [targets [targets ...]]
+    usage: craftr [-h] [-V] [-v] [-m MODULE] [-b] [-e] [-c] [-d PATH] [-p PATH]
+                  [-D <key>[=<value>]] [-I PATH] [-N ...] [-t {standard,external}]
+                  [--no-rc] [--rc FILE] [--strace-depth INT] [--rts]
+                  [--rts-at HOST:PORT]
+                  [targets [targets ...]]
 
-  https://github.com/craftr-build/craftr
+    https://github.com/craftr-build/craftr
 
-  positional arguments:
-    targets
+    positional arguments:
+      targets
 
-  optional arguments:
-    -h, --help            show this help message and exit
-    -V, --version
-    -v, --verbose
-    -m MODULE, --module MODULE
-    -b, --skip-build
-    -e, --skip-export
-    -c, --clean
-    -d PATH, --build-dir PATH
-    -p PATH, --project-dir PATH
-    -D <key>[=<value>], --define <key>[=<value>]
-    -I PATH, --search-path PATH
-    -N ..., --ninja-args ...
-    --buildtype {standard,external}
-    --no-rc
-    --rc FILE
-    --strace-depth INT
-    --rts
-    --rts-at HOST:PORT
-
+    optional arguments:
+      -h, --help            show this help message and exit
+      -V, --version
+      -v, --verbose
+      -m MODULE, --module MODULE
+      -b, --skip-build
+      -e, --skip-export
+      -c, --clean
+      -d PATH, --build-dir PATH
+      -p PATH, --project-dir PATH
+      -D <key>[=<value>], --define <key>[=<value>]
+      -I PATH, --search-path PATH
+      -N ..., --ninja-args ...
+      -t {standard,external}, --buildtype {standard,external}
+      --no-rc
+      --rc FILE
+      --strace-depth INT
+      --rts
+      --rts-at HOST:PORT
 
 ``targets``
 -----------
@@ -162,8 +161,8 @@ Add an additional search path for Craftr modules.
 Consumes all arguments after it and passes it to the Ninja
 command in the build step.
 
-``--buildtype``
----------------
+``-t, --buildtype``
+------....---------
 
 Choices: ``standard``, ``external``
 
