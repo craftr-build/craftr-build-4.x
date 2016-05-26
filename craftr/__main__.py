@@ -182,14 +182,13 @@ def main():
   rts_mode = None
   cache = None
   do_run = bool(args.export or args.rts)
-  export_if_required = False
   if args.export:
     # Remove files/directories we'll create again eventually.
     path.silent_remove(craftr.MANIFEST)
     path.silent_remove(craftr.CMDDIR, is_dir=True)
   elif not path.isfile(craftr.MANIFEST):
-    # We need to export a manifest if its required by the selected targets.
-    export_if_required = do_run = True
+    error('{!r} does not exist'.format(craftr.MANIFEST))
+    return 1
   else:
     # If we're not going to export a manifest, read the cached
     # data from the Ninja manifest.
@@ -284,10 +283,6 @@ def main():
       cache = craftr.ninja.CraftrCache(args.define, args.search_path, session=session)
       if rts_mode is None:
         rts_mode = cache.get_rts_mode(args.targets)
-
-      if export_if_required and rts_mode != Target.RTS_Plain:
-        warn('{!r} does not exist but is required by selected targets, forcing "-e"'.format(craftr.MANIFEST))
-        args.export = True
 
       if args.export:
         # Export a ninja manifest.
