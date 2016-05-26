@@ -94,6 +94,7 @@ def _abs_env(cwd=None):
 
 def main():
   parser = argparse.ArgumentParser(
+    prog='craftr',
     description='https://github.com/craftr-build/craftr')
   parser.add_argument('-V', '--version', action='store_true')
   parser.add_argument('-v', '--verbose', action='count', default=0)
@@ -107,12 +108,12 @@ def main():
   parser.add_argument('-I', '--search-path', metavar='PATH', default=[], action='append')
   parser.add_argument('-N', '--ninja-args', nargs='...', default=[])
   parser.add_argument('--buildtype', choices=['standard', 'external'], default='standard')
-  parser.add_argument('--no-rc', action='store_true', help='skip running craftrc.py files')
-  parser.add_argument('--rc', metavar='PYFILE', help='run the specified Python file before anything else, CAN be paired with --no-rc')
-  parser.add_argument('--strace-depth', metavar='INT', type=int, default=5, help='depth of the logging stacktrace, default is 5')
-  parser.add_argument('--rts', action='store_true', help='keep alive the runtime server')
-  parser.add_argument('--rts-at', metavar='HOST:PORT', type=craftr.rts.parse_uri, help='override the runtime server\'s host:port')
-  parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
+  parser.add_argument('--no-rc', action='store_true')
+  parser.add_argument('--rc', metavar='FILE')
+  parser.add_argument('--strace-depth', metavar='INT', type=int, default=5)
+  parser.add_argument('--rts', action='store_true')
+  parser.add_argument('--rts-at', metavar='HOST:PORT', type=craftr.rts.parse_uri)
+  parser.add_argument('targets', nargs='*', default=[])
   args = parser.parse_args()
   debug = partial(craftr.debug, verbosity=args.verbose)
 

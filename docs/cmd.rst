@@ -7,6 +7,55 @@ the manifest export and build process and no subcommands.
 
 .. contents::
 
+Synopsis
+--------
+
+::
+
+  usage: craftr [-h] [-V] [-v] [-m MODULE] [-b] [-e] [-c] [-d PATH] [-p PATH]
+                [-D <key>[=<value>]] [-I PATH] [-N ...]
+                [--buildtype {standard,external}] [--no-rc] [--rc FILE]
+                [--strace-depth INT] [--rts] [--rts-at HOST:PORT]
+                [targets [targets ...]]
+
+  https://github.com/craftr-build/craftr
+
+  positional arguments:
+    targets
+
+  optional arguments:
+    -h, --help            show this help message and exit
+    -V, --version
+    -v, --verbose
+    -m MODULE, --module MODULE
+    -b, --skip-build
+    -e, --skip-export
+    -c, --clean
+    -d PATH, --build-dir PATH
+    -p PATH, --project-dir PATH
+    -D <key>[=<value>], --define <key>[=<value>]
+    -I PATH, --search-path PATH
+    -N ..., --ninja-args ...
+    --buildtype {standard,external}
+    --no-rc
+    --rc FILE
+    --strace-depth INT
+    --rts
+    --rts-at HOST:PORT
+
+
+``targets``
+-----------
+
+Zero or more targets to build. Target names can be absolute or relative
+to the main module name (beginning with a period). Targets that are
+referenced from modules that haven't been imported already will be imported.
+
+If the specified target or targets are only Python backed tasks (see
+:func:`craftr.task`), Ninja will **not** be invoked since the tasks
+can be executed solely on the Python side. In many cases, this is
+often even desired (eg. if you're using Craftr only for tasks).
+
 ``-V, --version``
 -----------------
 
@@ -127,3 +176,34 @@ The default value for this argument is ``standard``. Choosing
 options into account, like ``CFLAGS``, ``CPPFLAGS`` and ``LDFLAGS``.
 
 See: :attr:`craftr.Session.buildtype`
+
+``--no-rc``
+-----------
+
+Don't run ``craftrc.py`` files
+
+``--rc``
+--------
+
+Specify a file that will be executed before anything else. It will
+be executed the same way ``craftrc.py`` files are. Can be combined
+with ``--no-rc`` to exclusively run the specified file.
+
+``--strace-depth``
+------------------
+
+Specify the depth of the stacktrace when it is printed. This is only
+for stacktraces printed with the :ref:`logging_funcs`. The default
+value is 5. Also note that frames of builtin modules are hidden from
+this stacktrace.
+
+``--rts``
+---------
+
+Keep alive the Craftr runtime server until you quit it with CTRL+C.
+
+``--rts-at``
+------------
+
+Specify the ``HOST:PORT`` for the Craftr runtime server instead of
+picking loopback and a random port.
