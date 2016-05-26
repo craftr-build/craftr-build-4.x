@@ -25,6 +25,7 @@ Contents
   :maxdepth: 1
 
   changelog
+  cmd
   api
   stl
   ext

@@ -63,6 +63,8 @@ v1.1.0 (unreleased)
 
 * Command-line changes
 
+  * inverted behaviour of ``-e``!! Now causes skip of
+    the export and eventually execution step (if possible)
   * removed ``-f`` and ``-F`` command-line options completely (instead,
     tasks that do not depend on normal targets can be executed without
     Ninja, see #103)

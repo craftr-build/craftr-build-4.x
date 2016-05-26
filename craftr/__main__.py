@@ -94,32 +94,20 @@ def _abs_env(cwd=None):
 
 def main():
   parser = argparse.ArgumentParser(
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=textwrap.dedent('''
-    Craftr v{}
-    -----------------
-
-    Craftr is the next generation build system based on Ninja and Python.
-
-    https://github.com/craftr-build/craftr
-    '''.format(craftr.__version__)))
-  parser.add_argument('-V', '--version', action='store_true', help='print version and exit ({})'.format(craftr.__version__))
-  parser.add_argument('-v', '--verbose', action='count', default=0, help='increase the verbosity level')
-  parser.add_argument('-m', '--module', metavar='MODULE', help='name of the main Craftr module to take relative target references for or the module to load if no targets are specified on the command-line')
-  parser.add_argument('-n', '--no-build', action='store_true', help='skip the build step')
-  parser.add_argument('-e', '--export', action='store_true', help='(re-)export the Ninja manifest')
-  parser.add_argument('-b', action='store_true', help='deprecated since v1.1.0')
-  parser.add_argument('-c', '--clean', default=0, action='count', help='clean the specified target(s), specify twice for recursive clean')
-  parser.add_argument('-d', '--build-dir', metavar='PATH', help='build directory, defaults to "./build" or the cwd if -p is used (conflicts with -p)')
-  parser.add_argument('-p', '--project-dir', metavar='PATH', help='inverse of -b, use the specified directory as the main project directory and the cwd for -b')
-  parser.add_argument('-D', '--define', metavar='<key>[=<value>]', default=[], action='append',
-    help='set an option in the environment variable, <key> may be relative, '
-    '=<value> can be omitted')
-  parser.add_argument('-I', '--search-path', metavar='PATH', default=[], action='append', help='additional Craftr module search path')
-  parser.add_argument('-N', '--ninja-args', nargs='...', default=[], help='additional args passed to the Ninja command-line')
-  parser.add_argument('--buildtype', choices=['standard', 'external'], default='standard',
-    help='choose the buildtype, this option does not necessarily have any influence '
-         'on the build, it must be respected by the Craftfile/rule functions in use')
+    description='https://github.com/craftr-build/craftr')
+  parser.add_argument('-V', '--version', action='store_true')
+  parser.add_argument('-v', '--verbose', action='count', default=0)
+  parser.add_argument('-m', '--module', metavar='MODULE')
+  parser.add_argument('-n', '--no-build', action='store_true')
+  parser.add_argument('-e', '--no-export', action='store_false', dest='export')
+  parser.add_argument('-b', action='store_true', help='deprecated')
+  parser.add_argument('-c', '--clean', default=0, action='count')
+  parser.add_argument('-d', '--build-dir', metavar='PATH')
+  parser.add_argument('-p', '--project-dir', metavar='PATH')
+  parser.add_argument('-D', '--define', metavar='<key>[=<value>]', default=[], action='append')
+  parser.add_argument('-I', '--search-path', metavar='PATH', default=[], action='append')
+  parser.add_argument('-N', '--ninja-args', nargs='...', default=[])
+  parser.add_argument('--buildtype', choices=['standard', 'external'], default='standard')
   parser.add_argument('--no-rc', action='store_true', help='skip running craftrc.py files')
   parser.add_argument('--rc', metavar='PYFILE', help='run the specified Python file before anything else, CAN be paired with --no-rc')
   parser.add_argument('--strace-depth', metavar='INT', type=int, default=5, help='depth of the logging stacktrace, default is 5')
