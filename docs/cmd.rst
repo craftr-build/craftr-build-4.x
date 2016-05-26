@@ -36,12 +36,12 @@ directory is loaded.
 
 .. _no_build:
 
-``-n, --no-build``
+``-b, --skip-build``
 ------------------
 
 Skip the build phase.
 
-``-e, --no-export``
+``-e, --skip-export``
 -------------------
 
 Skip the export phase and, if possible, even the step of
@@ -67,7 +67,7 @@ Clean the specified targets. Pass the flag twice to clean
 recursively which even works without explicitly specifying
 a target to clean.
 
-``-b, --build-dir``
+``-d, --build-dir``
 -------------------
 
 Specify the build directory. Craftr will automatically
@@ -77,7 +77,7 @@ and will stay inside it until the build is completed.
 ``-p, --project-dir``
 ---------------------
 
-Similar to ``-b, --build-dir``, but this option will cause
+Similar to ``-d, --build-dir``, but this option will cause
 Craftr to use the current working directory as build directory
 and instead load the main module from the specified project
 directory.

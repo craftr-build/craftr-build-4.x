@@ -98,9 +98,8 @@ def main():
   parser.add_argument('-V', '--version', action='store_true')
   parser.add_argument('-v', '--verbose', action='count', default=0)
   parser.add_argument('-m', '--module', metavar='MODULE')
-  parser.add_argument('-n', '--no-build', action='store_true')
-  parser.add_argument('-e', '--no-export', action='store_false', dest='export')
-  parser.add_argument('-b', action='store_true', help='deprecated')
+  parser.add_argument('-b', '--skip-build', action='store_true')
+  parser.add_argument('-e', '--skip-export', action='store_true')
   parser.add_argument('-c', '--clean', default=0, action='count')
   parser.add_argument('-d', '--build-dir', metavar='PATH')
   parser.add_argument('-p', '--project-dir', metavar='PATH')
@@ -116,9 +115,6 @@ def main():
   parser.add_argument('targets', nargs='*', default=[], help='zero or more target/task names to build/execute')
   args = parser.parse_args()
   debug = partial(craftr.debug, verbosity=args.verbose)
-
-  if args.b:
-    warn('"-b" option is deprecated (since v1.1.0)')
 
   if args.version:
     print('craftr {0}'.format(craftr.__version__))
@@ -181,14 +177,18 @@ def main():
 
   rts_mode = None
   cache = None
-  do_run = bool(args.export or args.rts)
-  if args.export:
+  do_run = bool(not args.skip_export or args.rts)
+  if not args.skip_export:
     # Remove files/directories we'll create again eventually.
     path.silent_remove(craftr.MANIFEST)
     path.silent_remove(craftr.CMDDIR, is_dir=True)
   elif not path.isfile(craftr.MANIFEST):
-    error('{!r} does not exist'.format(craftr.MANIFEST))
-    return 1
+    # If we're to do the build phase, we can't continue
+    # without a manifest.
+    if not args.skip_build:
+      error('{!r} does not exist'.format(craftr.MANIFEST))
+      return 1
+    do_run = True
   else:
     # If we're not going to export a manifest, read the cached
     # data from the Ninja manifest.
@@ -228,7 +228,7 @@ def main():
     server_bind=args.rts_at,
     verbosity=args.verbose,
     strace_depth=args.strace_depth,
-    export=args.export,
+    export=not args.skip_export,
     buildtype=args.buildtype)
   with craftr.magic.enter_context(craftr.session, session):
     _abs_env(old_cwd)
@@ -284,7 +284,7 @@ def main():
       if rts_mode is None:
         rts_mode = cache.get_rts_mode(args.targets)
 
-      if args.export:
+      if not args.skip_export:
         # Export a ninja manifest.
         debug('exporting {!r}'.format(craftr.MANIFEST))
         with open(craftr.MANIFEST, 'w') as fp:
@@ -314,7 +314,7 @@ def main():
         return ret
 
     # Perform the build.
-    if not args.no_build:
+    if not args.skip_build:
       if rts_mode == Target.RTS_Plain:
         debug("the specified targets can be executed in plain Python-space")
         state = {}
