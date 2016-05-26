@@ -88,6 +88,9 @@ v1.1.0 (unreleased)
     *kwargs* parameters
   * removed ``options.get_option()``
   * ``options.get()`` now accepts a *default* parameter, updated its docstrings
+  * passing ``NotImplemented`` for *default* to ``options.get()`` now raises
+    a ``KeyError`` if the option does not exist
+  * add ``option.get_bool()``
 
   * removed ``Session.update()`` (see issue #108)
   * removed ``Session.rts_funcs``

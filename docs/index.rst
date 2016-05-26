@@ -1,16 +1,46 @@
 The Craftr build system
 =======================
 
-Craftr is the build system of the future based on `Ninja`_ and `Python`_.
+Craftr is a next generation build system based on `Ninja`_ and `Python`_.
+And don't worry, it isn't like waf or SCons!
 
-* Modular build scripts
-* Cross-platform support
-* Low- and high-level interfaces for specifying build dependencies and commands
-* Good performance compared to traditional build systems like CMake and Make or Meson
-* LDL: Language-domain-less, Craftr is an omnipotent build system
-* Extensive STL with high-level interfaces to common compiler toolsets like
-  MSVC, Clang, GCC, Java, Protobuf, Yacc, Cython, Flex, NVCC
-* **Consequent** out-of-tree builds
+.. raw:: html
+
+  <style>.craftr-feature-table tr td:nth-child(2) { white-space: normal; }</style>
+  <table class="docutils craftr-feature-table">
+    <thead><tr><th colspan="2">Features</th></tr></thead>
+    <tr>
+      <td>Cross-platform</td>
+      <td>Use Craftr anywhere Ninja and Python can run</td>
+    </tr>
+    <tr>
+      <td>Modular build scripts</td>
+      <td>Import other build scripts as Python modules, synergizes well
+          with <code>git submodule</code></td>
+    </tr>
+    <tr>
+      <td>Performance</td>
+      <td>Craftr outperforms traditional tools like Make, CMake or Meson</td>
+    </tr>
+    <tr>
+      <td>Language-independent</td>
+      <td>Don't be tied to a single language, use Craftr for anything you want!</td>
+    </tr>
+    <tr>
+      <td>Extensive standard library</td>
+      <td>High-level interfaces to modern C/C++ compilers, C+, Java, Protobuff,
+          Yacc, Cython, Flex, NVCC (OpenCL coming soon)</td>
+    </tr>
+    <tr>
+      <td>Everything under your control</td>
+      <td>Use the lowlevel API when- and wherever you need it and manully
+          define the exact build commands</td>
+    </tr>
+    <tr>
+      <td>Consequent out-of-tree builds</td>
+      <td>Craftr never builds in your working tree (unless you tell it to)</td>
+    </tr>
+  </table>
 
 Requirements
 ------------
@@ -36,10 +66,12 @@ Getting Started
 ---------------
 
 Craftr is built around Python-ish modules that we call Craftr modules or
-scripts. There are two ways a Craftr module can be created:
+Craftfiles (though this name usually refers to the first type of Craftr
+modules). There are two ways a Craftr module can be created:
 
 1. A file named ``Craftfile.py`` with a ``# craftr_module(...)`` declaration
-2. A file named ``craftr.ext.<module_name>.py``
+2. A file named ``craftr.ext.<module_name>.py`` where ``<module_name>`` is
+   of course the name of your Craftr module
 
 By default, Craftr will execute the ``Craftfile.py`` from the current
 working directy if no different main module is specified with the ``-m``
@@ -48,10 +80,10 @@ on any platform (that is supported by the Craftr STL).
 
 .. code-block:: python
 
-  # craftr_module(my_project)
+  #craftr_module(my_project)
 
-  from craftr import path                   # similar to os.path with a lot of additional features
-  from craftr.ext.platform import cxx, ld   # import the C++ compiler and Linker for the current platform
+  from craftr import path
+  from craftr.ext.platform import cxx, ld
 
   # Create object files for each .cpp file in the src/ directory.
   obj = cxx.compile(
@@ -65,14 +97,14 @@ on any platform (that is supported by the Craftr STL).
     inputs = obj
   )
 
-To get you an idea of what's going on, we pass the `-v` flag to enable
-more detailed output. What you see below is an example run on Windows:
+Below is a sample invokation on Windows. We pass the ``-v`` flag for
+additional debug output by Craftr and full command-line output from Ninja.
 
 ::
 
   λ craftr -v
   detected ninja v1.6.0
-  $ cd "build"
+  cd "build"
   load 'craftr.ext.my_project'
   (craftr.ext.my_project, line 9): unused options for compile(): {'std'}
   exporting 'build.ninja'
@@ -95,7 +127,7 @@ Installation
 
     pip install craftr-build
 
-To install from the Git repository, use the `-e` flag to be able to update
+To install from the Git repository, use the ``-e`` flag to be able to update
 Craftr by simply pulling the latest changes from the remote repository.
 
 ::
@@ -106,216 +138,237 @@ Craftr by simply pulling the latest changes from the remote repository.
 Targets
 -------
 
-Craftr describes builds with :class:`Targets<craftr.Target>`. Each
-Target has a list of input and output files and a command line to create
-the output files. It is the most basic class and in many cases, it is not
-needed to use it directly. If however you have very fixed requirements,
-you can still use it and hard-code the command line.
+Craftr describes builds with the :class:`craftr.Target` class. Similar to
+rules in Makefiles, a target has input and output files and a command to
+produce the output files. Note that in Craftr, targets can also represents
+`Tasks`_ which can be used to embed real Python functions into the build
+graph.
 
-.. code-block:: python
+Using the :class:`Target<craftr.Target>` class directly is usually not
+necessary unless you have very specific requirements and need control
+over the exact commands that will be executed. Or if you're just being
+super lazy and need the easiest script to compile a C program:
 
-  # craftr_module(example)
-  from craftr import *
+.. code:: python
+
+  # craftr_module(super_lazy)
+  from craftr import Target, path
   main = Target(
     command = 'gcc $in -o $out',
-    inputs = path.local(['src/main.c', 'src/util.c']),
+    inputs  = path.local(['src/main.c', 'src/util.c']),
     outputs = 'main'
   )
 
-This creates a Target called ``example.main`` that you can now export and
-execute with `Ninja`_. Note that you can use the full target specifier that
-was mentioned before or a relative target specified like ``.main``.
+The substition of ``$in`` and ``$out`` is conveniently done by `Ninja`_.
 
 ::
 
   $ craftr .main
   [1/1] gcc /home/niklas/Desktop/example/src/main....til.c -o /home/niklas/Desktop/example/build/main
 
-
-Rules
+Tasks
 -----
 
-Most of the time, you will be using "rule functions" instead of the Target
-class. Rule functions are basically just Python functions that build a Target
-for you, sparing your the hazzle of generating the appropriate command-line
-parameters. Rules usually use of the :class:`craftr.TargetBuilder` class to
-make things easier.
+Tasks were initially designed as functions doing convenient operations
+that can be invoked from the command-line, they can also be used to export
+any function as a "command" to the Ninja manifest and have the production
+of output files implemented in Python.
 
-.. code-block:: python
+A common use-case for tasks is to generate an archive from the build
+products to have it ready for distribution. Below you can find a simple
+example using the :mod:`archive<craftr.ext.archive>` and :mod:`git<craftr.ext.git>`
+extension modules:
 
-  # craftr_module(example)
-  from craftr import *
+.. code:: python
 
-  # An example rule function for GCC.
-  def gcc(inputs, output, shared = False, debug = False, frameworks = (), **kwargs):
-    builder = TargetBuilder(inputs, frameworks, kwargs)
-    include = builder.merge('include')
-    defines = builder.merge('defines')
+  #craftr_module(myapp)
+  from craftr import path, task, info
+  from craftr.ext import archive, git, platform
 
-    command = ['gcc', '$in', '-o', '$out']
-    if shared:
-      command += ['-shared', '-fPIC']
-    if debug:
-      command += ['-g', '-O0']
-    else:
-      command += ['-O2']
-    command += ['-I' + i for i in include]
-    command += ['-D' + d for d in defines]
+  git = git.Git(project_dir)
+  obj = platform.cc.compile(sources = path.glob('src/*.c'))
+  bin = platform.ld.linkn(inputs = obj, output = 'myapp')
 
-    return builder.create_target(command, outputs = [output])
+  @task(requires = [bin])
+  def archive():
+    archive = Archive(prefix = 'myapp-{}'.format(git.describe()))
+    archive.add('res')        # Add a directory to the archive
+    archive.add(bin.outputs)  # Add the produced binary
+    archive.save()
+    info('archive saved: {!r}'.format(archive.name))
 
-  main = gcc(
-    output = 'main'
-    inputs = path.local(['src/main.c', 'src/util.c']),
-    shared = False,
-    include = path.local(['include']),
-    defines = ['COOL_KIDS'],
-  )
+.. note::
 
-The :class:`~craftr.TargetBuilder` does a lot of things for us:
+  Craftr is clever enough to run a task directly if it doesn't
+  need any Ninja targets to be built before it can be executed.
+  For example, the following task via ``craftr .hello``
 
-* Expand the list of ``inputs`` using :func:`craftr.expand_inputs` (in case
-  of :class:`~craftr.Target` objects being passed, this will automatically
-  add frameworks used by that target to the framework list)
-* Create a proxy :class:`~craftr.Framework` for the specified ``**kwargs``
-* Create a :class:`~craftr.FrameworkJoin` from the frameworks list so we
-  can do things like joining all lists of ``includes`` and ``defines`` into
-  a single list
-* Check for unused options directly passed to the rule via ``**kwargs`` in
-  :meth:`~craftr.TargetBuilder.create_target` and eventually yield a warning
+  .. code:: python
 
-There are a bunch of rules provided by the built-in Craftr extension modules
-to compile C/C++, C#, Java, etc. For example, the ``ext.platform`` Craftr module
-gives you access to a compiler implementation for C/C++. These are based on
-``compiler.gcc``, ``compiler.clang`` or ``compiler.msvc`` based on your platform
-and environment. Go to :ref:`compiler_abstraction` for more information.
+    @task
+    def hello():
+      info('Hello, World!')
+
+.. seealso::
+
+  Tasks invoked by Ninja are executed through the :doc:`rts`.
+
+Generator Functions
+-------------------
+
+Most of the time you don't want to be using `Targets`_ directly but instead
+use functions to produce them with a high-level interface. It is sometimes
+useful to create such a target generator function first and then use it
+to reduce the complexity of the build script.
+
+The Craftr standard library provides an extensive set of functions and
+classes that generate targets for you, most notably the C/C++ compiler
+toolsets.
+
+.. seealso::
+
+  Since C/C++ builds are very complex and strongly vary between platforms,
+  Craftr defines a standard interface for compiling C/C++ source files as
+  well as the linking and archiving steps.
+
+  * :ref:`platform_interface`
+  * :ref:`compiler_interface`
+  * :ref:`linker_interface`
+  * :ref:`archiver_interface`
+
+Functions that generate targets use the :class:`craftr.TargetBuilder`
+that does a lot of useful preprocessing and, as the name suggests,
+make building `Targets`_  much easier.
 
 Frameworks
 ----------
 
 The :class:`craftr.Framework` is in fact just a dictionary (with an
 additional :attr:`name<craftr.Framework>` attribute) that represents
-a set of options for anything build related. How the data in a framework
-is interpreted depends on the rule that interprets it.
+a set of options for anything build related. How the data is interpreted
+depends on the generator function.
 
-The easiest way to use frameworks and to demonstrate their usefulness
-is with the Craftr module for a very simple C++ library, in this case
-the header-only `nr_matrix`_ library.
+Frameworks are useful for grouping build information. They were designed
+for C/C++ builds but may find other uses as well. For example, there
+might be a framework for a C++ library that specifies the include paths,
+preprocessor definitions, linker search path and other libraries required
+for the library to be used in a C++ application.
 
-.. code-block:: python
+For example, the Craftfile for a header-only C++ library might look as
+simple as this:
 
-    # craftr_module(libs.nr_matrix)
+.. code:: python
 
-    from craftr import Framework, path
-    from craftr.ext.libs.nr_iterator import nr_iterator
+  from craftr import Framework, path
+  from craftr.ext.libs.some_library import some_library
+  my_library = Framework(
+    frameworks = [some_library],
+    include = [path.local('include')],
+    libs = ['zip'],
+  )
 
-    nr_matrix = Framework(
-      include = [path.local('include')],
-      frameworks = [nr_iterator],
-    )
+As you can see in the example above, frameworks can also be nested.
 
-Rule functions like the ``compile()`` methods of the C++ compiler
-implementations will usually accumulate all ``include`` values to
-generate a list of include paths, the same for the ``defines`` etc.
+Targets there were generated by helper functions (as described in
+the `Generator Functions`_ section) list up the frameworks that have
+been used to produce the target in the :attr:`Target.frameworks<craftr.Target.frameworks>`
+attribute. Passing a target directly as input to another generator
+function will automatically inherit the frameworks of that target!
 
-Frameworks are usually passed to a rule function with the ``frameworks``
-keyword parameter, however there are additional places where they could
-be coming from.
+.. code:: python
 
-1. Nested frameworks: As you can see above, the ``nr_matrix`` framework
-   specifies ``nr_iterator`` as an additional required framework
-2. Target frameworks: All the frameworks that were used to generate a
-   target are transfered to the :attr:`craftr.Target.frameworks`
-   attribute and are taken into consideration when passing a target as
-   input to rule functions, eg:
+  fw = Framework(
+    include = [path.local('vendor/include'),
+    libpath = [path.local('vendor/lib')],
+    libs = ['vendorlib1', 'vendorlib2']
+  )
 
-   .. code-block:: python
+  obj = cc.compiler(
+    sources = path.glob('src/*.c'),
+    frameworks = [fw]
+  )
 
-      from craftr.ext.platform import cxx, ld
-      from craftr.ext.libs.some_cool_library import some_cool_library  # a Framework
+  bin = ld.link(
+    inputs = obj
+    # we don't need to specify "fw" again, it is inherited from "obj"
+  )
 
-      obj = cxx.compile(
-        sources = path.glob('src/*.cpp'),
-        frameworks = [some_cool_library],
-        std = 'c++11',
-      )
+Build Options
+-------------
 
-      bin = ld.link(
-        output = 'main',
-        inputs = obj,    # Here, the frameworks that were used for "obj" will
-                         # automatically be passed on to the link() rule
-      )
+Options for the build process are entirely read from environment variables.
+The :func:`craftr.options.get` function is a convenient method to read the
+options from the environment.
 
-Tasks
------
+In Craftr, options can be specified local for a module or globally for
+all modules. A local option is actually prefixed by the full name of
+the Craftr module.
 
-Craftr allows you to embedd arbitrary Python procedures into the Ninja
-manifest and thus the dependency graph and build process with the
-:func:`craftr.task` decorator.
+.. code:: python
 
-For more information, see :doc:`rts`.
+  #craftr_module(app)
+  from craftr import options
+  name = options.get('name')
+  debug = options.get_bool('debug')
 
-Target References & Build Options
----------------------------------
+  info('Hello {}, you want a {} build?'.format(name, 'debug' if debug else 'release'))
 
-You can pass absolute or relative target names to Craftr and it will then use
-these targets where applicable. For example ``craftr -b .lib`` will build the
-lib target from your Craftfile. An absolute target name does *not* begin with
-a dot.
+The options can be specified locally using the following methods:
 
-Options are set via environment variables. This is the order in which the
-variables are overwritten:
+::
 
-1. Envrionment variables from your shell
-2. ``craftrc.py`` files that modify the :data:`craftr.environ` dictionary
-3. The ``-D`` option that can be specified on the command-line
-4. Craftr modules that modify the :data:`craftr.environ` dictionary
+  craftr -D.name="John Doe" -D.debug
+  craftr -Dapp.name="John Doe" -Dapp.debug
+  app.name="John Doe" app.debug="true" craftr   # assuming your shell supports this syntax
 
-Note that you can pass relative identifiers to the ``-D`` option as well.
-If your Craftfile identifier is ``my_project`` and you pass
-``craftr -D.debug=true``, it will set the environment variable
-``my_project.debug`` to the string ``true``.
+They can be set globally like this:
 
-.. note::
+::
 
-  You can also reference targets from a Craftr module that would normally
-  not be imported into your current Craftfile. For instance, lets say you
-  have a library called `libs.myfoo` and the build definitions are in a
-  ``Craftfile.py`` and you have a `libs.myfoo.test.craftr` file that exposes
-  a ``run`` target, you can do this from the command-line:
+  craftr -Dname="John Doe" -Ddebug
+  name="John Doe" debug="true" craftr   # assuming your shell supports this syntax
 
-  ::
+Options and environment variables can also be set from ``craftrc.py`` files.
 
-    craftr -eb .test.run
+Oh, and say hello to John!
 
-  Instead of having to switch the main module.
+::
 
-  ::
-
-    craftr -m libs.myfoo.test -eb .run
-
+  Hello John Doe, you want a debug build?
 
 craftrc.py Files
 -----------------
 
-Before Craftr will execute the main Craftr module, it will look for ``craftrc.py``
-files in the user home and working directory and execute them. It will skip
-this step if you pass ``--no-rc``. You can specify a difference file instead
-of the ``craftrc.py`` of the current working directory with the ``--rc <filename>``
-option.
+Before anything, Craftr will execute a ``craftrc.py`` file if any exist. This
+file can exist in the current working directory and/or the users home directory.
+Both will be executed if both exist! You can prevent Craftr from executing
+these files by passing ``--no-rc``. You can also tell it to execute a specific
+file with the ``--rc`` parameter (can be combined).
 
-Craftr RC files are intended to setup environment variables that can have
-influence on the build process on a per-user and per-project basis. The RC files
-are execute **before** the options passed with ``-D`` are set.
+This file is not executed in a Craftr module context and hence should not
+declare any targets, but it can be used to set up environment variables and
+options.
 
-For example, for using the `craftr.ext.qt5`_ module on Windows, I use this
-``craftrc.py`` file in my home directory:
+For example, for using the `craftr.ext.qt5`_ module on Windows, you could
+use this ``craftrc.py`` file in the home directory to let the Craftr Qt5
+module know where the Qt5 headers and libraries are located.
 
 .. code-block:: python
 
   from os import environ
   if 'Qt5Path' not in environ:
-    environ['Q5Path'] = 'D:\\lib\\Qt\\5.5\\msvc2013_64'
+    environ['Qt5Path'] = 'D:\\lib\\Qt\\5.5\\msvc2013_64'
+
+Note that you can still specify a different ``Qt5Path`` via the command
+line that will override the value set in the ``craftrc.py`` file because
+the environment variables are set in the following order:
+
+1. Variables from the parent process/shell
+2. Variables prefixed on the command-line (like ``VAR=VALUE craftr ...``)
+   if your shell supports it
+3. ``craftrc.py`` files that modify the :data:`craftr.environ`
+4. Options passed via the ``-D, --define`` command-line parameter
+5. Craftr modules that modify the :data:`craftr.environ`
 
 Colorized Output
 ----------------

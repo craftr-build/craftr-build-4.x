@@ -5,8 +5,6 @@ Craftr's command-line interface should feel easy, quick
 and efficient to use. There are only flags that alter
 the manifest export and build process and no subcommands.
 
-.. contents::
-
 Synopsis
 --------
 

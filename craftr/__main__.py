@@ -166,7 +166,7 @@ def main():
   if os.getcwd() != path.normpath(args.build_dir):
     started_from_build_dir = False
     os.chdir(args.build_dir)
-    debug('$ cd "{0}"'.format(args.build_dir))
+    debug('cd "{0}"'.format(args.build_dir))
 
   # If the build directory didn't exist from the start and it
   # is empty after Craftr exits, we can delete it again.

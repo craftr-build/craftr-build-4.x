@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 ''' Utility functions to read options from the environment. '''
 
-__all__ = []
+__all__ = ['get', 'get_bool']
 
 from craftr import module, environ
 
@@ -40,10 +40,14 @@ def get(name, default=None, inherit_global=True):
 
   :param name: The name of the option.
   :param default: The default value that is returned if the
-    option is not set in the environment.
+    option is not set in the environment. If :const:`NotImplemented`
+    is passed for *default* and the option is not set, a :class:`KeyError`
+    is raised.
   :param inherit_global: If this is True, the option is also
     searched globally (ie. *name* without the prefix of the
     currently executed module).
+  :raise KeyError: If *default* is :const:`NotImplemented` and the
+    option does not exist.
   '''
 
   full_name = module.project_name + '.' + name
@@ -51,7 +55,42 @@ def get(name, default=None, inherit_global=True):
     value = environ[full_name]
   except KeyError:
     if inherit_global:
-      value = environ.get(name, default)
+      try:
+        value = environ[name]
+        if not value:
+          raise KeyError(name)
+      except KeyError:
+        if default is NotImplemented:
+          raise KeyError(name)
+        value = default
     else:
       value = default
   return value
+
+
+def get_bool(name, default=False, inherit_global=True):
+  ''' Read a boolean option. The actual option value is interpreted
+  as boolean value. Allowed values that are interpreted as correct
+  boolean values are: ``''``, ``'true'``, ``'false''`, ``'yes'``,
+  ``'no'``, ``'0'`` and ``'1'``
+
+  :raise KeyError: If *default* is :const:`NotImplemented` and the option
+    does not exist.
+  :raise ValueError: If the option exists but has a value that can not
+    be interpreted as boolean.
+  '''
+
+  try:
+    value = get(name, NotImplemented, inherit_global)
+  except KeyError:
+    if default is NotImplemented:
+      raise
+    return default
+
+  value = value.lower().strip()
+  if value in ('0', 'no', 'false', ''):
+    return False
+  elif value in ('1', 'yes', 'true'):
+    return True
+  else:
+    raise ValueError('invalid value for option {!r}: {!r}'.format(name, value))
