@@ -42,6 +42,8 @@ def get_tool(name):
     return detect_compiler(environ.get('CC', 'clang'), 'c')
   elif name == 'cxx':
     return detect_compiler(environ.get('CXX', 'clang++'), 'c++')
+  elif name == 'asm':
+    return detect_compiler(environ.get('AS', 'clang'), 'asm')
   elif name == 'ld':
     return detect_compiler(environ.get('CC', 'clang'), 'c')
   elif name ==  'ar':

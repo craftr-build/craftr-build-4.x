@@ -20,6 +20,8 @@ Standard Library Modules
 Platform Interface
 ------------------
 
+All ``platform.xxx`` modules implement this interface.
+
 .. data:: platform.name
 
 A string identifier of the platform. Currently implemented values are
@@ -68,6 +70,7 @@ variables like ``CC`` and ``CXX``. Possible values for *name* are
 
   ``'c'``, C Compiler (see :ref:`compiler_interface`)
   ``'c++'``, C++ Compiler (see :ref:`compiler_interface`)
+  ``'asm'``, ASM Compiler (see :ref:`compiler_interface`)
   ``'ld'``, Linker (usually the same as C compiler on Linux/Mac OS) (see :ref:`linker_interface`)
   ``'ar'``, Static libary generator (archiver) (see :ref:`archiver_interface`)
 
