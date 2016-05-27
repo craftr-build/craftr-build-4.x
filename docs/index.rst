@@ -382,39 +382,46 @@ Debugging
 ---------
 
 Not only can you debug your Craftr build scripts with the :mod:`pdb`
-module, but you can also increase the verbosity level to increase
-the output detail. By default, Craftr already shows the module and
-line number when using the :func:`craftr.info`, :func:`craftr.warn`
-or :func:`craftr.error` functions. However, there might be cases
-where you are facing messages as such and you don't know from where
-exactly they originate.
+module, but you can also increase the verbosity level for more verbose
+output. This is very useful for tracing down warnings or locations of
+errors in the output, eg.:
 
 ::
 
-    craftr: [INFO ]: Changed directory to "build"
-    craftr: [WARN ] (options|L23): craftr.ext.options will be removed in the next version
-    craftr: [WARN ] (options|L24): use craftr.options instead
+  λ craftr --skip-build
+  you really shouldn't do it that way!
 
-Simply pass the ``-vv`` option to show stacktrace with each message.
-Also note that this stacktrace is nicely highlighted if you're in a
-terminal that supports ANSI color codes.
+To find the location of that line, we can pass ``-v``.
 
 ::
 
-    craftr: [DEBUG]: Detected ninja v1.6.0
-    craftr: [INFO ]: Changed directory to "build"
-    craftr: [WARN ] (options|L23): craftr.ext.options will be removed in the next version
-      In _load_backward_compatible() [<frozen importlib._bootstrap>|L634]
-      In load_module() [/Users/niklas/Documents/craftr/craftr/ext.py|L225]
-      In <craftr.ext.options> [/Users/niklas/Documents/craftr/craftr/lib/options.craftr|L23]
-    craftr: [WARN ] (options|L24): use craftr.options instead
-      In _load_backward_compatible() [<frozen importlib._bootstrap>|L634]
-      In load_module() [/Users/niklas/Documents/craftr/craftr/ext.py|L225]
-      In <craftr.ext.options> [/Users/niklas/Documents/craftr/craftr/lib/options.craftr|L24]
+  λ craftr --skip-build -v
+  detected ninja v1.6.0
+  cd "build"
+  load 'craftr.ext.test'
+  (craftr.ext.test, line 4): you really shouldn't do it that way!
+  exporting 'build.ninja'
 
-You can also use a verbosity level of one by passing only one ``-v``
-and Craftr will only show the stack trace of :func:`craftr.error`
-messages.
+Now if you're really having trouble finding out how the Python script
+actually gets there, you can enable a stacktrace with each line that
+is output with ``-vv``.
+
+::
+
+  λ craftr --skip-build -vv
+  detected ninja v1.6.0
+  cd "build"
+  load 'craftr.ext.test'
+  (craftr.ext.test, line 4): you really shouldn't do it that way!
+    In <module> (F:\Python34\Scripts\craftr-script.py, line 9)
+    In main() (c:\users\niklas\repos\craftr-build\craftr\craftr\__main__.py, line 256)
+    In import_module() (f:\python34\lib\importlib\__init__.py, line 109)
+    In load_module() (c:\users\niklas\repos\craftr-build\craftr\craftr\ext.py, line 245)
+    In <craftr.ext.test> (Craftfile.py, line 4)
+  exporting 'build.ninja'
+
+This output is also nicely colorized if you're in a terminal that supports
+ANSI color codes.
 
 Additional Links
 ----------------
