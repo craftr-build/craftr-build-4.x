@@ -159,20 +159,21 @@ Add an additional search path for Craftr modules.
 Consumes all arguments after it and passes it to the Ninja
 command in the build step.
 
-``-t, --buildtype``
--------------------
+``-t, --buildtype {standard, external}``
+----------------------------------------
 
-Choices: ``standard``, ``external``
+Switch between standard or externally controlled build. Choosing
+the ``external`` option will cause target generator functions to
+consider environment variables like ``CFLAGS``, ``CPPFLAGS``,
+``LDFLAGS`` and ``LDLIBS`` or whatever else is applicable to the
+target generator you're using.
 
-Choose the buildtype. This option does not necessarily have
-any influence on the build, it must be respected by the
-Craftfile and/or rule functions used.
+.. note:: The consideration of these environment variables is
+          completely dependent on the implementation of the
+          target generator.
 
-The default value for this argument is ``standard``. Choosing
-``external`` will cause rules that implement it to take external
-options into account, like ``CFLAGS``, ``CPPFLAGS`` and ``LDFLAGS``.
-
-See: :attr:`craftr.Session.buildtype`
+.. seealso:: The selected buildtype can be read from the
+             :attr:`craftr.Session.buildtype` attribute.
 
 ``--no-rc``
 -----------
