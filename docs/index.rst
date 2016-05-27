@@ -54,6 +54,7 @@ Contents
 .. toctree::
   :maxdepth: 1
 
+  self
   changelog
   cmd
   api

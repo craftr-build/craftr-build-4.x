@@ -83,12 +83,12 @@ directory is loaded.
 .. _no_build:
 
 ``-b, --skip-build``
-------------------
+--------------------
 
 Skip the build phase.
 
 ``-e, --skip-export``
--------------------
+---------------------
 
 Skip the export phase and, if possible, even the step of
 executing Craftr modules. If ``-n, --no-build`` is not passed,
@@ -142,7 +142,7 @@ automatically prefixed with the main module identifier.
 As an example, say the Craftfile in your working directory
 has the identifier ``my_module``. Using ``-D.debug=yes``
 will set the environment variable ``my_module.debug`` to
-the string ``'yes''`.
+the string ``'yes'``.
 
 If you leave out the value part, the option is set to the
 string value ``'true'``. If you keep the assignment operator
@@ -160,7 +160,7 @@ Consumes all arguments after it and passes it to the Ninja
 command in the build step.
 
 ``-t, --buildtype``
-------....---------
+-------------------
 
 Choices: ``standard``, ``external``
 

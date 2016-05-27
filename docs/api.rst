@@ -7,8 +7,10 @@ This part of the documentation contains the API reference of the functions
 and classes that can be used in Craftfiles.
 
 
-Logging & Version Check
------------------------
+.. _logging_funcs:
+
+Logging
+-------
 
 The logging functions implement the :func:`print` interface.
 
@@ -16,7 +18,6 @@ The logging functions implement the :func:`print` interface.
 .. autofunction:: info
 .. autofunction:: warn
 .. autofunction:: error
-.. autofunction:: craftr_min_version
 
 Tasks
 -----
@@ -31,6 +32,7 @@ Helpers
 .. autofunction:: expand_frameworks
 .. autofunction:: import_file
 .. autofunction:: import_module
+.. autofunction:: craftr_min_version
 
 Session Objects
 ---------------
