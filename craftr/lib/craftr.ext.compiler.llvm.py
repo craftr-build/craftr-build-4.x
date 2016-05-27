@@ -190,11 +190,11 @@ class LlvmCompiler(BaseCompiler):
         stdlib = self.desc.get('cpp_stdlib', 'stdc++')
       fw['libs'] = [stdlib]
 
-    if language == 'asm':
-      language = 'assembler'
-
     command = [builder['program']]
-    command += ['-x', language] if language else []
+    if language == 'asm':
+      command += ['-x', 'assembler']
+    elif language:
+      command += ['-x', language]
     command += ['-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
@@ -248,6 +248,8 @@ class LlvmCompiler(BaseCompiler):
         command += shell.split(options.get('CFLAGS', ''))
       elif language == 'c++':
         command += shell.split(options.get('CPPFLAGS', ''))
+      elif language == 'asm':
+        command += shell.split(options.get('ASMFLAGS', ''))
 
     return builder.create_target(command, outputs=objects, foreach=True,
       description=description)
@@ -359,14 +361,18 @@ class LlvmCompiler(BaseCompiler):
     command += ['-o', '$out']
 
     if session.buildtype == 'external':
-      # TODO: (craftr/craftr-build#111) should we assume that
-      # LDFLAGS is already in -Wl, format? Or should we detected
-      # the format and accept both?
-
-      # Read the LDFLAGS and convert them to -Wl, format so we
-      # can pass them to the linker via the compiler's command line.
+      command = []
       flags = shell.split(options.get('LDFLAGS', '').strip())
-      command += ['-Wl,' + ','.join(flags)]
+      wlflags = sum(1 for s in flags if s.startswith('-Wl,'))
+      if wlflags > 0 and wlflags != len(flags):
+        error('LDFLAGS must be either in -Wl, or raw arguments format. Got:\n::  LDFLAGS=' + options.get('LDFLAGS', ''))
+      if flags and wlflags == 0:
+        # The flags are not in -Wl, format, so we convert them to
+        # a single -Wl, argument.
+        flags = ['-Wl,' + ','.join(flags)]
+
+      command += flags
+      command += shell.split(options.get('LDLIBS', ''))
 
     builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output],
