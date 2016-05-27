@@ -1,5 +1,5 @@
-The Craftr standard library
-===========================
+Craftr Standard Library
+=======================
 
 Standard Library Modules
 ------------------------

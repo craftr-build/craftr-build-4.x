@@ -1,5 +1,5 @@
-Craftr Extension Modules
-========================
+Extension Modules
+=================
 
 Craftr comes with a set of builtin modules that contain useful functionality
 to quickly write powerful Craftfiles. Most of the modules contain compiler

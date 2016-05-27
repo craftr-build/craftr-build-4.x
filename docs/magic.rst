@@ -1,5 +1,5 @@
-Craftr Magic Explained
-=======================
+Craftr's Python Magic
+=====================
 
 Craftr uses some magic tricks behind the scenes to make the interface
 as convenient as possible. Most of the magic comes from the :mod:`craftr.magic`
@@ -35,10 +35,17 @@ to the :class:`craftr.Target` constructor or a rule function.
 Check the :func:`craftr.magic.get_assigned_name` function for details on the
 implementation of this feature.
 
+.. _rts:
+
 Craftr RTS
 ----------
 
 The Craftr Runtime Server is a socket server that is started on a random
-port on the localhost when Craftr is started. The ``craftr-rts`` command
-can connect to that server and execute Python functions in the original
-Craftr process. See :doc:`rts` for more information.
+port on the localhost when Craftr is started. The ``craftr-rts-invoke``
+command can connect to that server and execute Python functions in the
+original Craftr process. The address of the server is saved in the
+``CRAFTR_RTS`` environment variable. There are a few limitations to this
+method:
+
+* The execution phase can not be skipped when RTS is required
+* You can not pipe into the ``craftr-rts-invoke`` script

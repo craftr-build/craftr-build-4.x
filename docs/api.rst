@@ -6,6 +6,8 @@ API Documentation
 This part of the documentation contains the API reference of the functions
 and classes that can be used in Craftfiles.
 
+.. autodata:: session
+.. autodata:: module
 
 .. _logging_funcs:
 

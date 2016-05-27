@@ -55,13 +55,12 @@ Contents
   :maxdepth: 1
 
   self
-  changelog
   cmd
-  api
   stl
   ext
-  rts
+  api
   magic
+  changelog
 
 Getting Started
 ---------------
@@ -212,7 +211,7 @@ extension modules:
 
 .. seealso::
 
-  Tasks invoked by Ninja are executed through the :doc:`rts`.
+  Tasks invoked by Ninja are executed through the :ref:`rts`.
 
 Generator Functions
 -------------------
