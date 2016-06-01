@@ -31,6 +31,7 @@ v1.1.0 (unreleased)
   * Linux linker is now read from ``CC`` variable instead of ``CCLD``
   * support for ``CFLAGS``, ``CPPFLAGS``, ``ASMFLAGS``, ``LDFLAGS`` and
     ``LDLIBS`` (see issue #111)
+  * Add ``craftr.ext.cmake`` module (issue #113)
 
 * General
 

@@ -9,6 +9,7 @@ Standard Library Modules
 
   stl/archive
   stl/compiler
+  stl/cmake
   stl/git
   stl/platform
   stl/python
