@@ -36,6 +36,8 @@ This module allows you to render CMake configuration headers from Craftr
   include = config.include + path.glob('modules/*/include')
 """
 
+__all__ = ['ConfigResult', 'render_config']
+
 from craftr import session, environ, Framework, task, path, utils
 from craftr.ext.compiler import gen_objects
 
