@@ -190,7 +190,7 @@ def main():
       error('{!r} does not exist'.format(craftr.MANIFEST))
       return 1
     do_run = True
-  else:
+  elif not args.skip_build:
     # If we're not going to export a manifest, read the cached
     # data from the Ninja manifest.
     cache = craftr.ninja.CraftrCache.read()
@@ -222,6 +222,8 @@ def main():
       info('prepending cached search path:', ' '.join(
         shell.quote('-I' + x) for x in cache.path))
       args.search_path = cache.path + args.search_path
+  else:
+    do_run = True
 
   session = craftr.Session(
     cwd=old_cwd,
