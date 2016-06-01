@@ -23,15 +23,20 @@ This module allows you to render CMake configuration headers from Craftr
 
 .. code:: python
 
+  from craftr import path
   from craftr.ext import cmake
   config = cmake.render_config(
     config_file = path.local('cmake/templates/cvconfig.h.in'),
     variables = {
       'BUILD_SHARED_LIBS': True,
       'CUDA_ARCH_BIN': '...',
+      # ...
+    }
+  )
+  include = config.include + path.glob('modules/*/include')
 """
 
-from craftr import environ, Framework, task, path, utils
+from craftr import session, environ, Framework, task, path, utils
 from craftr.ext.compiler import gen_objects
 
 import re
@@ -73,27 +78,29 @@ def render_config(config_file, output=None, variables={}, inherit_env=True):
     del temp
 
   output_dir = path.dirname(output)
-  path.makedirs(output_dir)
 
-  with open(config_file) as src:
-    with open(output, 'w') as dst:
-      for line in src:
-        match = re.match('\s*#cmakedefine\s+(\w+)\s*(.*)', line)
-        if match:
-          var, value = match.groups()
-          if variables.get(var, False):
-            line = '#define {} {}\n'.format(var, value)
-          else:
-            line = '/* #undef {} */\n'.format(var)
+  if session.export:
+    path.makedirs(output_dir)
 
-        # Replace variable references with $X or ${X}
-        def replace(match):
-          value = variables.get(match.group(3), None)
-          if value:
-            return str(value)
-          return ''
-        line = string.Template.pattern.sub(replace, line)
+    with open(config_file) as src:
+      with open(output, 'w') as dst:
+        for line in src:
+          match = re.match('\s*#cmakedefine\s+(\w+)\s*(.*)', line)
+          if match:
+            var, value = match.groups()
+            if variables.get(var, False):
+              line = '#define {} {}\n'.format(var, value)
+            else:
+              line = '/* #undef {} */\n'.format(var)
 
-        dst.write(line)
+          # Replace variable references with $X or ${X}
+          def replace(match):
+            value = variables.get(match.group(3), None)
+            if value:
+              return str(value)
+            return ''
+          line = string.Template.pattern.sub(replace, line)
+
+          dst.write(line)
 
   return ConfigResult(output, [output_dir], None)
