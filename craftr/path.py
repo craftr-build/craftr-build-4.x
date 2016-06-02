@@ -287,10 +287,33 @@ def move(filename, basedir, newbase):
 
 
 def local(path):
-  ''' Can only be called from a module context. Returns *path* normalized,
-  assumed relative to the current modules project directory. '''
+  '''
+  Given a path relative to the current module's project directory,
+  this function returns a normalized absolute path. Just like many
+  of the path functions, *path* can also be alist.
+
+  .. note::
+
+    Can only be called from a module context (ie. from inside a
+    Craftr module).
+  '''
 
   return normpath(path, module.project_dir)
+
+
+def buildlocal(path):
+  '''
+  Given a relative path, this function returns an absolute version
+  assuming the path is relative to to current module's build
+  directory.
+
+  .. note::
+
+    Can only be called from a module context (ie. from inside a
+    Craftr module).
+  '''
+
+  return normpath(path, abspath(module.__name__))
 
 
 def iter_tree(dirname, depth=1):

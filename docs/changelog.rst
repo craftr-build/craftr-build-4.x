@@ -113,6 +113,7 @@ v1.1.0 (unreleased)
     RTS by passing a callable to the constructor for the *command* argument
     (you should prefer the ``task()`` function though)
 
+  * add ``craftr.path.buildlocal()`` function
   * add ``craftr.shell.format()`` and ``~.join()`` functions
   * ``craftr.shell.run()`` now splits strings into a command list if
     the *shell* argument is False
