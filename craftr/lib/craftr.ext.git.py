@@ -21,12 +21,38 @@
 '''
 A very small interface for querying information about a Git repository.
 
+Examples
+~~~~~~~~
+
+Display a note in console if build is started with unversioned changes
+in the Git repository.
+
 .. code:: python
 
-    git = load_module('git').Git(project_dir)
-    info('Current Version:', git.describe())
-    if git.status(exclude='??'):
-      info('Unversioned changes present.')
+  git = load_module('git').Git(project_dir)
+  info('Current Version:', git.describe())
+  if git.status(exclude='??'):
+    info('Unversioned changes present.')
+
+Export a ``GIT_VERSION.h`` header file into the build directory (not
+to mess with your source tree!)
+
+.. code:: python
+
+  from craftr import *
+  from craftr.ext import git
+
+  def write_gitversion():
+    filename = path.buildlocal('include/GIT_VERSION.h')
+    dirname = path.dirname(filename)
+    if session.export:
+      path.makedirs(dirname)
+      description = git.Git(project_dir).describe()
+      with open(filename, 'w') as fp:
+        fp.write('#pragma once\\n#define GIT_VERSION "{}"\\n'.format(description))
+    return dirname
+
+  gitversion_dir = write_gitversion()  # Add this to your includes
 '''
 
 __all__ = ['Git']
