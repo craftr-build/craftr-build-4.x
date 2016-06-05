@@ -31,8 +31,12 @@ if sys.version < '3.4':
 
 # Convert README.md to reST.
 if os.path.isfile('README.md'):
-  if os.system('pandoc -s README.md -o README.rst') == 0:
+  if os.system('pandoc -s README.md -o README.rst') != 0:
+    print('-----------------------------------------------------------------')
     print('WARNING: README.rst could not be generated, pandoc command failed')
+    print('-----------------------------------------------------------------')
+    if sys.stdout.isatty():
+      input("Enter to continue... ")
 
 # parse_requirements() interface has changed in Pip 6.0
 from pip.req import parse_requirements
@@ -50,7 +54,7 @@ requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
   name = 'craftr-build',
-  version = '1.1.0',
+  version = '1.1.0.1',
   description = 'next generation build system based on Ninja and Python',
   long_description = long_description,
   classifiers = [
