@@ -16,8 +16,7 @@ And don't worry, it isn't like waf or SCons!
 ### Contribute
 
 I welcome all contributions, feedback and suggestions! If you have any of
-those or just want to chat, ping me on twitter [@rosensteinn][], by [mail][] or
-open a [new issue][]!
+those or just want to chat, ping me on [twitter][], by [mail][] or open a [new issue][]!
 
 ### Requirements
 
@@ -38,10 +37,10 @@ Craftr by simply pulling the latest changes from the remote repository.
 
 ----
 
-<p align="center">MIT Licensed &ndash; Copyright &copy; 2016  Niklas Rosenstein</p>
+MIT Licensed &ndash; Copyright &copy; 2016  Niklas Rosenstein
 
   [new issue]: https://github.com/craftr-build/craftr/issues/new
-  [@rosensteinn]: https://twitter.com/rosensteinn
+  [twitter]: https://twitter.com/rosensteinn
   [mail]: mailto:rosensteinniklas@gmail.com
   [Ninja]: https://github.com/ninja-build/ninja
   [Python]: https://www.python.org
