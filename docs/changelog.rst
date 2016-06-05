@@ -1,8 +1,8 @@
 Changelog
 =========
 
-v1.1.0 (unreleased)
--------------------
+v1.1.0
+------
 
 * NEW: Tasks (replaces ``craftr.ext.rules.PythonTool``)
 
