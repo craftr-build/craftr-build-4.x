@@ -1,8 +1,8 @@
 # Craftr
 
-[![PyPI Downloads](http://img.shields.io/pypi/dm/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 [![PyPI Version](https://img.shields.io/pypi/v/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 [![Travis CI](https://travis-ci.org/craftr-build/craftr.svg)](https://travis-ci.org/craftr-build/craftr)
+[![Documentation Status](https://readthedocs.org/projects/craftr/badge/?version=latest)](http://craftr.readthedocs.io/en/latest/?badge=latest)
 
 Craftr is a next generation build system based on [Ninja][] and [Python][].
 And don't worry, it isn't like waf or SCons!
@@ -35,11 +35,6 @@ Craftr by simply pulling the latest changes from the remote repository.
 
     git clone https://github.com/craftr-build/craftr.git && cd craftr
     pip install -e .
-
-> **Note**: The current development version of Craftr (`v1.1.0-dev`) 
-> contains some severe changes to the Craftr ecosystem and API. Please
-> take a look at the [Changelog][] and consider familiarizing yourself
-> with the latest version from the `master` branch.
 
 ----
 
