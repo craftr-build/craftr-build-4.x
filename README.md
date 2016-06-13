@@ -8,8 +8,8 @@ Craftr is a next generation build system based on [Ninja][] and [Python][].
 And don't worry, it isn't like waf or SCons!
 
 * [Changelog (latest)][Changelog]
-* [Documentation (latest)](craftr.readthedocs.io/en/latest/)
-* [Documentation (stable)](craftr.readthedocs.io/en/stable/)
+* [Documentation (latest)](https://craftr.readthedocs.io/en/latest/)
+* [Documentation (stable)](https://craftr.readthedocs.io/en/stable/)
 * [List of third-party extension modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
 * [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
 
