@@ -1,6 +1,14 @@
 Changelog
 =========
 
+v1.1.1
+------
+
+* removed default ``clean`` target, use ``-c`` or ``-cc`` command-line option
+* add ``__no_default`` target when there are no default targets, printing
+  "no default target"
+* add ``Target.as_explicit()``
+
 v1.1.0
 ------
 

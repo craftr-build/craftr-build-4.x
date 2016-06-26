@@ -20,7 +20,7 @@
 ''' Craftr is a powerful meta build system for Ninja. '''
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '1.1.0'
+__version__ = '1.1.1-dev'
 
 import os
 import sys
@@ -173,14 +173,6 @@ class Session(object):
 
     if path is not None:
       self.path.extend(path)
-
-    self.register_target(Target(
-      command = 'ninja -t clean',
-      inputs = None,
-      outputs = None,
-      name = 'clean',
-      module = None,
-      explicit = True))
 
   def register_target(self, target):
     ''' This function is used by the :class:`Target` constructor
@@ -681,6 +673,12 @@ class Target(object):
       if dep_mode == self.RTS_Mixed or dep_mode != mode:
         mode = self.RTS_Mixed
     return mode
+
+  def as_explicit(self):
+    ''' Sets :attr`explicit` to :const:`True` and retunrs *self*. '''
+
+    self.explicit = True
+    return self
 
 
 class TargetBuilder(object):

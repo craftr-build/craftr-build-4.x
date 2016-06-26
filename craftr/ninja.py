@@ -57,6 +57,7 @@ def export(fp, cache):
     writer.variable(key, value)
   writer.newline()
 
+  only_explicit = True
   default = []
   for target in sorted(session.targets.values(), key=lambda t: t.fullname):
     validate_ident(target.fullname)
@@ -117,6 +118,8 @@ def export(fp, cache):
         implicit=implicit_deps,
         order_only=path.normpath(target.order_only_deps))
 
+    if not target.explicit:
+      only_explicit = False
     if target.fullname not in outputs:
       writer.build(target.fullname, 'phony', outputs)
     if not target.explicit:
@@ -125,6 +128,12 @@ def export(fp, cache):
 
   if default:
     writer.default(default)
+
+  if only_explicit and not default:
+    name = '__no_default'
+    writer.rule(name, 'echo "no default target"')
+    writer.build(name, name)
+    writer.default(name)
 
 
 class CraftrCache(object):
