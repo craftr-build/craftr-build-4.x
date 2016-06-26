@@ -162,7 +162,7 @@ class LlvmCompiler(BaseCompiler):
     include = utils.unique(builder.merge('include'))
     defines = utils.unique(builder.merge('defines'))
     language = builder['language']
-    debug = builder.get('debug', False)
+    debug = builder.get('debug', options.get_bool('debug'))
     std = builder.get('std')
     pedantic = builder.get('pedantic', False)
     pic = builder.get('pic', False)
@@ -305,7 +305,7 @@ class LlvmCompiler(BaseCompiler):
     output = gen_output(output, suffix=do_suffix)
     implicit_deps = []
 
-    debug = builder.get('debug', False)
+    debug = builder.get('debug', options.get_bool('debug'))
     libs = builder.merge('libs')
     # Clang is based on GCC libraries, so always use the gcc_libs option.
     libs += builder.merge('gcc_libs')

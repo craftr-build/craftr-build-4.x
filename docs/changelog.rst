@@ -8,6 +8,8 @@ v1.1.1
 * add ``__no_default`` target when there are no default targets, printing
   "no default target"
 * add ``Target.as_explicit()``
+* C/C++ compiler implementations now take ``debug`` option into account if
+  no explicit value is passed to the generator function
 
 v1.1.0
 ------

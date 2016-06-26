@@ -16,6 +16,18 @@ Standard Library Modules
   stl/rules
   stl/unix
 
+General Properties
+------------------
+
+Compiler implementations should consider the ``'debug'`` option when
+handling the build parameters. More specifically, given a target uses
+a :class:`TargetBuilder`, it is usually good practice to read the
+debug option like this:
+
+.. code:: python
+
+  debug = builder.get('debug', options.get_bool('debug'))
+
 .. _platform_interface:
 
 Platform Interface
