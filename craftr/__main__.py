@@ -264,6 +264,7 @@ def main():
               debug('load {!r}'.format('craftr.ext.' + mname))
               importlib.import_module('craftr.ext.' + mname)
       except craftr.ModuleError as exc:
+        exc.log_error()
         error('Error in module {0!r}. Abort'.format(exc.module.project_name))
         return 1
       except ImportError as exc:

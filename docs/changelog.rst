@@ -10,6 +10,9 @@ v1.1.1
 * add ``Target.as_explicit()``
 * C/C++ compiler implementations now take ``debug`` option into account if
   no explicit value is passed to the generator function
+* add ``craftr.ext.platform.asm`` compiler proxy
+* catching ``ModuleError`` no longer prints the error text (#118)
+* add ``frame`` and ``module`` argument to ``craftr.log()``
 
 v1.1.0
 ------

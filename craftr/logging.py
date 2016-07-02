@@ -21,6 +21,7 @@
 from craftr import session, module, ModuleError
 from craftr import magic, path, tty
 
+import craftr
 import sys
 import traceback
 
@@ -57,7 +58,18 @@ def debug(*args, stacklevel=1, verbosity=None, **kwargs):
     log('debug', *args, stacklevel=stacklevel, **kwargs)
 
 
-def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs):
+def log(level, *args, stacklevel=1, module_name=None, show_trace=None, frame=None, module=None, **kwargs):
+  if frame:
+    stacklevel = 0
+  else:
+    stacklevel += 1
+
+  if module is None and craftr.module:
+    module = craftr.module()
+
+  if frame is None and module:
+    frame = magic.get_module_frame(module)
+
   levelinfo = LOG_METADATA[level]
   prefix = levelinfo['fg']
   if not module_name and module:
@@ -65,7 +77,7 @@ def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs)
   if module_name and session.verbosity > 0:
     prefix += '(craftr.ext.' + module_name
     if module:
-      prefix += ', line ' + str(magic.get_module_frame(module).f_lineno)
+      prefix += ', line ' + str(frame.f_lineno)
     prefix += '): '
 
   end = kwargs.pop('end', '\n')
@@ -79,7 +91,7 @@ def log(level, *args, stacklevel=1, module_name=None, show_trace=None, **kwargs)
     show_trace = bool(session and module and session.verbosity >= levelinfo['strace_min_verbosity'])
   if show_trace:
     max_frames = session.strace_depth
-    frames = list(_walk_frames(stacklevel=(stacklevel + 1), max_frames=max_frames))
+    frames = list(_walk_frames(frame, stacklevel, max_frames))
     for frame in reversed(frames):
       fn = frame.f_code.co_filename
       if not fn.startswith('<'):  # not built-in module filename
@@ -109,7 +121,9 @@ def warn(*args, stacklevel=1, **kwargs):
 
 
 def error(*args, stacklevel=1, raise_=True, **kwargs):
-  stacklevel += 1
-  log('error', *args, stacklevel=stacklevel, **kwargs)
   if raise_ and module:
-    raise ModuleError()
+    frame = magic.get_frame(stacklevel)
+    raise ModuleError(' '.join(map(str, args)), frame)
+  else:
+    stacklevel += 1
+    log('error', *args, stacklevel=stacklevel, **kwargs)

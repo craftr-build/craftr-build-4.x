@@ -1159,8 +1159,18 @@ class FrameworkJoin(object):
 
 class ModuleError(RuntimeError):
 
-  def __init__(self, module=None):
-    self.module = module or craftr.module()
+  def __init__(self, message, frame=None, module=None):
+    if module is None:
+      module = craftr.module()
+    self.message = message
+    self.frame = frame
+    self.module = module
+
+  def log_error(self):
+    craftr.error(self.message, frame=self.frame, module=self.module)
+
+  def __str__(self):
+    return str(self.message)
 
 
 class ModuleReturn(Exception):
