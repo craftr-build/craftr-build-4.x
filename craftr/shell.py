@@ -21,6 +21,7 @@
 available since Python 3.5 but is a bit customized so that it works
 better with Craftr. '''
 
+from . import utils
 from shlex import split
 from subprocess import PIPE, STDOUT
 
@@ -63,6 +64,7 @@ def join(cmd):
   ''' Join a list of strings to a single command. '''
 
   return ' '.join(map(quote, cmd))
+
 
 class _ProcessError(Exception):
   ''' Base class that implements the attributes and behaviour of errors
@@ -152,23 +154,39 @@ class CompletedProcess(object):
 
 def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
     timeout=None, check=False, cwd=None, encoding=sys.getdefaultencoding()):
-  ''' Run the process with the specified *cmd*. If *cmd* is a list of
+  """
+  Run the process with the specified *cmd*. If *cmd* is a list of
   commands and *shell* is True, the list will be automatically converted
   to a properly escaped string for the shell to execute.
 
-  Raises:
-    CalledProcessError: If *check* is True and the process exited with
-      a non-zero exit-code.
-    TimeoutExpired: If *timeout* was specified and the process did not
-      finish before the timeout expires.
-    OSError: For some OS-level error, eg. if the program could not be
+  .. note::
+
+    If "shell" is True, this function will manually check if the file
+    exists and is executable first and raise :class:`FileNotFoundError`
+    if not.
+
+  :raise CalledProcessError: If *check* is True and the process exited with
+    a non-zero exit-code.
+  :raise TimeoutExpired: If *timeout* was specified and the process did not
+    finish before the timeout expires.
+  :raise OSError: For some OS-level error, eg. if the program could not be
       found.
-  '''
+  """
 
   if shell and not isinstance(cmd, str):
     cmd = join(cmd)
   elif not shell and isinstance(cmd, str):
     cmd = split(cmd)
+
+  if shell:
+    # Wrapping the call in a shell invokation will not raise an
+    # exception when the file could not actually be executed, thus
+    # we have to check it manually.
+    if isinstance(cmd, str):
+      program = split(cmd)[0]
+    else:
+      program = cmd[0]
+    utils.find_program(program)
 
   try:
     popen = subprocess.Popen(

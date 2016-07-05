@@ -15,6 +15,9 @@ v1.1.1
 * add ``frame`` and ``module`` argument to ``craftr.log()``
 * add ``craftr.ext.cython.PythonInfo`` class
 * add ``craftr.ext.cython.CythonCompiler.compile_project()`` method
+* ``craftr.shell.run()`` now manually checks if the program exists and
+  raises a ``FileNotFoundError`` exception if it does not (only if
+  ``shell=True``)
 
 v1.1.0
 ------
