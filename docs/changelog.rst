@@ -22,6 +22,7 @@ v1.1.1
     raises a :class:`FileNotFoundError` exception if it does not (only if
     ``shell=True``)
   * add :func:`craftr.utils.override_environ`
+  * add :func:`craftr.ext.rules.alias` function
 
 * C/C++ related changes
 

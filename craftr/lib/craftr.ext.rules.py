@@ -31,6 +31,26 @@ import craftr
 import sys
 
 
+def alias(*targets, target_name=None):
+  """
+  Create an alias target that causes all specified "targets"
+  to be built.
+
+  :param targets: The targets to create an alias for. You
+    may pass None for an element, in which case it is ignored.
+  :param target_name: Alternative target name.
+  """
+
+  # TODO: This is a placeholder for a better alias implementation.
+  inputs = []
+  for target in targets:
+    if target:
+      inputs.extend(target.inputs)
+  builder = TargetBuilder(inputs, [], {}, name=target_name)
+  return builder.create_target('echo',
+    description='Collective alias target: {0!r}'.format(builder.name))
+
+
 def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     pool=None, description=None, target_name=None):
   ''' This function creates a :class:`Target` that runs a custom command.
