@@ -18,6 +18,8 @@ v1.1.1
 * ``craftr.shell.run()`` now manually checks if the program exists and
   raises a ``FileNotFoundError`` exception if it does not (only if
   ``shell=True``)
+* ``craftr.memoize_tool()`` will be deprecated in the future and is now
+  a synonym for ``functools.lru_cache()``
 
 v1.1.0
 ------

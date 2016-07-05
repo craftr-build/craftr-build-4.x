@@ -1347,28 +1347,9 @@ def import_module(modname, globals=None, fromlist=None):
   return root
 
 
-def memoize_tool(func):
-  ''' Decorator for functions that take the path to a program as an
-  argument and extract information from it such as its version or
-  raising a :class:`craftr.ext.compiler.ToolDetectionError` if the
-  tool could not be detected.
-
-  Basically, this is just a memoize decorator but it applies
-  :func:`path.normpath` to the argument passed to the wrapped
-  function. :-) '''
-
-  cache = {}
-
-  @functools.wraps(func)
-  def wrapper(program):
-    program = path.normpath(program, abs=False)
-    try:
-      result = cache[program]
-    except KeyError:
-      result = cache[program] = func(program)
-    return result
-
-  return wrapper
+#: Backwards compatibility for the old ``memory_cache()`` decorator.
+#: Will be deprecated in the future, use :func:`functools.lru_cache`
+memoize_tool = functools.lru_cache()
 
 
 def init_module(module):
