@@ -58,6 +58,7 @@ Contents
   cmd
   stl
   ext
+  tutorials
   api
   magic
   changelog
