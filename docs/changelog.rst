@@ -30,7 +30,7 @@ v1.1.1
 
 * Cython related changes
 
-  * add Cython tutorial to docs
+  * add :doc:`Cython tutorial<tutorials/cython>` to docs
   * Cython compiler program can now be overwritten with ``CYTHONC``
   * add :class:`craftr.ext.compiler.cython.PythonInfo` class
   * add :func:`craftr.ext.compiler.cython.CythonCompiler.compile_project` method
