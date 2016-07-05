@@ -13,6 +13,8 @@ v1.1.1
 * add ``craftr.ext.platform.asm`` compiler proxy
 * catching ``ModuleError`` no longer prints the error text (#118)
 * add ``frame`` and ``module`` argument to ``craftr.log()``
+* add ``craftr.ext.cython.PythonInfo`` class
+* add ``craftr.ext.cython.CythonCompiler.compile_project()`` method
 
 v1.1.0
 ------

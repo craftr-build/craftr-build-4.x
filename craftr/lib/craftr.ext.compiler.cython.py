@@ -19,11 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['CythonCompiler']
+__all__ = ['CythonCompiler', 'PythonInfo']
 
 from craftr import *
-
+from craftr.ext import platform
 from craftr.ext.compiler import gen_output_dir, gen_objects, BaseCompiler
+from craftr.ext.python import get_python_config_vars, get_python_framework
+
 import craftr
 import re
 
@@ -105,6 +107,81 @@ class CythonCompiler(BaseCompiler):
 
     builder.meta['cython_outdir'] = gen_output_dir('cython')
     return builder.create_target(command, outputs=outputs, foreach=True)
+
+  def compile_project(self, sources, python_bin='python', cc=None, ld=None, defines=(), **kwargs):
+    """
+    Compile a set of Cython source files into dynamic libraries for the
+    Python version specified with "python_bin".
+
+    :param sources: A list of the `.pyx` source files.
+    :param python_bin: The name of the Python executable to compile for.
+    :param cc: Alternative C/C++ compiler implementation. Defaults
+      to :data:`platform.cc`
+    :param ld: Alternative linker implementation. Defaults to
+      :data:`platform.ld`
+    :param defines: Additional defines for the compiler invokation.
+    :return: A tuple of two elements: 1) The target returned by
+      :meth:`compile` and 2) a list of targets returned by the
+      ``ld.link()`` function
+    """
+
+    if cc is None:
+      cc = platform.cc
+    if ld is None:
+      ld = platform.ld
+
+    py = PythonInfo(python_bin)
+    pyxc_sources = self.compile(
+      py_sources = sources,
+      python_version = py.major_version,
+      **kwargs
+    )
+
+    # Separately compile all source files.
+    link_targets = []
+    for pyxfile, cfile in zip(pyxc_sources.inputs, pyxc_sources.outputs):
+      link_targets.append(ld.link(
+        output = path.setsuffix(pyxfile, py.conf['SO']),
+        output_type = 'dll',
+        keep_suffix = True, # don't let link() replace the suffix
+        inputs = cc.compile(
+          sources = [cfile],
+          frameworks = [py.fw],
+          pic = True,
+          defines = defines
+        )
+      ))
+
+    return pyxc_sources, link_targets
+
+
+class PythonInfo(object):
+  """
+  Container class for meta information of an installed Python
+  version. The information is read from the :mod:`craftr.ext.python`
+  module.
+
+  .. attribute:: fw
+
+    The framework retrieved with :func:`get_python_framework`
+
+  .. attribute:: conf
+
+    The Python version's setuptools configuration retrieved with
+    :mod:`get_python_config_vars`.
+  """
+
+  def __init__(self, pybin):
+    self.conf = get_python_config_vars(pybin)
+    self.fw = get_python_framework(pybin)
+
+  @property
+  def major_version(self):
+    """
+    Returns the major version number of the Python installation.
+    """
+
+    return int(self.conf['VERSION'][0])
 
 
 cythonc = CythonCompiler()
