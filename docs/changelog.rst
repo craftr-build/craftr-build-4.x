@@ -17,7 +17,7 @@ v1.1.1
   * add ``Target.as_explicit()``
   * add ``craftr.ext.platform.asm`` compiler proxy
   * ``craftr.memoize_tool()`` will be deprecated in the future and is now
-      a synonym for ``functools.lru_cache()
+    a synonym for ``functools.lru_cache()``
   * ``craftr.shell.run()`` now manually checks if the program exists and
     raises a ``FileNotFoundError`` exception if it does not (only if
     ``shell=True``)
