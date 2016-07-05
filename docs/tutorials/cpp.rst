@@ -1,4 +1,4 @@
-Using Craftr for C++ projects
-=============================
+Using Craftr for C++ projects (TODO)
+====================================
 
-.. todo: A nice and simple tutorial :)
+.. todo:: Nice tutorial there
