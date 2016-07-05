@@ -819,6 +819,7 @@ class TargetBuilder(object):
     self.module = module or craftr.module()
     self.name = name
     self.target_attrs = {}
+    self.allocated_names = {}
     if not self.name:
       try:
         self.name = Target._get_name(self.module)
@@ -1035,6 +1036,18 @@ class TargetBuilder(object):
         stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)  # rwxrw-r--
 
     return result, filename
+
+  def mkname(self, name):
+    """
+    Create a unique target identifier which based on this target
+    builders :attr:`name` and an incrementing index.
+    """
+
+    if name not in self.allocated_names:
+      self.allocated_names[name] = 0
+      return self.name + name
+    self.allocated_names[name] += 1
+    return self.name + name + '_{0:0>4}'.format(self.allocated_names[name])
 
 
 class Framework(dict):

@@ -23,6 +23,7 @@ v1.1.1
     ``shell=True``)
   * add :func:`craftr.utils.override_environ`
   * add :func:`craftr.ext.rules.alias` function
+  * add :meth:`craftr.TargetBuilder.mkname` method
 
 * C/C++ related changes
 
