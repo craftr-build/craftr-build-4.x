@@ -4,22 +4,35 @@ Changelog
 v1.1.1
 ------
 
-* removed default ``clean`` target, use ``-c`` or ``-cc`` command-line option
-* add ``__no_default`` target when there are no default targets, printing
-  "no default target"
-* add ``Target.as_explicit()``
-* C/C++ compiler implementations now take ``debug`` option into account if
-  no explicit value is passed to the generator function
-* add ``craftr.ext.platform.asm`` compiler proxy
-* catching ``ModuleError`` no longer prints the error text (#118)
-* add ``frame`` and ``module`` argument to ``craftr.log()``
-* add ``craftr.ext.cython.PythonInfo`` class
-* add ``craftr.ext.cython.CythonCompiler.compile_project()`` method
-* ``craftr.shell.run()`` now manually checks if the program exists and
-  raises a ``FileNotFoundError`` exception if it does not (only if
-  ``shell=True``)
-* ``craftr.memoize_tool()`` will be deprecated in the future and is now
-  a synonym for ``functools.lru_cache()``
+* Behaviour changes
+
+  * add ``__no_default`` target when there are no default targets, printing
+    "no default target"
+  * removed default ``clean`` target, use ``-c`` or ``-cc`` command-line option
+  * catching ``ModuleError`` no longer prints the error text (#118)
+
+* API related changes
+
+  * add ``frame`` and ``module`` argument to ``craftr.log()``
+  * add ``Target.as_explicit()``
+  * add ``craftr.ext.platform.asm`` compiler proxy
+  * ``craftr.memoize_tool()`` will be deprecated in the future and is now
+      a synonym for ``functools.lru_cache()
+  * ``craftr.shell.run()`` now manually checks if the program exists and
+    raises a ``FileNotFoundError`` exception if it does not (only if
+    ``shell=True``)
+
+* C/C++ related changes
+
+  * C/C++ compiler implementations now take ``debug`` option into account if
+    no explicit value is passed to the generator function
+
+* Cython related changes
+
+  * add Cython tutorial to docs
+  * Cython compiler program can now be overwritten with ``CYTHONC``
+  * add ``craftr.ext.cython.PythonInfo`` class
+  * add ``craftr.ext.cython.CythonCompiler.compile_project()`` method
 
 v1.1.0
 ------
