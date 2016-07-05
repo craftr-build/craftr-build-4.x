@@ -9,18 +9,19 @@ v1.1.1
   * add ``__no_default`` target when there are no default targets, printing
     "no default target"
   * removed default ``clean`` target, use ``-c`` or ``-cc`` command-line option
-  * catching ``ModuleError`` no longer prints the error text (#118)
+  * catching :class:`craftr.ModuleError` no longer prints the error text (#118)
 
 * API related changes
 
-  * add ``frame`` and ``module`` argument to ``craftr.log()``
-  * add ``Target.as_explicit()``
-  * add ``craftr.ext.platform.asm`` compiler proxy
-  * ``craftr.memoize_tool()`` will be deprecated in the future and is now
-    a synonym for ``functools.lru_cache()``
-  * ``craftr.shell.run()`` now manually checks if the program exists and
-    raises a ``FileNotFoundError`` exception if it does not (only if
+  * add ``frame`` and ``module`` argument to :func:`craftr.log`
+  * add :func:`Target.as_explicit`
+  * add :data:`craftr.ext.platform.asm` compiler proxy
+  * :func:`craftr.memoize_tool` will be deprecated in the future and is now
+    a synonym for :func:`functools.lru_cache`
+  * :func:`craftr.shell.run()` now manually checks if the program exists and
+    raises a :class:`FileNotFoundError` exception if it does not (only if
     ``shell=True``)
+  * add :func:`craftr.utils.override_environ`
 
 * C/C++ related changes
 
@@ -31,8 +32,8 @@ v1.1.1
 
   * add Cython tutorial to docs
   * Cython compiler program can now be overwritten with ``CYTHONC``
-  * add ``craftr.ext.cython.PythonInfo`` class
-  * add ``craftr.ext.cython.CythonCompiler.compile_project()`` method
+  * add :class:`craftr.ext.compiler.cython.PythonInfo` class
+  * add :func:`craftr.ext.compiler.cython.CythonCompiler.compile_project` method
 
 v1.1.0
 ------

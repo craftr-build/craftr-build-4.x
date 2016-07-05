@@ -19,11 +19,12 @@
 # THE SOFTWARE.
 
 from craftr import environ, path
+from tempfile import mkstemp as _mkstemp
+from contextlib import contextmanager
 
 import os
 import re
 import sys
-from tempfile import mkstemp as _mkstemp
 
 # PATH fiddling --------------------------------------------------------------
 
@@ -91,11 +92,35 @@ def find_program(name):
 
 
 def test_program(name):
+  """
+  Uses :func:`find_program` to find the path to "name" and returns
+  True if it could be found, False otherwise.
+  """
+
   try:
     find_program(name)
   except OSError:
     return False
   return True
+
+
+@contextmanager
+def override_environ(new_environ=None):
+  """
+  Context-manager that restores the old :data:`environ` on exit.
+
+  :param new_environ: A dictionary that will update the :data:`environ`
+    inside the context-manager.
+  """
+
+  old_environ = environ.copy()
+  try:
+    if new_environ:
+      environ.update(new_environ)
+    yield
+  finally:
+    environ.clear()
+    environ.update(old_environ)
 
 
 # General Programming Utilities ----------------------------------------------

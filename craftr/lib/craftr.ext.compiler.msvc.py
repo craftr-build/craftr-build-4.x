@@ -19,7 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['detect', 'MsvcCompiler', 'MsvcLinker', 'MsvcAr',
+__all__ = ['detect', 'get_vs_install_dir', 'get_vs_environment',
+  'MsvcCompiler', 'MsvcLinker', 'MsvcAr', 'MsvcSuite',
   'Compiler', 'Linker', 'Archiver']
 
 from craftr import *
@@ -37,18 +38,17 @@ def detect(program):
   be passed to the constructor of `MsvcCompiler` or raises
   `ToolDetectionError`.
 
-  This function also supports detecting the Clang-CL compiler. '''
+  This function also supports detecting the Clang-CL compiler.
 
-  ''' Assuming *program* points to a MSVC compiler or Clang-CL compiler,
-  this function extracts meta information of the tool. The returned
-  dictionary contains the following keys:
+  :param program: The name of the program to execute and check.
+  :return: :class:`dict` of
 
-  * name (either ``'msvc'`` or ``'clang-cl'``)
-  * version
-  * version_str
-  * target
-  * thread_model
-  * msvc_deps_prefix
+    * name (either ``'msvc'`` or ``'clang-cl'``)
+    * version
+    * version_str
+    * target
+    * thread_model
+    * msvc_deps_prefix
 
   :raise OSError: If *program* can not be executed (eg. if it does not exist).
   :raise ToolDetectionError: If *program* is not GCC or GCC++.
@@ -223,25 +223,20 @@ class MsvcCompiler(BaseCompiler):
   """
   Interface for the MSVC compiler.
 
-  If the ``cl`` program is not readily available, :func:`get_vs_install_dir`
-  will be used to detect the most recent compiler version. You can influence
-  which version of Visual Studio to use using the ``VSVERSIONS`` option.
+  :param program: The name of the MSVC compiler program. If not specified,
+    ``cl`` will be tested, otherwise :meth:`get_vs_install_dir` will
+    be used.
+  :param language: The language name to compile for. Must be ``c``,
+    ``c++`` or ``asm``.
+  :param desc: The description returned by :func:`detect`. If not
+    specified, :func:`detect` will be called by the constructor.
+  :param kwargs: Additional arguments that will be taken into account
+    as a :class:`Framework` to :meth:`compile`.
   """
 
   name = 'msvc'
 
   def __init__(self, program='cl', language='c', desc=None, **kwargs):
-    """
-    :param program: The name of the MSVC compiler program. If not specified,
-      ``cl`` will be tested, otherwise :meth:`get_vs_install_dir` will
-      be used.
-    :param language: The language name to compile for. Must be ``c``,
-      ``c++`` or ``asm``.
-    :param desc: TODO
-    :param kwargs: Additional arguments that will be taken into account
-      as a :class:`Framework` to :meth:`compile`.
-    """
-
     super().__init__(program=program, language=language, **kwargs)
     if language not in ('c', 'c++', 'asm'):
       raise ValueError('unsupported language: {0}'.format(language))
@@ -487,8 +482,9 @@ class MsvcSuite(object):
     cl = path.join(self.toolsdir, 'cl.exe')
     link = path.join(self.toolsdir, 'link.exe')
     lib = path.join(self.toolsdir, 'lib.exe')
+    with utils.override_environ(self.env):
+      self.desc = detect(cl)
 
-    self.desc = detect(cl)
     self.include = tuple(filter(bool, self.env['INCLUDE'].split(os.pathsep)))
     self.libpath = tuple(filter(bool, self.env['LIBPATH'].split(os.pathsep)))
     self.lib = tuple(filter(bool, self.env['LIB'].split(os.pathsep)))
