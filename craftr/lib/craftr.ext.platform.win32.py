@@ -21,8 +21,8 @@
 
 __all__ = ['name', 'standard', 'obj', 'bin', 'lib', 'dll', 'get_tool']
 
-from craftr import path, environ
-import functools
+from craftr import path, environ, utils
+from functools import lru_cache
 
 name = 'win'
 standard = 'nt'
@@ -33,21 +33,26 @@ lib = lambda x: path.addsuffix(x, '.lib')
 dll = lambda x: path.addsuffix(x, '.dll')
 
 
-@functools.lru_cache(maxsize=None)
-def get_tool(name):
+@lru_cache()
+def get_tool(name, __cache={}):
   from craftr.ext.compiler import msvc
-  # xxx: Implement detecting the compiler if no compiler toolset is
-  # available in the PATH by default via VS__COMNTOOLS and even allow
-  # using a GCC interface instead.
-  if name == 'cc':
+
+  if 'suite' in __cache:
+    # If we were detecting to use a Suite once, we will
+    # use it always (damn this is so dirty).
+    return getattr(__cache['suite'], name)
+
+  # TODO: Support MinGW
+  if name == 'cc' and ('CC' in environ or utils.test_program('cl')):
     return msvc.Compiler(environ.get('CC', 'cl'), 'c')
-  elif name == 'cxx':
+  elif name == 'cxx' and ('CXX' in environ or utils.test_program('cl')):
     return msvc.Compiler(environ.get('CXX', 'cl'), 'c++')
-  elif name == 'asm':
+  elif name == 'asm' and ('AS' in environ or utils.test_program('cl')):
     return msvc.Compiler(environ.get('AS', 'cl'), 'asm')
-  elif name == 'ld':
+  elif name == 'ld' and utils.test_program('cl'):
     return msvc.Linker('link')
-  elif name == 'ar':
+  elif name == 'ar' and utils.test_program('cl'):
     return msvc.Archiver('lib')
-  else:
-    raise ValueError(name)
+
+  __cache['suite'] = msvc.MsvcSuite()
+  return get_tool(name)

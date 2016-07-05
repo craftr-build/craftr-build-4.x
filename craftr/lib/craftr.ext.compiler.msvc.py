@@ -25,12 +25,14 @@ __all__ = ['detect', 'MsvcCompiler', 'MsvcLinker', 'MsvcAr',
 from craftr import *
 from craftr.ext.compiler import *
 from craftr.ext import platform
-import os, re, tempfile
+from functools import lru_cache
+import json, os, re, tempfile, sys
 
 
-@memoize_tool
+@lru_cache()
 def detect(program):
-  ''' Detects the version of the MSVC compiler from the specified
+  """
+  Detects the version of the MSVC compiler from the specified
   *program* name and returns a dictionary with information that can
   be passed to the constructor of `MsvcCompiler` or raises
   `ToolDetectionError`.
@@ -49,7 +51,8 @@ def detect(program):
   * msvc_deps_prefix
 
   :raise OSError: If *program* can not be executed (eg. if it does not exist).
-  :raise ToolDetectionError: If *program* is not GCC or GCC++. '''
+  :raise ToolDetectionError: If *program* is not GCC or GCC++.
+  """
 
   clang_cl_expr = r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)'
   msvc_expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
@@ -116,16 +119,133 @@ def detect(program):
   }
 
 
+@lru_cache()
+def get_vs_install_dir(versions=None, prefer_newest=True):
+  """
+  Returns the path to the newest installed version of Visual Studio.
+  This is determined by reading the environment variables
+  ``VS***COMNTOOLS``.
+
+  If "versions" is specified, it must be a list of three-digit version
+  numbers like ``100`` for Visual Studio 2010, ``110`` for 2012,
+  ``120`` for 2013, ``140`` for 2015, etc.
+
+  :param versions: Optionally, a list of acceptable Visual Studio
+    version numbers that will be considered. If specified, the first
+    detected installation will be used.
+  :param prefer_newest: True if the newest version should be preferred.
+  :return: :class:`str` of the main installation directory.
+  :raise ToolDetectionError: If no Visual Studio insallation
+    could be found.
+
+  .. note::
+
+    The option ``VSVERSIONS`` can be used to override the
+    "versions" parameter if no explicit value is specified.
+  """
+
+  if not versions:
+    versions = [x for x in options.get('VSVERSIONS', '').split(',') if x]
+
+  for v in versions:
+    if len(v) != 3 or not all(c.isdigit() for c in v):
+      raise ValueError('not a valid VS version: {0!r}'.format(v))
+
+  if versions:
+    choices = ['VS{0}COMNTOOLS'.format(x) for x in versions]
+  else:
+    choices = []
+    for key, value in environ.items():
+      if key.startswith('VS') and key.endswith('COMNTOOLS'):
+        choices.append(key)
+    choices.sort(reverse=prefer_newest)
+  if not choices:
+    raise ToolDetectionError('Visual Studio installation path could not be detected.')
+
+  res = environ[choices[0]].rstrip('\\')
+  return path.dirname(path.dirname(res))
+
+
+@lru_cache()
+def get_vs_environment(install_dir, arch=None):
+  """
+  Given an installation directory returned by :func:`get_vs_install_dir`,
+  returns the environment that is created from running the Visual Studio
+  vars batch file.
+
+  :param install_dir: The installation directory.
+  :param arch: The architecture name. If no value is specified,
+    an architecture matching the current host operating system
+    is selected.
+
+  .. note::
+
+    The option ``VSARCH`` can be used to specify the default
+    value for "arch" if no explicit value is specified.
+  """
+
+  parch = environ.get('PROCESSOR_ARCHITEW6432')
+  if not parch:
+    parch = environ.get('PROCESSOR_ARCHITECTURE', 'x86')
+  parch = parch.lower()
+  assert parch in ('x86', 'amd64', 'ia64')
+
+  if arch is None:
+    arch = options.get('VSARCH', parch)
+
+  # Adjust the architecture if the host system is incompatible
+  # (i.e. select the correct cross compiler).
+  if parch in ('x86', 'amd64') and not arch.startswith(parch):
+    arch = parch + '_' + arch
+
+  if arch == 'x86':
+    toolsdir = basedir = path.join(install_dir, 'VC', 'bin')
+    batch = path.join(toolsdir, 'vcvars32.bat')
+  else:
+    toolsdir = path.join(install_dir, 'VC', 'bin', arch)
+    basedir = path.join(install_dir, 'VC', 'bin', parch)
+    if arch == 'amd64':
+      batch = path.join(toolsdir, 'vcvars64.bat')
+    else:
+      batch = path.join(toolsdir, 'vcvars' + arch + '.bat')
+
+  info('Detected VS architecture:', arch)
+
+  # Run the batch file and print the environment.
+  cmd = [batch, shell.safe('&&'), sys.executable,
+    '-c', 'import os, json; print(json.dumps(dict(os.environ)))']
+  env = json.loads(shell.pipe(cmd, shell=True).output)
+
+  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env}
+
+
 class MsvcCompiler(BaseCompiler):
-  ''' Interface for the MSVC compiler. '''
+  """
+  Interface for the MSVC compiler.
+
+  If the ``cl`` program is not readily available, :func:`get_vs_install_dir`
+  will be used to detect the most recent compiler version. You can influence
+  which version of Visual Studio to use using the ``VSVERSIONS`` option.
+  """
 
   name = 'msvc'
 
   def __init__(self, program='cl', language='c', desc=None, **kwargs):
+    """
+    :param program: The name of the MSVC compiler program. If not specified,
+      ``cl`` will be tested, otherwise :meth:`get_vs_install_dir` will
+      be used.
+    :param language: The language name to compile for. Must be ``c``,
+      ``c++`` or ``asm``.
+    :param desc: TODO
+    :param kwargs: Additional arguments that will be taken into account
+      as a :class:`Framework` to :meth:`compile`.
+    """
+
     super().__init__(program=program, language=language, **kwargs)
-    if language not in ('c', 'c++'):
+    if language not in ('c', 'c++', 'asm'):
       raise ValueError('unsupported language: {0}'.format(language))
-    if desc is None:
+    if not desc:
       desc = detect(program)
     self.desc = desc
     self.name = desc['name']
@@ -344,6 +464,40 @@ class MsvcAr(BaseCompiler):
     builder.target['description'] = builder.get('description', 'MSVC lib ($out)')
     builder.meta['staticlib_output'] = output
     return builder.create_target(command, outputs=[output])
+
+
+class MsvcSuite(object):
+  """
+  Represents an MSVC installation and its meta information.
+  """
+
+  def __init__(self, vsversions=None, vsarch=None):
+    install_dir = get_vs_install_dir(vsversions)
+    data = get_vs_environment(install_dir)
+    self.basedir = data['basedir']
+    self.toolsdir = data['toolsdir']
+    self.env = data['env']
+
+    # TODO: This is a dirty hack to make sure the Visual Studio
+    #       compiler can be run until craftr-build/craftr#120 is
+    #       implemented.
+    utils.prepend_path(self.basedir)
+    utils.prepend_path(self.toolsdir)
+
+    cl = path.join(self.toolsdir, 'cl.exe')
+    link = path.join(self.toolsdir, 'link.exe')
+    lib = path.join(self.toolsdir, 'lib.exe')
+
+    self.desc = detect(cl)
+    self.include = tuple(filter(bool, self.env['INCLUDE'].split(os.pathsep)))
+    self.libpath = tuple(filter(bool, self.env['LIBPATH'].split(os.pathsep)))
+    self.lib = tuple(filter(bool, self.env['LIB'].split(os.pathsep)))
+
+    self.cc = MsvcCompiler(cl, 'c', desc=self.desc, include=self.include, libpath=self.libpath)
+    self.cxx = MsvcCompiler(cl, 'c++', desc=self.desc, include=self.include, libpath=self.libpath)
+    self.asm = MsvcCompiler(cl, 'asm', desc=self.desc, include=self.include, libpath=self.libpath)
+    self.ld = MsvcLinker(link, libpath=self.lib)
+    self.ar = MsvcAr(lib)
 
 
 Compiler = MsvcCompiler

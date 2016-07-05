@@ -40,18 +40,24 @@ def prepend_path(pth):
 
 
 def find_program(name):
-  ''' Finds the program *name* in the `PATH` and returns the full
+  """
+  Finds the program *name* in the `PATH` and returns the full
   absolute path to it. On Windows, this also takes the `PATHEXT`
   variable into account.
 
-  Arguments:
-    name: The name of the program to find.
-  Returns:
-    str: The absolute path to the program.
-  Raises:
-    FileNotFoundError: If the program could not be found in the PATH. '''
+
+  :param name: The name of the program to find.
+  :return: :class:`str` -- The absolute path to the program.
+  :raise FileNotFoundError: If the program could not be found in the PATH.
+  :raise PermissionError: If a candidate for "name" was found but
+    it is not executable.
+  """
 
   if path.isabs(name):
+    if not path.isfile(name):
+      raise FileNotFoundError(name)
+    if not os.access(name, os.X_OK):
+      raise PermissionError('{0!r} is not executable'.format(name))
     return name
 
   iswin = sys.platform.startswith('win32')
@@ -68,14 +74,28 @@ def find_program(name):
   else:
     pathext = [None]
 
+  first_candidate = None
   for dirname in environ['PATH'].split(path.pathsep):
     fullname = path.join(dirname, name)
     for ext in pathext:
       extname = (fullname + ext) if ext else fullname
-      if path.isfile(extname) and os.access(extname, os.X_OK):
-        return extname
+      if path.isfile(extname):
+        if os.access(extname, os.X_OK):
+          return extname
+        if first_candidate is None:
+          first_candidate = extname
+
+  if first_candidate:
+    raise PermissionError('{0!r} is not executable'.format(first_candidate))
   raise FileNotFoundError(name)
 
+
+def test_program(name):
+  try:
+    find_program(name)
+  except OSError:
+    return False
+  return True
 
 
 # General Programming Utilities ----------------------------------------------
