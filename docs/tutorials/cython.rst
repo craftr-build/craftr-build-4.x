@@ -49,3 +49,30 @@ version of the above shorthand:
         pic = True
       )
     )
+
+Compiling with ``--embed``
+--------------------------
+
+Cython has an ``--embed`` command-line option that will cause the
+generated C/C++ source code to contain a ``main()`` entry point.
+You can just pass the ``main`` parameter to ``compile_project()``
+and it will automatically generate an executable:
+
+.. code:: python
+
+  from craftr import *
+  from craftr.ext import rules
+  from craftr.ext.compiler import cython
+
+  project = cython.cythonc.compile_project(
+    main = path.local('main.pyx'),
+    python_bin = options.get('PYTHON', 'python'),
+  )
+
+  # Allows you to invoke `craftr .run` to compile and run
+  run = rules.run(project.main_bin)
+
+.. note::
+
+  You can combine compiling C-Extensions and an executable in a
+  single call to :func:`~craftr.ext.compiler.cython.CythonCompiler.compile_project`.

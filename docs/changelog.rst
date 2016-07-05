@@ -34,8 +34,9 @@ v1.1.1
 
   * add :doc:`Cython tutorial<tutorials/cython>` to docs
   * Cython compiler program can now be overwritten with ``CYTHONC``
-  * add :class:`craftr.ext.compiler.cython.PythonInfo` class
-  * add :func:`craftr.ext.compiler.cython.CythonCompiler.compile_project` method
+  * add support for ``embed`` parameter to :func:`~craftr.ext.compiler.cython.CythonCompiler.compile`
+  * add :class:`~craftr.ext.compiler.cython.PythonInfo` class
+  * add :func:`~craftr.ext.compiler.cython.CythonCompiler.compile_project` method
 
 v1.1.0
 ------

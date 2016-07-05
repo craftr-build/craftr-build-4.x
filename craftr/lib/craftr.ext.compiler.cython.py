@@ -18,11 +18,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+"""
+Interface for compiling Cython source code. See also :doc:`tutorials/cython`.
+"""
 
 __all__ = ['CythonCompiler', 'PythonInfo']
 
 from craftr import *
-from craftr.ext import platform
+from craftr.ext import platform, rules
 from craftr.ext.compiler import gen_output_dir, gen_objects, BaseCompiler
 from craftr.ext.python import get_python_config_vars, get_python_framework
 
@@ -89,6 +92,9 @@ class CythonCompiler(BaseCompiler):
     :param include: Additional include directories for Cython.
     :param fast_fail: True to enable the ``--fast-fail`` flag.
     :param cpp: True to translate to C++ source files.
+    :param embed: Pass ``--embed`` to Cython. Note that if multiple
+      files are specfied in "py_sources", all of them will have a
+      ``int main()`` function.
     :param additional_flags: List of additional flags for the Cython command.
     :param python_version: The Python version to build for (2 or 3).
       Defaults to 3.
@@ -101,6 +107,7 @@ class CythonCompiler(BaseCompiler):
     builder = self.builder(py_sources, frameworks, kwargs, name=target_name)
 
     cpp = builder.get('cpp', False)
+    embed = builder.get('embed', False)
     python_version = builder.get('python_version', 3)
     fast_fail = builder.get('fast_fail', False)
 
@@ -114,18 +121,24 @@ class CythonCompiler(BaseCompiler):
     command += ['-I' + x for x in include]
     command += ['--fast-fail'] if fast_fail else []
     command += ['--cplus'] if cpp else []
+    command += ['--embed'] if embed else []
     command += builder.merge('additional_flags')
-
-    # xxx: Determine the Python Framework and add it to the target!
 
     builder.meta['cython_outdir'] = gen_output_dir('cython')
     return builder.create_target(command, outputs=outputs, foreach=True)
 
-  def compile_project(self, sources, python_bin='python', cc=None, ld=None, defines=(), **kwargs):
+  #: Result structure for :meth:`compile_project`.
+  ProjectResult = utils.slotobject('ProjectResult',
+    'sources libs main_source main_bin alias')
+
+  def compile_project(self, main=None, sources=[], python_bin='python', cc=None, ld=None, defines=(), **kwargs):
     """
     Compile a set of Cython source files into dynamic libraries for the
     Python version specified with "python_bin".
 
+    :param main: Optional filename of a ``.pyx`` file that will
+      be compiled with the ``--embed`` option and compiled to an
+      executable file.
     :param sources: A list of the `.pyx` source files.
     :param python_bin: The name of the Python executable to compile for.
     :param cc: Alternative C/C++ compiler implementation. Defaults
@@ -133,10 +146,11 @@ class CythonCompiler(BaseCompiler):
     :param ld: Alternative linker implementation. Defaults to
       :data:`platform.ld`
     :param defines: Additional defines for the compiler invokation.
-    :return: A tuple of two elements: 1) The target returned by
-      :meth:`compile` and 2) a list of targets returned by the
-      ``ld.link()`` function
+    :return: A :class:`ProjectResult` object
     """
+
+    builder = self.builder([], {}, kwargs)
+    kwargs.pop('target_name', None)
 
     if cc is None:
       cc = platform.cc
@@ -144,16 +158,40 @@ class CythonCompiler(BaseCompiler):
       ld = platform.ld
 
     py = PythonInfo(python_bin)
-    pyxc_sources = self.compile(
+    sources = self.compile(
       py_sources = sources,
       python_version = py.major_version,
+      target_name = builder.mkname('_sources'),
       **kwargs
     )
 
-    # Separately compile all source files.
-    link_targets = []
-    for pyxfile, cfile in zip(pyxc_sources.inputs, pyxc_sources.outputs):
-      link_targets.append(ld.link(
+    if main:
+      main_source = self.compile(
+        py_sources = [main],
+        python_version = py.major_version,
+        embed = True,
+        target_name = builder.mkname('_main_source'),
+        **kwargs
+      )
+      main_bin = ld.link(
+        output = path.rmvsuffix(main),
+        output_type = 'bin',
+        inputs = cc.compile(
+          sources = main_source.outputs,
+          frameworks = [py.fw],
+          pic = False,
+          defines = defines,
+          target_name = builder.mkname('_main_compile')
+        ),
+        target_name = builder.mkname('_main_bin')
+      )
+    else:
+      main_bin = None
+
+    # Separately compile all source files and link them to C-extensions.
+    libs = []
+    for pyxfile, cfile in zip(sources.inputs, sources.outputs):
+      libs.append(ld.link(
         output = path.setsuffix(pyxfile, py.conf['SO']),
         output_type = 'dll',
         keep_suffix = True, # don't let link() replace the suffix
@@ -161,11 +199,14 @@ class CythonCompiler(BaseCompiler):
           sources = [cfile],
           frameworks = [py.fw],
           pic = True,
-          defines = defines
-        )
+          defines = defines,
+          target_name = builder.mkname('_compile')
+        ),
+        target_name = builder.mkname('_lib')
       ))
 
-    return pyxc_sources, link_targets
+    alias = rules.alias(main_bin, *libs, target_name=builder.name)
+    return self.ProjectResult(sources, libs, main_source, main_bin, alias)
 
 
 class PythonInfo(object):
@@ -197,4 +238,6 @@ class PythonInfo(object):
     return int(self.conf['VERSION'][0])
 
 
+#: An instance of the :class:`CythonCompiler` created with the
+#: default arguments.
 cythonc = CythonCompiler()
