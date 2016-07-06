@@ -110,7 +110,7 @@ are here for reference:
    your ``additional_flags`` passed to ``cc.compile()`` also being
    passed to ``ar.staticlib()`` automatically :)
 4. All frameworks will then be expanded into a single list using
-   :func:`~craftr.expand_inputs` (to flatten out framework dependencies).
+   :func:`~craftr.expand_frameworks` (to flatten out framework dependencies).
 5. A :class:`~craftr.FrameworkJoin` will be created from *all* frameworks
    (including the special ``**kwargs`` framework) to enable the generator
    function to read the settings.
