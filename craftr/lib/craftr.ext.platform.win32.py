@@ -50,7 +50,7 @@ def get_tool(name, __cache={}):
   elif name == 'asm' and ('AS' in environ or utils.test_program('cl')):
     return msvc.Compiler(environ.get('AS', 'cl'), 'asm')
   elif name == 'ld' and utils.test_program('cl'):
-    return msvc.Linker('link')
+    return msvc.Linker('link', desc=get_tool('cc').desc)
   elif name == 'ar' and utils.test_program('cl'):
     return msvc.Archiver('lib')
 

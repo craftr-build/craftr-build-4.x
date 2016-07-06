@@ -374,14 +374,18 @@ class MsvcLinker(BaseCompiler):
 
   name = 'msvc:link'
 
-  def __init__(self, program='link', **kwargs):
+  def __init__(self, program='link', desc=None, **kwargs):
+    if desc is None:
+      raise TypeError('MsvcLinker requires description of MsvcCompiler')
     super().__init__(program=program, **kwargs)
+    self.desc = desc
 
-  def link(self, output, inputs, output_type='bin', frameworks=(),
+  def link(self, output, inputs, frameworks=(),
       target_name=None, meta=None, **kwargs):
     '''
     Supported options:
 
+      * output_type
       * keep_suffix
       * libpath
       * libs
@@ -406,6 +410,7 @@ class MsvcLinker(BaseCompiler):
 
     builder = self.builder(inputs, frameworks, kwargs, name=target_name, meta=meta)
 
+    output_type = builder.get('output_type', 'bin')
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
     keep_suffix = builder.get('keep_suffix', False)
@@ -511,7 +516,7 @@ class MsvcSuite(object):
     self.cc = MsvcCompiler(cl, 'c', desc=self.desc, include=self.include, libpath=self.libpath)
     self.cxx = MsvcCompiler(cl, 'c++', desc=self.desc, include=self.include, libpath=self.libpath)
     self.asm = MsvcCompiler(cl, 'asm', desc=self.desc, include=self.include, libpath=self.libpath)
-    self.ld = MsvcLinker(link, libpath=self.lib)
+    self.ld = MsvcLinker(link, desc=self.desc, libpath=self.lib)
     self.ar = MsvcAr(lib)
 
 
