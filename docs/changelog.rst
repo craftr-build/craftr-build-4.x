@@ -31,6 +31,7 @@ v1.1.1
     backwards compatible import exists
   * removed ``BaseCompiler.__getitem__()`` and ``~.__setitem__()``
   * add ``BaseCompiler.register_hook()``
+  * :meth:`craftr.TargetBuilder.add_framework()` was updated
 
 * C/C++ related changes
 
