@@ -24,6 +24,9 @@ v1.1.1
   * add :func:`craftr.utils.override_environ`
   * add :func:`craftr.ext.rules.alias` function
   * add :meth:`craftr.TargetBuilder.mkname` method
+  * add :func:`craftr.TargetBuilder.setdefault` method
+  * add :data:`craftr.FrameworkJoin.defaults` member
+  * add :func:`craftr.FrameworkJoin.iter_frameworks` method
   * moved ``craftr.ext.compiler.BaseCompiler`` to :class:`craftr.ext.compiler._base.BaseCompiler`,
     backwards compatible import exists
 

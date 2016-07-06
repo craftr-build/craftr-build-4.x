@@ -815,7 +815,8 @@ class TargetBuilder(object):
     self.inputs = inputs
     self.frameworks = expand_frameworks(frameworks)
     self.kwargs = kwargs
-    self.options = FrameworkJoin(Framework(self.caller, kwargs), *self.frameworks)
+    self.options = FrameworkJoin(
+      Framework(self.caller, kwargs), *self.frameworks)
     self.module = module or craftr.module()
     self.name = name
     self.target_attrs = {}
@@ -883,17 +884,31 @@ class TargetBuilder(object):
       message = '{0} ({1})'.format(message, cause)
     self.log('warn', message, stacklevel=2)
 
+  def setdefault(self, key, value):
+    """
+    Sets a value in the :attr:`fwdefaults` framework.
+    """
+
+    self.options.defaults[key] = value
+
   def add_framework(self, __fw_or_name, __fw_dict=None, **kwargs):
-    ''' Add or create a new Framework and add it to :attr:`options`
-    and :attr:`frameworks`. '''
+    """
+    Add or create a new Framework and add it to :attr:`options`
+    and :attr:`frameworks`. The framework will be added to the
+    end of the frameworks list, thus it will be considered after
+    all others.
+
+    .. note:: It is important to keep this behaviour. If we want
+      to implement adding frameworks to the beginning of the
+      framework list, add a new method or parameter!
+    """
 
     if not isinstance(__fw_or_name, Framework):
       fw = Framework(__fw_or_name, __fw_dict, **kwargs)
     else:
       fw = __fw_or_name
-    if fw not in self.frameworks:
-      self.frameworks.append(fw)
-    self.options += [fw]
+    self.frameworks.append(fw)
+    self.options.frameworks.append(fw)
     return fw
 
   def expand_inputs(self, inputs):
@@ -1110,12 +1125,18 @@ class FrameworkJoin(object):
 
     The list of :class:`Framework` objects.
 
+  .. attribute:: defaults
+
+    An additional framework that can be used to set default
+    values. This framework will always be checked last.
+
   .. automethod:: FrameworkJoin.__iadd__
   '''
 
   def __init__(self, *frameworks):
     self.used_keys = set()
     self.frameworks = []
+    self.defaults = Framework('defaults')
     self += frameworks
 
   def __iadd__(self, frameworks):
@@ -1128,12 +1149,16 @@ class FrameworkJoin(object):
 
   def __getitem__(self, key):
     self.used_keys.add(key)
-    for fw in self.frameworks:
+    for fw in self.iter_frameworks():
       try:
         return fw[key]
       except KeyError:
         pass
     raise KeyError(key)
+
+  def iter_frameworks(self):
+    yield from self.frameworks
+    yield self.defaults
 
   def get(self, key, default=None):
     ''' Get the first available value of *key* from the frameworks. '''
@@ -1150,7 +1175,7 @@ class FrameworkJoin(object):
 
     self.used_keys.add(key)
     result = []
-    for fw in self.frameworks:
+    for fw in self.iter_frameworks():
       try:
         value = fw[key]
       except KeyError:
@@ -1165,7 +1190,7 @@ class FrameworkJoin(object):
     ''' Returns a set of all keys in all frameworks. '''
 
     keys = set()
-    for fw in self.frameworks:
+    for fw in self.iter_frameworks():
       keys |= fw.keys()
     return keys
 
