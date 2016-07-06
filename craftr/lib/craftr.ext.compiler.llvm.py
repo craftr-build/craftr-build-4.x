@@ -45,7 +45,7 @@ def detect(program):
   :param name:
   :param target:
   :param thread_model:
-  :param cpp_stdlib: (only present for Clang++)
+  :param cpp_stdlib: (only present for C++ compilers)
 
   :raise OSError: If *program* can not be executed (eg. if it does not exist).
   :raise ToolDetectionError: If *program* is not Clang or Clang++. '''
@@ -58,6 +58,11 @@ def detect(program):
 
   if not all(version):
     raise ToolDetectionError('could not determine LLVM version')
+
+  name = version[1].lower()
+  if name == 'clang':
+    name = 'llvm'
+  assert name in ('gcc', 'llvm')
 
   result = {
     'version': version[2],
@@ -110,7 +115,7 @@ class LlvmCompiler(BaseCompiler):
   ''' Interface for the LLVM compiler. '''
 
   name = 'LLVM'
-  _supported_compilers = ('gcc', 'clang', 'llvm')
+  _supported_compilers = ('gcc', 'llvm')
 
   def __init__(self, program, language, desc=None, **kwargs):
     super().__init__(program=program, language=language, **kwargs)
@@ -119,7 +124,7 @@ class LlvmCompiler(BaseCompiler):
     self.desc = desc
     self.version = desc['version']
     self.name = desc['name']
-    assert self.name in ('gcc', 'clang', 'llvm'), self.name
+    assert self.name in self._supported_compilers, self.name
 
   def compile(self, sources, frameworks=(), target_name=None,  **kwargs):
     '''
@@ -131,6 +136,8 @@ class LlvmCompiler(BaseCompiler):
 
     :param include: Additional include directories.
     :param defines: Preprocessor definitions.
+    :param forced_include: Force includes for every compilation unit.
+    :param exceptions: Allows you to disable exceptions.
     :param language: Override compilation language. Choices are
       ``'c'``, ``'cpp'``, ``'asm'``
     :param debug: True ot disable optimizations and enable debugging symbols.
@@ -151,21 +158,22 @@ class LlvmCompiler(BaseCompiler):
     :param additional_flags: Additional flags for the compiler command-
     :param gcc_additional_flags: Additional flags (GCC only).
     :param gcc_compile_additional_flags: Additional flags (GCC only).
+    :param gcc_remove_flags: Flags to remove (GCC only).
+    :param gcc_compile_remove_flags: Flags to remove (GCC only).
     :param llvm_additional_flags: Additional flags (LLVM only).
     :param llvm_compile_additional_flags: Additional flags (LLVM only).
+    :param llvm_remove_flags: Flags to remove (LLVM only).
+    :param llvm_compile_remove_flags: Flags to remove (LLVM only).
     '''
 
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
     fw = builder.add_framework(builder.name)
 
-    include = utils.unique(builder.merge('include'))
-    defines = utils.unique(builder.merge('defines'))
     language = builder['language']
     debug = builder.get('debug', options.get_bool('debug'))
     std = builder.get('std')
     pedantic = builder.get('pedantic', False)
-    pic = builder.get('pic', False)
     warn = builder.get('warn', 'all')
     optimize = builder.get('optimize', None)
     autodeps = builder.get('autodeps', True)
@@ -173,7 +181,7 @@ class LlvmCompiler(BaseCompiler):
     if not description:
       description = '{0} compile $out'.format(self.name)
 
-    if platform.name == 'Darwin':
+    if platform.name == platform.DARWIN:
       osx_fwpath = builder.merge('osx_fwpath')
       osx_frameworks = builder.merge('osx_frameworks')
     else:
@@ -191,20 +199,17 @@ class LlvmCompiler(BaseCompiler):
       fw['libs'] = [stdlib]
 
     command = [builder['program']]
-    if language == 'asm':
-      command += ['-x', 'assembler']
-    elif language:
-      command += ['-x', language]
     command += ['-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
-    if self.name in ('clang', 'llvm'):
-      command += ['-stdlib=lib' + stdlib] if stdlib else []
+    command += ['-stdlib=lib' + stdlib] if stdlib else []
     command += ['-pedantic'] if pedantic else []
-    command += ['-I' + x for x in include]
-    command += ['-D' + x for x in defines]
-    command += ['-fPIC'] if pic else []
+    command += ['-I' + x for x in builder.merge('include')]
+    command += ['-D' + x for x in builder.merge('defines')]
+    command += utils.flatten([('-include', x) for x in builder.merge('forced_include')])
+    command += ['-fPIC'] if builder.get('pic', False) else []
     command += ['-F' + x for x in osx_fwpath]
+    command += ['-fno-exceptions'] if not builder.get('exceptions', True) else []
     command += utils.flatten(['-framework', x] for x in osx_frameworks)
 
     if warn == 'all':
@@ -234,14 +239,8 @@ class LlvmCompiler(BaseCompiler):
       command += ['-MD', '-MP', '-MF', '$depfile']
 
     command += builder.merge('additional_flags')
-    if self.name in ('clang', 'llvm'):
-      command += builder.merge('llvm_additional_flags')
-      command += builder.merge('llvm_compile_additional_flags')
-    elif self.name == 'gcc':
-      command += builder.merge('gcc_additional_flags')
-      command += builder.merge('gcc_compile_additional_flags')
-    else:
-      assert False, self.name
+    command += builder.merge(self.name + '_additional_flags')
+    command += builder.merge(self.name + '_compile_additional_flags')
 
     if session.buildtype == 'external':
       if language == 'c':
@@ -251,10 +250,13 @@ class LlvmCompiler(BaseCompiler):
       elif language == 'asm':
         command += shell.split(options.get('ASMFLAGS', ''))
 
+    remove_flags(command, builder.merge(self.name + '_remove_flags'), builder)
+    remove_flags(command, builder.merge(self.name + '_compile_remove_flags'), builder)
+
     return builder.create_target(command, outputs=objects, foreach=True,
       description=description)
 
-  def link(self, output, inputs, output_type='bin', frameworks=(),
+  def link(self, output, inputs, frameworks=(),
       target_name=None, **kwargs):
     '''
 
@@ -262,7 +264,6 @@ class LlvmCompiler(BaseCompiler):
       appropriate suffix is automatically appended unless *keep_suffix*
       is True.
     :param inputs: A list of input files/targets.
-    :param output_type: The output type. Can be ``'bin'`` or ``'dll'``
     :param frameworks: List of additional :class:`Framework` objects.
       Note that the frameworks of :class:`Target` objects listed in
       *inputs* are taken into account automatically.
@@ -270,6 +271,7 @@ class LlvmCompiler(BaseCompiler):
 
     Supported framework options:
 
+    :param output_type: The output type. Can be ``'bin'`` or ``'dll'``
     :param keep_suffix: Do not replace the suffix of the specified *output* files.
     :param debug: True to enable debug symbols and disable optimization.
     :param libs: Additional library names to link with.
@@ -287,9 +289,13 @@ class LlvmCompiler(BaseCompiler):
     :param program: Override the linker program to incoke.
     :param additional_flags: Additional flags for the linker.
     :param gcc_additional_flags: Additional flags for the linker (GCC only).
-    :param llvm_additional_flags: Additional flags for the linker (LLVM only).
     :param gcc_link_additional_flags: Additional flags for the linker (GCC only).
+    :param gcc_remove_flags: Flags to remove (GCC only).
+    :param gcc_link_remove_flags: Flags to remove (GCC only).
+    :param llvm_additional_flags: Additional flags for the linker (LLVM only).
     :param llvm_link_additional_flags: Additional flags for the linker (LLVM only).
+    :param llvm_remove_flags: Flags to remove (LLVM only).
+    :param llvm_link_remove_flags: Flags to remove (LLVM only).
 
     :attr:`Target.meta` variables:
 
@@ -298,6 +304,7 @@ class LlvmCompiler(BaseCompiler):
 
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
 
+    output_type = builder.get('output_type', 'bin')
     if output_type not in ('bin', 'dll'):
       raise ValueError('invalid output_type: {0!r}'.format(output_type))
     keep_suffix = builder.get('keep_suffix', False)
@@ -309,15 +316,13 @@ class LlvmCompiler(BaseCompiler):
     libs = builder.merge('libs')
     # Clang is based on GCC libraries, so always use the gcc_libs option.
     libs += builder.merge('gcc_libs')
-    if self.name in ('clang', 'llvm'):
-      # We also use this class for GCC in which case the llvm_libs
-      # option should not be handled!
-      libs += builder.merge('llvm_libs')
+    if self.name != 'gcc':
+      libs += builder.merge(self.name + '_libs')
 
     linker_args = builder.merge('linker_args')
     linker_args += builder.merge('gcc_linker_args')
-    if self.name in ('clang', 'llvm'):
-      linker_args += builder.merge('llvm_linker_args')
+    if self.name != 'gcc':
+      linker_args += builder.merge(self.name + '_linker_args')
 
     linker_script = builder.get('linker_script', None)
     if linker_script:
@@ -350,14 +355,8 @@ class LlvmCompiler(BaseCompiler):
     if linker_args:
       command += ['-Wl,' + ','.join(linker_args)]
     command += builder.merge('additional_flags')
-    if self.name in ('clang', 'llvm'):
-      command += builder.merge('llvm_additional_flags')
-      command += builder.merge('llvm_link_additional_flags')
-    elif self.name == 'gcc':
-      command += builder.merge('gcc_additional_flags')
-      command += builder.merge('gcc_link_additional_flags')
-    else:
-      assert False, self.name
+    command += builder.merge(self.name + '_additional_flags')
+    command += builder.merge(self.name + '_link_additional_flags')
     command += ['-o', '$out']
 
     if session.buildtype == 'external':
@@ -373,6 +372,9 @@ class LlvmCompiler(BaseCompiler):
 
       command += flags
       command += shell.split(options.get('LDLIBS', ''))
+
+    remove_flags(command, builder.merge(self.name + '_remove_flags'), builder)
+    remove_flags(command, builder.merge(self.name + '_link_remove_flags'), builder)
 
     builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output],

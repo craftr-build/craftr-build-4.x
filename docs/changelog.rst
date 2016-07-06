@@ -36,6 +36,10 @@ v1.1.1
 
   * C/C++ compiler implementations now take ``debug`` option into account if
     no explicit value is passed to the generator function
+  * removed ``'clang'`` as a compiler name
+  * added support for ``***_compile_remove_flags`` and ``***_link_remove_flags``
+    options where ``***`` can be ``msvc``, ``llvm`` and ``gcc``
+  * add support for ``msvc_runtime_library`` and ``force_include`` options
 
 * Cython related changes
 

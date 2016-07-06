@@ -42,7 +42,7 @@ object filenames using :meth:`gen_objects`.
 '''
 
 __all__ = ['detect_compiler', 'gen_output_dir', 'gen_output', 'gen_objects',
-  'ToolDetectionError', 'BaseCompiler']
+  'remove_flags', 'ToolDetectionError', 'BaseCompiler']
 
 from craftr import *
 
@@ -117,6 +117,40 @@ def gen_objects(sources, output_dir='obj', suffix=None):
     else:
       objects = path.setsuffix(objects, suffix)
   return objects
+
+
+def remove_flags(command, remove_flags, builder=None):
+  """
+  Helper function to remove flags from a command.
+
+  :param command: A list of command-line arguments.
+  :param remove_flags: An iterable of flags to remove.
+  :param builder: Optionally, a :class:`craftr.TargetBuilder`
+    that will be used for logging.
+  :return: The "command" list, but it is also directly altered.
+  """
+
+  # Remove the specified flags and keep every flag that could not
+  # be removed from the command.
+  remove_flags = set(remove_flags)
+  for flag in list(remove_flags):
+    count = 0
+    while True:
+      try:
+        command.remove(flag)
+      except ValueError:
+        break
+      count += 1
+    if count != 0:
+      remove_flags.remove(flag)
+  if remove_flags:
+    fmt = ' '.join(shell.quote(x) for x in remove_flags)
+    if builder:
+      builder.log('warn', "flags not removed: {0}".format(fmt))
+    else:
+      warn("flags not removed: {0}".format(fmt))
+
+  return command
 
 
 from ._base import BaseCompiler ## backwards compatibility

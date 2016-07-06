@@ -261,19 +261,24 @@ class MsvcCompiler(BaseCompiler):
     '''
     Supported options:
 
-      * include
-      * defines
       * language
-      * debug
-      * warn
-      * optimize
-      * exceptions
-      * autodeps
+      * include (``/I``) [list of str]
+      * defines (``/D``) [list of str]
+      * forced_include (``/FI``) [list of str]
+      * debug (``/Od /Zi /RTC1 /FC /Fd /FS``) [``True, False``]
+      * warn (``/W4, /w``) [``'all', 'none', None``]
+      * optimize (``/Od, /O1, /O2, /Os``) [``'speed', 'size', 'debug', 'none', None]``
+      * exceptions (``/EHsc``) [``True, False, None``]
+      * autodeps (``/showIncludes``)
       * description
+      * msvc_runtime_library (``/MT, /MTd, /MD, /MDd``) [``'static', 'dynamic', None``]
+      * msvc_disable_warnings (``/wd``) [list of int/str]
       * program
       * additional_flags
       * msvc_additional_flags
       * msvc_compile_additional_flags
+      * msvc_remove_flags
+      * msvc_compile_remove_flags
 
     Unsupported options supported by other compilers:
 
@@ -289,23 +294,19 @@ class MsvcCompiler(BaseCompiler):
     builder = self.builder(sources, frameworks, kwargs, name=target_name, meta=meta)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
 
-    include = utils.unique(builder.merge('include'))
-    defines = utils.unique(builder.merge('defines'))
     language = builder['language']
     debug = builder.get('debug', options.get_bool('debug'))
-    warn = builder.get('warn', 'all')
-    optimize = builder.get('optimize', None)
-    exceptions = builder.get('exceptions', None)
-    autodeps = builder.get('autodeps', True)
-    msvc_runtime_library = builder.get('msvc_runtime_library', None)
     builder.target['description'] = builder.get('description', '{0} Compile Object ($out)'.format(self.name))
 
-    if language not in ('c', 'c++'):
+    if language not in ('c', 'c++', 'asm'):
       raise ValueError('invalid language: {0!r}'.format(language))
 
     command = [builder['program'], '/nologo', '/c', '$in', '/Fo$out']
-    command += ['/I' + x for x in include]
-    command += ['/D' + x for x in defines]
+    command += ['/wd' + str(x) for x in builder.merge('msvc_disable_warnings')]
+    command += ['/we' + str(x) for x in builder.merge('msvc_warnings_as_errors')]
+    command += ['/I' + x for x in builder.merge('include')]
+    command += ['/D' + x for x in builder.merge('defines')]
+    command += ['/FI' + x for x in builder.merge('forced_include')]
     if debug:
       command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
       if not self.version or self.version >= 'v18':
@@ -313,6 +314,7 @@ class MsvcCompiler(BaseCompiler):
         # option is necessary by default.
         command += ['/FS']
 
+    exceptions = builder.get('exceptions', None)
     if exceptions:
       if language != 'c++':
         builder.invalid_option('exception', True, cause='not supported in {0!r}'.format(language))
@@ -321,6 +323,7 @@ class MsvcCompiler(BaseCompiler):
       # Enable exceptions by default.
       command += ['/EHsc']
 
+    warn = builder.get('warn', 'all')
     if warn == 'all':
       # /Wall really shows too many warnings, /W4 is pretty good.
       command += ['/W4']
@@ -331,6 +334,7 @@ class MsvcCompiler(BaseCompiler):
     else:
       builder.invalid_option('warn')
 
+    optimize = builder.get('optimize', None)
     if debug:
       if optimize and optimize != 'debug':
         builder.invalid_option('optimize', cause='no optimize with debug enabled')
@@ -343,6 +347,7 @@ class MsvcCompiler(BaseCompiler):
     else:
       builder.invalid_option('optimize')
 
+    msvc_runtime_library = builder.get('msvc_runtime_library', None)
     if msvc_runtime_library == 'dynamic':
       command += ['/MTd' if debug else '/MT']
     elif msvc_runtime_library == 'static':
@@ -350,6 +355,7 @@ class MsvcCompiler(BaseCompiler):
     elif msvc_runtime_library is not None:
       raise ValueError('invalid msvc_runtime_library: {0!r}'.format(msvc_runtime_library))
 
+    autodeps = builder.get('autodeps', True)
     if autodeps:
       builder.target['deps'] = 'msvc'
       builder.target['msvc_deps_prefix'] = self.deps_prefix
@@ -358,6 +364,8 @@ class MsvcCompiler(BaseCompiler):
     command += builder.merge('msvc_additional_flags')
     command += builder.merge('msvc_compile_additional_flags')
 
+    remove_flags(command, builder.merge('msvc_remove_flags'), builder)
+    remove_flags(command, builder.merge('msvc_compile_remove_flags'), builder)
     return builder.create_target(command, outputs=objects, foreach=True)
 
 
@@ -378,6 +386,8 @@ class MsvcLinker(BaseCompiler):
       * libpath
       * libs
       * msvc_libs
+      * win32_libs
+      * win64_libs
       * external_libs
       * msvc_external_libs
       * debug
@@ -386,6 +396,8 @@ class MsvcLinker(BaseCompiler):
       * additional_flags
       * msvc_additional_flags
       * msvc_link_additional_flags
+      * msvc_remove_flags
+      * msvc_link_remove_flags
 
     Target meta variables:
 
@@ -403,6 +415,10 @@ class MsvcLinker(BaseCompiler):
     libpath = builder.merge('libpath')
     libs = builder.merge('libs')
     libs += builder.merge('msvc_libs')
+    if self.desc['target'] == 'x86':
+      libs += builder.merge('win32_libs')
+    else:
+      libs += builder.merge('win64_libs')
     external_libs = builder.merge('external_libs')
     external_libs += builder.merge('msvc_external_libs')
     debug = builder.get('debug', options.get_bool('debug'))
@@ -417,6 +433,9 @@ class MsvcLinker(BaseCompiler):
     command += builder.merge('additional_flags')
     command += builder.merge('msvc_additional_flags')
     command += builder.merge('msvc_link_additional_flags')
+
+    remove_flags(command, builder.merge('msvc_remove_flags'), builder)
+    remove_flags(command, builder.merge('msvc_link_remove_flags'), builder)
 
     builder.meta['link_output'] = output
     return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
