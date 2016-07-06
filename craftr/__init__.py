@@ -20,7 +20,7 @@
 ''' Craftr is a powerful meta build system for Ninja. '''
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '1.1.1-dev'
+__version__ = '1.1.1.dev.0'
 
 import os
 import sys
