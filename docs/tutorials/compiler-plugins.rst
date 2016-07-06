@@ -181,3 +181,26 @@ However! you can now pass additional settings to the ``SimpleGCC()``
 constructor that will be taken into account as well. Note that these are
 considered last after everything else (``**kwargs``, frameworks list, input
 target frameworks and only then the settings passed to the constructor).
+
+Monkeypatching existing compilers
+---------------------------------
+
+This is a technique that is used for instance by the `maxon.c4d`_
+extension modules which requires additional preprocessing of the
+parameters passed to ``cxx.compile()`` and ``ld.link()``. Since v1.1.1,
+the ``BaseCompiler`` supports hooking in after a :class:`~craftr.TargetBuilder`
+was created for a specific method call.
+
+.. code:: python
+
+  def _my_link_hook(builder):
+    debug = builder.get('debug', options.get_bool('debug', False))
+    builder.setdefault('output_type', 'dll')
+    builder.add_framework(Framework('_my_link_hook',
+      defines = ['_DEBUG'] if debug else ['NDEBUG'],
+    ), local=True)
+
+  ld = platform.ld.fork()
+  ld.register_hook('link', _my_link_hook)
+
+.. _maxon.c4d: https://github.com/craftr-build/maxon.c4d
