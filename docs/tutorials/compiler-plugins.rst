@@ -67,7 +67,7 @@ complications: What will you do if you make use of some libraries and have
 a number of additional include directories, defines, libpaths and libs? Just
 concatenate them by hand?
 
-Craftr's solution to this problem are :class:`~craftr.Framework`s. They
+Craftr's solution to this problem are :class:`~craftr.Framework` s. They
 represent a collection of settings that can either be merged (e.g. for
 things like include directories, defines, etc.) or the first available
 setting can be used (e.g. for some one-off compiler option). In Craftr,
@@ -93,7 +93,7 @@ yet another time.
     # <: Note how we do not add "some_library_framework" in this call
   )
 
-Now on to creating :class:`~craftr.Target` generato functions with the
+Moving on to creating :class:`~craftr.Target` generator functions with the
 :class:`~craftr.TargetBuilder`! This class handles a bunch of things,
 but don't let yourself be confused about all these internals yet. They
 are here for reference:
