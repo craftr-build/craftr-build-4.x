@@ -24,6 +24,8 @@ v1.1.1
   * add :func:`craftr.utils.override_environ`
   * add :func:`craftr.ext.rules.alias` function
   * add :meth:`craftr.TargetBuilder.mkname` method
+  * moved ``craftr.ext.compiler.BaseCompiler`` to :class:`craftr.ext.compiler._base.BaseCompiler`,
+    backwards compatible import exists
 
 * C/C++ related changes
 

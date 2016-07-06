@@ -28,6 +28,7 @@ object filenames using :meth:`gen_objects`.
 .. toctree::
   :maxdepth: 2
 
+  compiler_base
   compiler_csc
   compiler_cython
   compiler_flex
@@ -41,12 +42,17 @@ object filenames using :meth:`gen_objects`.
 '''
 
 __all__ = ['detect_compiler', 'gen_output_dir', 'gen_output', 'gen_objects',
-  'BaseCompiler', 'ToolDetectionError']
+  'ToolDetectionError', 'BaseCompiler']
 
 from craftr import *
 
 import collections
 import copy
+
+
+class ToolDetectionError(Exception):
+  ''' This exception is raised if a command-line tool could not be
+  successfully be detected. '''
 
 
 def detect_compiler(program, language):
@@ -113,42 +119,4 @@ def gen_objects(sources, output_dir='obj', suffix=None):
   return objects
 
 
-class BaseCompiler(object):
-  ''' Base class for implementing a compiler object that can be forked
-  with new options and that makes it easy to implement rule methods. '''
-
-  def __init__(self, **kwargs):
-    if not hasattr(self, 'name'):
-      raise TypeError('{0}.name is not set'.format(type(self).__name__))
-    super().__init__()
-    self.settings = Framework(type(self).__name__, **kwargs)
-    self.frameworks = [self.settings]
-
-  def builder(self, inputs, frameworks, kwargs, **_add_kwargs):
-    ''' Creates a `TargetBuilder` that also contains the frameworks of
-    this compiler object. '''
-
-    frameworks = self.frameworks + list(frameworks)
-    return TargetBuilder(inputs, frameworks, kwargs, stacklevel=2, **_add_kwargs)
-
-  def fork(self, **kwargs):
-    ''' Create a fork of the compiler while overriding the *kwargs*. '''
-
-    obj = copy.copy(self)
-    # Create a new Settings framework for the compiler.
-    obj.settings = Framework(type(self).__name__, **kwargs)
-    # Copy the frameworks of the parent.
-    obj.frameworks = self.frameworks[:]
-    obj.frameworks.append(obj.settings)
-    return obj
-
-  def __getitem__(self, key):
-    return FrameworkJoin(*self.frameworks)[key]
-
-  def __setitem__(self, key, value):
-    self.settings[key] = value
-
-
-class ToolDetectionError(Exception):
-  ''' This exception is raised if a command-line tool could not be
-  successfully be detected. '''
+from ._base import BaseCompiler ## backwards compatibility
