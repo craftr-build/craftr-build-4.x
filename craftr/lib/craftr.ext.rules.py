@@ -52,8 +52,9 @@ def alias(*targets, target_name=None):
 
 
 def run(commands, args=(), inputs=(), outputs=None, cwd=None,
-    pool=None, description=None, target_name=None):
-  ''' This function creates a :class:`Target` that runs a custom command.
+    pool=None, description=None, target_name=None, multiple=False):
+  """
+  This function creates a :class:`Target` that runs a custom command.
   The function is three different modes based on the first parameter.
 
   1. If *commands* is a :class:`Target`, that target must list exactly
@@ -85,7 +86,7 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     run = rules.run([
       'command1 args11 args12 args13',
       ['command2', 'args21', 'args22', 'args23'],
-    ], cwd = path.local('test'))
+    ], cwd = path.local('test'), multiple=True)
 
   :param commands: A :class:`Target`, string or list of strings/command lists.
   :param args: Additional program arguments when a :class:`Target` is
@@ -101,9 +102,11 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     ``console``.
   :param description: Optional target description displayed when building
     with Ninja.
+  :param multiple: True if *commands* is a list of commands. This will
+    cause a shell/batch script to be created and invoked by Ninja.
   :param target_name: An optional override for the return target's name.
   :return: A :class:`Target`.
-  '''
+  """
 
   builder = TargetBuilder(inputs, [], {}, name = target_name)
 
@@ -117,9 +120,12 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
   elif isinstance(commands, str):
     commands = [commands]
 
-  if len(commands) == 1:
+  if not multiple:
     # We don't need a multi command file for a single command.
-    command = commands[0]
+    if isinstance(commands, str):
+      command = commands
+    else:
+      command = shell.join(commands)
     if cwd:
       if platform.name == platform.WIN32:
         command = ['cmd', '/c', 'cd', cwd, shell.safe('&&')] + command
@@ -129,7 +135,7 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     command, program = builder.write_multicommand_file(commands, cwd=cwd)
 
   inputs = builder.inputs or program
-  return builder.create_target(command, inputs, outputs, pool=pool, description=description)
+  return builder.create_target(command, inputs, outputs, pool=pool, description=description, explicit=True)
 
 
 def render_template(template, output, context, env = None, target_name = None):
