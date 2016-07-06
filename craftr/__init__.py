@@ -891,25 +891,33 @@ class TargetBuilder(object):
 
     self.options.defaults[key] = value
 
-  def add_framework(self, __fw_or_name, __fw_dict=None, **kwargs):
+  def add_framework(self, fw, local=False, front=False):
     """
-    Add or create a new Framework and add it to :attr:`options`
-    and :attr:`frameworks`. The framework will be added to the
-    end of the frameworks list, thus it will be considered after
-    all others.
+    Adds the :class:`Framework` "fw" to the builder and also to the
+    target if "local" is False. The framework will be appended to the
+    end of the chain, thus is has the lowest priority unless you
+    pass "front" to True.
 
-    .. note:: It is important to keep this behaviour. If we want
-      to implement adding frameworks to the beginning of the
-      framework list, add a new method or parameter!
+    :param fw: The framwork to add.
+    :param local: If this is False, the framework will also be added
+      to the target created by the builder.
+    :param front: If this is True, the framework will be added to
+      the front of the frameworks list and thus will be treated
+      with high priority.
     """
 
-    if not isinstance(__fw_or_name, Framework):
-      fw = Framework(__fw_or_name, __fw_dict, **kwargs)
+    if not isinstance(fw, Framework):
+      raise TypeError('expected Framework object')
+
+    if not local:
+      if front:
+        self.frameworks.insert(0, fw)
+      else:
+        self.frameworks.append(fw)
+    if front:
+      self.options.frameworks.insert(0, fw)
     else:
-      fw = __fw_or_name
-    self.frameworks.append(fw)
-    self.options.frameworks.append(fw)
-    return fw
+      self.options.frameworks.append(fw)
 
   def expand_inputs(self, inputs):
     ''' Wrapper for :func:`expand_inputs` that will add the Frameworks

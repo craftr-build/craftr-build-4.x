@@ -168,7 +168,8 @@ class LlvmCompiler(BaseCompiler):
 
     builder = self.builder(sources, frameworks, kwargs, name=target_name)
     objects = gen_objects(builder.inputs, suffix=platform.obj)
-    fw = builder.add_framework(builder.name)
+    fw = Framework(builder.name)
+    builder.add_framework(fw)
 
     language = builder['language']
     debug = builder.get('debug', options.get_bool('debug'))
