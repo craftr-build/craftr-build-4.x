@@ -29,6 +29,8 @@ v1.1.1
   * add :func:`craftr.FrameworkJoin.iter_frameworks` method
   * moved ``craftr.ext.compiler.BaseCompiler`` to :class:`craftr.ext.compiler._base.BaseCompiler`,
     backwards compatible import exists
+  * removed ``BaseCompiler.__getitem__()`` and ``~.__setitem__()``
+  * add ``BaseCompiler.register_hook()``
 
 * C/C++ related changes
 

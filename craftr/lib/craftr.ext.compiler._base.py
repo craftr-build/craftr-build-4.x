@@ -58,9 +58,9 @@ class BaseCompiler(object):
 
   1. The ``**kwargs`` passed to ``compile()``
   2. The :class:`Framework` objects in ``frameworks``
+  3. The :attr:`settings` framework of ``SimpleGCC``
   3. If the ``sources`` list contained an :class:`Target`s,
      the :class:`Framework`s of these targets will be considered
-  3. The :attr:`settings` framework of ``SimpleGCC``
 
   .. attribute:: settings
 
@@ -75,6 +75,7 @@ class BaseCompiler(object):
     super().__init__()
     self.settings = Framework(type(self).__name__, **kwargs)
     self.frameworks = [self.settings]
+    self.hooks = {}
 
   def builder(self, inputs, frameworks, kwargs, **_add_kwargs):
     """
@@ -82,8 +83,12 @@ class BaseCompiler(object):
     :class:`Framework` of this :class:`BaseCompiler`.
     """
 
-    frameworks = self.frameworks + list(frameworks)
-    return TargetBuilder(inputs, frameworks, kwargs, stacklevel=2, **_add_kwargs)
+    frameworks = list(frameworks) + self.frameworks
+    builder = TargetBuilder(inputs, frameworks, kwargs, stacklevel=2, **_add_kwargs)
+    if builder.caller in self.hooks:
+      for handler in self.hooks[builder.caller]:
+        handler(builder)
+    return builder
 
   def fork(self, **kwargs):
     """
@@ -96,11 +101,17 @@ class BaseCompiler(object):
     obj.settings = Framework(type(self).__name__, **kwargs)
     # Copy the frameworks of the parent.
     obj.frameworks = self.frameworks[:]
-    obj.frameworks.append(obj.settings)
+    obj.frameworks.insert(0, obj.settings)
     return obj
 
-  def __getitem__(self, key):
-    return FrameworkJoin(*self.frameworks)[key]
+  def register_hook(self, call, handler):
+    """
+    Registers a handler for the method call that will be invoked
+    when a :class:`TargetBuilder` was created. It will allow the
+    "handler" to set up default and additional settings.
+    """
 
-  def __setitem__(self, key, value):
-    self.settings[key] = value
+    self.hooks.setdefault(call, []).append(handler)
+
+
+
