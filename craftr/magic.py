@@ -39,13 +39,34 @@ class Proxy(werkzeug.LocalProxy):
   def __call__(self):
     return self._get_current_object()
 
+  @property
+  def __name__(self):
+    return self._get_current_object().__name__
+
+  @__name__.setter
+  def __name__(self, value):
+    # werkzeug.LocalProxy uses object.__setattr__(self, '__name__', name)
+    # in its constructor which will cause this setter to be called, but
+    # that happens when the Proxy() object is constructor and the _lookup()
+    # function in new_context() has no reference to it yet.
+    try:
+      obj = self._get_current_object()
+    except RuntimeError as exc:
+      if str(exc) != 'this exception should always ever happen in the Proxy.__name__ setter':
+        raise
+    else:
+      obj.__name__ = value
+
 
 def new_context(context_name):
   ''' Create a new context with the specified *context_name* and
   return a `Proxy` that represents the top-most object of the context
   stack. '''
 
+  proxy = None
   def _lookup():
+    if proxy is None:
+      raise RuntimeError('this exception should always ever happen in the Proxy.__name__ setter')
     top = object.__getattribute__(proxy, '_proxy_localstack').top
     if top is None:
       raise RuntimeError('outside of {0!r} context'.format(context_name))

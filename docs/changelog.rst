@@ -36,6 +36,8 @@ v1.1.1
     (alias introduced for backwards compatibility)
   * :mod:`craftr.utils` is now a package, some name changes but backwards
     compatibility has been kept by introducing aliases
+  * fix :class:`~craftr.magic.Proxy` ``__name__`` attribute always
+    returning :const:`None` instead of the underlying object's member value
 
 * C/C++ related changes
 
