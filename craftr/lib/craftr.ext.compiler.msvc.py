@@ -411,6 +411,9 @@ class MsvcLinker(BaseCompiler):
     Target meta variables:
 
       * link_output -- The output filename of the link operation.
+      * link_target -- The filename that can be specified to the linker.
+        This is necessary because on Windows you pass in a separately
+        created ``.lib`` file instead of the ``.dll`` output file.
     '''
 
     builder = self.builder(inputs, frameworks, kwargs, name=target_name, meta=meta)
@@ -448,6 +451,8 @@ class MsvcLinker(BaseCompiler):
     remove_flags(command, builder.merge('msvc_link_remove_flags'), builder)
 
     builder.meta['link_output'] = output
+    if output_type == 'dll':
+      builder.meta['link_target'] = path.setsuffix(output, '.lib')
     return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 
 

@@ -47,6 +47,7 @@ v1.1.1
   * added support for ``***_compile_remove_flags`` and ``***_link_remove_flags``
     options where ``***`` can be ``msvc``, ``llvm`` and ``gcc``
   * add support for ``msvc_runtime_library`` and ``force_include`` options
+  * add support for ``link_target`` output variable
 
 * Cython related changes
 

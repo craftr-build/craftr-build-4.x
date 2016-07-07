@@ -116,7 +116,14 @@ Linker Interface
 |:attr:`Target.meta<craftr.Target.meta>` output variables: |
 +-----------------------+----------------------------------+
 |``'link_output'``      | Absolute output filename         |
+|``'link_target'``      | Linker target filename  (1)      |
 +-----------------------+----------------------------------+
+
+(1) This is required because on Windows you can not passed the actuall
+DLL filename to the linker but you must pass to it the also generated
+``.lib`` file which is what this ``'link_target'`` value is pointing
+to. Other implementations like GCC/LLVM just fill in the same filename
+as in ``'link_output'``
 
 **Known Implementations**
 

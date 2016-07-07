@@ -301,6 +301,10 @@ class LlvmCompiler(BaseCompiler):
     :attr:`Target.meta` variables:
 
     :param link_output: The output filename of the link operation.
+    :param link_target: The filename of the target that can be
+      passed into the linker. This is required because on Windows this
+      needs to be a different value than ``link_output``. Only valid
+      with ``output_type='dll'``.
     '''
 
     builder = self.builder(inputs, frameworks, kwargs, name=target_name)
@@ -378,6 +382,8 @@ class LlvmCompiler(BaseCompiler):
     remove_flags(command, builder.merge(self.name + '_link_remove_flags'), builder)
 
     builder.meta['link_output'] = output
+    if output_type == 'dll':
+      builder.meta['link_target'] = output
     return builder.create_target(command, outputs=[output],
       implicit_deps=implicit_deps, description=description)
 
