@@ -114,11 +114,13 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
   if isinstance(commands, Target):
     assert len(commands.outputs) == 1, "Target for rules.run() must specify exactly one output file"
     program = path.abspath(commands.outputs[0])
-    commands = [[program] + list(args)]
+    commands = [program] + list(args)
     pool = pool or 'console'
     builder.target_attrs['explicit'] = True
+    multiple = False
   elif isinstance(commands, str):
     commands = [commands]
+    multiple = False
 
   if not multiple:
     # We don't need a multi command file for a single command.
@@ -135,7 +137,8 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     command, program = builder.write_multicommand_file(commands, cwd=cwd)
 
   inputs = builder.inputs or program
-  return builder.create_target(command, inputs, outputs, pool=pool, description=description, explicit=True)
+  return builder.create_target(command, inputs, outputs, pool=pool,
+    description=description, explicit=True)
 
 
 def render_template(template, output, context, env = None, target_name = None):

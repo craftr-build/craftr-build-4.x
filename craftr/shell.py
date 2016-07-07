@@ -28,7 +28,6 @@ __all__ = ['safe', 'quote', 'format', 'split', 'join', 'find_program',
            'CompletedProcess', 'run', 'pipe', 'PIPE', 'STDOUT']
 
 from . import path, environ
-from shlex import split
 from subprocess import PIPE, STDOUT
 
 import os
@@ -41,6 +40,10 @@ import sys
 class safe(str):
   ''' If this object is passed to `quote()`, it will not be escaped. '''
   pass
+
+
+def split(s):
+  return shlex.split(s, posix=(os.name != 'nt'))
 
 
 def quote(s):
