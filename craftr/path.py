@@ -314,7 +314,7 @@ def buildlocal(path):
     Craftr module).
   '''
 
-  return normpath(path, abspath(module.__name__))
+  return normpath(path, abspath(module.project_name))
 
 
 def iter_tree(dirname, depth=1):

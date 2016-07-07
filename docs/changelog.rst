@@ -38,6 +38,8 @@ v1.1.1
     compatibility has been kept by introducing aliases
   * fix :class:`~craftr.magic.Proxy` ``__name__`` attribute always
     returning :const:`None` instead of the underlying object's member value
+  * fix :func:`craftr.path.buildlocal` now using ``project_name`` instead
+    of ``__name__``
 
 * C/C++ related changes
 
