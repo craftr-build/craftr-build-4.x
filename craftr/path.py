@@ -422,7 +422,7 @@ def silent_remove(filename, is_dir=False):
 
 
 class tempfile(object):
-  '''
+  r'''
   A better temporary file class where the :meth:`close` function
   does not delete the file but only :meth:`__exit__` does. Obviously,
   this allows you to close the file and re-use it with some other
@@ -448,7 +448,6 @@ class tempfile(object):
   '''
 
   def __init__(self, suffix='', prefix='tmp', dir=None, text=False):
-    super().__init__()
     self.fd, self.name = _mkstemp(suffix, prefix, dir, text)
     self.fp = os.fdopen(self.fd, 'w' if text else 'wb')
 

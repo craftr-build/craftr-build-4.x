@@ -6,6 +6,14 @@ API Documentation
 This part of the documentation contains the API reference of the functions
 and classes that can be used in Craftfiles.
 
+.. toctree::
+
+  craftr.ext
+  craftr.options
+  craftr.path
+  craftr.shell
+  craftr.utils
+
 .. autodata:: session
 .. autodata:: module
 
@@ -64,28 +72,4 @@ FrameworkJoin Objects
 ----------------------
 
 .. autoclass:: FrameworkJoin
-  :members:
-
-The ``path`` module
--------------------
-
-.. automodule:: craftr.path
-  :members:
-
-The ``shell`` module
---------------------
-
-.. automodule:: craftr.shell
-  :members:
-
-The ``utils`` module
---------------------
-
-.. automodule:: craftr.utils
-  :members:
-
-The ``options`` module
-----------------------
-
-.. automodule:: craftr.options
   :members:

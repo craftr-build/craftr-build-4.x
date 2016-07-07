@@ -59,8 +59,8 @@ class BaseCompiler(object):
   1. The ``**kwargs`` passed to ``compile()``
   2. The :class:`Framework` objects in ``frameworks``
   3. The :attr:`settings` framework of ``SimpleGCC``
-  3. If the ``sources`` list contained an :class:`Target`s,
-     the :class:`Framework`s of these targets will be considered
+  4. If the ``sources`` list contained an :class:`Target` s,
+     the :class:`Framework` s of these targets will be considered
 
   .. attribute:: settings
 

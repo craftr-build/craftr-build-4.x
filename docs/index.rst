@@ -59,7 +59,7 @@ Contents
   stl
   ext
   tutorials
-  api
+  api/craftr
   magic
   changelog
 
