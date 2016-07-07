@@ -279,6 +279,7 @@ class MsvcCompiler(BaseCompiler):
       * msvc_compile_additional_flags
       * msvc_remove_flags
       * msvc_compile_remove_flags
+      * msvc_use_default_defines
 
     Unsupported options supported by other compilers:
 
@@ -301,11 +302,15 @@ class MsvcCompiler(BaseCompiler):
     if language not in ('c', 'c++', 'asm'):
       raise ValueError('invalid language: {0!r}'.format(language))
 
+    defines = builder.merge('defines')
+    if builder.get('msvc_use_default_defines', True):
+      defines += ['WIN32', '_WIN32']
+
     command = [builder['program'], '/nologo', '/c', '$in', '/Fo$out']
     command += ['/wd' + str(x) for x in builder.merge('msvc_disable_warnings')]
     command += ['/we' + str(x) for x in builder.merge('msvc_warnings_as_errors')]
     command += ['/I' + x for x in builder.merge('include')]
-    command += ['/D' + x for x in builder.merge('defines')]
+    command += ['/D' + x for x in defines]
     command += ['/FI' + x for x in builder.merge('forced_include')]
     if debug:
       command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
