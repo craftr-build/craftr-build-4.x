@@ -21,6 +21,7 @@
 from craftr import module, session
 from os.path import *
 from os import sep, pathsep, curdir, pardir, getcwd
+from tempfile import mkstemp as _mkstemp
 
 import collections
 import ctypes
@@ -398,12 +399,14 @@ def get_long_path_name(path):
 
 
 def silent_remove(filename, is_dir=False):
-  ''' Remove the file *filename* if it exists and be silent if it
+  '''
+  Remove the file *filename* if it exists and be silent if it
   does not. Returns True if the file was removed, False if it did
   not exist. Raises an error in all other cases.
 
   :param filename: The path to the file or directory to remove.
-  :param is_dir: If True, remove recursive (for directories). '''
+  :param is_dir: If True, remove recursive (for directories).
+  '''
 
   try:
     if is_dir:
@@ -416,3 +419,52 @@ def silent_remove(filename, is_dir=False):
     return False
   else:
     return True
+
+
+class tempfile(object):
+  '''
+  A better temporary file class where the :meth:`close` function
+  does not delete the file but only :meth:`__exit__` does. Obviously,
+  this allows you to close the file and re-use it with some other
+  processing before it finally gets deleted.
+
+  This is especially important on Windows because apparently another
+  process can't read the file while it's still opened in the process
+  that created it.
+
+  .. code:: python
+
+    from craftr import path, shell
+    with path.tempfile(suffix='c', text=True) as fp:
+      fp.write('#include <stdio.h>\nint main() { }\n')
+      fp.close()
+      shell.run(['gcc', fp.name])
+
+  :param suffix: The suffix of the temporary file.
+  :param prefix: The prefix of the temporary file.
+  :param dir: Override the temporary directory.
+  :param text: True to open the file in text mode. Otherwise, it
+    will be opened in binary mode.
+  '''
+
+  def __init__(self, suffix='', prefix='tmp', dir=None, text=False):
+    super().__init__()
+    self.fd, self.name = _mkstemp(suffix, prefix, dir, text)
+    self.fp = os.fdopen(self.fd, 'w' if text else 'wb')
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *__):
+    try:
+      self.close()
+    finally:
+      path.silent_remove(self.name)
+
+  def __getattr__(self, name):
+    return getattr(self.fp, name)
+
+  def close(self):
+    if self.fp:
+      self.fp.close()
+      self.fp = None

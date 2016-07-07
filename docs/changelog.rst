@@ -34,6 +34,8 @@ v1.1.1
   * :meth:`craftr.TargetBuilder.add_framework()` was updated
   * replace ``craftr.utils.slotobject()`` with :func:`~craftr.utils.recordclass`
     (alias introduced for backwards compatibility)
+  * :mod:`craftr.utils` is now a package, some name changes but backwards
+    compatibility has been kept by introducing aliases
 
 * C/C++ related changes
 

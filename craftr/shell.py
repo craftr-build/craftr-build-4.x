@@ -17,11 +17,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-''' This module is similar to the `subprocess.run()` interface that is
+'''
+This module is similar to the `subprocess.run()` interface that is
 available since Python 3.5 but is a bit customized so that it works
-better with Craftr. '''
+better with Craftr.
+'''
 
-from . import utils
+__all__ = ['safe', 'quote', 'format', 'split', 'join', 'find_program',
+           'test_program', 'CalledProcessError', 'TimeoutExpired',
+           'CompletedProcess', 'run', 'pipe', 'PIPE', 'STDOUT']
+
+from . import path, environ
 from shlex import split
 from subprocess import PIPE, STDOUT
 
@@ -64,6 +70,70 @@ def join(cmd):
   ''' Join a list of strings to a single command. '''
 
   return ' '.join(map(quote, cmd))
+
+
+def find_program(name):
+  """
+  Finds the program *name* in the `PATH` and returns the full
+  absolute path to it. On Windows, this also takes the `PATHEXT`
+  variable into account.
+
+
+  :param name: The name of the program to find.
+  :return: :class:`str` -- The absolute path to the program.
+  :raise FileNotFoundError: If the program could not be found in the PATH.
+  :raise PermissionError: If a candidate for "name" was found but
+    it is not executable.
+  """
+
+  if path.isabs(name):
+    if not path.isfile(name):
+      raise FileNotFoundError(name)
+    if not os.access(name, os.X_OK):
+      raise PermissionError('{0!r} is not executable'.format(name))
+    return name
+
+  iswin = sys.platform.startswith('win32')
+  iscygwin = sys.platform.startswith('cygwin')
+  if iswin and '/' in name or '\\' in name:
+    return path.abspath(name)
+  elif iswin and path.sep in name:
+    return path.abspath(name)
+
+  if iswin:
+    pathext = environ['PATHEXT'].split(path.pathsep)
+  elif iscygwin:
+    pathext = [None, '.exe']
+  else:
+    pathext = [None]
+
+  first_candidate = None
+  for dirname in environ['PATH'].split(path.pathsep):
+    fullname = path.join(dirname, name)
+    for ext in pathext:
+      extname = (fullname + ext) if ext else fullname
+      if path.isfile(extname):
+        if os.access(extname, os.X_OK):
+          return extname
+        if first_candidate is None:
+          first_candidate = extname
+
+  if first_candidate:
+    raise PermissionError('{0!r} is not executable'.format(first_candidate))
+  raise FileNotFoundError(name)
+
+
+def test_program(name):
+  """
+  Uses :func:`find_program` to find the path to "name" and returns
+  True if it could be found, False otherwise.
+  """
+
+  try:
+    find_program(name)
+  except OSError:
+    return False
+  return True
 
 
 class _ProcessError(Exception):
@@ -154,7 +224,7 @@ class CompletedProcess(object):
 
 def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
     timeout=None, check=False, cwd=None, encoding=sys.getdefaultencoding()):
-  """
+  '''
   Run the process with the specified *cmd*. If *cmd* is a list of
   commands and *shell* is True, the list will be automatically converted
   to a properly escaped string for the shell to execute.
@@ -171,7 +241,7 @@ def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
     finish before the timeout expires.
   :raise OSError: For some OS-level error, eg. if the program could not be
       found.
-  """
+  '''
 
   if shell and not isinstance(cmd, str):
     cmd = join(cmd)
@@ -186,7 +256,7 @@ def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
       program = split(cmd)[0]
     else:
       program = cmd[0]
-    utils.find_program(program)
+    find_program(program)
 
   try:
     popen = subprocess.Popen(
@@ -224,7 +294,3 @@ def pipe(*args, merge=True, **kwargs):
   kwargs.setdefault('stdout', PIPE)
   kwargs.setdefault('stderr', STDOUT if merge else PIPE)
   return run(*args, **kwargs)
-
-
-
-__all__ = ['PIPE', 'STDOUT', 'split', 'quote', 'run', 'pipe']
