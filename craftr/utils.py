@@ -125,62 +125,79 @@ def override_environ(new_environ=None):
 
 # General Programming Utilities ----------------------------------------------
 
-def slotobject(cls_name, slots):
-  ''' Similar to :func:`collections.namedtuple`, this function creates
-  a type object with the attributes specified via the *slots* (a string
-  or list of strings) only the type does not inherit from :class:`tuple`
-  but insead from :class:`object`. Its attributes can actually be changed.
-  Instances of the type can not act as tuples.
+def recordclass(__name, __fields, **defaults):
+  '''
+  Creates a new class that can represent a record with the
+  specified *fields*. This is equal to a mutable namedtuple.
+  The returned class also supports keyword arguments in its
+  constructor.
 
-  .. code-block:: python
-
-    >>> from craftr.utils import slotobject
-    >>> File = slotobject('File', 'name arc_name')
-    >>> File('foo', 'subdir/foo')
-    <File name='foo' arc_name='subdir/foo'>
+  :param __name: The name of the recordclass.
+  :param __fields: A string or list of field names.
+  :param defaults: Default values for fields. The defaults
+    may list field names that haven't been listed in *fields*.
   '''
 
-  if isinstance(slots, str):
-    if ',' in slots:
-      slots = slots.split(',')
+  name = __name
+  fields = __fields
+
+  if isinstance(fields, str):
+    if ',' in fields:
+      fields = fields.split(',')
     else:
-      slots = slots.split(' ')
-  slots_set = frozenset(slots)
-  assert len(slots_set) == len(slots)
+      fields = fields.split()
+  else:
+    fields = list(fields)
 
-  def __init__(self, *args, **kwargs):
-    # Fill the args matching the slots in kwargs.
-    if len(args) > len(slots):
-      raise TypeError('{0}() expected {1} positional arguments, got {2}'.format(
-        cls_name, len(slots), len(args)))
-    for key in kwargs:
-      if key not in slots_set:
-        raise TypeError('{0}() unexpected keyword argument \'{1}\''.format(
-          cls_name, key))
-    for key, arg in zip(slots, args):
-      if key in kwargs:
-        raise TypeError('{0}() duplicate parameter for argument \'{1}\''.format(
-          cls_name, key))
-      kwargs[key] = arg
-    if len(kwargs) != len(slots):
-      raise TypeError('{0}() missing arguments'.format(cls_name))
-    for key, value in kwargs.items():
-      setattr(self, key, value)
+  for key in defaults.keys():
+    if key not in fields:
+      fields.append(key)
 
-  def __str__(self):
-    parts = []
-    for key in slots:
-      parts.append('{0}={1!r}'.format(key, getattr(self, key)))
-    result = '<{0}'.format(cls_name)
-    if parts:
-      result += ' ' + ' '.join(parts)
-    return result + '>'
+  class _record(object):
+    __slots__ = fields
 
-  return type(cls_name, (object,), {
-    '__init__': __init__,
-    '__slots__': slots,
-    '__str__': __str__,
-  })
+    def __init__(self, *args, **kwargs):
+      for key, arg in izip(fields, args):
+        if key in kwargs:
+          msg = 'multiple values for argument {0!r}'.format(key)
+          raise TypeError(msg)
+        kwargs[key] = arg
+      for key, arg in kwargs.items():
+        setattr(self, key, arg)
+      for key in fields:
+        if not hasattr(self, key):
+          if key in defaults:
+            setattr(self, key, defaults[key])
+          else:
+            raise TypeError('missing argument {0!r}'.format(key))
+
+    def __repr__(self):
+      parts = ['{0}={1!r}'.format(k, v) for k, v in self.items()]
+      return '{0}('.format(name) + ', '.join(parts) + ')'
+
+    def __iter__(self):
+      for key in fields:
+        yield getattr(self, key)
+
+    def __len__(self):
+      return len(fields)
+
+    def items(self):
+      for key in fields:
+        yield key, getattr(self, key)
+
+    def keys(self):
+      return iter(fields)
+
+    def values(self):
+      for key in fields:
+        yield getattr(self, key)
+
+  _record.__name__ = name
+  return _record
+
+
+slotobject = recordclass  # Backwards compatibility < 1.1.1
 
 
 def flatten(iterable):

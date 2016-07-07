@@ -32,6 +32,8 @@ v1.1.1
   * removed ``BaseCompiler.__getitem__()`` and ``~.__setitem__()``
   * add ``BaseCompiler.register_hook()``
   * :meth:`craftr.TargetBuilder.add_framework()` was updated
+  * replace ``craftr.utils.slotobject()`` with :func:`~craftr.utils.recordclass`
+    (alias introduced for backwards compatibility)
 
 * C/C++ related changes
 
