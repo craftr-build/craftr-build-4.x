@@ -18,73 +18,78 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 """
-This module allows you to render CMake configuration headers from Craftr
-(without using CMake at all).
+CMake-style file configuration.
 
 .. code:: python
 
   from craftr import path
   from craftr.ext import cmake
-  config = cmake.render_config(
-    config_file = path.local('cmake/templates/cvconfig.h.in'),
-    variables = {
+
+  cvconfig = cmake.configure_file(
+    input = path.local('cmake/templates/cvconfig.h.in'),
+    environ = {
       'BUILD_SHARED_LIBS': True,
       'CUDA_ARCH_BIN': '...',
       # ...
     }
   )
-  include = config.include + path.glob('modules/*/include')
+
+  info('cvconfig.h created in', cvconfig.include)
 """
 
-__all__ = ['ConfigResult', 'render_config']
+__all__ = ['ConfigResult', 'configure_file']
 
-from craftr import session, environ, Framework, task, path, utils
+from craftr import *
 from craftr.ext.compiler import gen_objects
 
+import craftr
 import re
 import string
 
 #: Result of a CMake configuration. Contains the :attr:`filename`,
 #: a list of :attr:`include` directories and the :class:`target` if
 #: one was generated.
-ConfigResult = utils.slotobject('ConfigResult', 'filename include target')
+ConfigResult = utils.recordclass('ConfigResult', 'output include target')
 
 
-def render_config(config_file, output=None, variables={}, inherit_env=True):
-  '''
-  Render a CMake *config_file* given the specified *variables*
-  dictionary. If *output* is None, the output filename will
-  automatically be generated in the current project's build
-  directory.
+def configure_file(input, output=None, environ={}, inherit_environ=True):
+  """
+  Renders the CMake configuration file using the specified environment
+  and optionally the process' environment.
 
-  :param config_file: Absolute path to the CMake config file.
-  :param output: Path to the output file, or None to create
-    the output filename automatically.
-  :param variables: A dictionary containing the variables for
+  If the *output* parameter is omitted, an output filename in a
+  special ``include/`` directory will be generated from the *input*
+  filename. The ``.in`` suffix from *input* will be removed if it
+  exists.
+
+  :param input: Absolute path to the CMake config file.
+  :param output: Name of the output file. Will be automatically
+    generated if omitted.
+  :param environ: A dictionary containing the variables for
     rendering the CMake configuration file. Non-existing
     variables are considered undefined.
-  :param inherit_env: Inherit environment variables in
-    *variables*. The default is True.
-  :return: :class:`ConfigResult`
-  '''
+  :param inherit_environ: If True, the environment variables of the
+    Craftr process are additionally taken into account.
+  :return: A :class:`ConfigResult` object.
+  """
 
   if not output:
-    output = gen_objects([config_file],  'include')[0]
+    output = gen_objects([input],  'include')[0]
     if output.endswith('.in'):
       output = output[:-3]
 
-  if inherit_env:
-    temp = variables
-    variables = dict(environ)
-    variables.update(temp)
-    del temp
+  if inherit_environ:
+    new_env = craftr.environ.copy()
+    new_env.update(environ)
+    environ = new_env
+    del new_env
 
   output_dir = path.dirname(output)
 
   if session.export:
     path.makedirs(output_dir)
 
-    with open(config_file) as src:
+    with open(input) as src:
       with open(output, 'w') as dst:
         for line in src:
           match = re.match('\s*#cmakedefine\s+(\w+)\s*(.*)', line)
@@ -105,4 +110,4 @@ def render_config(config_file, output=None, variables={}, inherit_env=True):
 
           dst.write(line)
 
-  return ConfigResult(output, [output_dir], None)
+  return ConfigResult(output, output_dir, None)

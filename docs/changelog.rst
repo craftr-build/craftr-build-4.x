@@ -52,6 +52,11 @@ v1.1.1
   * add :class:`~craftr.ext.compiler.cython.PythonInfo` class
   * add :func:`~craftr.ext.compiler.cython.CythonCompiler.compile_project` method
 
+* :mod:`craftr.ext.cmake`
+
+  * renamed ``render_config()`` to :func:`~craftr.ext.cmake.configure_file`
+    to match the CMake naming and update parameter names
+
 v1.1.0
 ------
 
