@@ -20,7 +20,7 @@
 
 from . import regex
 from .env import append_path, prepend_path, override_environ
-from .recordclass import recordclass
+from .recordclass import recordclass_base, recordclass
 from .transform import flatten, uniquify
 
 # backwards compatibility < 1.11.

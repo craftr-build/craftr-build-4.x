@@ -19,6 +19,80 @@
 # THE SOFTWARE.
 
 
+class recordclass_base(object):
+  '''
+  Base class that provides a namedtuple like interface based on
+  the ``__slots__`` parameter.
+
+  .. code:: python
+
+    class MyRecord(recordclass_base):
+      __slots__ = 'foo bar ham'.split()
+
+    data = MyRecord('a foo', 42, ham="spam")
+  '''
+
+  def __init__(self, *args, **kwargs):
+    for key, arg in zip(self.__slots__, args):
+      if key in kwargs:
+        msg = 'multiple values for argument {0!r}'.format(key)
+        raise TypeError(msg)
+      kwargs[key] = arg
+    for key, arg in kwargs.items():
+      setattr(self, key, arg)
+    for key in self.__slots__:
+      if not hasattr(self, key):
+        if key in defaults:
+          setattr(self, key, defaults[key])
+        else:
+          raise TypeError('missing argument {0!r}'.format(key))
+
+  def __repr__(self):
+    parts = ['{0}={1!r}'.format(k, v) for k, v in self.items()]
+    return '{0}('.format(name) + ', '.join(parts) + ')'
+
+  def __iter__(self):
+    for key in self.__slots__:
+      yield getattr(self, key)
+
+  def __len__(self):
+    return len(self.__slots__)
+
+  def __getitem__(self, index_or_key):
+    if isinstance(index_or_key, int):
+      return getattr(self, self.__slots__[index_or_key])
+    elif isinstance(index_or_key, str):
+      if index_or_key not in self.__slots__:
+        raise KeyError(index_or_key)
+      return getattr(self, index_or_key)
+    else:
+      raise TypeError('expected int or str')
+
+  def __setitem__(self, index_or_key, value):
+    if isinstance(index_or_key, int):
+      setattr(self, self.__slots__[index_or_key], value)
+    elif isinstance(index_or_key, str):
+      if index_or_key not in self.__slots__:
+        raise KeyError(index_or_key)
+      setattr(self, index_or_key, value)
+    else:
+      raise TypeError('expected int or str')
+
+  def items(self):
+    for key in self.__slots__:
+      yield key, getattr(self, key)
+
+  def keys(self):
+    return iter(self.__slots__)
+
+  def values(self):
+    for key in self.__slots__:
+      yield getattr(self, key)
+
+  def _asdict(self):
+    return {k: getattr(self, k) for k in self.__slots__}
+
+
 def recordclass(__name, __fields, **defaults):
   '''
   Creates a new class that can represent a record with the
@@ -48,68 +122,7 @@ def recordclass(__name, __fields, **defaults):
     if key not in fields:
       fields.append(key)
 
-  class _record(object):
+  class _record(recordclass_base):
     __slots__ = fields
-
-    def __init__(self, *args, **kwargs):
-      for key, arg in zip(fields, args):
-        if key in kwargs:
-          msg = 'multiple values for argument {0!r}'.format(key)
-          raise TypeError(msg)
-        kwargs[key] = arg
-      for key, arg in kwargs.items():
-        setattr(self, key, arg)
-      for key in fields:
-        if not hasattr(self, key):
-          if key in defaults:
-            setattr(self, key, defaults[key])
-          else:
-            raise TypeError('missing argument {0!r}'.format(key))
-
-    def __repr__(self):
-      parts = ['{0}={1!r}'.format(k, v) for k, v in self.items()]
-      return '{0}('.format(name) + ', '.join(parts) + ')'
-
-    def __iter__(self):
-      for key in fields:
-        yield getattr(self, key)
-
-    def __len__(self):
-      return len(fields)
-
-    def __getitem__(self, index_or_key):
-      if isinstance(index_or_key, int):
-        return getattr(self, fields[index_or_key])
-      elif isinstance(index_or_key, str):
-        if index_or_key not in fieldset:
-          raise KeyError(index_or_key)
-        return getattr(self, index_or_key)
-      else:
-        raise TypeError('expected int or str')
-
-    def __setitem__(self, index_or_key, value):
-      if isinstance(index_or_key, int):
-        setattr(self, fields[index_or_key], value)
-      elif isinstance(index_or_key, str):
-        if index_or_key not in fieldset:
-          raise KeyError(index_or_key)
-        setattr(self, index_or_key, value)
-      else:
-        raise TypeError('expected int or str')
-
-    def items(self):
-      for key in fields:
-        yield key, getattr(self, key)
-
-    def keys(self):
-      return iter(fields)
-
-    def values(self):
-      for key in fields:
-        yield getattr(self, key)
-
-    def _asdict(self):
-      return {k: getattr(self, k) for k in fields}
-
   _record.__name__ = name
   return _record
