@@ -15,6 +15,17 @@ automation abstraction.
 * [List of third-party extension modules](https://github.com/craftr-build/craftr/wiki/Craftr-Extensions)
 * [Projects using Craftr](https://github.com/craftr-build/craftr/wiki/Projects-using-Craftr)
 
+Currently, the Craftr standard library provides convenient interfaces
+for the following languages:
+
+* ASM/C/C++
+* Cython
+* C#
+* Java
+* CUDA (experimental)
+* flex/YACC
+* protobuf
+
 ### Contribute
 
 I welcome all contributions, feedback and suggestions! If you have any of
