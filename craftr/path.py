@@ -458,7 +458,7 @@ class tempfile(object):
     try:
       self.close()
     finally:
-      path.silent_remove(self.name)
+      silent_remove(self.name)
 
   def __getattr__(self, name):
     return getattr(self.fp, name)
