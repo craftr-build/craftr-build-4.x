@@ -18,6 +18,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+'''
+.. autofunction:: pkg_config
+.. autoclass:: Ar
+  :members:
+  :undoc-members:
+.. autoclass:: Ld
+  :members:
+  :undoc-members:
+.. autoclass:: Objcopy
+  :members:
+  :undoc-members:
+'''
 
 __all__ = ['Ar', 'Ld', 'Objcopy', 'pkg_config']
 

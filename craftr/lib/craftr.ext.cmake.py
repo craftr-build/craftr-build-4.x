@@ -35,6 +35,16 @@ CMake-style file configuration.
   )
 
   info('cvconfig.h created in', cvconfig.include)
+
+Functions
+---------
+
+.. autofunction:: configure_file
+
+Classes
+-------
+
+.. autoclass:: ConfigResult
 """
 
 __all__ = ['ConfigResult', 'configure_file']

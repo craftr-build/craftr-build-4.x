@@ -22,7 +22,7 @@
 A very small interface for querying information about a Git repository.
 
 Examples
-~~~~~~~~
+--------
 
 Display a note in console if build is started with unversioned changes
 in the Git repository.
@@ -53,6 +53,13 @@ to mess with your source tree!)
     return dirname
 
   gitversion_dir = write_gitversion()  # Add this to your includes
+
+Classes
+-------
+
+.. autoclass:: Git
+  :members:
+  :undoc-members:
 '''
 
 __all__ = ['Git']
@@ -98,7 +105,6 @@ class Git(object):
         count = int(self._popen(['git', 'rev-list', 'HEAD', '--count']).output.strip())
         return '{}-{}'.format(count, sha)
       raise
-
 
   def branches(self):
     command = ['git', 'branch']

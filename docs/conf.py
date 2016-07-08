@@ -23,6 +23,11 @@ import atexit
 import craftr
 print("[craftr/docs/conf.py]: Entering Craftr session context.")
 
+print("[craftr/docs/conf.py]: render_stl.main()")
+sys.path.append('.')
+import render_stl
+render_stl.main()
+
 _ctx = craftr.magic.enter_context(craftr.session, craftr.Session())
 _ctx.__enter__()
 

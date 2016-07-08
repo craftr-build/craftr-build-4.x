@@ -7,14 +7,7 @@ Standard Library Modules
 .. toctree::
   :maxdepth: 1
 
-  stl/craftr.ext.archive
-  stl/craftr.ext.cmake
-  stl/craftr.ext.compiler
-  stl/craftr.ext.git
-  stl/craftr.ext.platform
-  stl/craftr.ext.python
-  stl/craftr.ext.rules
-  stl/craftr.ext.unix
+  {{stl_toctree}}
 
 General Properties
 ------------------

@@ -23,6 +23,9 @@ installations that are required for compiling C-extensions. Use
 the :func:`get_python_framework` function to extract all the
 information from a Python installation using its ``distutils``
 module.
+
+.. autofunction:: get_python_config_vars
+.. autofunction:: get_python_framework
 '''
 
 __all__ = ['get_python_config_vars', 'get_python_framework']
@@ -30,7 +33,6 @@ __all__ = ['get_python_config_vars', 'get_python_framework']
 from craftr import *
 from craftr.ext import platform
 import json, re
-
 
 
 @memoize_tool

@@ -21,22 +21,21 @@
 ''' This module represents the current platform that Craftr is running
 on by importing the correct implementation based on :data:`sys.platform`.
 
-Available Implementations
--------------------------
+Proxies
+-------
 
-.. toctree::
-  :maxdepth: 2
+.. autodata:: WIN32
+.. autodata:: DARWIN
+.. autodata:: LINUX
+.. autodata:: CYGWIN
 
-  platform_cygwin
-  platform_darwin
-  platform_linux
-  platform_win32
-
-Contents
---------
+.. autodata:: cc
+.. autodata:: cxx
+.. autodata:: ld
+.. autodata:: ar
 '''
 
-__all__ = ['WIN32', 'DARWIN', 'LINUX', 'CYGWIN', 'as,', 'cc', 'cxx', 'ld', 'ar']
+__all__ = ['WIN32', 'DARWIN', 'LINUX', 'CYGWIN', 'asm', 'cc', 'cxx', 'ld', 'ar']
 
 from craftr import import_module
 from craftr.magic import Proxy

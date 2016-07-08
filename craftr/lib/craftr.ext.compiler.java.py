@@ -18,6 +18,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+'''
+.. autofunction:: get_class_files
+.. autoclass:: JavaCompiler
+  :members:
+  :undoc-members:
+'''
 
 __all__ = ['get_class_files', 'JavaCompiler']
 

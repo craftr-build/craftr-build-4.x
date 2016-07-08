@@ -19,6 +19,10 @@
 # THE SOFTWARE.
 """
 Provides a convenient base class for Craftr compilers.
+
+.. autoclass:: BaseCompiler
+  :members:
+  :undoc-members:
 """
 
 __all__ = ['BaseCompiler']

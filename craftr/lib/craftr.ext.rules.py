@@ -18,8 +18,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+'''
 
-__all__ = ['run', 'render_template']
+.. autofunction:: alias
+.. autofunction:: run
+.. autofunction:: render_template
+'''
+
+__all__ = ['alias', 'run', 'render_template']
 
 from os import environ
 from craftr import *

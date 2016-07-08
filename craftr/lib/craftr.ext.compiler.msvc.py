@@ -18,6 +18,23 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+'''
+.. autofunction:: detect
+.. autofunction:: get_vs_install_dir
+.. autofunction:: get_vs_environment
+.. autoclass:: MsvcCompiler
+  :members:
+  :undoc-members:
+.. autoclass:: MsvcLinker
+  :members:
+  :undoc-members:
+.. autoclass:: MsvcAr
+  :members:
+  :undoc-members:
+.. autoclass:: MsvcSuite
+  :members:
+  :undoc-members:
+'''
 
 __all__ = ['detect', 'get_vs_install_dir', 'get_vs_environment',
   'MsvcCompiler', 'MsvcLinker', 'MsvcAr', 'MsvcSuite',

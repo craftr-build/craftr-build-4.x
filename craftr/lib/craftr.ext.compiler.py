@@ -23,29 +23,6 @@ This module provides common utility functions that are used by compiler
 interface implementations, for example to convert source filenames to
 object filenames using :meth:`gen_objects`.
 
-Submodules
-----------
-
-.. toctree::
-  :maxdepth: 2
-
-  compiler_base
-  compiler_csc
-  compiler_cython
-  compiler_flex
-  compiler_gcc
-  compiler_java
-  compiler_llvm
-  compiler_msvc
-  compiler_nvcc
-  compiler_protoc
-  compiler_yacc
-
-Exceptions
-----------
-
-.. autoclass:: ToolDetectionError
-
 Functions
 ---------
 
@@ -54,6 +31,11 @@ Functions
 .. autofunction:: gen_output
 .. autofunction:: gen_objects
 .. autofunction:: remove_flags
+
+Exceptions
+----------
+
+.. autoclass:: ToolDetectionError
 '''
 
 __all__ = ['detect_compiler', 'gen_output_dir', 'gen_output', 'gen_objects',

@@ -20,6 +20,14 @@
 # THE SOFTWARE.
 """
 Interface for compiling Cython source code. See also :doc:`tutorials/cython`.
+
+.. autoclass:: CythonCompiler
+  :members:
+  :undoc-members:
+.. autoclass:: PythonInfo
+  :members:
+  :undoc-members:
+.. autodata:: cythonc
 """
 
 __all__ = ['CythonCompiler', 'PythonInfo']
@@ -127,10 +135,6 @@ class CythonCompiler(BaseCompiler):
     builder.meta['cython_outdir'] = gen_output_dir('cython')
     return builder.create_target(command, outputs=outputs, foreach=True)
 
-  #: Result structure for :meth:`compile_project`.
-  ProjectResult = utils.slotobject('ProjectResult',
-    'sources libs main_source main_bin alias')
-
   def compile_project(self, main=None, sources=[], python_bin='python', cc=None, ld=None, defines=(), **kwargs):
     """
     Compile a set of Cython source files into dynamic libraries for the
@@ -207,7 +211,7 @@ class CythonCompiler(BaseCompiler):
       ))
 
     alias = rules.alias(main_bin, *libs, target_name=builder.name)
-    return self.ProjectResult(sources, libs, main_source, main_bin, alias)
+    return ProjectResult(sources, libs, main_source, main_bin, alias)
 
 
 class PythonInfo(object):
@@ -238,6 +242,10 @@ class PythonInfo(object):
 
     return int(self.conf['VERSION'][0])
 
+
+#: Result structure for :meth:`compile_project`.
+ProjectResult = utils.slotobject('ProjectResult',
+  'sources libs main_source main_bin alias')
 
 #: An instance of the :class:`CythonCompiler` created with the
 #: default arguments.
