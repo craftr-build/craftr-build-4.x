@@ -29,7 +29,6 @@ Classes
 __all__ = ['Archive']
 
 from craftr import *
-from craftr.utils import slotobject
 from fnmatch import fnmatch
 
 import zipfile
@@ -41,7 +40,7 @@ class Archive(object):
   specified, it is derived from the *prefix*. The *format* must
   be ``'zip'`` for now. '''
 
-  File = slotobject('File', 'name arc_name')
+  File = utils.recordclass('File', 'name arc_name')
 
   def __init__(self, name = None, base_dir = None, prefix = None, format = 'zip'):
     assert format == 'zip', "format must be 'zip' for now"

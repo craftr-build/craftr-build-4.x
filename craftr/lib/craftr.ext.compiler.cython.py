@@ -244,7 +244,7 @@ class PythonInfo(object):
 
 
 #: Result structure for :meth:`compile_project`.
-ProjectResult = utils.slotobject('ProjectResult',
+ProjectResult = utils.recordclass('ProjectResult',
   'sources libs main_source main_bin alias')
 
 #: An instance of the :class:`CythonCompiler` created with the

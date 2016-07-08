@@ -4,8 +4,10 @@
 [![Travis CI](https://travis-ci.org/craftr-build/craftr.svg)](https://travis-ci.org/craftr-build/craftr)
 [![Documentation Status](https://readthedocs.org/projects/craftr/badge/?version=latest)](http://craftr.readthedocs.io/en/latest/?badge=latest)
 
-Craftr is a next generation build system based on [Ninja][] and [Python][].
-And don't worry, it isn't like waf or SCons!
+Craftr is a next generation build system based on [Ninja][] and [Python][]
+that features modular and cross-platform build definitions at the flexibility
+of a Python script and provides access to multiple levels of build
+automation abstraction.
 
 * [Changelog (latest)][Changelog]
 * [Documentation (latest)](https://craftr.readthedocs.io/en/latest/)

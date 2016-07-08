@@ -1,8 +1,10 @@
 The Craftr build system
 =======================
 
-Craftr is a next generation build system based on `Ninja`_ and `Python`_.
-And don't worry, it isn't like waf or SCons!
+Craftr is a next generation build system based on `Ninja`_ and `Python`_
+that features modular and cross-platform build definitions at the flexibility
+of a Python script and provides access to multiple levels of build
+automation abstraction.
 
 .. raw:: html
 
@@ -81,21 +83,20 @@ on any platform (that is supported by the Craftr STL).
 
 .. code-block:: python
 
-  #craftr_module(my_project)
-
+  # craftr_module(my_project)
   from craftr import path
-  from craftr.ext.platform import cxx, ld
+  from craftr.ext import platform
 
   # Create object files for each .cpp file in the src/ directory.
-  obj = cxx.compile(
+  obj = platform.cxx.compile(
     sources = path.glob('src/*.cpp'),
     std = 'c++11',
   )
 
   # Link all object files into an executable called "main".
-  program = ld.link(
-    output = 'main',
-    inputs = obj
+  program = platform.ld.link(
+    inputs = obj,
+    output = 'main'
   )
 
 Below is a sample invokation on Windows. We pass the ``-v`` flag for
@@ -145,7 +146,7 @@ produce the output files. Note that in Craftr, targets can also represents
 `Tasks`_ which can be used to embed real Python functions into the build
 graph.
 
-Using the :class:`Target<craftr.Target>` class directly is usually not
+Using the :class:`~craftr.Target` class directly is usually not
 necessary unless you have very specific requirements and need control
 over the exact commands that will be executed. Or if you're just being
 super lazy and need the easiest script to compile a C program:
