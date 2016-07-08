@@ -33,6 +33,7 @@ from craftr import magic
 RTS_COMMAND = 'craftr-rts-invoke'  # Name of the Craftr RTS command
 MANIFEST = 'build.ninja'           # Name of the exported Ninja manifest
 CMDDIR = '.craftr-cmd'             # Temp directory for command files
+LIBDIR = os.path.join(os.path.dirname(__file__), 'lib')
 
 session = magic.new_context('session')
 module = magic.new_context('module')
@@ -160,7 +161,7 @@ class Session(object):
     self.server = rts.CraftrRuntimeServer(self)
     self.server_bind = server_bind
     self.ext_importer = ext.CraftrImporter(self)
-    self.path = [craftr.path.join(craftr.path.dirname(__file__), 'lib')]
+    self.path = [LIBDIR]
     self.modules = {}
     self.targets = {}
     self.files_to_targets = {}
