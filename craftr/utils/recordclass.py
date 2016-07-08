@@ -52,7 +52,7 @@ def recordclass(__name, __fields, **defaults):
     __slots__ = fields
 
     def __init__(self, *args, **kwargs):
-      for key, arg in izip(fields, args):
+      for key, arg in zip(fields, args):
         if key in kwargs:
           msg = 'multiple values for argument {0!r}'.format(key)
           raise TypeError(msg)

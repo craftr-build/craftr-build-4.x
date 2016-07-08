@@ -186,6 +186,7 @@ class CythonCompiler(BaseCompiler):
         target_name = builder.mkname('_main_bin')
       )
     else:
+      main_source = None
       main_bin = None
 
     # Separately compile all source files and link them to C-extensions.
