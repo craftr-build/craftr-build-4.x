@@ -18,21 +18,42 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-''' This module represents the current platform that Craftr is running
-on by importing the correct implementation based on :data:`sys.platform`.
+'''
+This module represents the current platform that Craftr is running on by
+importing the correct implementation based on :data:`sys.platform`. Be
+sure to check out the :ref:`platform_interface` documentation.
 
-Proxies
--------
+
+Platform C/C++ Toolset
+----------------------
+
+.. data:: asm
+
+  The Assembler retrieved with :func:`platform.get_tool`
+
+.. data:: cc
+
+  The C compiler retrieved with :func:`platform.get_tool`
+
+.. data:: cxx
+
+  The C++ compiler retrieved with :func:`platform.get_tool`
+
+.. data:: ld
+
+  The linker retrieved with :func:`platform.get_tool`
+
+.. data:: ar
+
+  The archiver retrieved with :func:`platform.get_tool`
+
+Constants
+---------
 
 .. autodata:: WIN32
 .. autodata:: DARWIN
 .. autodata:: LINUX
 .. autodata:: CYGWIN
-
-.. autodata:: cc
-.. autodata:: cxx
-.. autodata:: ld
-.. autodata:: ar
 '''
 
 __all__ = ['WIN32', 'DARWIN', 'LINUX', 'CYGWIN', 'asm', 'cc', 'cxx', 'ld', 'ar']

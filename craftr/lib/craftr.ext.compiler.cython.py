@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 """
-Interface for compiling Cython source code. See also :doc:`tutorials/cython`.
+Interface for compiling Cython source code. See also :doc:`../tutorials/cython`.
 
 .. autoclass:: CythonCompiler
   :members:

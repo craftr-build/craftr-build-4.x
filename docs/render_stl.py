@@ -7,7 +7,20 @@ import craftr
 import functools
 import builtins
 
-Module = craftr.utils.recordclass('Module', 'name parent children pure')
+class Module(craftr.utils.recordclass_base):
+  __slots__ = 'name parent children pure'.split()
+
+  @property
+  def use(self):
+    return self.parent is not None
+
+  @property
+  def isroot(self):
+    if '.' not in self.name:
+      return self.pure
+    if self.parent and not self.parent.pure:
+      return True
+    return False
 
 
 def write_module_rst(module, dirname):
@@ -31,9 +44,8 @@ def write_module_rst(module, dirname):
 
 
 def inject_stl_toctree(input, output, dirname, modules):
-  modules = [m.name for m in modules.values() if m.parent and not m.parent.pure]
-  modules.sort()
-  toctree_contents = '\n  '.join(dirname + '/' + m for m in modules)
+  modules = sorted(filter(lambda m: m.isroot, modules.values()), key=lambda m: m.name)
+  toctree_contents = '\n  '.join(dirname + '/' + m.name for m in modules)
   with open(input, 'r') as fp:
     data = fp.read()
     data = data.replace('{{stl_toctree}}', toctree_contents)
@@ -67,7 +79,8 @@ def main():
 
   # Write them into .rst files.
   for module in modules.values():
-    write_module_rst(module, 'stl')
+    if module.use:
+      write_module_rst(module, 'stl')
 
   inject_stl_toctree('stl.rst.template', 'stl.rst', 'stl', modules)
 

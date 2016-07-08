@@ -19,6 +19,8 @@
 # THE SOFTWARE.
 '''
 Regex utility functions.
+
+.. autofunction:: search_get_groups
 '''
 
 import re

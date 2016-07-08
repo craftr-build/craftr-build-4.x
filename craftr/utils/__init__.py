@@ -17,6 +17,35 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+'''
+Various common utilities used by Craftr and its extension modules.
+
+Transform Functions
+-------------------
+
+.. autofunction:: flatten
+.. autofunction:: uniquify
+
+Recordclass
+-----------
+
+.. autoclass:: recordclass_base
+  :members:
+  :undoc-members:
+.. autofunction:: recordclass
+
+Environment Variables
+---------------------
+
+.. autofunction:: append_path
+.. autofunction:: prepend_path
+.. autofunction:: override_environ
+
+:mod:`craftr.utils.regex` Module
+---------------------------------
+
+.. automodule:: craftr.utils.regex
+'''
 
 from . import regex
 from .env import append_path, prepend_path, override_environ

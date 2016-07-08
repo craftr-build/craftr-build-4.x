@@ -7,6 +7,7 @@ This part of the documentation contains the API reference of the functions
 and classes that can be used in Craftfiles.
 
 .. toctree::
+  :maxdepth: 1
 
   craftr.ext
   craftr.options
@@ -14,8 +15,30 @@ and classes that can be used in Craftfiles.
   craftr.shell
   craftr.utils
 
-.. autodata:: session
+.. data:: session
+
+  A :class:`~craftr.magic.Proxy` to the current :class:`Session` object
+  that is being used for the current Craftr build session.
+
+  .. note::
+
+    If you've used Flask before: It's similar to the Flask request object.
+
 .. autodata:: module
+
+  A :class:`~craftr.magic.Proxy` of the Craftr module that is currently
+  being executed. Modules are standard Python module objects. When a
+  Craftr extension module is being executed, this proxy points to exactly
+  that module.
+
+  .. code:: python
+
+    # craftr_module(test)
+    # A stupid example
+    from craftr import module
+    import sys
+    assert project_name == module.project_name
+    assert sys.modules[__name__] is module()
 
 .. _logging_funcs:
 
