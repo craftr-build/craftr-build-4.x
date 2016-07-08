@@ -23,7 +23,8 @@ This module provides common utility functions that are used by compiler
 interface implementations, for example to convert source filenames to
 object filenames using :meth:`gen_objects`.
 
-:Submodules:
+Submodules
+----------
 
 .. toctree::
   :maxdepth: 2
@@ -39,15 +40,27 @@ object filenames using :meth:`gen_objects`.
   compiler_nvcc
   compiler_protoc
   compiler_yacc
+
+Exceptions
+----------
+
+.. autoclass:: ToolDetectionError
+
+Functions
+---------
+
+.. autofunction:: detect_compiler
+.. autofunction:: gen_output_dir
+.. autofunction:: gen_output
+.. autofunction:: gen_objects
+.. autofunction:: remove_flags
 '''
 
 __all__ = ['detect_compiler', 'gen_output_dir', 'gen_output', 'gen_objects',
-  'remove_flags', 'ToolDetectionError', 'BaseCompiler']
+           'remove_flags', 'ToolDetectionError', 'BaseCompiler']
 
 from craftr import *
-
 import collections
-import copy
 
 
 class ToolDetectionError(Exception):
@@ -153,4 +166,4 @@ def remove_flags(command, remove_flags, builder=None):
   return command
 
 
-from ._base import BaseCompiler ## backwards compatibility
+from .base import BaseCompiler ## backwards compatibility

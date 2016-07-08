@@ -2,5 +2,3 @@
 ==========================
 
 .. automodule:: craftr.ext.compiler
-  :members:
-  :undoc-members:

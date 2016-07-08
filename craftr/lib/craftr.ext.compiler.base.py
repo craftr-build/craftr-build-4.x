@@ -37,7 +37,7 @@ class BaseCompiler(object):
 
   .. code:: python
 
-    from craftr.ext.compiler._base import BaseCompiler
+    from craftr.ext.compiler.base import BaseCompiler
     from craftr.ext.compiler import gen_output
 
     class SimpleGCC(BaseCompiler):

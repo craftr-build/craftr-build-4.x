@@ -1,6 +1,4 @@
-:mod:`craftr.ext.compiler._base`
-================================
+:mod:`craftr.ext.compiler.base`
+===============================
 
-.. automodule:: craftr.ext.compiler._base
-  :members:
-  :undoc-members:
+.. automodule:: craftr.ext.compiler.base
