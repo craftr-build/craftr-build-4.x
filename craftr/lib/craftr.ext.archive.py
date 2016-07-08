@@ -35,10 +35,12 @@ import zipfile
 
 
 class Archive(object):
-  ''' Helper class to build and a list of files for an archive
+  '''
+  Helper class to build and a list of files for an archive
   and then create that archive from that list. If no *name* is
   specified, it is derived from the *prefix*. The *format* must
-  be ``'zip'`` for now. '''
+  be ``'zip'`` for now.
+  '''
 
   File = utils.recordclass('File', 'name arc_name')
 
