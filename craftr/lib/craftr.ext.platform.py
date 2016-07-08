@@ -37,8 +37,7 @@ Proxies
 
 __all__ = ['WIN32', 'DARWIN', 'LINUX', 'CYGWIN', 'asm', 'cc', 'cxx', 'ld', 'ar']
 
-from craftr import import_module
-from craftr.magic import Proxy
+from craftr import import_module, environ
 import sys
 
 WIN32 = 'win'     #: Windows platform name
@@ -50,8 +49,9 @@ CYGWIN = 'cygwin' #: Cygwin platform name
 import_module(__name__ + '.' + sys.platform, globals(), '*')
 
 # get_tool() imported from the current platform module.
-asm = Proxy(get_tool, 'asm')  #: The Assembler retrieved with :func:`platform.get_tool`
-cc = Proxy(get_tool, 'cc')    #: The C compiler retrieved with :func:`platform.get_tool`
-cxx = Proxy(get_tool, 'cxx')  #: The C++ compiler retrieved with :func:`platform.get_tool`
-ld = Proxy(get_tool, 'ld')    #: The linker retrieved with :func:`platform.get_tool`
-ar = Proxy(get_tool, 'ar')    #: The archiver retrieved with :func:`platform.get_tool`
+if 'SPHINXBUILD' not in environ:
+  asm = get_tool('asm')
+  cc = get_tool('cc')
+  cxx = get_tool('cxx')
+  ld = get_tool('ld')
+  ar = get_tool('ar')

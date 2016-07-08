@@ -40,6 +40,9 @@ v1.1.1
     returning :const:`None` instead of the underlying object's member value
   * fix :func:`craftr.path.buildlocal` now using ``project_name`` instead
     of ``__name__``
+  * :data:`~craftr.ext.platform.cc`, :data:`~craftr.ext.platform.cxx`,
+    :data:`~craftr.ext.platform.ld` etc. are no longer proxies but real
+    objects
 
 * C/C++ related changes
 
