@@ -4,6 +4,10 @@ Changelog
 v1.1.1
 ------
 
+* Bug fixes
+
+  * Logging in Craftr RTS fails with Runtime Error (#104)
+
 * Behaviour changes
 
   * add ``__no_default`` target when there are no default targets, printing

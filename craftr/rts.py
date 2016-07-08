@@ -516,7 +516,12 @@ class CraftrRuntimeServer(object):
           sock, addr = self.sock.accept()
         except socket.timeout:
           continue
-      thread = threading.Thread(target=_RequestHandler, args=[self, sock, addr])
+
+      def in_context(*args, **kwargs):
+        with magic.enter_context(craftr.session, self.session, secret=True):
+          _RequestHandler(*args, **kwargs)
+
+      thread = threading.Thread(target=in_context, args=[self, sock, addr])
       thread.start()
       with self.lock_state:
         self.threads.append(thread)
