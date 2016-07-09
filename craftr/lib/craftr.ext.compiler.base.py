@@ -104,8 +104,9 @@ class BaseCompiler(object):
     # Create a new Settings framework for the compiler.
     obj.settings = Framework(type(self).__name__, **kwargs)
     # Copy the frameworks of the parent.
-    obj.frameworks = self.frameworks[:]
+    obj.frameworks = copy.copy(self.frameworks)
     obj.frameworks.insert(0, obj.settings)
+    obj.hooks = copy.copy(self.hooks)
     return obj
 
   def register_hook(self, call, handler):
