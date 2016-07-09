@@ -58,7 +58,8 @@ def alias(*targets, target_name=None):
 
 
 def run(commands, args=(), inputs=(), outputs=None, cwd=None,
-    pool=None, description=None, target_name=None, multiple=False):
+    pool=None, description=None, target_name=None, multiple=False,
+    requires=()):
   """
   This function creates a :class:`Target` that runs a custom command.
   The function is three different modes based on the first parameter.
@@ -131,9 +132,9 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
   if not multiple:
     # We don't need a multi command file for a single command.
     if isinstance(commands, str):
-      command = commands
+      command = shell.split(commands)
     else:
-      command = shell.join(commands)
+      command = commands
     if cwd:
       if platform.name == platform.WIN32:
         command = ['cmd', '/c', 'cd', cwd, shell.safe('&&')] + command
@@ -144,7 +145,7 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
 
   inputs = builder.inputs or program
   return builder.create_target(command, inputs, outputs, pool=pool,
-    description=description, explicit=True)
+    description=description, explicit=True, requires=requires)
 
 
 def render_template(template, output, context, env = None, target_name = None):
