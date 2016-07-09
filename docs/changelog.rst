@@ -47,6 +47,8 @@ v1.1.1
   * :data:`~craftr.ext.platform.cc`, :data:`~craftr.ext.platform.cxx`,
     :data:`~craftr.ext.platform.ld` etc. are no longer proxies but real
     objects
+  * add :func:`craftr.ext.rules.run` ``requires`` parameter
+  * add :func:`craftr.utils.keep_module_context` function
 
 * C/C++ related changes
 

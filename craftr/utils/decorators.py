@@ -18,49 +18,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 '''
-Various common utilities used by Craftr and its extension modules.
-
-Transform Functions
--------------------
-
-.. autofunction:: flatten
-.. autofunction:: uniquify
-
-Recordclass
------------
-
-.. autoclass:: recordclass_base
-  :members:
-  :undoc-members:
-.. autofunction:: recordclass
-
-Environment Variables
----------------------
-
-.. autofunction:: append_path
-.. autofunction:: prepend_path
-.. autofunction:: override_environ
-
-:mod:`craftr.utils.regex` Module
----------------------------------
-
-.. automodule:: craftr.utils.regex
-
-Decorators
-----------
-
-.. autofunction:: keep_module_context
+Some useful decorators.
 '''
 
-from . import regex
-from .env import append_path, prepend_path, override_environ
-from .recordclass import recordclass_base, recordclass
-from .transform import flatten, uniquify
-from .decorators import keep_module_context
+import craftr
+import functools
 
-# backwards compatibility < 1.11.
-from ..shell import find_program, test_program
-from ..path import tempfile
-from .regex import search_get_groups as gre_search
-unique = uniquify
-slotobject = recordclass
+
+def keep_module_context(func):
+  '''
+  Use this decorator on a function that, when called, is executed in
+  the context of the module that the function was created in rather
+  then in the context of the module that the function is being
+  called from.
+
+  .. code:: python
+
+    @keep_module_context
+    def get_info_txt_path():
+      return path.local('info.txt')
+  '''
+
+  module = craftr.module()
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    with craftr.magic.enter_context(craftr.module, module):
+      return func(*args, **kwargs)
+  return wrapper
