@@ -409,6 +409,7 @@ class MsvcLinker(BaseCompiler):
 
       * output_type
       * keep_suffix
+      * force_suffix
       * libpath
       * libs
       * msvc_libs
@@ -439,8 +440,10 @@ class MsvcLinker(BaseCompiler):
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
     keep_suffix = builder.get('keep_suffix', False)
-    do_suffix = None if keep_suffix else getattr(platform, output_type)
-    output = gen_output(output, suffix=do_suffix)
+    suffix = builder.get('force_suffix', None)
+    if not suffix and not keep_suffix:
+      suffix = getattr(platform, output_type)
+    output = gen_output(output, suffix=suffix)
 
     libpath = builder.merge('libpath')
     libs = builder.merge('libs')

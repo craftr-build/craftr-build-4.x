@@ -57,6 +57,7 @@ v1.1.1
     options where ``***`` can be ``msvc``, ``llvm`` and ``gcc``
   * add support for ``msvc_runtime_library`` and ``force_include`` options
   * add support for ``link_target`` output variable
+  * add ``force_suffix`` option to MSVC compiler
 
 * Cython related changes
 
