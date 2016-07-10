@@ -56,6 +56,7 @@ v1.1.1
   * add :func:`craftr.utils.keep_module_context` function
   * removed ``craftr.FrameworkJoin.used_keys`` and added
     :attr:`craftr.TargetBuilder.used_options` instead
+  * add :func:`craftr.path.projectlocal`
 
 * C/C++ related changes
 

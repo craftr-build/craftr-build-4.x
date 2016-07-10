@@ -317,6 +317,23 @@ def buildlocal(path):
   return normpath(path, abspath(module.project_name))
 
 
+def projectlocal(path):
+  '''
+  Given a relative path, this function returns an absolute path
+  assuming it is relative to the :attr:`Session.cwd` path, that
+  is the working directory that Craftr is being invoked from
+  OR, if specified, the project directory that is overwritten
+  using the ``-p`` option.
+
+  .. note::
+
+    Can only be called from a session context (ie. from inside
+    a ``craftrc.py`` file or a Craftr module).
+  '''
+
+  return normpath(path, session.cwd)
+
+
 def iter_tree(dirname, depth=1):
   ''' Iterates over all files in *dirname* and its sub-directories up
   to the specified *depth*. If *dirname* is a list, this scheme will be
