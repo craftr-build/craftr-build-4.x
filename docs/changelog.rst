@@ -14,6 +14,11 @@ v1.1.1
     "no default target"
   * removed default ``clean`` target, use ``-c`` or ``-cc`` command-line option
   * catching :class:`craftr.ModuleError` no longer prints the error text (#118)
+  * :func:`craftr.TargetBuilder.get` now resolves options in a new order:
+
+    1. ``kwargs`` passed to the constructor (highest priority)
+    2. Environment options (read using :func:`options.get`)
+    3. Options from the frameworks (read using :class:`craftr.FrameworkJoin`)
 
 * API related changes
 

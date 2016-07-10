@@ -858,9 +858,27 @@ class TargetBuilder(object):
     return self.options[key]
 
   def get(self, key, default=None):
-    ''' Alias for :meth:`FrameworkJoin.get`. '''
+    '''
+    Resolves an option value for the target.
 
-    return self.options.get(key, default)
+    1. Checks the *kwargs* specified to the constructor
+    2. Checks the :mod:`options` module
+    3. The frameworks of the TargetBuilder.
+    '''
+
+    try:
+      return self.kwargs[key]
+    except KeyError:
+      pass
+    try:
+      return options.get(key, NotImplemented)
+    except KeyError:
+      pass
+
+    value = self.options.get(key, NotImplemented)
+    if value is NotImplemented:
+      value = default
+    return value
 
   def merge(self, key):
     ''' Alias for :meth:`FrameworkJoin.merge`. '''
