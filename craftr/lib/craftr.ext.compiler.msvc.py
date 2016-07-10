@@ -313,7 +313,7 @@ class MsvcCompiler(BaseCompiler):
     objects = gen_objects(builder.inputs, suffix=platform.obj)
 
     language = builder['language']
-    debug = builder.get('debug', options.get_bool('debug'))
+    debug = builder.get('debug', False)
     builder.target['description'] = builder.get('description', '{0} Compile Object ($out)'.format(self.name))
 
     if language not in ('c', 'c++', 'asm'):
@@ -369,7 +369,7 @@ class MsvcCompiler(BaseCompiler):
     else:
       builder.invalid_option('optimize')
 
-    msvc_runtime_library = builder.get('msvc_runtime_library', None)
+    msvc_runtime_library = builder.get('msvc_runtime_library', 'dynamic')
     if msvc_runtime_library == 'dynamic':
       command += ['/MTd' if debug else '/MT']
     elif msvc_runtime_library == 'static':
@@ -454,7 +454,7 @@ class MsvcLinker(BaseCompiler):
       libs += builder.merge('win64_libs')
     external_libs = builder.merge('external_libs')
     external_libs += builder.merge('msvc_external_libs')
-    debug = builder.get('debug', options.get_bool('debug'))
+    debug = builder.get('debug', False)
     builder.target['description'] = builder.get('description', 'MSVC Link {0!r} ($out)'.format(output_type))
 
     command = [builder['program'], '/nologo', '$in', '/OUT:$out']
