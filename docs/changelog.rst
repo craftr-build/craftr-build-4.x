@@ -54,6 +54,8 @@ v1.1.1
     objects
   * add :func:`craftr.ext.rules.run` ``requires`` parameter
   * add :func:`craftr.utils.keep_module_context` function
+  * removed ``craftr.FrameworkJoin.used_keys`` and added
+    :attr:`craftr.TargetBuilder.used_options` instead
 
 * C/C++ related changes
 

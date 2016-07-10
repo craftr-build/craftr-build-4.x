@@ -796,6 +796,10 @@ class TargetBuilder(object):
     Meta data for the Target that is passed directly to
     :attr:`Target.meta`.
 
+  .. attribute:: used_options
+
+  .. attribute:: allocated_names
+
   .. automethod:: TargetBuilder.__getitem__
   '''
 
@@ -822,6 +826,7 @@ class TargetBuilder(object):
     self.name = name
     self.target_attrs = {}
     self.allocated_names = {}
+    self.used_options = set()
     if not self.name:
       try:
         self.name = Target._get_name(self.module)
@@ -866,6 +871,7 @@ class TargetBuilder(object):
     3. The frameworks of the TargetBuilder.
     '''
 
+    self.used_options.add(key)
     try:
       return self.kwargs[key]
     except KeyError:
@@ -883,6 +889,7 @@ class TargetBuilder(object):
   def merge(self, key):
     ''' Alias for :meth:`FrameworkJoin.merge`. '''
 
+    self.used_options.add(key)
     return self.options.merge(key)
 
   def log(self, level, *args, stacklevel=1, **kwargs):
@@ -964,7 +971,7 @@ class TargetBuilder(object):
     '''
 
     # Complain about unhandled options.
-    unused_options = self.kwargs.keys() - self.options.used_keys
+    unused_options = self.kwargs.keys() - self.used_options
     if unused_options:
       self.log('info', 'unused options for {0}():'.format(self.caller), unused_options, stacklevel=2)
 
@@ -1143,11 +1150,6 @@ class FrameworkJoin(object):
     >>> FrameworkJoin(fw1, fw2).merge('defines')
     ['DEBUG', 'DO_STUFF']
 
-  .. attribute:: used_keys
-
-    A set of keys that have been accessed via :meth:`__getitem__`,
-    :meth:`get` and :meth:`merge`.
-
   .. attribute:: frameworks
 
     The list of :class:`Framework` objects.
@@ -1161,7 +1163,6 @@ class FrameworkJoin(object):
   '''
 
   def __init__(self, *frameworks):
-    self.used_keys = set()
     self.frameworks = []
     self.defaults = Framework('defaults')
     self += frameworks
@@ -1175,7 +1176,6 @@ class FrameworkJoin(object):
     return self
 
   def __getitem__(self, key):
-    self.used_keys.add(key)
     for fw in self.iter_frameworks():
       try:
         return fw[key]
@@ -1200,7 +1200,6 @@ class FrameworkJoin(object):
     assuming that every key is a non-string sequence and can be
     appended to a list. '''
 
-    self.used_keys.add(key)
     result = []
     for fw in self.iter_frameworks():
       try:
