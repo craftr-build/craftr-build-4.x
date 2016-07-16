@@ -54,9 +54,11 @@ Decorators
 
 from . import regex
 from .env import append_path, prepend_path, override_environ
-from .recordclass import recordclass_base, recordclass
 from .transform import flatten, uniquify
 from .decorators import keep_module_context
+
+from nr.utils.recordclass import recordclass as recordclass_base
+recordclass = recordclass_base.new
 
 # backwards compatibility < 1.11.
 from ..shell import find_program, test_program
