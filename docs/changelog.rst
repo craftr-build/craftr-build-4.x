@@ -20,6 +20,8 @@ v1.1.1
     2. Environment options (read using :func:`options.get`)
     3. Options from the frameworks (read using :class:`craftr.FrameworkJoin`)
 
+  * ``normpath()`` no longer lowers paths on windows (#92)
+
 * API related changes
 
   * add ``frame`` and ``module`` argument to :func:`craftr.log`
