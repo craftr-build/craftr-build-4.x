@@ -27,7 +27,6 @@ Functions
 ---------
 
 .. autofunction:: detect_compiler
-.. autofunction:: gen_output_dir
 .. autofunction:: gen_output
 .. autofunction:: gen_objects
 .. autofunction:: remove_flags
@@ -38,7 +37,7 @@ Exceptions
 .. autoclass:: ToolDetectionError
 '''
 
-__all__ = ['detect_compiler', 'gen_output_dir', 'gen_output', 'gen_objects',
+__all__ = ['detect_compiler', 'gen_output', 'gen_objects',
            'remove_flags', 'ToolDetectionError', 'BaseCompiler']
 
 from craftr import *
@@ -69,22 +68,8 @@ def detect_compiler(program, language):
   raise ToolDetectionError('could not detect toolset for {0!r}'.format(program))
 
 
-def gen_output_dir(output_dir):
-  ''' Given an output directory that is a relative path, it will be
-  prefixed with the current modules' project name. An absolute path is
-  left unchanged. If None is given, the current working directory is
-  returned. '''
-
-  if output_dir is None:
-    output_dir = '.'
-  else:
-    if not path.isabs(output_dir):
-      output_dir = path.join(module.project_name, output_dir)
-  return output_dir
-
-
-def gen_output(output, output_dir='', suffix=None):
-  output_dir = gen_output_dir(output_dir)
+def gen_output(output, output_dir='.', suffix=None):
+  output_dir = path.buildlocal(output_dir)
   if isinstance(output, str):
     if not path.isabs(output):
       output = path.join(output_dir, output)
@@ -103,8 +88,15 @@ def gen_output(output, output_dir='', suffix=None):
 def gen_objects(sources, output_dir='obj', suffix=None):
   if not sources:
     return []
+  # Make sure the basedir is either the project directory or
+  # only one subdir of the project directory.
   basedir = path.commonpath(sources)
-  output_dir = gen_output_dir(output_dir)
+  rel = path.relpath(basedir, module.project_dir, only_sub=True)
+  if not path.isabs(rel):
+    parts = path.split_parts(rel)[:1]
+    basedir = path.join(module.project_dir, *parts)
+
+  output_dir = path.buildlocal(output_dir)
   objects = path.move(sources, basedir, output_dir)
   if suffix is not None:
     if callable(suffix):

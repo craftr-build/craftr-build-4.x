@@ -34,7 +34,7 @@ __all__ = ['CythonCompiler', 'PythonInfo']
 
 from craftr import *
 from craftr.ext import platform, rules
-from craftr.ext.compiler import gen_output_dir, gen_objects, BaseCompiler
+from craftr.ext.compiler import gen_objects, BaseCompiler
 from craftr.ext.python import get_python_config_vars, get_python_framework
 
 import craftr
@@ -132,7 +132,7 @@ class CythonCompiler(BaseCompiler):
     command += ['--embed'] if embed else []
     command += builder.merge('additional_flags')
 
-    builder.meta['cython_outdir'] = gen_output_dir('cython')
+    builder.meta['cython_outdir'] = path.buildlocal('cython')
     return builder.create_target(command, outputs=outputs, foreach=True)
 
   def compile_project(self, main=None, sources=[], python_bin='python', cc=None, ld=None, defines=(), **kwargs):

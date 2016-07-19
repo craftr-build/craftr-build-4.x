@@ -62,6 +62,12 @@ v1.1.1
   * removed ``craftr.FrameworkJoin.used_keys`` and added
     :attr:`craftr.TargetBuilder.used_options` instead
   * add :func:`craftr.path.projectlocal`
+  * :func:`craftr.ext.compiler.gen_objects` now determines the base directory
+    of the specified source files in a more meaningful way to avoid collisions
+    with other invokations that could potentially generate the same filename
+    when both invokations received files with the same basename in different
+    folders
+  * removed ``craftr.ext.compiler.gen_output_dir()``, use :func:`path.buildlocal` instead
 
 * C/C++ related changes
 

@@ -320,7 +320,7 @@ def buildlocal(path):
     Craftr module).
   '''
 
-  return normpath(path, abspath(module.project_name))
+  return join(module.project_name, path)
 
 
 def projectlocal(path):
