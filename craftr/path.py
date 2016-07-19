@@ -26,10 +26,34 @@ from tempfile import mkstemp as _mkstemp
 import collections
 import ctypes
 import errno
+import functools
 import glob2
 import os
 import shutil
 import sys
+
+def _iter_applicable(func):
+  '''
+  Decorator for functions that process a string argument. The returned
+  function will operate the same on a single string, but can be applied
+  recursively on an iterable of strings or nested iterables and return
+  the same nested structure as lists where each non-iterable is processed
+  by the wrapped function.
+  '''
+
+  @functools.wraps(func)
+  def wrapper(subject, *args, **kwargs):
+    if isinstance(subject, collections.Iterable) and not isinstance(subject, str):
+      return [wrapper(x, *args, **kwargs) for x in subject]
+    else:
+      return func(subject, *args, **kwargs)
+
+  return wrapper
+
+
+split = _iter_applicable(os.path.split)
+dirname = _iter_applicable(os.path.dirname)
+basename = _iter_applicable(os.path.basename)
 
 
 def isglob(path):
@@ -166,34 +190,29 @@ def normpath(path, parent_dir=None, abs=True):
   else:
     raise TypeError('normpath() expected string or iterable')
 
-
+@_iter_applicable
 def addprefix(subject, prefix):
-  ''' Given a filename, this function will prepend the specified prefix
+  '''
+  Given a filename, this function will prepend the specified prefix
   to the base of the filename and return it. *filename* may be an iterable
   other than a string in which case the function is applied recursively
   and a list is being returned instead of a string.
 
   __Important__: This is *not* the directy equivalent of `addsuffix()`
   as it considered *subject* to be a filename and appends the *prefix*
-  only to the files base name. '''
+  only to the files base name.
+  '''
 
   if not prefix:
     return subject
-
-  if isinstance(subject, str):
-    dir_, base = split(subject)
-    return join(dir_, prefix + base)
-  elif isinstance(subject, collections.Iterable):
-    result = []
-    for item in subject:
-      result.append(addprefix(item, prefix))
-    return result
-  else:
-    raise TypeError('addprefix() expected string or iterable')
+  dir_, base = split(subject)
+  return join(dir_, prefix + base)
 
 
+@_iter_applicable
 def addsuffix(subject, suffix, replace=False):
-  ''' Given a string, this function appends *suffix* to the end of
+  '''
+  Given a string, this function appends *suffix* to the end of
   the string and returns the new string.
 
   *subject* may be an iterable other than a string in which case the
@@ -202,54 +221,43 @@ def addsuffix(subject, suffix, replace=False):
 
   If the *replace* argument is True, the suffix will be replaced
   instead of being just appended. Make sure to include a period in
-  the *suffix* parameter value. '''
+  the *suffix* parameter value.
+  '''
 
   if not suffix and not replace:
     return subject
-
-  if isinstance(subject, str):
-    if replace:
-      subject = rmvsuffix(subject)
-    if suffix:
-      subject += suffix
-    return subject
-  elif isinstance(subject, collections.Iterable):
-    result = []
-    for item in subject:
-      result.append(addsuffix(item, suffix, replace))
-    return result
-  else:
-    raise TypeError('addsuffix() expected string or iterable')
+  if replace:
+    subject = rmvsuffix(subject)
+  if suffix:
+    subject += suffix
+  return subject
 
 
 def setsuffix(subject, suffix):
-  ''' Remove the existing suffix from *subject* and add *suffix*
-  instead. The *suffix* must contain the dot at the beginning. '''
+  '''
+  Remove the existing suffix from *subject* and add *suffix*
+  instead. The *suffix* must contain the dot at the beginning.
+  '''
 
   return addsuffix(subject, suffix, replace=True)
 
 
+@_iter_applicable
 def rmvsuffix(subject):
-  ''' Given a filename, this function removes the the suffix of the
+  '''
+  Given a filename, this function removes the the suffix of the
   filename and returns it. If the filename had no suffix to begin with,
   it is returned unchanged.
 
   *subject* may be an iterable other than a string in which case the
   function is applied recursively to its items and a list is returned
-  instead of a string. '''
+  instead of a string.
+  '''
 
-  if isinstance(subject, str):
-    index = subject.rfind('.')
-    if index > subject.replace('\\', '/').rfind('/'):
-      subject = subject[:index]
-    return subject
-  elif isinstance(subject, collections.Iterable):
-    result = []
-    for item in subject:
-      result.append(rmvsuffix(item))
-    return result
-  else:
-    raise TypeError('rmvsuffix() expected string or iterable')
+  index = subject.rfind('.')
+  if index > subject.replace('\\', '/').rfind('/'):
+    subject = subject[:index]
+  return subject
 
 
 def move(filename, basedir, newbase):
@@ -372,11 +380,11 @@ def relpath(path, start='.', only_sub=False):
     return res
 
 
-def split_path(path):
+def split_parts(path):
   ''' Splits *path* into a list of its parts. '''
 
   result = []
-  path = normpath(path)
+  path = normpath(path, abs=False)
   path, base = split(path)
   while base:
     result.append(base)

@@ -95,7 +95,7 @@ class Archive(object):
         name = path.get_long_path_name(name)
         if parts:
           assert not arc_name
-          path_parts = path.split_path(name)
+          path_parts = path.split_parts(name)
           arc_name = path.sep.join(path_parts[-parts:])
         if not arc_name:
           arc_name = path.relpath(name, rel_dir)

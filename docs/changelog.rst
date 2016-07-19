@@ -21,6 +21,9 @@ v1.1.1
     3. Options from the frameworks (read using :class:`craftr.FrameworkJoin`)
 
   * ``normpath()`` no longer lowers paths on windows (#92)
+  * add support for iterables other than strings in :func:`path.basename`,
+    :func:`path.dirname` and :func:`path.split`
+  * renamed ``path.split_path()`` to :func:`path.split_parts`
 
 * API related changes
 
