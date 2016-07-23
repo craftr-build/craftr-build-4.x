@@ -290,6 +290,7 @@ def get_assigned_name(frame):
   state = SEARCHING
   result = ''
   stacksize = 0
+
   for op in dis.get_instructions(frame.f_code):
     if state == SEARCHING and op.offset == frame.f_lasti:
       if not op.opname.startswith('CALL_FUNCTION'):
@@ -310,7 +311,10 @@ def get_assigned_name(frame):
       elif stacksize < 0:
         raise ValueError('not a top-level expression')
 
-      if op.opname == 'LOAD_ATTR':
+      if op.opname.startswith('CALL_FUNCTION'):
+        # Chained function call, reset.
+        result = ''
+      elif op.opname == 'LOAD_ATTR':
         result += op.argval + '.'
 
   if not result:

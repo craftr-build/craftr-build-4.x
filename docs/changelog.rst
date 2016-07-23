@@ -1,12 +1,28 @@
 Changelog
 =========
 
+v1.1.2
+------
+
+* Bug fixes
+
+  * Fixed target name deduction with chained function calls on
+    generator functions (#122)
+
+* Behaviour changes
+
+  * If the folders ``./craftr/`` and ./craftr/modules`` exist in the
+    project directory, they will automatically be added to the Craftr
+    search path
+
 v1.1.1
 ------
 
 * Bug fixes
 
   * Logging in Craftr RTS fails with Runtime Error (#104)
+  * Fix wrong target name deduction with chained function calls on
+    target generator functions (#122)
 
 * Behaviour changes
 

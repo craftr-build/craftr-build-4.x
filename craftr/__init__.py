@@ -175,6 +175,9 @@ class Session(object):
     if path is not None:
       self.path.extend(path)
 
+    self.path.append(os.path.join(self.cwd, 'craftr'))
+    self.path.append(os.path.join(self.cwd, 'craftr', 'modules'))
+
   def register_target(self, target):
     ''' This function is used by the :class:`Target` constructor
     to register itself to the :class:`Session`. This will add the
