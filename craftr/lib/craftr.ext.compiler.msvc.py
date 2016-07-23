@@ -151,7 +151,7 @@ def get_vs_install_dir(versions=None, prefer_newest=True):
     version numbers that will be considered. If specified, the first
     detected installation will be used.
   :param prefer_newest: True if the newest version should be preferred.
-  :return: :class:`str` of the main installation directory.
+  :return: tuple of (version, install_dir)
   :raise ToolDetectionError: If no Visual Studio insallation
     could be found.
 
@@ -179,8 +179,11 @@ def get_vs_install_dir(versions=None, prefer_newest=True):
   if not choices:
     raise ToolDetectionError('Visual Studio installation path could not be detected.')
 
-  res = environ[choices[0]].rstrip('\\')
-  return path.dirname(path.dirname(res))
+  var = choices[0]
+  version = var[2:5]; assert all(c.isdigit() for c in version)
+  res = environ[var].rstrip('\\')
+
+  return version, path.dirname(path.dirname(res))
 
 
 @lru_cache()
@@ -226,14 +229,12 @@ def get_vs_environment(install_dir, arch=None):
     else:
       batch = path.join(toolsdir, 'vcvars' + arch + '.bat')
 
-  info('Detected VS architecture:', arch)
-
   # Run the batch file and print the environment.
   cmd = [batch, shell.safe('&&'), sys.executable,
     '-c', 'import os, json; print(json.dumps(dict(os.environ)))']
   env = json.loads(shell.pipe(cmd, shell=True).output)
 
-  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env}
+  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env, 'arch': arch}
 
 
 class MsvcCompiler(BaseCompiler):
@@ -521,7 +522,7 @@ class MsvcSuite(object):
   """
 
   def __init__(self, vsversions=None, vsarch=None):
-    install_dir = get_vs_install_dir(vsversions)
+    version, install_dir = get_vs_install_dir(vsversions)
     data = get_vs_environment(install_dir)
     self.basedir = data['basedir']
     self.toolsdir = data['toolsdir']
@@ -548,6 +549,8 @@ class MsvcSuite(object):
     self.asm = MsvcCompiler(cl, 'asm', desc=self.desc, include=self.include, libpath=self.libpath)
     self.ld = MsvcLinker(link, desc=self.desc, libpath=self.lib)
     self.ar = MsvcAr(lib)
+
+    info('Detected: Microsoft Visual Studio Compiler v{0}:{1}'.format(version, data['arch']))
 
 
 Compiler = MsvcCompiler
