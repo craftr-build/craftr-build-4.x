@@ -36,6 +36,12 @@ v1.1.2
   * Added :attr:`craftr.Session.options` (of type :class:`craftr.ModuleOptions`)
     that contains options that are globally inherited by all Craftr modules
 
+* Compiler changes
+
+  * MSVC version detection now detects include errors and raises a
+    :craftr:`~craftr.ext.compiler.ToolDetectionError` in that case (can
+    happen with an incomplete VS installation)
+
 v1.1.1
 ------
 

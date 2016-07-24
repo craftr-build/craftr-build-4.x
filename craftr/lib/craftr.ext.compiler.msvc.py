@@ -118,6 +118,9 @@ def detect(program):
     # notices.
     for line in output.split('\n'):
       if 'stddef.h' in line:
+        if 'C1083' in line:  # C1083: can not open include file
+          msg = 'MSVC can not compile a simple C program.\n  Program: {}\n  Output:\n\n{}'
+          raise ToolDetectionError(msg.format(program, output))
         match = re.search('[\w\s]+:[\w\s]+:', line)
         if match:
           deps_prefix = match.group(0)
