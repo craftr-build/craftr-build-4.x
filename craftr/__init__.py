@@ -48,6 +48,8 @@ import traceback
 import types
 import warnings
 
+from craftr import utils
+
 # This object is used to indicate a state where a parameter was
 # not specified. This is used when None would be an accepted value.
 _sentinel = object()
@@ -79,6 +81,13 @@ class Session(object):
 
     A dictionary of Craftr extension modules. Key is the module name
     without the ``craftr.ext.`` prefix.
+
+  .. attribute:: options
+
+    A :class:`ModuleOptions` object with no prefix that represents
+    global options. All :class:`ModuleOptions` of Craftr modules have
+    this object as its parent. Global options can be declared with this
+    object.
 
   .. attribute:: targets
 
@@ -163,6 +172,7 @@ class Session(object):
     self.ext_importer = ext.CraftrImporter(self)
     self.path = [LIBDIR]
     self.modules = {}
+    self.options = ModuleOptions()
     self.targets = {}
     self.files_to_targets = {}
     self.var = {}
@@ -177,6 +187,8 @@ class Session(object):
 
     self.path.append(os.path.join(self.cwd, 'craftr'))
     self.path.append(os.path.join(self.cwd, 'craftr', 'modules'))
+
+    self.options.add('debug', type=bool)
 
   def register_target(self, target):
     ''' This function is used by the :class:`Target` constructor
@@ -1244,6 +1256,170 @@ class ModuleReturn(Exception):
   pass
 
 
+class ModuleOptions(object):
+  ''' This class serves as an interface to declare available options
+  of a module and reading those options from the environment.
+
+  :param prefix: The name of the module that this options container
+    is used for. The prefix will be prepended to all option names
+    when reading from the environment variables. (If the prefix does
+    not end with a dot, the dot will be appended).
+  :param parent: A parent :class:`ModuleOptions` object. The
+    :attr:`Session.options` object has no parent, but the ``options``
+    object of every module has the :attr:`Session.options` as its parent.
+
+  .. attribute:: prefix
+  .. attribute:: parent
+  .. attribute:: declarations
+  '''
+
+  OptionInfo = utils.recordclass('OptionInfo', 'name type default adapter')
+
+  def __init__(self, prefix=None, parent=None):
+    if prefix and not prefix.endswith('.'):
+      prefix += '.'
+    self.prefix = prefix
+    self.parent = parent
+    self.declarations = {}
+
+  def get(self, name):
+    ''' Reads an option with the specified name from the environment
+    variables prefixed with the string the :class:`ModuleOptions`
+    have been initialized with.
+
+    :param name: The name of the option.
+    :raise KeyError: If *name* is not an option declared with :func:`add`.
+    '''
+
+    info = self.declarations[name]
+    full_name = (self.prefix + name) if self.prefix else name
+
+    try:
+      try:
+        value = environ[full_name]
+      except KeyError:
+        if self.parent:
+          value = self.parent.get(name)
+        else:
+          raise
+    except KeyError:
+      value = info.default
+    else:
+      try:
+        value = (info.adapter or info.type)(value)
+      except (ValueError, TypeError) as exc:
+        raise type(exc)('option {!r}: {}'.format(full_name, exc)) from exc
+
+    return value
+
+  def add(self, name, type=str, default=None, adapter=None):
+    ''' Declare an option with a name, type and an optional default
+    value. The option can then be accessed by reading from the
+    respective attribute name from the :class:`ModuleOptions` object
+    or by using the :func:`get` method. '''
+
+    if name in self.declarations:
+      raise ValueError('option {!r} already declared'.format(name))
+    if type is bool:
+      # Special handling for bool types.
+      if adapter is None:
+        adapter = self._adapter_bool
+      if default is None:
+        default = False
+    self.declarations[name] = self.OptionInfo(name, type, default, adapter)
+
+  @staticmethod
+  def _adapter_bool(value):
+    if isinstance(value, str):
+      value = value.lower().strip()
+      if value in ('0', 'no', 'false', ''):
+        return False
+      elif value in ('1', 'yes', 'true'):
+        return True
+      else:
+        raise ValueError('invalid value for option {!r}: {!r}'.format(name, value))
+    elif isinstance(value, bool):
+      return value
+    raise TypeError('unexpected type: {!r}'.format(type(value).__name__))
+
+class ModuleOptionsNamespace(object):
+  ''' Namespace object for reading and writing options of a module. '''
+
+  def __init__(self, provider):
+    self._provider = provider
+
+  def __getattr__(self, name):
+    try:
+      return self._provider.get(name)
+    except KeyError:
+      raise AttributeError(name)
+
+  # Backwards compatibility <= 1.1.1
+
+  @staticmethod
+  def get(name, default=None, inherit_global=True):
+    ''' Reads an option value from the environment variables.
+    The option name will be prefixed by the identifier of the
+    module that is currently executed, eg:
+
+    :param name: The name of the option.
+    :param default: The default value that is returned if the
+      option is not set in the environment. If :const:`NotImplemented`
+      is passed for *default* and the option is not set, a :class:`KeyError`
+      is raised.
+    :param inherit_global: If this is True, the option is also
+      searched globally (ie. *name* without the prefix of the
+      currently executed module).
+    :raise KeyError: If *default* is :const:`NotImplemented` and the
+      option does not exist.
+    '''
+
+    full_name = module.project_name + '.' + name
+    try:
+      value = environ[full_name]
+    except KeyError:
+      if inherit_global:
+        try:
+          value = environ[name]
+          if not value:
+            raise KeyError(name)
+        except KeyError:
+          if default is NotImplemented:
+            raise KeyError(name)
+          value = default
+      else:
+        value = default
+    return value
+
+  @staticmethod
+  def get_bool(name, default=False, inherit_global=True):
+    ''' Read a boolean option. The actual option value is interpreted
+    as boolean value. Allowed values that are interpreted as correct
+    boolean values are: ``''``, ``'true'``, ``'false''`, ``'yes'``,
+    ``'no'``, ``'0'`` and ``'1'``
+
+    :raise KeyError: If *default* is :const:`NotImplemented` and the option
+      does not exist.
+    :raise ValueError: If the option exists but has a value that can not
+      be interpreted as boolean.
+    '''
+
+    try:
+      value = ModuleOptionsNamespace.get(name, NotImplemented, inherit_global)
+    except KeyError:
+      if default is NotImplemented:
+        raise
+      return default
+
+    value = value.lower().strip()
+    if value in ('0', 'no', 'false', ''):
+      return False
+    elif value in ('1', 'yes', 'true'):
+      return True
+    else:
+      raise ValueError('invalid value for option {!r}: {!r}'.format(name, value))
+
+
 class TaskError(Exception):
   ''' Raised from :meth:`Target.execute_task()`. '''
 
@@ -1422,6 +1598,8 @@ def init_module(module):
   module.__session__ = session()
   module.project_dir = path.dirname(module.__file__)
   module.project_name = module.__name__[11:]
+  module.__options__ = ModuleOptions(module.project_name, session.options)
+  module.options = ModuleOptionsNamespace(module.__options__)
 
 
 def finish_module(module):
@@ -1465,9 +1643,9 @@ def craftr_min_version(version_string):
 
 
 from craftr.logging import log, debug, info, warn, error
-from craftr import ext, options, path, shell, ninja, rts, utils
+from craftr import ext, path, shell, ninja, rts, utils
 
-__all__ = ['session', 'module', 'path', 'options', 'shell', 'utils', 'environ',
+__all__ = ['session', 'module', 'path', 'shell', 'utils', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
   'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs', 'task',
   'import_file', 'import_module', 'craftr_min_version']

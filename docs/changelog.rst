@@ -18,6 +18,23 @@ v1.1.2
 * API Changes
 
   * Removed ``craftr.memoize_tool()`` function which was deprecated in v1.1.1
+  * Removed ``craftr.options`` module! (some backwards compatibility maintained
+    by new ``options`` object in module globals, see below)
+  * Added new ``options`` built-in for Craftr modules (of type
+    :class:`craftr.ModuleOptionsNamespace`) that serves as a namespace for
+    option values declared in the ``__options__`` builtin
+  * Added new ``__options__`` built-in (of type :class:`craftr.ModuleOptions`)
+    that should be used to declare module options, eg:
+
+    .. code:: python
+
+      # craftr_module(my_module)
+      __options__.add('staticbuild', type=bool)
+      info(options.debug)
+      info(options.staticbuild)
+
+  * Added :attr:`craftr.Session.options` (of type :class:`craftr.ModuleOptions`)
+    that contains options that are globally inherited by all Craftr modules
 
 v1.1.1
 ------
