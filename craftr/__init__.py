@@ -892,10 +892,9 @@ class TargetBuilder(object):
     except KeyError:
       pass
     try:
-      return options.get(key, NotImplemented)
+      return self.module.__options__.get(key)
     except KeyError:
       pass
-
     value = self.options.get(key, NotImplemented)
     if value is NotImplemented:
       value = default
