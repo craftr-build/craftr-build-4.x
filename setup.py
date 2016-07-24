@@ -54,7 +54,7 @@ requirements = [str(x.req) for x in parse_requirements('requirements.txt')]
 
 setup(
   name = 'craftr-build',
-  version = '1.1.1',
+  version = '1.1.2.dev',
   description = 'next generation build system based on Ninja and Python',
   long_description = long_description,
   classifiers = [
