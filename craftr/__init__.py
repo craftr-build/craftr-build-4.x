@@ -1414,11 +1414,6 @@ def import_module(modname, globals=None, fromlist=None):
   return root
 
 
-#: Backwards compatibility for the old ``memory_cache()`` decorator.
-#: Will be deprecated in the future, use :func:`functools.lru_cache`
-memoize_tool = functools.lru_cache()
-
-
 def init_module(module):
   ''' Called when a craftr module is being imported before it is
   executed to initialize its contents. '''
@@ -1475,4 +1470,4 @@ from craftr import ext, options, path, shell, ninja, rts, utils
 __all__ = ['session', 'module', 'path', 'options', 'shell', 'utils', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
   'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs', 'task',
-  'import_file', 'import_module', 'memoize_tool', 'craftr_min_version']
+  'import_file', 'import_module', 'craftr_min_version']

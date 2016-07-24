@@ -11,9 +11,13 @@ v1.1.2
 
 * Behaviour changes
 
-  * If the folders ``./craftr/`` and ./craftr/modules`` exist in the
+  * If the folders ``./craftr/`` and ``./craftr/modules`` exist in the
     project directory, they will automatically be added to the Craftr
     search path
+
+* API Changes
+
+  * Removed ``craftr.memoize_tool()`` function which was deprecated in v1.1.1
 
 v1.1.1
 ------

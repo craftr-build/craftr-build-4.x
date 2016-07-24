@@ -32,7 +32,7 @@ from craftr import *
 from craftr.ext import platform
 from craftr.ext.compiler import *
 
-from functools import partial
+from functools import partial, lru_cache
 import re
 
 
@@ -41,7 +41,7 @@ _e_llvm_target = r'Target:\s*([\w\-\._]+)'
 _e_llvm_thread = r'Thread\s+model:\s*([\w\-\._]+)'
 
 
-@memoize_tool
+@lru_cache()
 def detect(program):
   ''' Assuming *program* points to Clang or Clang++, this function
   determines meta information about it. The returned dictionary contains
