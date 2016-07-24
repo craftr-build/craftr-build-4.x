@@ -1,12 +1,49 @@
 Changelog
 =========
 
+v1.1.2
+------
+
+* Bug fixes
+
+  * Fixed target name deduction with chained function calls on
+    generator functions (#122)
+
+* Behaviour changes
+
+  * If the folders ``./craftr/`` and ``./craftr/modules`` exist in the
+    project directory, they will automatically be added to the Craftr
+    search path
+
+* API Changes
+
+  * Removed ``craftr.memoize_tool()`` function which was deprecated in v1.1.1
+  * Removed ``craftr.options`` module! (some backwards compatibility maintained
+    by new ``options`` object in module globals, see below)
+  * Added new ``options`` built-in for Craftr modules (of type
+    :class:`craftr.ModuleOptionsNamespace`) that serves as a namespace for
+    option values declared in the ``__options__`` builtin
+  * Added new ``__options__`` built-in (of type :class:`craftr.ModuleOptions`)
+    that should be used to declare module options, eg:
+
+    .. code:: python
+
+      # craftr_module(my_module)
+      __options__.add('staticbuild', type=bool)
+      info(options.debug)
+      info(options.staticbuild)
+
+  * Added :attr:`craftr.Session.options` (of type :class:`craftr.ModuleOptions`)
+    that contains options that are globally inherited by all Craftr modules
+
 v1.1.1
 ------
 
 * Bug fixes
 
   * Logging in Craftr RTS fails with Runtime Error (#104)
+  * Fix wrong target name deduction with chained function calls on
+    target generator functions (#122)
 
 * Behaviour changes
 

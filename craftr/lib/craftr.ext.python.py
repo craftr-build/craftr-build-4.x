@@ -32,10 +32,10 @@ __all__ = ['get_python_config_vars', 'get_python_framework']
 
 from craftr import *
 from craftr.ext import platform
-import json, re
+import functools, json, re
 
 
-@memoize_tool
+@functools.lru_cache()
 def get_python_config_vars(python_bin):
   ''' Given the name or path to a Python executable, this function
   returns the dictionary that would be returned by

@@ -29,7 +29,7 @@ __all__ = ['GccCompiler']
 
 from craftr import *
 from .. import llvm
-from functools import partial
+from functools import partial, lru_cache
 import re
 
 
@@ -38,7 +38,7 @@ _e_gcc_target = r'Target:\s*([\w\-\._]+)'
 _e_gcc_thread = r'--enable-threads=([\w\-\._]+)'
 
 
-@memoize_tool
+@lru_cache()
 def detect(program):
   ''' Assuming *program* points to GCC or GCC++, this function determines
   meta information about it. The returned dictionary contains the
