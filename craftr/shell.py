@@ -43,7 +43,8 @@ class safe(str):
 
 
 def split(s):
-  return shlex.split(s, posix=(os.name != 'nt'))
+  # xxx: do we need to set posix=False on Windows?
+  return shlex.split(s)
 
 
 def quote(s):
@@ -81,7 +82,6 @@ def find_program(name):
   absolute path to it. On Windows, this also takes the `PATHEXT`
   variable into account.
 
-
   :param name: The name of the program to find.
   :return: :class:`str` -- The absolute path to the program.
   :raise FileNotFoundError: If the program could not be found in the PATH.
@@ -99,9 +99,9 @@ def find_program(name):
   iswin = sys.platform.startswith('win32')
   iscygwin = sys.platform.startswith('cygwin')
   if iswin and '/' in name or '\\' in name:
-    return path.abspath(name)
+    name = path.abspath(name)
   elif iswin and path.sep in name:
-    return path.abspath(name)
+    name = path.abspath(name)
 
   if iswin:
     pathext = environ['PATHEXT'].split(path.pathsep)
