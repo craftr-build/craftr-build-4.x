@@ -182,10 +182,15 @@ def get_vs_install_dir(versions=None, prefer_newest=True):
   if not choices:
     raise ToolDetectionError('Visual Studio installation path could not be detected.')
 
-  var = choices[0]
-  version = var[2:5]; assert all(c.isdigit() for c in version)
-  res = environ[var].rstrip('\\')
+  for vsvar in choices:
+    vspath = environ.get(vsvar, '')
+    if vspath and path.exists(vspath):
+      break
+  else:
+    raise ToolDetectionError('Visual Studio installation path could not be detected.')
 
+  version = vsvar[2:5]; assert all(c.isdigit() for c in version)
+  res = vspath.rstrip('\\')
   return version, path.dirname(path.dirname(res))
 
 
@@ -235,7 +240,11 @@ def get_vs_environment(install_dir, arch=None):
   # Run the batch file and print the environment.
   cmd = [batch, shell.safe('&&'), sys.executable,
     '-c', 'import os, json; print(json.dumps(dict(os.environ)))']
-  env = json.loads(shell.pipe(cmd, shell=True).output)
+  try:
+    out = shell.pipe(cmd, shell=True).output
+  except OSError as exc:
+    raise ToolDetectionError('Visual Studio Environment could not be detected: {}'.format(exc)) from exc
+  env = json.loads(out)
 
   return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env, 'arch': arch}
 
