@@ -421,7 +421,7 @@ class MsvcLinker(BaseCompiler):
     Supported options:
 
       * output_type
-      * keep_suffix
+      * keep_suffix (overrides force_suffix)
       * force_suffix
       * libpath
       * libs
@@ -452,9 +452,14 @@ class MsvcLinker(BaseCompiler):
     output_type = builder.get('output_type', 'bin')
     if output_type not in ('bin', 'dll'):
       raise ValueError('unsupported output_type: {0}'.format(kind))
+
+    # Generate the output filename, keeping the suffix or forcing
+    # a specific suffix based on the respective options.
     keep_suffix = builder.get('keep_suffix', False)
     suffix = builder.get('force_suffix', None)
-    if not suffix and not keep_suffix:
+    if keep_suffix:
+      suffix = None
+    elif not suffix:
       suffix = getattr(platform, output_type)
     output = gen_output(output, suffix=suffix)
 

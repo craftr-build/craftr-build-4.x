@@ -8,6 +8,7 @@ v1.1.2
 
   * Fixed target name deduction with chained function calls on
     generator functions (#122)
+  * MSVC fixed handling of keep_suffix and force_suffix options
 
 * Behaviour changes
 
