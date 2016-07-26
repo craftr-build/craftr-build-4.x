@@ -1290,24 +1290,26 @@ class ModuleOptions(object):
     :raise KeyError: If *name* is not an option declared with :func:`add`.
     '''
 
-    info = self.declarations[name]
+    try:
+      info = self.declarations[name]
+    except KeyError:
+      if self.parent is None:
+        raise
+      return self.parent.get(name)
+
     full_name = (self.prefix + name) if self.prefix else name
+    try:
+      value = environ[full_name]
+    except KeyError:
+      if self.parent is None:
+        value = info.default
+      else:
+        return self.parent.get(name)
 
     try:
-      try:
-        value = environ[full_name]
-      except KeyError:
-        if self.parent:
-          value = self.parent.get(name)
-        else:
-          raise
-    except KeyError:
-      value = info.default
-    else:
-      try:
-        value = (info.adapter or info.type)(value)
-      except (ValueError, TypeError) as exc:
-        raise type(exc)('option {!r}: {}'.format(full_name, exc)) from exc
+      value = (info.adapter or info.type)(value)
+    except (ValueError, TypeError) as exc:
+      raise type(exc)('option {!r}: {}'.format(full_name, exc)) from exc
 
     return value
 
