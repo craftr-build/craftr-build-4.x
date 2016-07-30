@@ -299,6 +299,7 @@ class MsvcCompiler(BaseCompiler):
       * warn (``/W4, /w``) [``'all', 'none', None``]
       * optimize (``/Od, /O1, /O2, /Os``) [``'speed', 'size', 'debug', 'none', None]``
       * exceptions (``/EHsc``) [``True, False, None``]
+      * rtti (``/GR[-]``) [``True, False, None``]
       * autodeps (``/showIncludes``)
       * description
       * msvc_runtime_library (``/MT, /MTd, /MD, /MDd``) [``'static', 'dynamic', None``]
@@ -357,6 +358,10 @@ class MsvcCompiler(BaseCompiler):
     elif exceptions is None and language == 'c++':
       # Enable exceptions by default.
       command += ['/EHsc']
+
+    rtti = builder.get('rtti', None)
+    if rtti is not None:
+      command += ['/GR'] if rtti else ['/GR-']
 
     warn = builder.get('warn', 'all')
     if warn == 'all':

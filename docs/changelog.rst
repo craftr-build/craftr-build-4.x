@@ -42,6 +42,7 @@ v1.1.2
   * MSVC version detection now detects include errors and raises a
     :craftr:`~craftr.ext.compiler.ToolDetectionError` in that case (can
     happen with an incomplete VS installation)
+  * Support new ``rtti`` option in LLVM and MSVC compiler
 
 v1.1.1
 ------

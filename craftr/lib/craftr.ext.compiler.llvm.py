@@ -151,6 +151,7 @@ class LlvmCompiler(BaseCompiler):
     :param std: Set the C/C++ standard (``--std`` argument)
     :param pedantic: Enable the ``--pedantic`` flag
     :param pic: Enable position independent code.
+    :param rtti: Include runtime type information or disable it explicitly.
     :param warn: Warning level. Choices are ``'all'``, ``'none'`` and
       :const:`None` (latter is different in that it adds no warning related
       compiler flag at all).
@@ -218,6 +219,7 @@ class LlvmCompiler(BaseCompiler):
     command += ['-fPIC'] if builder.get('pic', False) else []
     command += ['-F' + x for x in osx_fwpath]
     command += ['-fno-exceptions'] if not builder.get('exceptions', True) else []
+    command += ['-fno-rtti'] if not builder.get('rtti', True) else []
     command += utils.flatten(['-framework', x] for x in osx_frameworks)
 
     if warn == 'all':
