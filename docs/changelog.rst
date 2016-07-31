@@ -36,6 +36,13 @@ v1.1.2
 
   * Added :attr:`craftr.Session.options` (of type :class:`craftr.ModuleOptions`)
     that contains options that are globally inherited by all Craftr modules
+  * Removed ``craftr.magic.get_caller()``
+  * All module-level options can now be read from the unprefixed version
+  * :class:`craftr.TargetBuilder` now has a ``caller_options`` member
+    that contains the ``__options__`` variable of the frame that created
+    the ``TargetBuilder``
+  * :meth:`craftr.TargetBuilder.get` now also reads options of the module
+    that created the ``TargetBuilder``
 
 * Compiler changes
 

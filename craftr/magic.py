@@ -126,12 +126,6 @@ def get_module_frame(module, allow_local=True, start_frame=None, stacklevel=None
   raise RuntimeError('module frame can not be found')
 
 
-def get_caller(stacklevel=1):
-  ''' Returns the name of the calling function. '''
-
-  return get_frame(stacklevel).f_code.co_name
-
-
 # Bytecode parsing stuff =====================================================
 
 

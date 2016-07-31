@@ -27,6 +27,7 @@
 '''
 
 __all__ = ['detect', 'LlvmCompiler', 'Compiler', 'Linker']
+__options__.add('rtti', bool, default=True)
 
 from craftr import *
 from craftr.ext import platform

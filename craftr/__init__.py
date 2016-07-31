@@ -826,8 +826,12 @@ class TargetBuilder(object):
       meta = {}
     if not isinstance(meta, dict):
       raise TypeError('meta must be a dictionary')
+    frame = magic.get_frame(stacklevel)
+
     self.meta = meta
-    self.caller = magic.get_caller(stacklevel + 1)
+    self.caller = frame.f_code.co_name
+    self.caller_options = frame.f_globals.get('__options__')
+
     frameworks = list(frameworks)
 
     if inputs is not None:
@@ -882,8 +886,9 @@ class TargetBuilder(object):
     Resolves an option value for the target.
 
     1. Checks the *kwargs* specified to the constructor
-    2. Checks the :mod:`options` module
-    3. The frameworks of the TargetBuilder.
+    2. Checks the ``__options__`` of the currently executed module
+    3. Checks the ``__options__`` of the module that created the TargetBuilder
+    4. The frameworks of the TargetBuilder.
     '''
 
     self.used_options.add(key)
@@ -895,6 +900,12 @@ class TargetBuilder(object):
       return self.module.__options__.get(key)
     except KeyError:
       pass
+    try:
+      if self.caller_options:
+        return self.caller_options.get(key)
+    except KeyError:
+      pass
+    # Check the frameworks for the options
     value = self.options.get(key, NotImplemented)
     if value is NotImplemented:
       value = default
@@ -1301,10 +1312,11 @@ class ModuleOptions(object):
     try:
       value = environ[full_name]
     except KeyError:
-      if self.parent is None:
+      try:
+        # Try the unprefixed version of the option name.
+        value = environ[name]
+      except KeyError:
         value = info.default
-      else:
-        return self.parent.get(name)
 
     try:
       value = (info.adapter or info.type)(value)
@@ -1321,6 +1333,8 @@ class ModuleOptions(object):
 
     if name in self.declarations:
       raise ValueError('option {!r} already declared'.format(name))
+    if '.' in name:
+      raise ValueError('option name must not contain a period: {!r}'.format(name))
     if type is bool:
       # Special handling for bool types.
       if adapter is None:
@@ -1338,7 +1352,7 @@ class ModuleOptions(object):
       elif value in ('1', 'yes', 'true'):
         return True
       else:
-        raise ValueError('invalid value for option {!r}: {!r}'.format(name, value))
+        raise ValueError('not a bool value: {!r}'.format(value))
     elif isinstance(value, bool):
       return value
     raise TypeError('unexpected type: {!r}'.format(type(value).__name__))
@@ -1354,6 +1368,16 @@ class ModuleOptionsNamespace(object):
       return self._provider.get(name)
     except KeyError:
       raise AttributeError(name)
+
+  def __setitem__(self, name, value):
+    '''
+    Synonym for setting and environment variable, except that
+    if *name* contains no period, the module's name will be prefixed.
+    '''
+
+    if '.' not in name:
+      name = self._provider.prefix + name
+    environ[name] = value
 
   # Backwards compatibility <= 1.1.1
 
@@ -1596,7 +1620,9 @@ def init_module(module):
   executed to initialize its contents. '''
 
   assert module.__name__.startswith('craftr.ext.')
+  module.session = session()
   module.__session__ = session()
+  module.environ = environ
   module.project_dir = path.dirname(module.__file__)
   module.project_name = module.__name__[11:]
   module.__options__ = ModuleOptions(module.project_name, session.options)
@@ -1646,7 +1672,7 @@ def craftr_min_version(version_string):
 from craftr.logging import log, debug, info, warn, error
 from craftr import ext, path, shell, ninja, rts, utils
 
-__all__ = ['session', 'module', 'path', 'shell', 'utils', 'environ',
+__all__ = ['module', 'path', 'shell', 'utils', 'environ',
   'Target', 'TargetBuilder', 'Framework', 'FrameworkJoin',
   'debug', 'info', 'warn', 'error', 'return_', 'expand_inputs', 'task',
   'import_file', 'import_module', 'craftr_min_version']

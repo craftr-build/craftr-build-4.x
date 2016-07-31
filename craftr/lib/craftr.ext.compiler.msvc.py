@@ -39,6 +39,7 @@
 __all__ = ['detect', 'get_vs_install_dir', 'get_vs_environment',
   'MsvcCompiler', 'MsvcLinker', 'MsvcAr', 'MsvcSuite',
   'Compiler', 'Linker', 'Archiver']
+__options__.add('rtti', bool, default=True)
 
 from craftr import *
 from craftr.ext.compiler import *
