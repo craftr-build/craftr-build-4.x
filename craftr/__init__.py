@@ -1375,8 +1375,9 @@ class ModuleOptionsNamespace(object):
     if *name* contains no period, the module's name will be prefixed.
     '''
 
-    if '.' not in name:
-      name = self._provider.prefix + name
+    if name.startswith('.'):
+      assert self._provider.prefix.endswith('.')
+      name = self._provider.prefix[:-1] + name
     environ[name] = value
 
   # Backwards compatibility <= 1.1.1
