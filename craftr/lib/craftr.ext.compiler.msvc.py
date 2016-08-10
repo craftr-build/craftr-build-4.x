@@ -141,7 +141,7 @@ def detect(program):
 
 
 @lru_cache()
-def get_vs_install_dir(versions=None, prefer_newest=True):
+def get_vs_environment(versions=None, prefer_newest=True, arch=None):
   """
   Returns the path to the newest installed version of Visual Studio.
   This is determined by reading the environment variables
@@ -163,6 +163,9 @@ def get_vs_install_dir(versions=None, prefer_newest=True):
 
     The option ``VSVERSIONS`` can be used to override the
     "versions" parameter if no explicit value is specified.
+
+    The option ``VSARCH`` can be used to specify the default
+    value for "arch" if no explicit value is specified.
   """
 
   if not versions:
@@ -183,36 +186,25 @@ def get_vs_install_dir(versions=None, prefer_newest=True):
   if not choices:
     raise ToolDetectionError('Visual Studio installation path could not be detected.')
 
+  paths = []
+  last_error = None
   for vsvar in choices:
-    vspath = environ.get(vsvar, '')
-    if vspath and path.exists(vspath):
-      break
-  else:
-    raise ToolDetectionError('Visual Studio installation path could not be detected.')
+    vsversion = vsvar[2:5]; assert(all(c.isdigit() for c in vsversion))
+    vspath = environ.get(vsvar, '').rstrip('\\')
+    if vspath:
+      vspath = path.join(path.dirname(path.dirname(vspath)), 'VC')
+      if not os.path.isdir(vspath):
+        continue
+      try:
+        return _get_vs_environment(vspath, vsversion, arch)
+      except ToolDetectionError as exc:
+        last_error = exc
 
-  version = vsvar[2:5]; assert all(c.isdigit() for c in version)
-  res = vspath.rstrip('\\')
-  return version, path.dirname(path.dirname(res))
-
+  if last_error:
+    raise last_error
 
 @lru_cache()
-def get_vs_environment(install_dir, arch=None):
-  """
-  Given an installation directory returned by :func:`get_vs_install_dir`,
-  returns the environment that is created from running the Visual Studio
-  vars batch file.
-
-  :param install_dir: The installation directory.
-  :param arch: The architecture name. If no value is specified,
-    an architecture matching the current host operating system
-    is selected.
-
-  .. note::
-
-    The option ``VSARCH`` can be used to specify the default
-    value for "arch" if no explicit value is specified.
-  """
-
+def _get_vs_environment(install_dir, vsversion, arch=None):
   parch = environ.get('PROCESSOR_ARCHITEW6432')
   if not parch:
     parch = environ.get('PROCESSOR_ARCHITECTURE', 'x86')
@@ -228,11 +220,11 @@ def get_vs_environment(install_dir, arch=None):
     arch = parch + '_' + arch
 
   if arch == 'x86':
-    toolsdir = basedir = path.join(install_dir, 'VC', 'bin')
+    toolsdir = basedir = path.join(install_dir, 'bin')
     batch = path.join(toolsdir, 'vcvars32.bat')
   else:
-    toolsdir = path.join(install_dir, 'VC', 'bin', arch)
-    basedir = path.join(install_dir, 'VC', 'bin', parch)
+    toolsdir = path.join(install_dir, 'bin', arch)
+    basedir = path.join(install_dir, 'bin', parch)
     if arch == 'amd64':
       batch = path.join(toolsdir, 'vcvars64.bat')
     else:
@@ -247,7 +239,8 @@ def get_vs_environment(install_dir, arch=None):
     raise ToolDetectionError('Visual Studio Environment could not be detected: {}'.format(exc)) from exc
   env = json.loads(out)
 
-  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env, 'arch': arch}
+  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env,
+    'arch': arch, 'version': vsversion}
 
 
 class MsvcCompiler(BaseCompiler):
@@ -545,11 +538,11 @@ class MsvcSuite(object):
   """
 
   def __init__(self, vsversions=None, vsarch=None):
-    version, install_dir = get_vs_install_dir(vsversions)
-    data = get_vs_environment(install_dir)
+    data = get_vs_environment(vsversions)
     self.basedir = data['basedir']
     self.toolsdir = data['toolsdir']
     self.env = data['env']
+    self.version = data['version']
 
     # TODO: This is a dirty hack to make sure the Visual Studio
     #       compiler can be run until craftr-build/craftr#120 is
@@ -573,7 +566,7 @@ class MsvcSuite(object):
     self.ld = MsvcLinker(link, desc=self.desc, libpath=self.lib)
     self.ar = MsvcAr(lib)
 
-    info('Detected: Microsoft Visual Studio Compiler v{0}:{1}'.format(version, data['arch']))
+    info('Detected: Microsoft Visual Studio Compiler v{0}:{1}'.format(self.version, data['arch']))
 
 
 Compiler = MsvcCompiler
