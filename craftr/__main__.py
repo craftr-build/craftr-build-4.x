@@ -136,6 +136,8 @@ def main():
   if not args.module:
     cfile = path.join(args.project_dir, 'Craftfile.py')
     if not path.isfile(cfile):
+      cfile = path.join(args.project_dir, 'craftr', 'Craftfile.py')
+    if not path.isfile(cfile):
       error('{0!r} does not exist'.format(path.relpath(cfile)))
       return errno.ENOENT
     args.module = craftr.ext.get_module_ident(cfile)
@@ -350,4 +352,3 @@ def main():
 
 if __name__ == '__main__':
   sys.exit(main())
-

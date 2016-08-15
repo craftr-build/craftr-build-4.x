@@ -17,6 +17,8 @@ v1.1.2
   * If the folders ``./craftr/`` and ``./craftr/modules`` exist in the
     project directory, they will automatically be added to the Craftr
     search path
+  * The ``Craftfile.py`` is now also searched for not only in the current
+    working directory but also in the ``craftr/`` directory
 
 * API Changes
 
