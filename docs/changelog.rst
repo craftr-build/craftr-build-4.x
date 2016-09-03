@@ -11,6 +11,7 @@ v1.1.2
   * MSVC fixed handling of keep_suffix and force_suffix options
   * MSVC compiler now correctly deduces a correct compiler version
     if multiple versions are specified and the first can not be used
+  * GCC/LLVM/MSVC don't add optimization flag if ``optimize=None`` (#126)
 
 * Behaviour changes
 

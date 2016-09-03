@@ -239,9 +239,9 @@ class LlvmCompiler(BaseCompiler):
       command += ['-O4']
     elif optimize == 'size':
       commandm += ['-Os']
-    elif optimize in ('debug', 'none', None):
+    elif optimize in ('debug', 'none'):
       command += ['-O0']
-    else:
+    elif optimize is not None:
       builder.invalid_option('optimize')
 
     if autodeps:

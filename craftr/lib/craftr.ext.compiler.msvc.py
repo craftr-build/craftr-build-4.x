@@ -376,9 +376,9 @@ class MsvcCompiler(BaseCompiler):
       command += ['/O2']
     elif optimize == 'size':
       command += ['/O1', '/Os']
-    elif optimize in ('debug', 'none', None):
+    elif optimize in ('debug', 'none'):
       command += ['/Od']
-    else:
+    elif optimize is not None:
       builder.invalid_option('optimize')
 
     msvc_runtime_library = builder.get('msvc_runtime_library', 'dynamic')
