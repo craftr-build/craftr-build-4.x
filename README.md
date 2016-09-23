@@ -26,6 +26,8 @@ for the following languages:
 * flex/YACC
 * protobuf
 
+Craftr currently works with Python 3.4 and 3.5.
+
 ### Contribute
 
 I welcome all contributions, feedback and suggestions! If you have any of
