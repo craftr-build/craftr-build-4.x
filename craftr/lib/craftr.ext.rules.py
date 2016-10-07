@@ -58,7 +58,7 @@ def alias(*targets, target_name=None):
 
 
 def run(commands, args=(), inputs=(), outputs=None, cwd=None,
-    pool=None, description=None, target_name=None, multiple=False,
+    pool='console', description=None, target_name=None, multiple=False,
     requires=()):
   """
   This function creates a :class:`Target` that runs a custom command.
@@ -122,7 +122,6 @@ def run(commands, args=(), inputs=(), outputs=None, cwd=None,
     assert len(commands.outputs) == 1, "Target for rules.run() must specify exactly one output file"
     program = path.abspath(commands.outputs[0])
     commands = [program] + list(args)
-    pool = pool or 'console'
     builder.target_attrs['explicit'] = True
     multiple = False
   elif isinstance(commands, str):
