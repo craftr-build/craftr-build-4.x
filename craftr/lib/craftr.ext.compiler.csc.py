@@ -26,7 +26,7 @@
 
 __all__ = ['CSCompiler']
 
-from craftr import Target
+from craftr import Target, path, module
 
 
 class CSCompiler(object):
@@ -76,5 +76,6 @@ class CSCompiler(object):
     command += ['/win32manifest:{0}'.format(win32manifest)] if win32manifest else []
     command += ['/win32res:{0}'.format(win32res)] if win32res else []
     command += ['$in']
+    command += additional_flags
 
     return Target(command, sources, [filename])
