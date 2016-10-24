@@ -4,6 +4,9 @@ Changelog
 v1.1.2
 ------
 
+* Fix installation via Pip or easy_install, the ``nr.utils``
+  module has changed and is now called just ``nr`` (issue #130)
+
 * Bug fixes
 
   * Fixed target name deduction with chained function calls on
