@@ -3,4 +3,4 @@ glob2==0.4.1
 ninja-syntax==1.6.0
 termcolor==1.1.0
 Werkzeug==0.11.8
-nr==1.3.2
+nr==1.3.3
