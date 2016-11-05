@@ -388,7 +388,7 @@ class UnixPlatformHelper(PlatformHelper):
 
   def prepare_single_command(self, command, cwd):
     if cwd is not None:
-      command = [[shell.safe('('), 'cd', cwd, sell.safe('&&')] + command + [shell.safe(')')]]
+      command = [[shell.safe('('), 'cd', cwd, shell.safe('&&')] + command + [shell.safe(')')]]
     return command
 
   def write_command_file(self, filename, commands, inputs=None, outputs=None,
