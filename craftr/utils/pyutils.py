@@ -20,3 +20,43 @@ def flatten(iterable):
   """
 
   return [item for subiterable in iterable for item in subiterable]
+
+
+def import_(fqn):
+  """
+  Given a fully qualified name, imports the object and returns it.
+
+  :param fqn: The full name of the object to import, including the module
+    name to import it from.
+  :raise ImportError: If the object can not be imported.
+  :return: any
+  """
+
+  parts = iter(fqn.split('.'))
+  snake = ''
+
+  # Import module and submodules until we can no longer import modules.
+  result = None
+  imp_error = None
+  for part in parts:
+    try:
+      # fromlist argument non-empty to get bottom-most module returned.
+      result = __import__(snake + part, fromlist=['foo'], level=0)
+    except ImportError as exc:
+      imp_error = exc
+      break
+    snake += part + '.'
+
+  if result is None and imp_error:
+    raise imp_error
+  elif result is None:
+    raise ImportError(snake.rstrip('.'))
+
+  try:
+    result = getattr(result, part)
+    for part in parts:
+      result = getattr(result, part)
+  except AttributeError:
+    raise ImportError(fqn)
+
+  return result

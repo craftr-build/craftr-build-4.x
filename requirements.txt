@@ -1,4 +1,5 @@
 jsonschema
 glob2
+ninja_syntax
 nr
 require
