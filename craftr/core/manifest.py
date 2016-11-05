@@ -55,6 +55,7 @@ from craftr.utils import pyutils
 from nr.types.recordclass import recordclass
 from nr.types.version import Version, VersionCriteria
 
+import abc
 import json
 import jsonschema
 import re
@@ -292,7 +293,7 @@ class Manifest(recordclass):
       raise Manifest.Invalid(exc)
 
 
-class BaseOption(object):
+class BaseOption(object, metaclass=abc.ABCMeta):
   """
   Base class for option value processors that convert and validate options
   from string values (usually provided via the command-line or environment
@@ -310,11 +311,18 @@ class BaseOption(object):
     self.inherit = inherit
     self.help = None
 
-  def __call__(self, string):
-    raise NotImplementedError
+  @abc.abstractmethod
+  def __call__(self, value):
+    """
+    Convert the string *value* to the respective Python representation.
+    """
 
 
 class BoolOption(BaseOption):
+  """
+  Represents a boolean option. Supports the identifiers "yes", "true",
+  "1", "no", "false" and "0".
+  """
 
   def __init__(self, name, default=False, **kwargs):
     super().__init__(name, **kwargs)
@@ -333,6 +341,10 @@ class BoolOption(BaseOption):
 
 
 class TripletOption(BoolOption):
+  """
+  Just like the :class:`BoolOption` but with a third option, accepting
+  "null" and "none" (which maps to :const:`None`).
+  """
 
   def __init__(self, name, default=None, **kwargs):
     super().__init__(name, default, **kwargs)
@@ -343,7 +355,7 @@ class TripletOption(BoolOption):
     except ValueError:
       if isinstance(value, str):
         value = value.strip().lower()
-        if value in ('null', 'None'):
+        if value in ('null', 'none'):
           return None
       elif value is None:
         return None
@@ -351,6 +363,9 @@ class TripletOption(BoolOption):
 
 
 class StringOption(BaseOption):
+  """
+  Plain-string option.
+  """
 
   def __init__(self, name, default='', **kwargs):
     super().__init__(name, **kwargs)
@@ -360,7 +375,13 @@ class StringOption(BaseOption):
     return string
 
 
-class BaseLoader(object):
+class LoaderError(Exception):
+  """
+  Raised by :class:`BaseLoader.load`.
+  """
+
+
+class BaseLoader(object, metaclass=abc.ABCMeta):
   """
   Base class for loader types. TODO
   """
@@ -368,12 +389,40 @@ class BaseLoader(object):
   def __init__(self, name):
     self.name = name
 
+  @abc.abstractmethod
+  def initialize(self, cache):
+    """
+    Called to initalize the loader from a *cache* dictinary that was formerly
+    created in :meth:`load`. This function is called when the laoder is not
+    intended to re-(down-)load anything but only re-use what has already been
+    loaded or detected.
+    """
+
+  @abc.abstractmethod
+  def load(self, context):
+    """
+    (Down-)load the data. If the process fails, a :class:`LoaderError` should
+    be raised. The function must return a dictionary that will be cached in
+    the project so that the loader can be initialized with this cache to re-use
+    what has been loaded in this method (see :meth:`initialize`).
+
+    :param context: TODO
+    :raise LoaderError:
+    :return: :class:`dict`
+    """
 
 class UrlLoader(BaseLoader):
 
   def __init__(self, name, urls):
     super().__init__(name)
     self.urls = urls
+
+  def initialize(self, cache):
+    raise NotImplementedError
+
+  def load(self, context):
+    raise NotImplementedError
+
 
 class _aliases:
   """
