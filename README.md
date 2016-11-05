@@ -13,6 +13,8 @@ stable version of Craftr 1 can be found [here](https://github.com/craftr-build/c
 ## Requirements
 
 - [glob2](https://pypi.python.org/pypi/glob2)
+- [nr](https://pypi.python.org/pypi/nr)
+- [py-require](https://pypi.python.org/pypi/py-require)
 
 ## License
 
