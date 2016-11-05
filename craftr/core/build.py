@@ -21,8 +21,8 @@ This module provides all the API to generate a Ninja build manifest.
 """
 
 from craftr.utils import argspec
-from craftr.utils import datatools
 from craftr.utils import path
+from craftr.utils import pyutils
 from craftr.utils import shell
 from craftr.utils.singleton import Default
 from ninja_syntax import Writer as NinjaWriter
@@ -317,7 +317,7 @@ class PlatformHelper(object, metaclass=abc.ABCMeta):
 
     new_commands = []
     for command in commands:
-      new_commands.append(datatools.flatten(
+      new_commands.append(pyutils.flatten(
         [PlatformHelper.replace_argument_inout_vars(x, inputs, outputs)
         for x in command]))
     return new_commands
