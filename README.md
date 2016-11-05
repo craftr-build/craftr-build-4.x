@@ -1,6 +1,14 @@
-# The Craftr build system
+# craftr
 
-This is the current development version of Craftr 2.
+Craftr is a meta build system that produces [Ninja] build manifests from
+simple [Python 3] scripts. It provides a high level of abstraction but gives
+you 100% control over the build process.
+
+This repository contains the in-development version of Craftr 2. The current
+stable version of Craftr 1 can be found [here](https://github.com/craftr-build/craftr).
+
+  [Ninja]: https://github.com/ninja-build/ninja
+  [Python 3]: https://www.python.org/
 
 ## Requirements
 
