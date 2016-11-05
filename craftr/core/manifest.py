@@ -28,17 +28,26 @@ Example manifest:
   {
     "name": "username.packagename",
     "version": "1.0.3",
-    "main": "Craftrfile",  // default
+    "main": "Craftrfile",
     "author": "User Name <username@nameuser.org>",
     "url": "https://github.com/username/packagename",
     "dependencies": {
       "another_user.another_package": "1.x"
     },
     "options": {
-      "BOOSTDIR": {
-        "type": "string"
+      "SOURCE_DIR": {"type": "string"},
+      "VERSION": {"type": "string"}
+    },
+    "loaders": [
+      {
+        "name": "source",
+        "type": "url",
+        "urls": [
+          "$SOURCE_DIR",
+          "http://some-mirror.org/ftp/packagename/tree/$VERSION.tar.gz"
+        ]
       }
-    }
+    ]
   }
 """
 
