@@ -51,14 +51,20 @@ Example manifest:
   }
 """
 
+from craftr.utils import httputils
+from craftr.utils import path
 from craftr.utils import pyutils
 from nr.types.recordclass import recordclass
 from nr.types.version import Version, VersionCriteria
 
 import abc
+import io
 import json
 import jsonschema
+import nr.misc.archive
 import re
+import string
+import urllib.request
 
 
 def validate_package_name(name):
@@ -218,6 +224,15 @@ class Manifest(recordclass):
           raise ValueError('{}.{}: {}'.format(self.name, option.name, exc))
       setattr(ns, key, value)
     return ns
+
+  @staticmethod
+  def parse_string(string):
+    """
+    Shortcut for wrapping *string* in a file-like object and padding it to
+    :func:`parse`.
+    """
+
+    return Manifest.parse(io.StringIO(string))
 
   @staticmethod
   def parse(file):
@@ -381,21 +396,55 @@ class LoaderError(Exception):
   """
 
 
+class LoaderContext(object):
+  """
+  The LoaderContext is required for the :class:`BaseLoader.load` method.
+
+  .. attribute:: directory
+
+  .. attribute:: manifest
+
+  .. attribute:: options
+
+  .. attribute:: tempdir
+
+  .. attribute:: installdir
+  """
+
+  def __init__(self, directory, manifest, options, tempdir, installdir):
+    self.directory = directory
+    self.manifest = manifest
+    self.options = options
+    self.tempdir = tempdir
+    self.installdir = installdir
+
+  def expand_variables(self, value):
+    templ = string.Template(value)
+    return templ.safe_substitute(vars(self.options))
+
+
 class BaseLoader(object, metaclass=abc.ABCMeta):
   """
-  Base class for loader types. TODO
+  Base class for loader types. Craftr executes the loaders in the order they
+  are defined in the :class:`Manifest` until one loader succeeds. This happens
+  in the same step in which dependencies are satisfied. In the execute step,
+  the loader will be initialized from cache.
   """
 
   def __init__(self, name):
     self.name = name
 
   @abc.abstractmethod
-  def initialize(self, cache):
+  def init_cache(self, cache):
     """
     Called to initalize the loader from a *cache* dictinary that was formerly
     created in :meth:`load`. This function is called when the laoder is not
     intended to re-(down-)load anything but only re-use what has already been
     loaded or detected.
+
+    :param cache: A dictionary that has been deserialized and was generated
+      in a previous step by :meth:`load`.
+    :raise LoaderError: If the cache is inconsistent.
     """
 
   @abc.abstractmethod
@@ -404,24 +453,102 @@ class BaseLoader(object, metaclass=abc.ABCMeta):
     (Down-)load the data. If the process fails, a :class:`LoaderError` should
     be raised. The function must return a dictionary that will be cached in
     the project so that the loader can be initialized with this cache to re-use
-    what has been loaded in this method (see :meth:`initialize`).
+    what has been loaded in this method (see :meth:`init_cache`).
 
-    :param context: TODO
-    :raise LoaderError:
-    :return: :class:`dict`
+    :param context: A :class:`LoaderContext` object.
+    :raise LoaderError: If the loader was unable to load or detect the source.
+    :return: A :class:`dict` that will be serialized into a cache. This
+      dictionary will be passed to :meth:`init_cache` in another step.
     """
 
+
 class UrlLoader(BaseLoader):
+  """
+  This loader implementation can be used to load source archives from online
+  mirrors and automatically unpack them into a directory where they can be
+  accessed by the build script, but it can also be used to fall back on
+  existing source directories.
+
+  The URLs that are passed to the constructor can contain variables which will
+  be expanded given the options of the same manifest. This is usually used to
+  allow users to configure the version of the source that is being downloaded
+  or to point to an existing directory.
+
+  .. code:: json
+
+    {
+      "name": "source",
+      "type": "url",
+      "urls": [
+        "file://$SOURCE_DIR",
+        "http://some-mirror.org/ftp/packagename-$SOURCE_VERSION.tar.gz"
+      ]
+    }
+
+  .. attribute:: urls
+
+  .. attribute:: directory
+
+    If the UrlLoader successfully loaded the source archives or detected the
+    source directory, this member is available and points to the directory
+    where the sources are located.
+  """
 
   def __init__(self, name, urls):
     super().__init__(name)
     self.urls = urls
+    self.directory = None
 
-  def initialize(self, cache):
-    raise NotImplementedError
+  def init_cache(self, cache):
+    self.directory = cache['directory']
+    if not os.path.isdir(self.directory):
+      raise LoaderError('inconsistent cache, the directory {!r} '
+        'no longer exists'.format(self.directory))
 
   def load(self, context):
-    raise NotImplementedError
+    directory = None
+    archive = None
+    delete_after_extract = True
+    for url in self.urls:
+      url = context.expand_variables(url)
+      if not url: continue
+      if url.startswith('file://'):
+        name = url[7:]
+        if path.isdir(name):
+          directory = name
+          break
+        elif path.isfile(name):
+          archive = name
+          delete_after_extract = False
+          break
+      else:
+        def progress(data):
+          if data['downloaded'] == 0:
+            print('Downloading', path.basename(data['filename']), '...')
+          print('\r  Progress: %s/%s' % (data['downloaded'], data['size']), end='')
+          if data['completed']:
+            print()
+        try:
+          archive, reused = httputils.download_file(
+            url, directory=context.tempdir,
+            on_exists='skip', progress=progress)
+        except (httputils.URLError, httputils.HTTPError) as exc:
+          print('Error:', exc)
+        else:
+          if reused:
+            print('Reusing cached ', end='')
+          else:
+            print('Finished downloading ', end='')
+          print(path.basename(archive))
+          break
+
+    if archive:
+      suffix = nr.misc.archive.get_opener(archive)[0]
+      filename = path.basename(archive)[:-len(suffix)]
+      directory = path.join(context.installdir, filename)
+      nr.misc.archive.extract(archive, directory, unpack_single_dir=True)
+
+    return {'directory': directory}
 
 
 class _aliases:
