@@ -14,9 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.utils import tty
+
 import abc
 import itertools
 import sys
+import time
 
 
 class BaseLogger(object, metaclass=abc.ABCMeta):
@@ -60,6 +63,13 @@ class BaseLogger(object, metaclass=abc.ABCMeta):
 
 class DefaultLogger(BaseLogger):
 
+  level_colors = {
+    'debug': 'yellow',
+    'info': 'white',
+    'warn': 'magenta',
+    'error': 'red'
+  }
+
   def __init__(self, stream=None, indent_seq='  '):
     self._stream = stream or sys.stdout
     self._indent_seq = indent_seq
@@ -70,7 +80,8 @@ class DefaultLogger(BaseLogger):
   def log(self, level, *objects, sep=' ', end='\n'):
     # TODO: Clear the current line completely if we're currently in a progress.
     prefix = '' if self._line_alive else self._indent_seq * self._indent
-    print(prefix + sep.join(map(str, objects)), end=end, file=self._stream)
+    prefix += tty.compile(self.level_colors[level])
+    print(prefix + sep.join(map(str, objects)) + tty.reset, end=end, file=self._stream)
     self._line_alive = ('\n' not in end)
 
   def indent(self):
@@ -82,18 +93,27 @@ class DefaultLogger(BaseLogger):
       self._indent = 0
 
   def progress_begin(self, description, spinning=False):
-    self._progress = {'description': description, 'spinning': spinning}
+    self._progress = {'description': description, 'spinning': spinning,
+      'index': 0, 'last': 0}
     self.info(description)
 
   def progress_update(self, progress, info_text=''):
     # TODO: Clear current line completely and get terminal width
-    width = 60
+    ctime = time.time()
+    if ctime - self._progress['last'] < 0.25:
+      return
+    tty.clear_line()
+    width = tty.terminal_size()[0] - len(info_text) - 5  # safe margin
     if self._progress['spinning']:
-      print('\r[' + '~' * width + ']', info_text, end='', file=self._stream)
+      sign = ('~--', '-~-', '--~')[self._progress['index'] % 3]
+      bar = ''.join(itertools.islice(itertools.cycle(sign), width))
     else:
       progress = int(min([1.0, max([0.0, float(progress)])]) * width)
-      print('\r[' + '=' * progress + ' ' * (width - progress) + ']', info_text, end='', file=self._stream)
+      bar = '=' * progress + ' ' * (width - progress)
+    print('[{}] {}'.format(bar, info_text), end='', file=self._stream)
+    self._progress['index'] += 1
+    self._progress['last'] = ctime
 
   def progress_end(self):
-    print('\r', end='', file=self._stream)
+    tty.clear_line()
     self._progress = None
