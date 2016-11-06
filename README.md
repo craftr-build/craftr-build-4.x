@@ -12,10 +12,13 @@ stable version of Craftr 1 can be found [here](https://github.com/craftr-build/c
 
 ## Requirements
 
+- [colorama](https://pypi.python.org/pypi/colorama) (optional, Windows)
 - [glob2](https://pypi.python.org/pypi/glob2)
+- [jsonschema](https://pypi.python.org/pypi/jsonschema)
 - [ninja_syntax](https://pypi.python.org/pypi/ninja_syntax)
 - [nr](https://pypi.python.org/pypi/nr)
 - [py-require](https://pypi.python.org/pypi/py-require)
+- [termcolor](https://pypi.python.org/pypi/termcolor) (optional)
 
 ## License
 
