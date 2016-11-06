@@ -409,14 +409,17 @@ class LoaderContext(object):
   .. attribute:: tempdir
 
   .. attribute:: installdir
+
+  .. attribute:: logger
   """
 
-  def __init__(self, directory, manifest, options, tempdir, installdir):
+  def __init__(self, directory, manifest, options, tempdir, installdir, logger):
     self.directory = directory
     self.manifest = manifest
     self.options = options
     self.tempdir = tempdir
     self.installdir = installdir
+    self.logger = logger
 
   def expand_variables(self, value):
     templ = string.Template(value)
@@ -506,6 +509,7 @@ class UrlLoader(BaseLoader):
         'no longer exists'.format(self.directory))
 
   def load(self, context):
+    logger = context.logger
     directory = None
     archive = None
     delete_after_extract = True
@@ -522,24 +526,34 @@ class UrlLoader(BaseLoader):
           delete_after_extract = False
           break
       else:
+
         def progress(data):
+          spinning = data['size'] is None
           if data['downloaded'] == 0:
-            print('Downloading', path.basename(data['filename']), '...')
-          print('\r  Progress: %s/%s' % (data['downloaded'], data['size']), end='')
+            logger.progress_begin(
+              'Downloading "{}"'.format(path.basename(data['filename'])),
+              spinning)
+          if spinning:
+            # TODO: Bytes to human readable
+            logger.progress_update(None, data['downloaded'])
+          else:
+            progress = data['downloaded'] / data['size']
+            logger.progress_update(progress, '{}%'.format(int(progress * 100)))
           if data['completed']:
-            print()
+            logger.progress_end()
+
         try:
           archive, reused = httputils.download_file(
             url, directory=context.tempdir,
             on_exists='skip', progress=progress)
         except (httputils.URLError, httputils.HTTPError) as exc:
-          print('Error:', exc)
+          logger.debug(exc)
         else:
           if reused:
-            print('Reusing cached ', end='')
+            logger.info('Reusing cached ', end='')
           else:
-            print('Finished downloading ', end='')
-          print(path.basename(archive))
+            logger.info('finished downloading ', end='')
+          logger.info(path.basename(archive))
           break
 
     if archive:
