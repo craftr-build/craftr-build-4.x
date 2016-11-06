@@ -78,11 +78,14 @@ class DefaultLogger(BaseLogger):
     self._line_alive = False
 
   def log(self, level, *objects, sep=' ', end='\n'):
-    # TODO: Clear the current line completely if we're currently in a progress.
+    if self._progress:
+      tty.clear_line()
     prefix = '' if self._line_alive else self._indent_seq * self._indent
     prefix += tty.compile(self.level_colors[level])
     print(prefix + sep.join(map(str, objects)) + tty.reset, end=end, file=self._stream)
     self._line_alive = ('\n' not in end)
+    if self._progress and 'progress' in self._progress:
+      self.progress_update(self._progress['progress'], self._progress['info_text'], _force=True)
 
   def indent(self):
     self._indent += 1
@@ -97,10 +100,9 @@ class DefaultLogger(BaseLogger):
       'index': 0, 'last': 0}
     self.info(description)
 
-  def progress_update(self, progress, info_text=''):
-    # TODO: Clear current line completely and get terminal width
+  def progress_update(self, progress, info_text='', *, _force=False):
     ctime = time.time()
-    if ctime - self._progress['last'] < 0.25:
+    if not _force and ctime - self._progress['last'] < 0.25:
       return
     tty.clear_line()
     width = tty.terminal_size()[0] - len(info_text) - 5  # safe margin
@@ -108,11 +110,13 @@ class DefaultLogger(BaseLogger):
       sign = ('~--', '-~-', '--~')[self._progress['index'] % 3]
       bar = ''.join(itertools.islice(itertools.cycle(sign), width))
     else:
-      progress = int(min([1.0, max([0.0, float(progress)])]) * width)
-      bar = '=' * progress + ' ' * (width - progress)
+      intprogress = int(min([1.0, max([0.0, float(progress)])]) * width)
+      bar = '=' * intprogress + ' ' * (width - intprogress)
     print('[{}] {}'.format(bar, info_text), end='', file=self._stream)
     self._progress['index'] += 1
     self._progress['last'] = ctime
+    self._progress['progress'] = progress
+    self._progress['info_text'] = info_text
 
   def progress_end(self):
     tty.clear_line()
