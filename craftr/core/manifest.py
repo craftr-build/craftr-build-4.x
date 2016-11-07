@@ -121,6 +121,11 @@ class Manifest(recordclass):
     If this member is None, Craftr will interpret it as the default value
     specified in the :class:`craftr.core.session.Session`.
 
+  .. attribute:: project_directory
+
+    Relative path to the project directory. Local paths in the build script
+    are automatically assumed relative to this directory. Defaults to ``..``.
+
   .. attribute:: author
 
     Name of the package author.
@@ -155,6 +160,7 @@ class Manifest(recordclass):
       "name": {"type": "string"},
       "version": {"type": "string"},
       "main": {"type": "string"},
+      "project_directory": {"type": "string"},
       "author": {"type": "string"},
       "url": {"type": "string"},
       "dependencies": {
@@ -189,13 +195,15 @@ class Manifest(recordclass):
 
   __slots__ = tuple(Schema['properties'].keys())
 
-  def __init__(self, name, version, main=None, author=None, url=None,
-               dependencies=None, options=None, loaders=None):
+  def __init__(self, name, version, main=None, project_directory='..',
+               author=None, url=None, dependencies=None, options=None,
+               loaders=None):
     if version is not None:
       version = Version(version)
     self.name = name
     self.version = version
     self.main = main
+    self.project_directory = project_directory
     self.author = author
     self.url = url
     self.dependencies = dependencies or {}

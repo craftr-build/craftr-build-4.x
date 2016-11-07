@@ -14,18 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import craftr.core.build as build
-import craftr.utils.shell as shell
+from craftr.core.session import session, Session
+
+import atexit
 import sys
 
+
 def main():
-  graph = build.Graph()
-  target = build.Target('compile_doe_shit', [['gcc', '$in', '-o', '$out'], ['echo', 'foo']], ['main.c', 'tool.c'], ['main.exe'])
-  graph.add_target(target)
-  platform = build.WindowsPlatformHelper()
-  context = build.ExportContext(ninja_version='1.7.2')
-  writer = build.NinjaWriter(sys.stdout)
-  graph.export(writer, context, platform)
+  atexit.register(Session.end)
+  Session.start()
+  print(session)
+
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())
