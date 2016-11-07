@@ -51,6 +51,7 @@ Example manifest:
   }
 """
 
+from craftr.core.logging import logger
 from craftr.utils import httputils
 from craftr.utils import path
 from craftr.utils import pyutils
@@ -409,17 +410,14 @@ class LoaderContext(object):
   .. attribute:: tempdir
 
   .. attribute:: installdir
-
-  .. attribute:: logger
   """
 
-  def __init__(self, directory, manifest, options, tempdir, installdir, logger):
+  def __init__(self, directory, manifest, options, tempdir, installdir):
     self.directory = directory
     self.manifest = manifest
     self.options = options
     self.tempdir = tempdir
     self.installdir = installdir
-    self.logger = logger
 
   def expand_variables(self, value):
     templ = string.Template(value)
@@ -509,7 +507,6 @@ class UrlLoader(BaseLoader):
         'no longer exists'.format(self.directory))
 
   def load(self, context):
-    logger = context.logger
     directory = None
     archive = None
     delete_after_extract = True

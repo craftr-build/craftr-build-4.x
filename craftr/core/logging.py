@@ -20,6 +20,7 @@ import abc
 import itertools
 import sys
 import time
+import werkzeug
 
 
 class BaseLogger(object, metaclass=abc.ABCMeta):
@@ -101,6 +102,8 @@ class DefaultLogger(BaseLogger):
     self.info(description)
 
   def progress_update(self, progress, info_text='', *, _force=False):
+    self._progress['progress'] = progress
+    self._progress['info_text'] = info_text
     ctime = time.time()
     if not _force and ctime - self._progress['last'] < 0.25:
       return
@@ -115,9 +118,16 @@ class DefaultLogger(BaseLogger):
     print('[{}] {}'.format(bar, info_text), end='', file=self._stream)
     self._progress['index'] += 1
     self._progress['last'] = ctime
-    self._progress['progress'] = progress
-    self._progress['info_text'] = info_text
 
   def progress_end(self):
     tty.clear_line()
     self._progress = None
+
+
+_logger = DefaultLogger()
+logger = werkzeug.LocalProxy(lambda: _logger)
+
+
+def set_logger(logger):
+  global _logger
+  _logger = logger
