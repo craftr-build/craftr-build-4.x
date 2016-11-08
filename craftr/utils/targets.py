@@ -161,6 +161,12 @@ class TargetBuilder(object):
     self.order_only_deps = order_only_deps
     self.metadata = {}
 
+  def get(self, key, default=None):
+    return self.options_merge.get(key, default)
+
+  def get_list(self, key):
+    return self.options_merge.get_list(key)
+
   def build(self, commands, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, metadata=None, **kwargs):
     """
