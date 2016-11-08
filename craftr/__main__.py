@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from craftr.core.logging import logger
-from craftr.core.session import session, Session
+from craftr.core.session import session, Session, Module
 from craftr.utils import path
 from nr.types.version import Version
 
@@ -46,9 +46,17 @@ class run(BaseCommand):
 
   def execute(self, parser, args):
     if not args.module:
-      # TODO: Determine module in CWD and load that.
-      parser.error("no module name specified")
-    module = session.find_module(args.module, args.version)
+      for fn in ['manifest.json', 'craftr/manifest.json']:
+        if path.isfile(fn):
+          module = session.parse_manifest(fn)
+          break
+      else:
+        parser.error('no Craftr package "manifest.json" found')
+    else:
+      try:
+        module = session.find_module(args.module, args.version)
+      except Module.NotFound as exc:
+        parser.error('module not found: ' + str(exc))
     module.run()
 
 

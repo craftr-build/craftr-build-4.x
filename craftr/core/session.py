@@ -33,7 +33,16 @@ import werkzeug
 
 
 class ModuleNotFound(Exception):
-  pass
+
+  def __init__(self, name, version):
+    self.name = name
+    self.version = version
+
+  def __str__(self):
+    if isinstance(self.version, Version):
+      return '{}-{}'.format(self.name, self.version)
+    else:
+      return '{}[{}]'.format(self.name, self.version)
 
 
 class Session(object):
@@ -108,6 +117,39 @@ class Session(object):
       return self.modulestack[-1]
     return None
 
+  def parse_manifest(self, filename):
+    """
+    Parse a manifest by filename and add register the module to the module
+    cache. Returns the :class:`Module` object. If the manifest has already
+    been parsed, it will not be re-parsed.
+
+    :raise Manifest.Invalid: If the manifest is invalid.
+    :return: :const:`None` if the manifest is a duplicate of an already
+      parsed manifest (determined by name and version), otherwise the
+      :class:`Module` object for the manifest's module.
+    """
+
+    filename = path.norm(path.abs(filename))
+    if filename in self._manifest_cache:
+      manifest = self._manifest_cache[filename]
+      return self.find_module(manifest.name, manifest.version)
+
+    manifest = Manifest.parse(filename)
+    self._manifest_cache[filename] = manifest
+    versions = self.modules.setdefault(manifest.name, {})
+    if manifest.version in versions:
+      logger.debug('multiple occurences of "{}-{}" found, '
+          'one of which is located at "{}"'.format(manifest.name,
+          manifest.version, filename), indent=1)
+      module = None
+    else:
+      logger.debug('[+] {}-{}'.format(
+          manifest.name, manifest.version), indent=1)
+      module = Module(path.dirname(filename), manifest)
+      versions[manifest.version] = module
+
+    return module
+
   def update_manifest_cache(self, force=False):
     if not self._refresh_cache and not force:
       return
@@ -123,22 +165,10 @@ class Session(object):
         if not path.isfile(manifest_fn):
           continue
         try:
-          manifest = Manifest.parse(manifest_fn)
+          self.parse_manifest(manifest_fn)
         except Manifest.Invalid as exc:
           logger.debug('invalid manifest found at "{}": {}'
               .format(manifest_fn, exc), indent=1)
-        else:
-          self._manifest_cache[manifest_fn] = manifest
-          versions = self.modules.setdefault(manifest.name, {})
-          if manifest.version in versions:
-            logger.debug('multiple occurences of "{}-{}" found, '
-                'one of which is located at "{}"'.format(manifest.name,
-                manifest.version, manifest_fn), indent=1)
-          else:
-            logger.debug('[+] {}-{}'.format(
-                manifest.name, manifest.version), indent=1)
-            versions[manifest.version] = Module(
-                path.dirname(manifest_fn), manifest)
 
   def find_module(self, name, version):
     """
@@ -213,6 +243,8 @@ class Module(object):
 
     True if the module was executed with :meth:`run`.
   """
+
+  NotFound = ModuleNotFound
 
   def __init__(self, directory, manifest):
     self.directory = directory
