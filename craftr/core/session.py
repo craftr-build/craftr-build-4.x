@@ -444,6 +444,7 @@ class Module(object):
       '__name__': self.manifest.name,
       '__version__': str(self.manifest.version),
       'options': self.options,
+      'loader': self.loader,
       'project_dir': self.project_directory,
     })
 
