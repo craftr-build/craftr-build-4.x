@@ -515,7 +515,7 @@ class UrlLoader(BaseLoader):
 
   def init_cache(self, cache):
     self.directory = cache['directory']
-    if not os.path.isdir(self.directory):
+    if not path.isdir(self.directory):
       raise LoaderError('inconsistent cache, the directory {!r} '
         'no longer exists'.format(self.directory))
 

@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from craftr.core.logging import logger
-from craftr.core.session import session, Session, Module
+from craftr.core.session import session, Session, Module, iter_module_hierarchy
 from craftr.utils import path
 from nr.types.version import Version
 
@@ -57,12 +57,28 @@ class run(BaseCommand):
         module = session.find_module(args.module, args.version)
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
+
+    # Load the cache if it exists.
+    cache_file = path.join('craftr/.cache')
+    if path.isfile(cache_file):
+      with open(cache_file) as fp:
+        session.cache = json.load(fp)
+
+    # Create the loader context.
+    for m in iter_module_hierarchy(session, module):
+      m.run_loader()
+
     try:
       module.run()
     except Module.InvalidOption as exc:
       for error in exc.format_errors():
         logger.error(error)
       return 1
+
+    # Write back the cache.
+    path.makedirs(path.dirname(cache_file))
+    with open(cache_file, 'w') as fp:
+      json.dump(session.cache, fp)
 
 
 class startproject(BaseCommand):

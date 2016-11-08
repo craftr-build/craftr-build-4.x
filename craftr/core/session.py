@@ -22,9 +22,9 @@ process of Craftr modules and contains all the important root datastructures
 for the meta build process (such as a :class:`craftr.core.build.Graph`).
 """
 
-from craftr.core import build
+from craftr.core import build, manifest
 from craftr.core.logging import logger
-from craftr.core.manifest import Manifest
+from craftr.core.manifest import Manifest, LoaderContext
 from craftr.utils import argspec, path
 from nr.types.version import Version, VersionCriteria
 
@@ -59,6 +59,16 @@ class InvalidOption(Exception):
     for option, value, exc in self.errors:
       yield '{}.{} ({}): {}'.format(self.module.manifest.name, option.name,
           self.module.manifest.version, exc)
+
+
+class LoaderCacheError(Exception):
+
+  def __init__(self, module, message):
+    self.module = module
+    self.message = message
+
+  def __str__(self):
+    return '"{}" -- {}'.format(self.module.ident, self.message)
 
 
 class Session(object):
@@ -105,6 +115,32 @@ class Session(object):
   .. attribute:: options
 
     A dictionary of options that are passed down to Craftr modules.
+
+  .. attributes:: cache
+
+    A JSON object that will be loaded from the current workspace's cache
+    file and written back when Craftr exits without errors. The cache can
+    contain anything and can be modified by everything, however it should
+    be assured that no name conflicts and accidental modifications/deletes
+    occur.
+
+    Currently the cache is mainly used for loaders. The information is saved
+    in the ``'loaders'`` key.
+
+    .. code:: json
+
+      {
+        "loaders": {
+          "modulename-1.0.0": {
+            "name": "source",
+            "data": {"directory": "..."}
+          }
+        }
+      }
+
+  .. attribute:: tempdir
+
+    Temporary directory, primarily used for loader data.
   """
 
   #: The current session object. Create it with :meth:`start` and destroy
@@ -129,6 +165,8 @@ class Session(object):
     self.modulestack = []
     self.modules = {}
     self.options = {}
+    self.cache = {'loaders': {}}
+    self.tempdir = path.join(self.maindir, 'craftr/.temp')
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
 
@@ -275,6 +313,11 @@ class Module(object):
     A :class:`~craftr.core.manifest.Namespace` that contains all the options
     for the module. This member is only initialized when the module is run
     or with :meth:`init_options`.
+
+  .. attribute:: loader
+
+    The loader that was specified in the manifest and initialized with
+    :meth:`init_loader`.
   """
 
   NotFound = ModuleNotFound
@@ -286,6 +329,7 @@ class Module(object):
     self.namespace = types.ModuleType(self.manifest.name)
     self.executed = False
     self.options = None
+    self.loader = None
 
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
@@ -302,7 +346,9 @@ class Module(object):
   def init_options(self):
     """
     Initialize the :attr:`options` member. Requires an active session context.
+
     :raise InvalidOption: If one or more options are invalid.
+    :raise RuntimeError: If there is no current session context.
     """
 
     if not session:
@@ -313,6 +359,57 @@ class Module(object):
       if errors:
         self.options = None
         raise InvalidOption(self, errors)
+
+  def init_loader(self):
+    """
+    Initialize the loader with the information that is stored in the sessions
+    loader cache. Note that the loader must be selected in an additional step
+    to prepare the loader cache.
+
+    :raise NoLoaderCacheAvailable: If there is no loader cache for this
+      module in the sessions cache.
+    :raise RuntimeError: If there is no current session context.
+    """
+
+    if not session:
+      raise RuntimeError('no current session')
+    if not self.manifest.loaders:
+      return
+    if self.loader is None:
+      if self.ident not in session.cache['loaders']:
+        raise LoaderCacheError(self, 'no loader cache available')
+      cache = session.cache['loaders'][self.ident]
+      loader = [l for l in self.manifest.loaders if l.name == cache['name']]
+      if not loader:
+        raise LoaderCacheError(self, 'inconistent cache -- has no loader "{}"'
+            .format(cache['name']))
+      loader[0].init_cache(cache['data'])
+      self.loader = loader[0]
+
+  def run_loader(self):
+    """
+    This function is used outside of the build step to initialize the cache
+    of loader objects in this module.
+    """
+
+    #argspec.validate('context', context, {'type': LoaderContext})
+
+    self.init_options()
+    if self.loader is not None or not self.manifest.loaders:
+      return
+
+    logger.info('finding loader for "{}" ...'.format(self.ident))
+    context = LoaderContext(session.maindir, self.manifest, self.options,
+        session.tempdir, session.tempdir)
+    for loader in self.manifest.loaders:
+      try:
+        cache_data = loader.load(context)
+      except manifest.LoaderError as exc:
+        pass
+      else:
+        session.cache['loaders'][self.ident] = {
+            'name': loader.name, 'data': cache_data}
+        break
 
   def run(self):
     """
@@ -330,6 +427,7 @@ class Module(object):
       raise RuntimeError('already run')
 
     self.executed = True
+    self.init_loader()
     self.init_options()
 
     script_fn = path.norm(path.join(self.directory, self.manifest.main))
@@ -354,6 +452,13 @@ class Module(object):
       exec(code, vars(self.namespace))
     finally:
       assert session.modulestack.pop() is self
+
+
+def iter_module_hierarchy(session, module):
+  yield module
+  for name, criteria in module.manifest.dependencies.items():
+    yield from iter_module_hierarchy(session, session.find_module(name, criteria))
+
 
 #: Proxy object that points to the current :class:`Session` object.
 session = werkzeug.LocalProxy(lambda: Session.current)
