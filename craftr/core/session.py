@@ -45,6 +45,21 @@ class ModuleNotFound(Exception):
       return '{}[{}]'.format(self.name, self.version)
 
 
+class InvalidOption(Exception):
+
+  def __init__(self, module, errors):
+    self.module = module
+    self.errors = errors
+
+  def __str__(self):
+    return '\n'.join(self.format_errors())
+
+  def format_errors(self):
+    for option, value, exc in self.errors:
+      yield '{}.{} ({}): {}'.format(self.module.manifest.name, option.name,
+          self.module.manifest.version, exc)
+
+
 class Session(object):
   """
   This class manages the :class:`build.Graph` and loading of Craftr modules.
@@ -85,6 +100,10 @@ class Session(object):
     The main directory from which Craftr was run. Craftr will switch to the
     build directory at a later point, which is why we keep this member for
     reference.
+
+  .. attribute:: options
+
+    A dictionary of options that are passed down to Craftr modules.
   """
 
   #: The current session object. Create it with :meth:`start` and destroy
@@ -108,6 +127,7 @@ class Session(object):
     self.path = [self.maindir, path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
     self.modules = {}
+    self.options = {}
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
 
@@ -248,15 +268,23 @@ class Module(object):
   .. attribute:: executed
 
     True if the module was executed with :meth:`run`.
+
+  .. attribute:: options
+
+    A :class:`~craftr.core.manifest.Namespace` that contains all the options
+    for the module. This member is only initialized when the module is run
+    or with :meth:`init_options`.
   """
 
   NotFound = ModuleNotFound
+  InvalidOption = InvalidOption
 
   def __init__(self, directory, manifest):
     self.directory = directory
     self.manifest = manifest
     self.namespace = {}
     self.executed = False
+    self.options = None
 
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
@@ -269,6 +297,21 @@ class Module(object):
   @property
   def project_directory(self):
     return path.norm(path.join(self.directory, self.manifest.project_directory))
+
+  def init_options(self):
+    """
+    Initialize the :attr:`options` member. Requires an active session context.
+    :raise InvalidOption: If one or more options are invalid.
+    """
+
+    if not session:
+      raise RuntimeError('no current session')
+    if self.options is None:
+      errors = []
+      self.options = self.manifest.get_options_namespace(session.options, errors)
+      if errors:
+        self.options = None
+        raise InvalidOption(self, errors)
 
   def run(self):
     """
@@ -286,6 +329,8 @@ class Module(object):
       raise RuntimeError('already run')
 
     self.executed = True
+    self.init_options()
+
     script_fn = path.norm(path.join(self.directory, self.manifest.main))
     script_fn = path.rel(script_fn, session.maindir, nopar=True)
     with open(script_fn) as fp:
@@ -299,6 +344,7 @@ class Module(object):
       '__file__': script_fn,
       '__name__': self.manifest.name,
       '__version__': str(self.manifest.version),
+      'options': self.options,
       'project_dir': self.project_directory,
     })
 

@@ -210,15 +210,19 @@ class Manifest(recordclass):
     self.options = options or {}
     self.loaders = loaders or []
 
-  def get_options_namespace(self, provider):
+  def get_options_namespace(self, provider, errors=None):
     """
     Create a :class:`Namespace` object filled with the option values specified
     in the manifest where the option values are read from *provider*.
 
-    @param provider: A dictionary that provides option values.
-    @return Namespace
+    :param provider: A dictionary that provides option values.
+    :param errors: A list to which tuples of error information will be
+      appended. The tuples are in the format (option, value, exc).
+    :return Namespace
     """
 
+    if errors is None:
+      errors = []
     ns = Namespace()
     for key, option in self.options.items():
       value = provider.get(self.name + '.' + option.name, NotImplemented)
@@ -230,7 +234,8 @@ class Manifest(recordclass):
         try:
           value = option(value)
         except ValueError as exc:
-          raise ValueError('{}.{}: {}'.format(self.name, option.name, exc))
+          errors.append((option, value, exc))
+          value = option.default
       setattr(ns, key, value)
     return ns
 

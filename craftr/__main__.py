@@ -57,7 +57,12 @@ class run(BaseCommand):
         module = session.find_module(args.module, args.version)
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
-    module.run()
+    try:
+      module.run()
+    except Module.InvalidOption as exc:
+      for error in exc.format_errors():
+        logger.error(error)
+      return 1
 
 
 class startproject(BaseCommand):
