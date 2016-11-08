@@ -38,7 +38,7 @@ class BaseLogger(object, metaclass=abc.ABCMeta):
     self.log('error', *args, **kwargs)
 
   @abc.abstractmethod
-  def log(self, level, *object, sep=' ', end='\n'):
+  def log(self, level, *object, sep=' ', end='\n', indent=0):
     pass
 
   @abc.abstractmethod
@@ -78,10 +78,10 @@ class DefaultLogger(BaseLogger):
     self._progress = None
     self._line_alive = False
 
-  def log(self, level, *objects, sep=' ', end='\n'):
+  def log(self, level, *objects, sep=' ', end='\n', indent=0):
     if self._progress:
       tty.clear_line()
-    prefix = '' if self._line_alive else self._indent_seq * self._indent
+    prefix = '' if self._line_alive else self._indent_seq * (self._indent + indent)
     prefix += tty.compile(self.level_colors[level])
     print(prefix + sep.join(map(str, objects)) + tty.reset, end=end, file=self._stream)
     self._line_alive = ('\n' not in end)
