@@ -202,7 +202,7 @@ class Session(object):
           manifest.version, filename))
       module = None
     else:
-      logger.debug('parsed manifest for {}-{}'.format(
+      logger.debug('note: Session parsed manifest for {}-{}'.format(
           manifest.name, manifest.version))
       module = Module(path.dirname(filename), manifest)
       versions[manifest.version] = module
@@ -343,16 +343,25 @@ class Module(object):
   def project_directory(self):
     return path.norm(path.join(self.directory, self.manifest.project_directory))
 
-  def init_options(self):
+  def init_options(self, recursive=False):
     """
     Initialize the :attr:`options` member. Requires an active session context.
 
+    :param recursive: Initialize the options of all dependencies as well.
     :raise InvalidOption: If one or more options are invalid.
+    :raise ModuleNotFound: If *recursive* is specified and a dependency
+      was not found.
     :raise RuntimeError: If there is no current session context.
     """
 
     if not session:
       raise RuntimeError('no current session')
+
+    if recursive:
+      for name, version in self.manifest.dependencies.items():
+        module = session.find_module(name, version)
+        module.init_options(True)
+
     if self.options is None:
       errors = []
       self.options = self.manifest.get_options_namespace(session.options, errors)
@@ -360,24 +369,30 @@ class Module(object):
         self.options = None
         raise InvalidOption(self, errors)
 
-  def init_loader(self):
+  def init_loader(self, recursive=False):
     """
     Check all available loaders as defined in the :attr:`manifest` until the
     first loads successfully.
 
+    :param recursive: Initialize the loaders of all dependencies as well.
     :raise RuntimeError: If there is no current session context.
     """
 
     if not session:
       raise RuntimeError('no current session')
-    if not self.manifest.loaders or self.loader is not None:
+    if not self.manifest.loaders:
       return
+
+    if recursive:
+      for name, version in self.manifest.dependencies.items():
+        module = session.find_module(name, version)
+        module.init_loader(True)
+
+    logger.debug('finding loader for {}'.format(self.ident))
 
     self.init_options()
     context = LoaderContext(self.directory, self.manifest, self.options,
         session.tempdir, session.tempdir)
-
-    logger.debug('checking loaders for {}'.format(self.ident))
 
     # Read the cached loader data.
     cache = session.cache['loaders'].get(self.ident)

@@ -65,7 +65,17 @@ class run(BaseCommand):
         session.cache = json.load(fp)
 
     try:
-      module.run()
+      logger.info('==> initializing options')
+      with logger.indent():
+        module.init_options(True)
+
+      logger.info('==> initializing loaders')
+      with logger.indent():
+        module.init_loader(True)
+
+      logger.info('==> executing build script')
+      with logger.indent():
+        module.run()
     except Module.InvalidOption as exc:
       for error in exc.format_errors():
         logger.error(error)
