@@ -233,6 +233,10 @@ class Module(object):
     The directory that contains the ``manifest.json``. Note that the actual
     project directory depends on the :attr:`Manifest.project_directory` member.
 
+  .. attribute:: ident
+
+    A concentation of the name and version defined in the :attr:`manifest`.
+
   .. attribute:: project_directory
 
     Path to the project directory as specified in the :attr:`manifest`.
@@ -257,6 +261,10 @@ class Module(object):
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
       self.manifest.version)
+
+  @property
+  def ident(self):
+    return '{}-{}'.format(self.manifest.name, self.manifest.version)
 
   @property
   def project_directory(self):

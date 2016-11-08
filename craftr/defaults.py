@@ -58,3 +58,25 @@ def glob(patterns, exclude=(), include_dotfiles=False, parent=None):
     parent = session.module.project_directory
 
   return path.glob(patterns, exclude, include_dotfiles, parent)
+
+
+def local(rel_path):
+  """
+  Given a relative path, returns the absolute path relative to the current
+  module's project directory.
+  """
+
+  parent = session.module.project_directory
+  return path.norm(rel_path, parent)
+
+
+def buildlocal(rel_path):
+  """
+  Given a relative path, returns the path (still relative) to the build
+  directory for the current module. This is basically a shorthand for
+  prepending the module name and version to *path*.
+  """
+
+  if path.isabs(rel_path):
+    raise ValueError('rel_path must be a relative path')
+  return path.canonical(path.join(session.module.ident, rel_path))
