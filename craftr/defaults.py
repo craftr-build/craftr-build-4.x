@@ -24,7 +24,7 @@ starting with an underscore will be ignored.
 from craftr.core.logging import logger
 from craftr.core.session import session, ModuleNotFound
 from craftr.utils import path
-from craftr.utils.targets import gtn
+from craftr.utils.targets import gtn, TargetBuilder
 
 import builtins as _builtins
 import itertools as _itertools
