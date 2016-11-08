@@ -70,6 +70,12 @@ class Session(object):
     numbers mapping to :class:`Module` objects. These are the modules that
     have already been loaded into the session or that have been found and
     cached but not yet been executed.
+
+  .. attribute:: maindir
+
+    The main directory from which Craftr was run. Craftr will switch to the
+    build directory at a later point, which is why we keep this member for
+    reference.
   """
 
   #: The current session object. Create it with :meth:`start` and destroy
@@ -87,11 +93,12 @@ class Session(object):
   def end():
     Session.current = None
 
-  def __init__(self):
+  def __init__(self, maindir=None):
     self.graph = build.Graph()
     self.path = ['.', 'craftr/modules']
     self.modulestack = []
     self.modules = {}
+    self.maindir = maindir or path.getcwd()
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
 
