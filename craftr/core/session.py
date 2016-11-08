@@ -156,12 +156,17 @@ class Session(object):
     argspec.validate('version', version, {'type': [str, Version, VersionCriteria]})
 
     if isinstance(version, str):
-      version = VersionCriteria(version)
+      try:
+        version = Version(version)
+      except ValueError as exc:
+        version = VersionCriteria(version)
 
     self.update_manifest_cache()
     if name in self.modules:
-      if isinstance(version, Version) and version in self.modules[name]:
-        return self.modules[name][version]
+      if isinstance(version, Version):
+        if version in self.modules[name]:
+          return self.modules[name][version]
+        raise ModuleNotFound(name, version)
       for module in sorted(self.modules[name].values(),
           key=lambda x: x.manifest.version, reverse=True):
         if version(module.manifest.version):
