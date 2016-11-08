@@ -140,11 +140,11 @@ class Session(object):
     if manifest.version in versions:
       logger.debug('multiple occurences of "{}-{}" found, '
           'one of which is located at "{}"'.format(manifest.name,
-          manifest.version, filename), indent=1)
+          manifest.version, filename))
       module = None
     else:
-      logger.debug('[+] {}-{}'.format(
-          manifest.name, manifest.version), indent=1)
+      logger.debug('parsed manifest for {}-{}'.format(
+          manifest.name, manifest.version))
       module = Module(path.dirname(filename), manifest)
       versions[manifest.version] = module
 
@@ -156,6 +156,7 @@ class Session(object):
     self._refresh_cache = False
 
     logger.debug('Session: refreshing module cache...')
+    logger.indent()
     for directory in self.path:
       for item in path.easy_listdir(directory):
         manifest_fn = path.join(directory, item, 'craftr', 'manifest.json')
@@ -169,6 +170,7 @@ class Session(object):
         except Manifest.Invalid as exc:
           logger.debug('invalid manifest found at "{}": {}'
               .format(manifest_fn, exc), indent=1)
+    logger.dedent()
 
   def find_module(self, name, version):
     """
