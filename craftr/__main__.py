@@ -14,18 +14,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.core.logging import logger
 from craftr.core.session import session, Session
+from craftr.utils import path
+from nr.types.version import Version
 
 import abc
 import argparse
 import atexit
+import json
 import sys
+import textwrap
 
 
 class BaseCommand(object, metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
-  def build_parser(self, root_parser, subparsers):
+  def build_parser(self, parser):
     pass
 
   @abc.abstractmethod
@@ -35,8 +40,7 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
 
 class run(BaseCommand):
 
-  def build_parser(self, root_parser, subparsers):
-    parser = subparsers.add_parser('run')
+  def build_parser(self, parser):
     parser.add_argument('module', nargs='?')
     parser.add_argument('version', nargs='?', default='*')
 
@@ -48,15 +52,61 @@ class run(BaseCommand):
     module.run()
 
 
+class startproject(BaseCommand):
+
+  def build_parser(self, parser):
+    parser.add_argument('name')
+    parser.add_argument('directory', nargs='?', default=None)
+    parser.add_argument('--version', type=Version, default='1.0.0')
+    parser.add_argument('--plain', action='store_true')
+
+  def execute(self, parser, args):
+    directory = args.directory or args.name
+    if not args.plain:
+      directory = path.join(directory, 'craftr')
+
+    if not path.exists(directory):
+      logger.debug('creating directory "{}"'.format(directory))
+      path.makedirs(directory)
+    elif not path.isdir(directory):
+      logger.error('"{}" is not a directory'.format(directory))
+      return 1
+
+    mfile = path.join(directory, 'manifest.json')
+    sfile = path.join(directory, 'Craftrfile')
+    for fn in [mfile, sfile]:
+      if path.isfile(fn):
+        logger.error('"{}" already exists'.format(fn))
+        return 1
+
+    logger.debug('creating file "{}"'.format(mfile))
+    with open(mfile, 'w') as fp:
+      fp.write(textwrap.dedent('''
+        {
+          "name": "%s",
+          "version": "%s",
+          "author": "",
+          "url": "",
+          "dependencies": {},
+          "options": {},
+          "loaders": []
+        }\n''' % (args.name, args.version)).lstrip())
+
+    logger.debug('creating file "{}"'.format(sfile))
+    with open(sfile, 'w') as fp:
+      print('# {}'.format(args.name), file=fp)
+
+
 def main():
   parser = argparse.ArgumentParser(prog='craftr', description='The Craftr build system')
-  parser.add_argument('-v', action='count', default=0)
+  parser.add_argument('-v', dest='verbose', action='count', default=0)
   subparsers = parser.add_subparsers(dest='command')
 
   commands = {}
   for class_ in BaseCommand.__subclasses__():
-    cmd = commands[class_.__name__] = class_()
-    cmd.build_parser(parser, subparsers)
+    cmd = class_()
+    cmd.build_parser(subparsers.add_parser(class_.__name__))
+    commands[class_.__name__] = cmd
 
   args = parser.parse_args()
   Session.start()
@@ -66,7 +116,7 @@ def main():
     parser.print_usage()
     return 0
 
-  commands[args.command].execute(parser, args)
+  return commands[args.command].execute(parser, args)
 
 
 if __name__ == '__main__':

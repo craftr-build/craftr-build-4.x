@@ -23,3 +23,5 @@ starting with an underscore will be ignored.
 
 from craftr.core.logging import logger
 from craftr.core.session import session
+
+import require
