@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from craftr.core import build
+from craftr.core.logging import logger
 from craftr.core.session import session
 from craftr.utils import argspec
 from nr.py.bytecode import get_assigned_name
@@ -160,11 +161,14 @@ class TargetBuilder(object):
     self.implicit_deps = implicit_deps
     self.order_only_deps = order_only_deps
     self.metadata = {}
+    self.used_option_keys = set()
 
   def get(self, key, default=None):
+    self.used_option_keys.add(key)
     return self.options_merge.get(key, default)
 
   def get_list(self, key):
+    self.used_option_keys.add(key)
     return self.options_merge.get_list(key)
 
   def build(self, commands, inputs=None, outputs=None, implicit_deps=None,
@@ -173,6 +177,14 @@ class TargetBuilder(object):
     Create a :class:`build.Target` from the information in the builder,
     add it to the build graph and return it.
     """
+
+    unused_keys = set(self.option_kwargs.keys()) - self.used_option_keys
+    if unused_keys:
+      logger.warn('TargetBuilder: "{}" unhandled option keys'.format(self.name))
+      logger.indent()
+      for key in unused_keys:
+        logger.warn('[-] {}={!r}'.format(key, self.option_kwargs[key]))
+      logger.dedent()
 
     # TODO: We could make this a bit shorter..
     if inputs is None:
