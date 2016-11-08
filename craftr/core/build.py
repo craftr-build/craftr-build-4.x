@@ -132,20 +132,25 @@ class Target(object):
   def __init__(self, name, commands, inputs, outputs, implicit_deps=(),
                order_only_deps=(), pool=None, deps=None, depfile=None,
                msvc_deps_prefix=None, foreach=False, description=None,
-               meta=None, cwd=None, environ=None):
+               metadata=None, cwd=None, environ=None, options=()):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
         {'type': list, 'allowEmpty': False, 'items': {'type': str}}})
+    argspec.validate('inputs', inputs, {'type': [list, tuple], 'items': {'type': str}})
+    argspec.validate('outputs', outputs, {'type': [list, tuple], 'items': {'type': str}})
+    argspec.validate('implicit_deps', implicit_deps, {'type': [list, tuple], 'items': {'type': str}})
+    argspec.validate('order_only_deps', order_only_deps, {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('pool', pool, {'type': [None, str]})
     argspec.validate('deps', deps, {'type': [None, str], 'enum': ['msvc', 'gcc']})
     argspec.validate('depfile', depfile, {'type': [None, str]})
     argspec.validate('msvc_deps_prefix', msvc_deps_prefix, {'type': [None, str]})
     argspec.validate('foreach', foreach, {'type': bool})
     argspec.validate('description', description, {'type': [None, str]})
-    argspec.validate('meta', meta, {'type': [None, dict]})
+    argspec.validate('metadata', metadata, {'type': [None, dict]})
     argspec.validate('cwd', cwd, {'type': [None, str]})
     argspec.validate('environ', environ, {'type': [None, dict]})
+    argspec.validate('options', options, {'type': [list, tuple], 'items': {'type': dict}})
 
     self.name = name
     self.commands = commands
@@ -159,9 +164,10 @@ class Target(object):
     self.msvc_deps_prefix = msvc_deps_prefix
     self.foreach = foreach
     self.description = description
-    self.meta = meta or {}
+    self.metadata = metadata or {}
     self.cwd = cwd
     self.environ = environ or {}
+    self.options = options
 
     if self.foreach and len(self.inputs) != len(self.outputs):
       raise ValueError('foreach target must have the same number of output '
@@ -170,6 +176,9 @@ class Target(object):
 
     if self.deps == 'gcc' and not self.depfile:
       raise ValueError('require depfile with deps="gcc"')
+
+  def __str__(self):
+    return '<{}.Target "{}">'.format(__name__, self.name)
 
   def export(self, writer, context, platform):
     """
