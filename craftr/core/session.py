@@ -217,18 +217,21 @@ class Session(object):
     logger.debug('Session: refreshing module cache...')
     logger.indent()
     for directory in self.path:
+      choices = []
+      choices.append(path.join(directory, 'manifest.json'))
+      choices.append(path.join(directory, 'craftr', 'manifest.json'))
       for item in path.easy_listdir(directory):
-        manifest_fn = path.join(directory, item, 'craftr', 'manifest.json')
-        manifest_fn = path.norm(manifest_fn)
-        if manifest_fn in self._manifest_cache:
+        choices.append(path.join(directory, item, 'craftr', 'manifest.json'))
+      for filename in map(path.norm, choices):
+        if filename in self._manifest_cache:
           continue  # don't parse a manifest that we already parsed
-        if not path.isfile(manifest_fn):
+        if not path.isfile(filename):
           continue
         try:
-          self.parse_manifest(manifest_fn)
+          self.parse_manifest(filename)
         except Manifest.Invalid as exc:
           logger.debug('invalid manifest found at "{}": {}'
-              .format(manifest_fn, exc), indent=1)
+              .format(filename, exc), indent=1)
     logger.dedent()
 
   def find_module(self, name, version):
