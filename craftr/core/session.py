@@ -294,7 +294,11 @@ class Module(object):
       'project_dir': self.project_directory,
     })
 
-    exec(code, self.namespace)
+    try:
+      session.modulestack.append(self)
+      exec(code, self.namespace)
+    finally:
+      assert session.modulestack.pop() is self
 
 #: Proxy object that points to the current :class:`Session` object.
 session = werkzeug.LocalProxy(lambda: Session.current)
