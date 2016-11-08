@@ -501,16 +501,10 @@ class UrlLoader(BaseLoader):
     self.urls = urls
     self.directory = None
 
-  def init_cache(self, cache):
-    self.directory = cache['directory']
-    if not path.isdir(self.directory):
-      raise LoaderError('inconsistent cache, the directory {!r} '
-        'no longer exists'.format(self.directory))
-
   def load(self, context, cache):
     if cache is not None and path.isdir(cache['directory']):
       self.directory = cache['directory']
-      return
+      return cache
 
     directory = None
     archive = None

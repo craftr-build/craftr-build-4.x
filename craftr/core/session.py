@@ -28,6 +28,7 @@ from craftr.core.manifest import Manifest, LoaderContext
 from craftr.utils import argspec, path
 from nr.types.version import Version, VersionCriteria
 
+import json
 import os
 import types
 import werkzeug
@@ -138,6 +139,10 @@ class Session(object):
         }
       }
 
+  .. attribute:: cachefile
+
+    The file that contains the cache.
+
   .. attribute:: tempdir
 
     Temporary directory, primarily used for loader data.
@@ -158,13 +163,14 @@ class Session(object):
   def end():
     Session.current = None
 
-  def __init__(self, maindir=None):
+  def __init__(self, maindir=None, cachefile=None):
     self.maindir = maindir or path.getcwd()
     self.graph = build.Graph()
     self.path = [self.maindir, path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
     self.modules = {}
     self.options = {}
+    self.cachefile = cachefile or path.join(self.maindir, 'craftr/.cache')
     self.cache = {'loaders': {}}
     self.tempdir = path.join(self.maindir, 'craftr/.temp')
     self._manifest_cache = {}  # maps manifest_filename: manifest
@@ -175,6 +181,16 @@ class Session(object):
     if self.modulestack:
       return self.modulestack[-1]
     return None
+
+  def read_cache(self):
+    if path.isfile(self.cachefile):
+      with open(self.cachefile) as fp:
+        self.cache = json.load(fp)
+
+  def write_cache(self):
+    path.makedirs(path.dirname(self.cachefile))
+    with open(self.cachefile, 'w') as fp:
+      json.dump(self.cache, fp)
 
   def parse_manifest(self, filename):
     """
@@ -388,33 +404,37 @@ class Module(object):
         module = session.find_module(name, version)
         module.init_loader(True)
 
-    logger.debug('finding loader for {}'.format(self.ident))
-
     self.init_options()
-    context = LoaderContext(self.directory, self.manifest, self.options,
-        session.tempdir, session.tempdir)
+    if self.loader is not None:
+      return
 
-    # Read the cached loader data.
-    cache = session.cache['loaders'].get(self.ident)
+    logger.info('running loaders for {}'.format(self.ident))
+    with logger.indent():
+      # Read the cached loader data and create the context.
+      cache = session.cache['loaders'].get(self.ident)
+      context = LoaderContext(self.directory, self.manifest, self.options,
+          session.tempdir, session.tempdir)
 
-    # Check all loaders in-order.
-    errors = []
-    for loader in self.manifest.loaders:
-      try:
-        if cache and loader.name == cache['name']:
-          new_data = loader.load(context, cache['data'])
-        else:
-          new_data = loader.load(None)
-      except manifest.LoaderError as exc:
-        errors.append(exc)
+      # Check all loaders in-order.
+      errors = []
+      for loader in self.manifest.loaders:
+        logger.info('[+]', loader.name)
+        with logger.indent():
+          try:
+            if cache and loader.name == cache['name']:
+              new_data = loader.load(context, cache['data'])
+            else:
+              new_data = loader.load(None)
+          except manifest.LoaderError as exc:
+            errors.append(exc)
+          else:
+            self.loader = loader
+            session.cache['loaders'][self.ident] = {
+                'name': loader.name, 'data': new_data}
+            break
       else:
-        self.loader = loader
-        session.cache['loaders'][self.ident] = {
-            'name': loader.name, 'data': new_data}
-        break
-    else:
-      # TODO: Proper exception type
-      raise RuntimeError('\n'.join(map(str, errors)))
+        # TODO: Proper exception type
+        raise RuntimeError('\n'.join(map(str, errors)))
 
   def run(self):
     """

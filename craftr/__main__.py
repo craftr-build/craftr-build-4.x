@@ -58,12 +58,7 @@ class run(BaseCommand):
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
 
-    # Load the cache if it exists.
-    cache_file = path.join('craftr/.cache')
-    if path.isfile(cache_file):
-      with open(cache_file) as fp:
-        session.cache = json.load(fp)
-
+    session.read_cache()
     try:
       logger.info('==> initializing options')
       with logger.indent():
@@ -73,6 +68,7 @@ class run(BaseCommand):
       with logger.indent():
         module.init_loader(True)
 
+      session.write_cache()
       logger.info('==> executing build script')
       with logger.indent():
         module.run()
@@ -82,10 +78,7 @@ class run(BaseCommand):
       return 1
 
     # Write back the cache.
-    path.makedirs(path.dirname(cache_file))
-    with open(cache_file, 'w') as fp:
-      json.dump(session.cache, fp)
-
+    session.write_cache()
 
 class startproject(BaseCommand):
 
