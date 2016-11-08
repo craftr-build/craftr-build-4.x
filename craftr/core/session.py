@@ -204,16 +204,16 @@ class Module(object):
 
   .. attribute:: namespace
 
-  .. attribute:: loaded
+  .. attribute:: executed
 
-    True if the module was already loaded (aka executed).
+    True if the module was executed with :meth:`run`.
   """
 
   def __init__(self, directory, manifest):
     self.directory = directory
     self.manifest = manifest
     self.namespace = {}
-    self.loaded = False
+    self.executed = False
 
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
@@ -223,22 +223,22 @@ class Module(object):
   def project_directory(self):
     return path.norm(path.join(self.directory, self.manifest.project_directory))
 
-  def load(self):
+  def run(self):
     """
     Loads the code of the main Craftr build script as specified in the modules
     manifest and executes it. Note that this must occur in a context where
     the :data:`session` is available.
 
     :raise RuntimeError: If there is no current :data:`session` or if the
-      module was already loaded.
+      module was already executed.
     """
 
     if not session:
       raise RuntimeError('no current session')
-    if self.loaded:
-      raise RuntimeError('already loaded')
+    if self.executed:
+      raise RuntimeError('already run')
 
-    self.loaded = True
+    self.executed = True
     script_fn = path.norm(path.join(self.directory, self.manifest.main))
     script_fn = path.rel(script_fn, session.maindir, nopar=True)
     with open(script_fn) as fp:
