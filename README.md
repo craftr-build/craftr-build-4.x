@@ -29,6 +29,22 @@ stable version of Craftr 1 can be found [here](https://github.com/craftr-build/c
 > utils = require('./utils')
 > ```
 
+## About Craftr
+
+### Project Structure
+
+Every Craftr project provides a Craftr package and module by providing a
+`manifest.json` file and a `Craftrfile`. These files may either be located
+at the root of the project or in the `/craftr/` directory, which is common
+for actual projects rather than modules that just provide functionality.
+
+    myproject/
+      craftr/
+        Craftrfile
+        manifest.json
+      src/
+      ...
+
 ## License
 
     The Craftr build system
