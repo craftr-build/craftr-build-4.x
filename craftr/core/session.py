@@ -221,7 +221,7 @@ class Module(object):
 
   @property
   def project_directory(self):
-    return path.norm(path.join(self.directory, manifest.project_directory))
+    return path.norm(path.join(self.directory, self.manifest.project_directory))
 
   def load(self):
     """
@@ -251,7 +251,8 @@ class Module(object):
     self.namespace.update({
       '__file__': script_fn,
       '__name__': self.manifest.name,
-      '__version__': str(self.manifest.version)
+      '__version__': str(self.manifest.version),
+      'project_dir': self.project_directory,
     })
 
     exec(code, self.namespace)
