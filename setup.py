@@ -32,5 +32,10 @@ setup(
   author_email = 'rosensteinniklas@gmail.com',
   url = 'https://gitlab.niklasrosenstein.com/niklas/craftr',
   packages = find_packages(),
-  install_requires = [str(x.req) for x in parse_requirements('requirements.txt')]
+  install_requires = [str(x.req) for x in parse_requirements('requirements.txt')],
+  entry_points = dict(
+    console_scripts = [
+      'craftr = craftr.__main__:main_and_exit'
+    ]
+  )
 )

@@ -3,6 +3,6 @@ glob2
 jsonschema
 ninja_syntax
 nr
-require
+py-require
 termcolor
 werkzeug

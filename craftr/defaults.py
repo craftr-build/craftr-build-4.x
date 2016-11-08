@@ -25,3 +25,22 @@ from craftr.core.logging import logger
 from craftr.core.session import session
 
 import require
+import sys as _sys
+
+require = require.Require(write_bytecode=False)
+
+
+def include_defs(filename, globals=None):
+  """
+  Uses :mod:`require` to load a Python file and then copies all symbols
+  that do not start with an underscore into the *globals* dictionary. If
+  *globals* is not specified, it will fall back to the globals of the frame
+  that calls the function.
+  """
+
+  module = require(filename, _stackdepth=1)
+  if globals is None:
+    globals = _sys._getframe(1).f_globals
+  for key, value in vars(module).items():
+    if not key.startswith('_'):
+      globals[key] = value

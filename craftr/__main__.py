@@ -127,5 +127,9 @@ def main():
   return commands[args.command].execute(parser, args)
 
 
-if __name__ == '__main__':
+def main_and_exit():
   sys.exit(main())
+
+
+if __name__ == '__main__':
+  main_and_exit()
