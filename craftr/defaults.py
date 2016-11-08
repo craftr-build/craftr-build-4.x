@@ -25,6 +25,8 @@ from craftr.core.logging import logger
 from craftr.core.session import session
 from craftr.utils import path
 
+import builtins as _builtins
+import itertools as _itertools
 import require
 import sys as _sys
 
@@ -80,3 +82,41 @@ def buildlocal(rel_path):
   if path.isabs(rel_path):
     raise ValueError('rel_path must be a relative path')
   return path.canonical(path.join(session.module.ident, rel_path))
+
+
+def filter(predicate, iterable):
+  """
+  Alternative for the built-in ``filter()`` function that returns a list
+  instead of an iterable (which is the behaviour since Python 3).
+  """
+
+  result = []
+  for item in iterable:
+    if predicate(item):
+      result.append(item)
+  return result
+
+
+def map(procedure, iterable):
+  """
+  Alternative for the built-in ``map()`` function that returns a list instead
+  of an iterable (which is the behaviour since Python 3).
+  """
+
+  result = []
+  for item in iterable:
+    result.append(procedure(item))
+  return result
+
+
+def zip(*iterables, fill=NotImplemented):
+  """
+  Alternative to the Python built-in ``zip()`` function. This function returns
+  a list rather than an iterable and also supports swapping to the
+  :func:`itertools.izip_longest` version if the *fill* parameter is specified.
+  """
+
+  if fill is NotImplemented:
+    return list(_builtins.zip(*iterables))
+  else:
+    return list(_itertools.zip_longest(*iterables, fillvalue=fill))
