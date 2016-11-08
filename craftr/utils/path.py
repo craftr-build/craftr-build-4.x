@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from os import sep, pathsep, curdir, pardir
+from os import sep, pathsep, curdir, pardir, getcwd
 from os.path import exists, isdir, isfile, isabs, abspath as abs
 from os.path import join, split, dirname, basename, expanduser
 
@@ -53,7 +53,7 @@ def norm(path, parent=None):
   """
 
   if not isabs(path):
-    path = join(parent or os.getcwd(), path)
+    path = join(parent or getcwd(), path)
   return canonical(path)
 
 def canonical(path):

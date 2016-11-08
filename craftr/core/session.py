@@ -135,7 +135,7 @@ class Session(object):
                 'one of which is located at "{}"'.format(manifest.name,
                 manifest.version, manifest_fn), indent=1)
           else:
-            logger.debug('found {}-{}'.format(
+            logger.debug('[+] {}-{}'.format(
                 manifest.name, manifest.version), indent=1)
             versions[manifest.version] = Module(
                 path.dirname(manifest_fn), manifest)
@@ -223,10 +223,38 @@ class Module(object):
   def project_directory(self):
     return path.norm(path.join(self.directory, manifest.project_directory))
 
-  def load(self, session):
-    # TODO
-    raise NotImplementedError
+  def load(self):
+    """
+    Loads the code of the main Craftr build script as specified in the modules
+    manifest and executes it. Note that this must occur in a context where
+    the :data:`session` is available.
 
+    :raise RuntimeError: If there is no current :data:`session` or if the
+      module was already loaded.
+    """
+
+    if not session:
+      raise RuntimeError('no current session')
+    if self.loaded:
+      raise RuntimeError('already loaded')
+
+    self.loaded = True
+    script_fn = path.norm(path.join(self.directory, self.manifest.main))
+    script_fn = path.rel(script_fn, session.maindir, nopar=True)
+    with open(script_fn) as fp:
+      code = compile(fp.read(), script_fn, 'exec')
+
+    from craftr import defaults
+    for key, value in vars(defaults).items():
+      if not key.startswith('_'):
+        self.namespace[key] = value
+    self.namespace.update({
+      '__file__': script_fn,
+      '__name__': self.manifest.name,
+      '__version__': str(self.manifest.version)
+    })
+
+    exec(code, self.namespace)
 
 #: Proxy object that points to the current :class:`Session` object.
 session = werkzeug.LocalProxy(lambda: Session.current)
