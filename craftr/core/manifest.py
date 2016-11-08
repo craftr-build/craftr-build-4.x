@@ -560,7 +560,7 @@ class UrlLoader(BaseLoader):
           logger.debug(exc)
         else:
           if reused:
-            logger.info('Reusing cached ', end='')
+            logger.info('reusing cached ', end='')
           else:
             logger.info('finished downloading ', end='')
           logger.info(path.basename(archive))
@@ -570,6 +570,7 @@ class UrlLoader(BaseLoader):
       suffix = nr.misc.archive.get_opener(archive)[0]
       filename = path.basename(archive)[:-len(suffix)]
       directory = path.join(context.installdir, filename)
+      logger.info('unpacking "{}" to "{}" ...'.format(archive, directory))
       nr.misc.archive.extract(archive, directory, unpack_single_dir=True)
 
     return {'directory': directory}
