@@ -195,7 +195,7 @@ class Manifest(recordclass):
 
   __slots__ = tuple(Schema['properties'].keys())
 
-  def __init__(self, name, version, main=None, project_directory='..',
+  def __init__(self, name, version, main='Craftrfile', project_directory='..',
                author=None, url=None, dependencies=None, options=None,
                loaders=None):
     if version is not None:
