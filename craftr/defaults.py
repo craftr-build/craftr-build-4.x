@@ -22,7 +22,7 @@ starting with an underscore will be ignored.
 """
 
 from craftr.core.logging import logger
-from craftr.core.session import session
+from craftr.core.session import session, ModuleNotFound
 from craftr.utils import path
 from craftr.utils.targets import gtn
 
@@ -121,3 +121,47 @@ def zip(*iterables, fill=NotImplemented):
     return list(_builtins.zip(*iterables))
   else:
     return list(_itertools.zip_longest(*iterables, fillvalue=fill))
+
+
+def load_module(name, into=None, get_namespace=True):
+  """
+  Load a Craftr module by name and return it. If *into* is specified, it must
+  be a dictionary that will be filled with all the members of the module. Note
+  that this function returns the namespace object of the module rather than
+  the actual :class:`craftr.core.session.Module` object that wraps the module
+  information unless *get_namespace* is False.
+
+  The version criteria is read from the current module's manifest.
+
+  :param name: The name of the module to load.
+  :param into: If specified, must be a dictionary.
+  :param get_namespace:
+  :return: The module namespace object (of type :class:`types.ModuleType`)
+    or the actual :class:`craftr.core.session.Module` if *get_namespace*
+    is False.
+  :raise ModuleNotFound: If the module could not be found.
+  :raise RuntimeError: If the module that is attempted to be loaded is not
+    declared in the current module's manifest.
+  """
+
+  if not session:
+    raise RuntimeError('no session context')
+  module = session.module
+  if not module:
+    raise RuntimeError('no current module')
+
+  if name not in module.manifest.dependencies:
+    raise RuntimeError('"{}" can not load "{}", make sure that it is listed '
+        'in the dependencies'.format(module.ident, name))
+
+  loaded_module = session.find_module(name, module.manifest.dependencies[name])
+  loaded_module.run()
+
+  if into is not None:
+    for key, value in vars(loaded_module.namespace).items():
+      if not key.startswith('_'):
+        into[key] = value
+
+  if get_namespace:
+    return loaded_module.namespace
+  return loaded_module

@@ -29,6 +29,7 @@ from craftr.utils import argspec, path
 from nr.types.version import Version, VersionCriteria
 
 import os
+import types
 import werkzeug
 
 
@@ -282,7 +283,7 @@ class Module(object):
   def __init__(self, directory, manifest):
     self.directory = directory
     self.manifest = manifest
-    self.namespace = {}
+    self.namespace = types.ModuleType(self.manifest.name)
     self.executed = False
     self.options = None
 
@@ -339,8 +340,8 @@ class Module(object):
     from craftr import defaults
     for key, value in vars(defaults).items():
       if not key.startswith('_'):
-        self.namespace[key] = value
-    self.namespace.update({
+        vars(self.namespace)[key] = value
+    vars(self.namespace).update({
       '__file__': script_fn,
       '__name__': self.manifest.name,
       '__version__': str(self.manifest.version),
@@ -350,7 +351,7 @@ class Module(object):
 
     try:
       session.modulestack.append(self)
-      exec(code, self.namespace)
+      exec(code, vars(self.namespace))
     finally:
       assert session.modulestack.pop() is self
 
