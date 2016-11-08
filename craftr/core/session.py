@@ -103,11 +103,11 @@ class Session(object):
     Session.current = None
 
   def __init__(self, maindir=None):
+    self.maindir = maindir or path.getcwd()
     self.graph = build.Graph()
-    self.path = ['.', 'craftr/modules']
+    self.path = [self.maindir, path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
     self.modules = {}
-    self.maindir = maindir or path.getcwd()
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
 
