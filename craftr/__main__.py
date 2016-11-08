@@ -16,14 +16,57 @@
 
 from craftr.core.session import session, Session
 
+import abc
+import argparse
 import atexit
 import sys
 
 
+class BaseCommand(object, metaclass=abc.ABCMeta):
+
+  @abc.abstractmethod
+  def build_parser(self, root_parser, subparsers):
+    pass
+
+  @abc.abstractmethod
+  def execute(self, parser, args):
+    pass
+
+
+class run(BaseCommand):
+
+  def build_parser(self, root_parser, subparsers):
+    parser = subparsers.add_parser('run')
+    parser.add_argument('module', nargs='?')
+    parser.add_argument('version', nargs='?', default='*')
+
+  def execute(self, parser, args):
+    if not args.module:
+      # TODO: Determine module in CWD and load that.
+      parser.error("no module name specified")
+    module = session.find_module(args.module, args.version)
+    module.run()
+
+
 def main():
-  atexit.register(Session.end)
+  parser = argparse.ArgumentParser(prog='craftr', description='The Craftr build system')
+  parser.add_argument('-v', action='count', default=0)
+  subparsers = parser.add_subparsers(dest='command')
+
+  commands = {}
+  for class_ in BaseCommand.__subclasses__():
+    cmd = commands[class_.__name__] = class_()
+    cmd.build_parser(parser, subparsers)
+
+  args = parser.parse_args()
   Session.start()
-  print(session)
+  atexit.register(Session.end)
+
+  if not args.command:
+    parser.print_usage()
+    return 0
+
+  commands[args.command].execute(parser, args)
 
 
 if __name__ == '__main__':
