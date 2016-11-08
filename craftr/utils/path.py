@@ -299,3 +299,16 @@ def common(paths):
   if not has_abs:
     common = rel(common)
   return common
+
+def easy_listdir(directory):
+  """
+  A friendly version of :func:`os.listdir` that does not error if the
+  *directory* doesn't exist.
+  """
+
+  try:
+    return os.listdir(directory)
+  except OSError as exc:
+    if exc.errno != errno.ENOENT:
+      raise
+  return []
