@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.utils import argspec
 from os import sep, pathsep, curdir, pardir, getcwd
 from os.path import exists, isdir, isfile, isabs, abspath as abs
 from os.path import join, split, dirname, basename, expanduser
@@ -63,7 +64,7 @@ def canonical(path):
 
   return os.path.normpath(path)
 
-def glob(*patterns, exclude=None, parent=None):
+def glob(patterns, excludes=(), include_dotfiles=False, parent=None):
   """
   Wrapper for :func:`glob2.glob` that accepts an arbitrary number of
   patterns and matches them. The paths are normalized with :func:`norm`.
@@ -76,11 +77,20 @@ def glob(*patterns, exclude=None, parent=None):
   that is/contains glob patterns or filenames to be removed from the
   result before returning.
 
-  :param patterns: Glob patterns
-  :param exclude: A string or list of strings
-  :param parent: The parent directory for relative paths
-  :return: A list of filenames
+  :param patterns: A list of glob patterns or filenames.
+  :param exclude: A list of glob patterns or filenames.
+  :param include_dotfiles: If True, ``*`` and ``**`` can also capture
+    file or directory names starting with a dot.
+  :param parent: The parent directory for relative paths.
+  :return: A list of filenames.
   """
+
+  argspec.validate('patterns', patterns, {'type': [list, tuple]})
+  argspec.validate('excludes', excludes, {'type': [list, tuple]})
+  argspec.validate('parent', parent, {'type': [None, str]})
+
+  if not parent:
+    parent = getcwd()
 
   result = []
   for pattern in patterns:
@@ -88,17 +98,15 @@ def glob(*patterns, exclude=None, parent=None):
       pattern = join(parent, pattern)
     result += glob2.glob(norm(pattern))
 
-  if isinstance(exclude, str):
-    exclude = [exclude]
-  if exclude is not None:
-    for pattern in exclude:
-      if not isabs(pattern):
-        pattern = join(parent, pattern)
-      if not isglob(pattern):
-        result.remove(norm(pattern))
-      else:
-        for item in glob2.glob(norm(pattern)):
-          result.remove(item)
+  for pattern in excludes:
+    if not isabs(pattern):
+      pattern = join(parent, pattern)
+    pattern = norm(pattern)
+    if not isglob(pattern):
+      result.remove(patten)
+    else:
+      for item in glob2.glob(pattern):
+        result.remove(item)
 
   return result
 
