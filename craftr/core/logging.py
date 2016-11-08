@@ -17,36 +17,50 @@
 from craftr.utils import tty
 
 import abc
+import contextlib
 import itertools
 import sys
 import time
 import werkzeug
 
+DEBUG = 5
+INFO = 10
+WARNING = 15
+ERROR = 20
 
 class BaseLogger(object, metaclass=abc.ABCMeta):
 
+  DEBUG = DEBUG
+  INFO = INFO
+  WARNING = WARNING
+  ERROR = ERROR
+
   def debug(self, *args, **kwargs):
-    self.log('debug', *args, **kwargs)
+    self.log(DEBUG, *args, **kwargs)
 
   def info(self, *args, **kwargs):
-    self.log('info', *args, **kwargs)
+    self.log(INFO, *args, **kwargs)
 
   def warn(self, *args, **kwargs):
-    self.log('warn', *args, **kwargs)
+    self.log(WARNING, *args, **kwargs)
 
   def error(self, *args, **kwargs):
-    self.log('error', *args, **kwargs)
+    self.log(ERROR, *args, **kwargs)
+
+  @contextlib.contextmanager
+  def indent(self):
+    self.add_indent(1)
+    try:
+      yield
+    finally:
+      self.add_indent(-1)
 
   @abc.abstractmethod
   def log(self, level, *object, sep=' ', end='\n', indent=0):
     pass
 
   @abc.abstractmethod
-  def indent(self):
-    pass
-
-  @abc.abstractmethod
-  def dedent(self):
+  def add_indent(self, level):
     pass
 
   @abc.abstractmethod
@@ -61,24 +75,31 @@ class BaseLogger(object, metaclass=abc.ABCMeta):
   def progress_end(self):
     pass
 
+  @abc.abstractmethod
+  def set_level(self, level):
+    pass
+
 
 class DefaultLogger(BaseLogger):
 
   level_colors = {
-    'debug': 'yellow',
-    'info': 'white',
-    'warn': 'magenta',
-    'error': 'red'
+    DEBUG: 'yellow',
+    INFO: 'white',
+    WARNING: 'magenta',
+    ERROR: 'red'
   }
 
-  def __init__(self, stream=None, indent_seq='  '):
+  def __init__(self, stream=None, level=INFO, indent_seq='  '):
     self._stream = stream or sys.stdout
+    self._level = level
     self._indent_seq = indent_seq
     self._indent = 0
     self._progress = None
     self._line_alive = False
 
   def log(self, level, *objects, sep=' ', end='\n', indent=0):
+    if level < self._level:
+      return
     if self._progress:
       tty.clear_line()
     prefix = '' if self._line_alive else self._indent_seq * (self._indent + indent)
@@ -88,13 +109,8 @@ class DefaultLogger(BaseLogger):
     if self._progress and 'progress' in self._progress:
       self.progress_update(self._progress['progress'], self._progress['info_text'], _force=True)
 
-  def indent(self):
-    self._indent += 1
-
-  def dedent(self):
-    self._indent -= 1
-    if self._indent < 0:
-      self._indent = 0
+  def add_indent(self, levels):
+    self._indent += levels
 
   def progress_begin(self, description, spinning=False):
     self._progress = {'description': description, 'spinning': spinning,
@@ -123,6 +139,9 @@ class DefaultLogger(BaseLogger):
   def progress_end(self):
     tty.clear_line()
     self._progress = None
+
+  def set_level(self, level):
+    self._level = level
 
 
 _logger = DefaultLogger()

@@ -141,6 +141,8 @@ def main():
     parser.print_usage()
     return 0
 
+  if args.verbose:
+    logger.set_level(logger.DEBUG)
   return commands[args.command].execute(parser, args)
 
 

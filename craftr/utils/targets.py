@@ -181,10 +181,9 @@ class TargetBuilder(object):
     unused_keys = set(self.option_kwargs.keys()) - self.used_option_keys
     if unused_keys:
       logger.warn('TargetBuilder: "{}" unhandled option keys'.format(self.name))
-      logger.indent()
-      for key in unused_keys:
-        logger.warn('[-] {}={!r}'.format(key, self.option_kwargs[key]))
-      logger.dedent()
+      with logger.indent():
+        for key in unused_keys:
+          logger.warn('[-] {}={!r}'.format(key, self.option_kwargs[key]))
 
     # TODO: We could make this a bit shorter..
     if inputs is None:

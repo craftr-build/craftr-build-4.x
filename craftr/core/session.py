@@ -214,8 +214,6 @@ class Session(object):
       return
     self._refresh_cache = False
 
-    logger.debug('Session: refreshing module cache...')
-    logger.indent()
     for directory in self.path:
       choices = []
       choices.append(path.join(directory, 'manifest.json'))
@@ -232,7 +230,6 @@ class Session(object):
         except Manifest.Invalid as exc:
           logger.debug('invalid manifest found at "{}": {}'
               .format(filename, exc), indent=1)
-    logger.dedent()
 
   def find_module(self, name, version):
     """
