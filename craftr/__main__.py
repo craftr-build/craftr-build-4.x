@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from craftr.core.logging import logger
-from craftr.core.session import session, Session, Module, iter_module_hierarchy
+from craftr.core.session import session, Session, Module
 from craftr.utils import path
 from nr.types.version import Version
 
@@ -63,10 +63,6 @@ class run(BaseCommand):
     if path.isfile(cache_file):
       with open(cache_file) as fp:
         session.cache = json.load(fp)
-
-    # Create the loader context.
-    for m in iter_module_hierarchy(session, module):
-      m.run_loader()
 
     try:
       module.run()

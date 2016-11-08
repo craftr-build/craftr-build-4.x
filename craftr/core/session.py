@@ -365,54 +365,44 @@ class Module(object):
 
   def init_loader(self):
     """
-    Initialize the loader with the information that is stored in the sessions
-    loader cache. Note that the loader must be selected in an additional step
-    to prepare the loader cache.
+    Check all available loaders as defined in the :attr:`manifest` until the
+    first loads successfully.
 
-    :raise NoLoaderCacheAvailable: If there is no loader cache for this
-      module in the sessions cache.
     :raise RuntimeError: If there is no current session context.
     """
 
     if not session:
       raise RuntimeError('no current session')
-    if not self.manifest.loaders:
+    if not self.manifest.loaders or self.loader is not None:
       return
-    if self.loader is None:
-      if self.ident not in session.cache['loaders']:
-        raise LoaderCacheError(self, 'no loader cache available')
-      cache = session.cache['loaders'][self.ident]
-      loader = [l for l in self.manifest.loaders if l.name == cache['name']]
-      if not loader:
-        raise LoaderCacheError(self, 'inconistent cache -- has no loader "{}"'
-            .format(cache['name']))
-      loader[0].init_cache(cache['data'])
-      self.loader = loader[0]
-
-  def run_loader(self):
-    """
-    This function is used outside of the build step to initialize the cache
-    of loader objects in this module.
-    """
-
-    #argspec.validate('context', context, {'type': LoaderContext})
 
     self.init_options()
-    if self.loader is not None or not self.manifest.loaders:
-      return
-
-    logger.info('finding loader for "{}" ...'.format(self.ident))
-    context = LoaderContext(session.maindir, self.manifest, self.options,
+    context = LoaderContext(self.directory, self.manifest, self.options,
         session.tempdir, session.tempdir)
+
+    logger.debug('checking loaders for {}'.format(self.ident))
+
+    # Read the cached loader data.
+    cache = session.cache['loaders'].get(self.ident)
+
+    # Check all loaders in-order.
+    errors = []
     for loader in self.manifest.loaders:
       try:
-        cache_data = loader.load(context)
+        if cache and loader.name == cache['name']:
+          new_data = loader.load(context, cache['data'])
+        else:
+          new_data = loader.load(None)
       except manifest.LoaderError as exc:
-        pass
+        errors.append(exc)
       else:
+        self.loader = loader
         session.cache['loaders'][self.ident] = {
-            'name': loader.name, 'data': cache_data}
+            'name': loader.name, 'data': new_data}
         break
+    else:
+      # TODO: Proper exception type
+      raise RuntimeError('\n'.join(map(str, errors)))
 
   def run(self):
     """
@@ -430,8 +420,8 @@ class Module(object):
       raise RuntimeError('already run')
 
     self.executed = True
-    self.init_loader()
     self.init_options()
+    self.init_loader()
 
     script_fn = path.norm(path.join(self.directory, self.manifest.main))
     script_fn = path.rel(script_fn, session.maindir, nopar=True)
@@ -456,12 +446,6 @@ class Module(object):
       exec(code, vars(self.namespace))
     finally:
       assert session.modulestack.pop() is self
-
-
-def iter_module_hierarchy(session, module):
-  yield module
-  for name, criteria in module.manifest.dependencies.items():
-    yield from iter_module_hierarchy(session, session.find_module(name, criteria))
 
 
 #: Proxy object that points to the current :class:`Session` object.

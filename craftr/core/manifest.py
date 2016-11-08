@@ -449,20 +449,7 @@ class BaseLoader(object, metaclass=abc.ABCMeta):
     self.name = name
 
   @abc.abstractmethod
-  def init_cache(self, cache):
-    """
-    Called to initalize the loader from a *cache* dictinary that was formerly
-    created in :meth:`load`. This function is called when the laoder is not
-    intended to re-(down-)load anything but only re-use what has already been
-    loaded or detected.
-
-    :param cache: A dictionary that has been deserialized and was generated
-      in a previous step by :meth:`load`.
-    :raise LoaderError: If the cache is inconsistent.
-    """
-
-  @abc.abstractmethod
-  def load(self, context):
+  def load(self, context, cache):
     """
     (Down-)load the data. If the process fails, a :class:`LoaderError` should
     be raised. The function must return a dictionary that will be cached in
@@ -470,9 +457,10 @@ class BaseLoader(object, metaclass=abc.ABCMeta):
     what has been loaded in this method (see :meth:`init_cache`).
 
     :param context: A :class:`LoaderContext` object.
+    :param cache: The cache of a former load operation. This is the data
+      returned by a former call to this :meth:`load` method.
     :raise LoaderError: If the loader was unable to load or detect the source.
-    :return: A :class:`dict` that will be serialized into a cache. This
-      dictionary will be passed to :meth:`init_cache` in another step.
+    :return: A :class:`dict` that will be serialized into a cache.
     """
 
 
@@ -519,7 +507,11 @@ class UrlLoader(BaseLoader):
       raise LoaderError('inconsistent cache, the directory {!r} '
         'no longer exists'.format(self.directory))
 
-  def load(self, context):
+  def load(self, context, cache):
+    if cache is not None and path.isdir(cache['directory']):
+      self.directory = cache['directory']
+      return
+
     directory = None
     archive = None
     delete_after_extract = True
