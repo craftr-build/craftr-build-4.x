@@ -17,9 +17,17 @@ stable version of Craftr 1 can be found [here](https://github.com/craftr-build/c
 - [jsonschema](https://pypi.python.org/pypi/jsonschema)
 - [ninja_syntax](https://pypi.python.org/pypi/ninja_syntax)
 - [nr](https://pypi.python.org/pypi/nr)
-- [py-require](https://pypi.python.org/pypi/py-require)
+- [py-require](https://pypi.python.org/pypi/py-require)\*
 - [termcolor](https://pypi.python.org/pypi/termcolor) (optional)
 - [werkzeug](https://pypi.python.org/pypi/werkzeug)
+
+> \* While the `require` module is not directly used by Craftr, it is a
+> common mechanism to load an additional file into a Craftr build script.
+>
+> ```python
+> import require
+> utils = require('./utils')
+> ```
 
 ## License
 
