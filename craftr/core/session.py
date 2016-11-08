@@ -23,7 +23,10 @@ for the meta build process (such as a :class:`craftr.core.build.Graph`).
 """
 
 from craftr.core import build
+from craftr.core.logging import logger
 from craftr.core.manifest import Manifest
+from craftr.utils import argspec, path
+from nr.types.version import Version, VersionCriteria
 
 import os
 import werkzeug
@@ -89,6 +92,7 @@ class Session(object):
     self.path = ['.', 'craftr/modules']
     self.modulestack = []
     self.modules = {}
+    self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
 
   @property
@@ -96,6 +100,38 @@ class Session(object):
     if self.modulestack:
       return self.modulestack[-1]
     return None
+
+  def update_manifest_cache(self, force=False):
+    if not self._refresh_cache and not force:
+      return
+    self._refresh_cache = False
+
+    logger.debug('Session: refreshing module cache...')
+    for directory in self.path:
+      for item in path.easy_listdir(directory):
+        manifest_fn = path.join(directory, item, 'craftr', 'manifest.json')
+        manifest_fn = path.norm(manifest_fn)
+        if manifest_fn in self._manifest_cache:
+          continue  # don't parse a manifest that we already parsed
+        if not path.isfile(manifest_fn):
+          continue
+        try:
+          manifest = Manifest.parse(manifest_fn)
+        except Manifest.Invalid as exc:
+          logger.debug('invalid manifest found at "{}": {}'
+              .format(manifest_fn, exc), indent=1)
+        else:
+          self._manifest_cache[manifest_fn] = manifest
+          versions = self.modules.setdefault(manifest.name, {})
+          if manifest.version in versions:
+            logger.debug('multiple occurences of "{}-{}" found, '
+                'one of which is located at "{}"'.format(manifest.name,
+                manifest.version, manifest_fn), indent=1)
+          else:
+            logger.debug('found {}-{}'.format(
+                manifest.name, manifest.version), indent=1)
+            versions[manifest.version] = Module(
+                path.dirname(manifest_fn), manifest)
 
   def find_module(self, name, version):
     """
@@ -109,8 +145,22 @@ class Session(object):
     :return: :class:`Module`
     """
 
-    # TODO
-    raise NotImplementedError
+    argspec.validate('name', name, {'type': str})
+    argspec.validate('version', version, {'type': [str, Version, VersionCriteria]})
+
+    if isinstance(version, str):
+      version = VersionCriteria(version)
+
+    self.update_manifest_cache()
+    if name in self.modules:
+      if isinstance(version, Version) and version in self.modules[name]:
+        return self.modules[name][version]
+      for module in sorted(self.modules[name].values(),
+          key=lambda x: x.manifest.version, reverse=True):
+        if version(module.manifest.version):
+          return module
+
+    raise ModuleNotFound(name, version)
 
 
 class Module(object):
@@ -159,7 +209,7 @@ class Module(object):
     self.loaded = False
 
   def __repr__(self):
-    return '<craftr.core.session.Module {!r}:{}>'.format(self.manifest.name,
+    return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
       self.manifest.version)
 
   @property
