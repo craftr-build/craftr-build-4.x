@@ -80,11 +80,12 @@ def gtn(target_name=None, name_hint=NotImplemented):
 
   if target_name is None:
     try:
-      return get_assigned_name(sys._getframe(2))
+      target_name = get_assigned_name(sys._getframe(2))
     except ValueError:
       if name_hint is NotImplemented:
         raise
 
+  if target_name is None:
     if name_hint is None:
       return None
 
