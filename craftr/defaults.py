@@ -93,7 +93,6 @@ def relocate_files(files, outdir, suffix, replace_suffix=True):
   a different suffix.
   """
 
-  outdir = buildlocal(outdir)
   base = path.common(files)
   result = []
   for filename in files:

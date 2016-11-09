@@ -81,6 +81,7 @@ class CythonCompiler(object):
     assert not isinstance(include, str)
     builder = TargetBuilder(gtn(name, "cython"), inputs=srcs)
 
+    outdir = buildlocal(outdir)
     if py_version is None:
       py_version = int(python.get_config()['VERSION'][0])
     if outputs is None:
@@ -96,4 +97,4 @@ class CythonCompiler(object):
     command += additional_flags
 
     return builder.build([command], None, outputs, foreach=True,
-      metadata={'cython_outdir': buildlocal('cython')})
+      metadata={'cython_outdir': outdir})
