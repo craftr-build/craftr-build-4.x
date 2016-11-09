@@ -80,7 +80,7 @@ class run(BaseCommand):
     # Write back the cache.
     session.write_cache()
 
-class startproject(BaseCommand):
+class startpackage(BaseCommand):
 
   def build_parser(self, parser):
     parser.add_argument('name')

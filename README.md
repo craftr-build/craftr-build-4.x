@@ -1,14 +1,99 @@
 # craftr
 
-Craftr is a meta build system that produces [Ninja] build manifests from
-simple [Python 3] scripts. It provides a high level of abstraction but gives
-you 100% control over the build process.
-
-This repository contains the in-development version of Craftr 2. The current
-stable version of Craftr 1 can be found [here](https://github.com/craftr-build/craftr).
+Craftr is a meta build system that produces [Ninja] build manifests. It
+uses [Python 3] for build scripts, which allows for an ease to use description
+language but also gives you all the power if you need it.
 
   [Ninja]: https://github.com/ninja-build/ninja
   [Python 3]: https://www.python.org/
+
+## How It Works
+
+Craftr is built from versioned modules. As such, every Craftr module must
+provide a `manifest.json` that contains all metadata such as the module
+name, version, dependencies, options, etc. We cann the manifest, build script
+and optionally other files together a *package*.
+
+To start a new package, use the `craftr startpackage` command.
+
+```json
+$ craftr startpackage cxx.mylib
+$ cat cxx.mylib/craftr/manifest.json
+{
+  "name": "cxx.mylib",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {},
+  "loaders": []
+}
+```
+
+The actual build script is located at `cxx.mylib/craftr/Craftrfile`. This
+file is executed in the Craftr runtime and has some additional and alternative
+built-in functions. For more information, see the `craftr.defaults` module.
+
+```python
+# cxx.mylib
+utils = require('./utils.py')
+logger.info(utils.say_hello())
+
+include_defs('./DEFINITIONS')
+logger.info('from ./DEFINITIONS:', VAR_FROM_DEFINITIONS_FILE)
+
+# note that we HAVE to add this to the 'dependencies' section in the
+# manifest in order load it in the build script.
+another_lib = load_module('cxx.anotherlib')
+
+# TODO: Show some sample C++ compilation targets.
+```
+
+### Dependencies
+
+Dependencies are added to the `manifest.json` by specifying the dependency
+name and map it to a version criteria. When using the `load_module()` function,
+Craftr will automatically load the newest Craftr module that is available
+matching the criteria.
+
+```json
+{
+  "dependencies": {
+    "cxx.anotherlib": "*",  // any version
+    "cxx.curl": "> 1.2.8"
+  }
+}
+```
+
+> __IMPORTANT__: The version you specify is the version of the Craftr module
+> that is specified in its manifest, NOT NECESSARILY the version of the
+> library.
+
+### Loaders
+
+Craftr has a feature called "loaders" that we use to load external data into
+a Craftr module before or during the build process. This is useful for
+libraries that don not natively build with Craftr. Instead of the Craftr
+package to contain the source files, they will be downloaded and extracted to
+a temporary directory by a *loader*.
+
+Currently there is only the `"url"` loader support, but in the future there
+will also be a `"pkg_config"` loader.
+
+```json
+{
+  "loaders": [
+    {
+      "name": "source",
+      "type": "url",
+      "urls": [
+        "file://$source_dir",
+        "https://curl.haxx.se/download/curl-$load_version.tar.gz"
+      ]
+    }
+  ]
+}
+```
 
 ## Requirements
 
@@ -28,22 +113,6 @@ stable version of Craftr 1 can be found [here](https://github.com/craftr-build/c
 > import require
 > utils = require('./utils')
 > ```
-
-## About Craftr
-
-### Project Structure
-
-Every Craftr project provides a Craftr package and module by providing a
-`manifest.json` file and a `Craftrfile`. These files may either be located
-at the root of the project or in the `/craftr/` directory, which is common
-for actual projects rather than modules that just provide functionality.
-
-    myproject/
-      craftr/
-        Craftrfile
-        manifest.json
-      src/
-      ...
 
 ## License
 
