@@ -13,11 +13,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+:mod:`craftr.targetbuilder`
+===========================
+
+Provides the :class:`TargetBuilder` and :class:`Framework` classes.
+"""
 
 from craftr.core import build
 from craftr.core.logging import logger
 from craftr.core.session import session
-from craftr.utils import argspec
+from craftr.utils import argspec, pyutils
 from nr.py.bytecode import get_assigned_name
 
 import collections
@@ -108,7 +114,7 @@ class TargetBuilder(object):
   """
   This is a helper class for target generators that does a lot of convenience
   handling such as creating a :class:`OptionMerge` from the build options
-  specified with the *options* argument or from the input
+  specified with the *frameworks* argument or from the input
   :class:`Targets<build.Target>`.
 
   :param name: The name of the target. Derive this target name by using
@@ -119,19 +125,20 @@ class TargetBuilder(object):
   :param inputs: A list of input files or :class:`build.Target` objects
     from which the outputs will be used as input files and the build
     options will be included in the :class:`OptionMerge`.
-  :param options: A list of build options that will be included in the
-    :class:`OptionMerge`.
+  :param frameworks: A list of build :class:`Framework` objects that will be
+    included in the :class:`OptionMerge`.
   :param outputs: A list of output filenames.
   :param implicit_deps: A list of filenames added as implicit dependencies.
   :param order_only_deps: A list of filenames added as order only dependencies.
   """
 
-  def __init__(self, name, option_kwargs=None, options=(), inputs=None,
+  def __init__(self, name, option_kwargs=None, frameworks=(), inputs=None,
       outputs=None, implicit_deps=None, order_only_deps=None):
     argspec.validate('name', name, {'type': str})
-    argspec.validate('option_kwargs', option_kwargs, {'type': [None, dict]})
-    argspec.validate('options', options,
-        {'type': [list, tuple], 'items': {'type': dict}})
+    argspec.validate('option_kwargs', option_kwargs,
+        {'type': [None, dict, Framework]})
+    argspec.validate('frameworks', frameworks,
+        {'type': [list, tuple], 'items': {'type': Framework}})
     argspec.validate('inputs', inputs,
         {'type': [None, list, tuple], 'items': {'type': [str, build.Target]}})
     argspec.validate('outputs', outputs,
@@ -141,12 +148,15 @@ class TargetBuilder(object):
     argspec.validate('order_only_deps', order_only_deps,
         {'type': [None, list, tuple], 'items': {'type': str}})
 
-    options = list(options)
+    self.frameworks = list(frameworks)
+
+    # If we find any Target objects in the inputs, expand the outputs
+    # and append the frameworks.
     if inputs is not None:
       self.inputs = []
       for input_ in (inputs or ()):
         if isinstance(input_, build.Target):
-          options += input_.options
+          pyutils.unique_extend(self.frameworks, input_.frameworks)
           self.inputs += input_.outputs
         else:
           self.inputs.append(input_)
@@ -155,8 +165,7 @@ class TargetBuilder(object):
 
     self.name = name
     self.option_kwargs = option_kwargs or {}
-    self.options = options
-    self.options_merge = OptionMerge(option_kwargs, *options)
+    self.options_merge = OptionMerge(option_kwargs or {}, *frameworks)
     self.outputs = outputs
     self.implicit_deps = implicit_deps
     self.order_only_deps = order_only_deps
@@ -208,19 +217,41 @@ class TargetBuilder(object):
       raise RuntimeError('metadata specified in constructor and build()')
 
     target = build.Target(self.name, commands, inputs, outputs, implicit_deps,
-        order_only_deps, metadata=metadata, options=self.options, **kwargs)
+        order_only_deps, metadata=metadata, frameworks=self.frameworks, **kwargs)
     session.graph.add_target(target)
     return target
 
 
-class OptionMerge(object):
+class Framework(dict):
   """
-  This class represents a merge of dictionaries virtually. Keys in the first
-  dictionaries passed to the constructor take precedence over the last.
+  A framework is simply a dictionary with a name to identify it. Frameworks
+  are used to represent build options.
   """
 
-  def __init__(self, *options):
-    self.options = options
+  def __init__(self, __name, **kwargs):
+    super().__init__(**kwargs)
+    self.name = __name
+
+  def __repr__(self):
+    return '<Framework "{}": {}>'.format(self.name, super().__repr__())
+
+
+class OptionMerge(object):
+  """
+  This class represents a virtual merge of :class:`Framework` objects. Keys
+  in the first dictionaries passed to the constructor take precedence over the
+  last.
+
+  :param frameworks: One or more :class:`Framework` objects. Note that
+    the constructor will expand and flatten the ``'frameworks'`` list.
+  """
+
+  def __init__(self, *frameworks):
+    self.frameworks = []
+    def update(fw):
+      pyutils.unique_append(self.frameworks, fw)
+      [update(x) for x in fw.get('frameworks', [])]
+    [update(x) for x in frameworks]
 
   def __getitem__(self, key):
     for options in self.options:

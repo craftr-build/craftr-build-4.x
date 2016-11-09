@@ -60,3 +60,14 @@ def import_(fqn):
     raise ImportError(fqn)
 
   return result
+
+
+def unique_append(lst, item):
+  if item not in lst:
+    lst.append(item)
+
+
+def unique_extend(lst, iterable):
+  for item in iterable:
+    if item not in lst:
+      lst.append(item)

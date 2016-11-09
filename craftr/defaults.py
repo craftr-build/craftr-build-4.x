@@ -24,7 +24,7 @@ starting with an underscore will be ignored.
 from craftr.core.logging import logger
 from craftr.core.session import session, ModuleNotFound
 from craftr.utils import path
-from craftr.utils.targets import gtn, TargetBuilder
+from craftr.targetbuilder import gtn, TargetBuilder, Framework
 
 import builtins as _builtins
 import itertools as _itertools
@@ -83,6 +83,24 @@ def buildlocal(rel_path):
   if path.isabs(rel_path):
     raise ValueError('rel_path must be a relative path')
   return path.canonical(path.join(session.module.ident, rel_path))
+
+
+def relocate_files(files, outdir, suffix, replace_suffix=True):
+  """
+  Converts a list of filenames, relocating them to *outdir* and replacing
+  their existing suffix. If *suffix* is a callable, it will be passed the
+  new filename and expected to return the same filename, eventually with
+  a different suffix.
+  """
+
+  outdir = buildlocal(outdir)
+  base = path.common(files)
+  result = []
+  for filename in files:
+    filename = path.join(outdir, path.rel(filename, base))
+    filename = path.addsuffix(filename, suffix, replace=replace_suffix)
+    result.append(filename)
+  return result
 
 
 def filter(predicate, iterable):

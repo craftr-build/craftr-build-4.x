@@ -132,7 +132,7 @@ class Target(object):
   def __init__(self, name, commands, inputs, outputs, implicit_deps=(),
                order_only_deps=(), pool=None, deps=None, depfile=None,
                msvc_deps_prefix=None, foreach=False, description=None,
-               metadata=None, cwd=None, environ=None, options=()):
+               metadata=None, cwd=None, environ=None, frameworks=()):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
@@ -150,7 +150,7 @@ class Target(object):
     argspec.validate('metadata', metadata, {'type': [None, dict]})
     argspec.validate('cwd', cwd, {'type': [None, str]})
     argspec.validate('environ', environ, {'type': [None, dict]})
-    argspec.validate('options', options, {'type': [list, tuple], 'items': {'type': dict}})
+    argspec.validate('frameworks', frameworks, {'type': [list, tuple], 'items': {'type': dict}})
 
     self.name = name
     self.commands = commands
@@ -167,7 +167,7 @@ class Target(object):
     self.metadata = metadata or {}
     self.cwd = cwd
     self.environ = environ or {}
-    self.options = options
+    self.frameworks = frameworks
 
     if self.foreach and len(self.inputs) != len(self.outputs):
       raise ValueError('foreach target must have the same number of output '
