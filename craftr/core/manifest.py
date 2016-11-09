@@ -576,6 +576,7 @@ class UrlLoader(BaseLoader):
     else:
       raise LoaderError(self, 'no URL matched')
 
+    self.directory = directory
     return {'directory': directory}
 
 
