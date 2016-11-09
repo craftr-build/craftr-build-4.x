@@ -64,7 +64,7 @@ def canonical(path):
 
   return os.path.normpath(path)
 
-def glob(patterns, excludes=(), include_dotfiles=False, parent=None):
+def glob(patterns, parent=None, excludes=(), include_dotfiles=False):
   """
   Wrapper for :func:`glob2.glob` that accepts an arbitrary number of
   patterns and matches them. The paths are normalized with :func:`norm`.
@@ -73,15 +73,15 @@ def glob(patterns, excludes=(), include_dotfiles=False, parent=None):
   parameter is omitted, it defaults to the currently executed build
   scripts project directory.
 
-  If *exclude* is specified, it must be a string or a list of strings
+  If *excludes* is specified, it must be a string or a list of strings
   that is/contains glob patterns or filenames to be removed from the
   result before returning.
 
   :param patterns: A list of glob patterns or filenames.
-  :param exclude: A list of glob patterns or filenames.
+  :param parent: The parent directory for relative paths.
+  :param excludes: A list of glob patterns or filenames.
   :param include_dotfiles: If True, ``*`` and ``**`` can also capture
     file or directory names starting with a dot.
-  :param parent: The parent directory for relative paths.
   :return: A list of filenames.
   """
 

@@ -530,6 +530,7 @@ class UrlLoader(BaseLoader):
           archive = name
           delete_after_extract = False
           break
+        error = None
       else:
 
         def progress(data):

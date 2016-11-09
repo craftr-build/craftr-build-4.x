@@ -50,7 +50,7 @@ def include_defs(filename, globals=None):
       globals[key] = value
 
 
-def glob(patterns, exclude=(), include_dotfiles=False, parent=None):
+def glob(patterns, parent=None, exclude=(), include_dotfiles=False):
   """
   Wrapper for :func:`path.glob` that automatically uses the current modules
   project directory for the *parent* argument if it has not been specifically
@@ -60,7 +60,7 @@ def glob(patterns, exclude=(), include_dotfiles=False, parent=None):
   if parent is None and session and session.module:
     parent = session.module.project_directory
 
-  return path.glob(patterns, exclude, include_dotfiles, parent)
+  return path.glob(patterns, parent, exclude, include_dotfiles)
 
 
 def local(rel_path):
