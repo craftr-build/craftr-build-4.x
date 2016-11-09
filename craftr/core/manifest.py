@@ -409,6 +409,13 @@ class LoaderError(Exception):
   Raised by :class:`BaseLoader.load`.
   """
 
+  def __init__(self, loader, message):
+    self.loader = loader
+    self.message = message
+
+  def __str__(self):
+    return '{}: {}'.format(self.loader.name, self.message)
+
 
 class LoaderContext(object):
   """
@@ -504,6 +511,8 @@ class UrlLoader(BaseLoader):
   def load(self, context, cache):
     if cache is not None and path.isdir(cache['directory']):
       self.directory = cache['directory']
+      logger.info('Reusing cached directory: {}'.format(
+          path.rel(self.directory, nopar=True)))
       return cache
 
     directory = None
@@ -526,9 +535,7 @@ class UrlLoader(BaseLoader):
         def progress(data):
           spinning = data['size'] is None
           if data['downloaded'] == 0:
-            logger.progress_begin(
-              'Downloading "{}"'.format(path.basename(data['filename'])),
-              spinning)
+            logger.progress_begin('Downloading {} ...'.format(url), spinning)
           if spinning:
             # TODO: Bytes to human readable
             logger.progress_update(None, data['downloaded'])
@@ -543,21 +550,30 @@ class UrlLoader(BaseLoader):
             url, directory=context.tempdir,
             on_exists='skip', progress=progress)
         except (httputils.URLError, httputils.HTTPError) as exc:
-          logger.debug(exc)
+          error = exc
         else:
           if reused:
-            logger.info('reusing cached ', end='')
-          else:
-            logger.info('finished downloading ', end='')
-          logger.info(path.basename(archive))
+            logger.info('Reusing cached download "{}" ... '.format(path.basename(archive)))
           break
 
-    if archive:
+      logger.info('URL does not apply: {}'.format(url))
+      if error:
+        logger.info('error:', error, indent=1)
+
+    if directory or archive:
+      logger.debug('URL applies: {}'.format(url))
+
+    if directory:
+      logger.info('Using directory: {}'.format(path.rel(directory, nopar=True)))
+    elif archive:
       suffix = nr.misc.archive.get_opener(archive)[0]
       filename = path.basename(archive)[:-len(suffix)]
       directory = path.join(context.installdir, filename)
-      logger.info('unpacking "{}" to "{}" ...'.format(archive, directory))
+      logger.info('Unpacking "{}" to "{}" ...'.format(
+          path.rel(archive, nopar=True), path.rel(directory, nopar=True)))
       nr.misc.archive.extract(archive, directory, unpack_single_dir=True)
+    else:
+      raise LoaderError(self, 'no URL matched')
 
     return {'directory': directory}
 

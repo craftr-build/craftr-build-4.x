@@ -424,7 +424,7 @@ class Module(object):
             if cache and loader.name == cache['name']:
               new_data = loader.load(context, cache['data'])
             else:
-              new_data = loader.load(None)
+              new_data = loader.load(context, None)
           except manifest.LoaderError as exc:
             errors.append(exc)
           else:
@@ -434,7 +434,8 @@ class Module(object):
             break
       else:
         # TODO: Proper exception type
-        raise RuntimeError('\n'.join(map(str, errors)))
+        raise RuntimeError('could not find loader for "{}"\n"'
+            .format(self.ident) + '\n'.join(map(str, errors)))
 
   def run(self):
     """
