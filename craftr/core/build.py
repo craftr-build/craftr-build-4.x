@@ -433,3 +433,11 @@ class UnixPlatformHelper(PlatformHelper):
       stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)  # rwxrw-r--
 
     return result, filename
+
+
+def get_platform_helper():
+  if sys.platform.startswith('win32'):
+    return WindowsPlatformHelper()
+  elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+    return UnixPlatformHelper()
+  raise EnvironmentError('unsupported platform: {}'.format(sys.platform))

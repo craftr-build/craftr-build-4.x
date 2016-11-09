@@ -14,15 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr import core
 from craftr.core.logging import logger
 from craftr.core.session import session, Session, Module
-from craftr.utils import path
+from craftr.utils import path, shell
 from nr.types.version import Version
 
 import abc
 import argparse
 import atexit
 import json
+import os
 import sys
 import textwrap
 
@@ -38,11 +40,13 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
     pass
 
 
-class run(BaseCommand):
+class build(BaseCommand):
 
   def build_parser(self, parser):
     parser.add_argument('module', nargs='?')
     parser.add_argument('version', nargs='?', default='*')
+    parser.add_argument('-B', '--build-dir', default='craftr/build')
+    parser.add_argument('-T', '--temp-dir', default='craftr/temp')
 
   def execute(self, parser, args):
     if not args.module:
@@ -57,6 +61,10 @@ class run(BaseCommand):
         module = session.find_module(args.module, args.version)
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
+
+    session.tempdir = path.abs(args.temp_dir)
+    path.makedirs(args.build_dir)
+    os.chdir(args.build_dir)
 
     session.read_cache()
     try:
@@ -79,6 +87,16 @@ class run(BaseCommand):
 
     # Write back the cache.
     session.write_cache()
+
+    # Write the Ninja manifest.
+    with open("build.ninja", 'w') as fp:
+      platform = core.build.get_platform_helper()
+      context = core.build.ExportContext('1.7.1')  # TODO: Get ninja version
+      writer = core.build.NinjaWriter(fp)
+      session.graph.export(writer, context, platform)
+
+    # Execute the ninja build.
+    shell.run(['ninja'])
 
 class startpackage(BaseCommand):
 

@@ -457,7 +457,6 @@ class Module(object):
     self.init_loader()
 
     script_fn = path.norm(path.join(self.directory, self.manifest.main))
-    script_fn = path.rel(script_fn, session.maindir, nopar=True)
     with open(script_fn) as fp:
       code = compile(fp.read(), script_fn, 'exec')
 
