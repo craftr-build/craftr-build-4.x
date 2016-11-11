@@ -62,16 +62,6 @@ class InvalidOption(Exception):
           self.module.manifest.version, exc)
 
 
-class LoaderCacheError(Exception):
-
-  def __init__(self, module, message):
-    self.module = module
-    self.message = message
-
-  def __str__(self):
-    return '"{}" -- {}'.format(self.module.ident, self.message)
-
-
 class Session(object):
   """
   This class manages the :class:`build.Graph` and loading of Craftr modules.
@@ -152,17 +142,6 @@ class Session(object):
   #: it with :meth:`end`.
   current = None
 
-  @staticmethod
-  def start(*args, **kwargs):
-    if Session.current:
-      raise RuntimeError('a session was already created')
-    Session.current = Session(*args, **kwargs)
-    return Session.current
-
-  @staticmethod
-  def end():
-    Session.current = None
-
   def __init__(self, maindir=None, cachefile=None):
     self.maindir = maindir or path.getcwd()
     self.graph = build.Graph()
@@ -175,6 +154,15 @@ class Session(object):
     self.tempdir = path.join(self.maindir, 'craftr/.temp')
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
+
+  def __enter__(self):
+    if Session.current:
+      raise RuntimeError('a session was already created')
+    Session.current = self
+    return Session.current
+
+  def __exit__(self, exc_value, exc_type, exc_tb):
+    Session.current = None
 
   @property
   def module(self):

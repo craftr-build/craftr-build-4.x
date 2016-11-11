@@ -155,16 +155,14 @@ def main():
     commands[class_.__name__] = cmd
 
   args = parser.parse_args()
-  Session.start()
-  atexit.register(Session.end)
+  with Session():
+    if not args.command:
+      parser.print_usage()
+      return 0
 
-  if not args.command:
-    parser.print_usage()
-    return 0
-
-  if args.verbose:
-    logger.set_level(logger.DEBUG)
-  return commands[args.command].execute(parser, args)
+    if args.verbose:
+      logger.set_level(logger.DEBUG)
+    return commands[args.command].execute(parser, args)
 
 
 def main_and_exit():
