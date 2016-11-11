@@ -100,6 +100,8 @@ class build(BaseCommand):
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
 
+    session.options.update(read_config_file(args.config))
+
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
     path.makedirs(session.builddir)
