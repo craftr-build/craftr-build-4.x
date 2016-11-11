@@ -29,6 +29,19 @@ import sys
 import textwrap
 
 
+def write_cache(cachefile):
+  # Write back the cache.
+  try:
+    path.makedirs(path.dirname(cachefile))
+    with open(cachefile, 'w') as fp:
+      session.write_cache(fp)
+  except OSError as exc:
+    logger.error('error writing cache file: {}'.format(cachefile))
+    logger.error(exc, indent=1)
+  else:
+    logger.debug('cache written: {}'.format(cachefile))
+
+
 class BaseCommand(object, metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
@@ -62,11 +75,20 @@ class build(BaseCommand):
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
 
+    cachefile = path.join(session.maindir, 'craftr', '.cache')
     session.tempdir = path.abs(args.temp_dir)
     path.makedirs(args.build_dir)
     os.chdir(args.build_dir)
 
-    session.read_cache()
+    # Read the cache.
+    if path.isfile(cachefile):
+      with open(cachefile) as fp:
+        try:
+          session.read_cache(fp)
+        except ValueError as exc:
+          logger.error('error reading cache file: {}'.format(cachefile))
+          logger.error(exc, indent=1)
+
     try:
       logger.info('==> initializing options')
       with logger.indent():
@@ -76,7 +98,7 @@ class build(BaseCommand):
       with logger.indent():
         module.init_loader(True)
 
-      session.write_cache()
+      write_cache(cachefile)
       logger.info('==> executing build script')
       with logger.indent():
         module.run()
@@ -85,8 +107,7 @@ class build(BaseCommand):
         logger.error(error)
       return 1
 
-    # Write back the cache.
-    session.write_cache()
+    write_cache(cachefile)
 
     # Write the Ninja manifest.
     with open("build.ninja", 'w') as fp:

@@ -139,10 +139,6 @@ class Session(object):
         }
       }
 
-  .. attribute:: cachefile
-
-    The file that contains the cache.
-
   .. attribute:: tempdir
 
     Temporary directory, primarily used for loader data.
@@ -170,7 +166,6 @@ class Session(object):
     self.modulestack = []
     self.modules = {}
     self.options = {}
-    self.cachefile = cachefile or path.join(self.maindir, 'craftr/.cache')
     self.cache = {'loaders': {}}
     self.tempdir = path.join(self.maindir, 'craftr/.temp')
     self._manifest_cache = {}  # maps manifest_filename: manifest
@@ -182,15 +177,16 @@ class Session(object):
       return self.modulestack[-1]
     return None
 
-  def read_cache(self):
-    if path.isfile(self.cachefile):
-      with open(self.cachefile) as fp:
-        self.cache = json.load(fp)
+  def read_cache(self, fp):
+    cache = json.load(fp)
+    if not isinstance(cache, dict):
+      raise ValueError('Craftr Session cache must be a JSON object, got {}'
+          .format(type(cache).__name__))
+    self.cache = cache
+    self.cache.setdefault('loaders', {})
 
-  def write_cache(self):
-    path.makedirs(path.dirname(self.cachefile))
-    with open(self.cachefile, 'w') as fp:
-      json.dump(self.cache, fp)
+  def write_cache(self, fp):
+    json.dump(self.cache, fp)
 
   def parse_manifest(self, filename):
     """
