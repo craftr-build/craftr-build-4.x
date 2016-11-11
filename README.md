@@ -18,7 +18,7 @@ To start a new package, use the `craftr startpackage` command.
 
 ```json
 $ craftr startpackage cxx.mylib
-$ cat cxx.mylib/craftr/manifest.json
+$ cat cxx.mylib/manifest.json
 {
   "name": "cxx.mylib",
   "version": "1.0.0",
@@ -30,7 +30,7 @@ $ cat cxx.mylib/craftr/manifest.json
 }
 ```
 
-The actual build script is located at `cxx.mylib/craftr/Craftrfile`. This
+The actual build script is located at `cxx.mylib/Craftrfile`. This
 file is executed in the Craftr runtime and has some additional and alternative
 built-in functions. For more information, see the `craftr.defaults` module.
 

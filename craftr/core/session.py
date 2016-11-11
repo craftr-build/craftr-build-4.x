@@ -239,9 +239,8 @@ class Session(object):
     for directory in self.path:
       choices = []
       choices.append(path.join(directory, 'manifest.json'))
-      choices.append(path.join(directory, 'craftr', 'manifest.json'))
       for item in path.easy_listdir(directory):
-        choices.append(path.join(directory, item, 'craftr', 'manifest.json'))
+        choices.append(path.join(directory, item, 'manifest.json'))
       for filename in map(path.norm, choices):
         if filename in self._manifest_cache:
           continue  # don't parse a manifest that we already parsed

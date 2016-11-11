@@ -153,12 +153,9 @@ class startpackage(BaseCommand):
     parser.add_argument('name')
     parser.add_argument('directory', nargs='?', default=None)
     parser.add_argument('--version', type=Version, default='1.0.0')
-    parser.add_argument('--plain', action='store_true')
 
   def execute(self, parser, args):
     directory = args.directory or args.name
-    if not args.plain:
-      directory = path.join(directory, 'craftr')
 
     if not path.exists(directory):
       logger.debug('creating directory "{}"'.format(directory))
