@@ -51,7 +51,7 @@ def read_config_file(filename):
 
   filename = path.norm(filename)
   if not path.isfile(filename):
-    return
+    return {}
   logger.debug('reading configuration file:', filename)
   parser = configparser.SafeConfigParser()
   parser.read([filename])
@@ -101,9 +101,9 @@ class build(BaseCommand):
         parser.error('module not found: ' + str(exc))
 
     # Create and switch to the build directory.
-    args.build_dir = path.abs(args.build_dir)
-    path.makedirs(args.build_dir)
-    os.chdir(args.build_dir)
+    session.builddir = path.abs(args.build_dir)
+    path.makedirs(session.builddir)
+    os.chdir(session.builddir)
 
     # Read the cache.
     cachefile = path.join(args.build_dir, '.craftr_cache.json')

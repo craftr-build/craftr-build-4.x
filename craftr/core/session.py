@@ -104,6 +104,10 @@ class Session(object):
     build directory at a later point, which is why we keep this member for
     reference.
 
+  .. attribute:: builddir
+
+    The absolute path to the build directory.
+
   .. attribute:: options
 
     A dictionary of options that are passed down to Craftr modules.
@@ -135,8 +139,9 @@ class Session(object):
   #: it with :meth:`end`.
   current = None
 
-  def __init__(self, maindir=None, cachefile=None):
-    self.maindir = maindir or path.getcwd()
+  def __init__(self, maindir=None):
+    self.maindir = path.norm(maindir or path.getcwd())
+    self.builddir = path.join(self.maindir, 'build')
     self.graph = build.Graph()
     self.path = [self.maindir, path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
@@ -416,9 +421,11 @@ class Module(object):
     logger.info('running loaders for {}'.format(self.ident))
     with logger.indent():
       # Read the cached loader data and create the context.
+      installdir = path.join(session.builddir, self.ident, 'src')
       cache = session.cache['loaders'].get(self.ident)
       context = LoaderContext(self.directory, self.manifest, self.options,
-          session.tempdir, session.tempdir)
+          installdir = installdir)
+      context.get_temporary_directory = session.get_temporary_directory
 
       # Check all loaders in-order.
       errors = []

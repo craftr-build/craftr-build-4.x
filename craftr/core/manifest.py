@@ -428,23 +428,25 @@ class LoaderContext(object):
   .. attribute:: options
 
   .. attribute:: installdir
-
-  .. attribute:: delete_temporary_files
-
-    True by default.
   """
 
-  def __init__(self, directory, manifest, options, installdir,
-         delete_temporary_files=True):
+  def __init__(self, directory, manifest, options, installdir):
     self.directory = directory
     self.manifest = manifest
     self.options = options
     self.installdir = installdir
-    self.delete_temporary_files = delete_temporary_files
 
   def expand_variables(self, value):
     templ = string.Template(value)
     return templ.safe_substitute(vars(self.options))
+
+  def get_temporary_directory(self):
+    """
+    Return the path to a temporary directory that a loader can use to
+    temporarily store downloaded files.
+    """
+
+    raise NotImplementedError
 
 
 class BaseLoader(object, metaclass=abc.ABCMeta):
@@ -551,7 +553,7 @@ class UrlLoader(BaseLoader):
 
         try:
           archive, reused = httputils.download_file(
-            url, directory=session.get_temporary_directory(),
+            url, directory = context.get_temporary_directory(),
             on_exists='skip', progress=progress)
         except (httputils.URLError, httputils.HTTPError) as exc:
           error = exc
