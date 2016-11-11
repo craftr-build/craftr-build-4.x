@@ -23,6 +23,7 @@ from nr.types.version import Version
 import abc
 import argparse
 import atexit
+import configparser
 import json
 import os
 import sys
@@ -36,13 +37,35 @@ def write_cache(cachefile):
     with open(cachefile, 'w') as fp:
       session.write_cache(fp)
   except OSError as exc:
-    logger.error('error writing cache file: {}'.format(cachefile))
+    logger.error('error writing cache file:', cachefile)
     logger.error(exc, indent=1)
   else:
-    logger.debug('cache written: {}'.format(cachefile))
+    logger.debug('cache written:', cachefile)
+
+
+def read_config_file(filename):
+  """
+  Parse a configuration file and return a dictionary that contains the
+  option keys concatenated with the section names separated by a dot.
+  """
+
+  filename = path.norm(filename)
+  if not path.isfile(filename):
+    return
+  logger.debug('reading configuration file:', filename)
+  parser = configparser.SafeConfigParser()
+  parser.read([filename])
+  result = {}
+  for section in parser.sections():
+    for option in parser.options(section):
+      result['{}.{}'.format(section, option)] = parser.get(section, option)
+  return result
 
 
 class BaseCommand(object, metaclass=abc.ABCMeta):
+  """
+  Base class for Craftr subcommands.
+  """
 
   @abc.abstractmethod
   def build_parser(self, parser):
@@ -58,10 +81,12 @@ class build(BaseCommand):
   def build_parser(self, parser):
     parser.add_argument('module', nargs='?')
     parser.add_argument('version', nargs='?', default='*')
-    parser.add_argument('-B', '--build-dir', default='craftr/build')
-    parser.add_argument('-T', '--temp-dir', default='craftr/temp')
+    parser.add_argument('-b', '--build-dir', default='build')
+    parser.add_argument('-c', '--config', default='.craftrconfig')
 
   def execute(self, parser, args):
+    # Determine the module to execute, either from the current working
+    # directory or find it by name if one is specified.
     if not args.module:
       for fn in ['manifest.json', 'craftr/manifest.json']:
         if path.isfile(fn):
@@ -75,20 +100,22 @@ class build(BaseCommand):
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
 
-    cachefile = path.join(session.maindir, 'craftr', '.cache')
-    session.tempdir = path.abs(args.temp_dir)
+    # Create and switch to the build directory.
+    args.build_dir = path.abs(args.build_dir)
     path.makedirs(args.build_dir)
     os.chdir(args.build_dir)
 
     # Read the cache.
+    cachefile = path.join(args.build_dir, '.craftr_cache.json')
     if path.isfile(cachefile):
       with open(cachefile) as fp:
         try:
           session.read_cache(fp)
         except ValueError as exc:
-          logger.error('error reading cache file: {}'.format(cachefile))
+          logger.error('error reading cache file:', cachefile)
           logger.error(exc, indent=1)
 
+    # Prepare options, loaders and execute.
     try:
       logger.info('==> initializing options')
       with logger.indent():
@@ -107,6 +134,7 @@ class build(BaseCommand):
         logger.error(error)
       return 1
 
+    # Write the cache back.
     write_cache(cachefile)
 
     # Write the Ninja manifest.
@@ -165,6 +193,8 @@ class startpackage(BaseCommand):
 
 
 def main():
+  # Create argument parsers and dynamically include all BaseCommand
+  # subclasses into it.
   parser = argparse.ArgumentParser(prog='craftr', description='The Craftr build system')
   parser.add_argument('-v', dest='verbose', action='count', default=0)
   subparsers = parser.add_subparsers(dest='command')
@@ -175,14 +205,22 @@ def main():
     cmd.build_parser(subparsers.add_parser(class_.__name__))
     commands[class_.__name__] = cmd
 
+  # Parse the arguments.
   args = parser.parse_args()
-  with Session():
-    if not args.command:
-      parser.print_usage()
-      return 0
+  if not args.command:
+    parser.print_usage()
+    return 0
 
-    if args.verbose:
-      logger.set_level(logger.DEBUG)
+  if args.verbose:
+    logger.set_level(logger.DEBUG)
+
+  session = Session()
+
+  # Parse the user configuration file.
+  session.options = read_config_file(path.expanduser('~/.craftrconfig'))
+
+  # Execute the command in the session context.
+  with session:
     return commands[args.command].execute(parser, args)
 
 

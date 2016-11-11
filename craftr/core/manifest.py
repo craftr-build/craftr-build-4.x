@@ -427,17 +427,20 @@ class LoaderContext(object):
 
   .. attribute:: options
 
-  .. attribute:: tempdir
-
   .. attribute:: installdir
+
+  .. attribute:: delete_temporary_files
+
+    True by default.
   """
 
-  def __init__(self, directory, manifest, options, tempdir, installdir):
+  def __init__(self, directory, manifest, options, installdir,
+         delete_temporary_files=True):
     self.directory = directory
     self.manifest = manifest
     self.options = options
-    self.tempdir = tempdir
     self.installdir = installdir
+    self.delete_temporary_files = delete_temporary_files
 
   def expand_variables(self, value):
     templ = string.Template(value)
@@ -548,7 +551,7 @@ class UrlLoader(BaseLoader):
 
         try:
           archive, reused = httputils.download_file(
-            url, directory=context.tempdir,
+            url, directory=session.get_temporary_directory(),
             on_exists='skip', progress=progress)
         except (httputils.URLError, httputils.HTTPError) as exc:
           error = exc

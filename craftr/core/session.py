@@ -30,6 +30,7 @@ from nr.types.version import Version, VersionCriteria
 
 import json
 import os
+import tempfile
 import types
 import werkzeug
 
@@ -128,10 +129,6 @@ class Session(object):
           }
         }
       }
-
-  .. attribute:: tempdir
-
-    Temporary directory, primarily used for loader data.
   """
 
   #: The current session object. Create it with :meth:`start` and destroy
@@ -146,7 +143,7 @@ class Session(object):
     self.modules = {}
     self.options = {}
     self.cache = {'loaders': {}}
-    self.tempdir = path.join(self.maindir, 'craftr/.temp')
+    self._tempdir = None
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
 
@@ -157,6 +154,14 @@ class Session(object):
     return Session.current
 
   def __exit__(self, exc_value, exc_type, exc_tb):
+    if Session.current is not self:
+      raise RuntimeError('session not in context')
+    if self._tempdir and not self.options.get('craftr.keep_temporary_directory'):
+      logger.debug('removing temporary directory:', self._tempdir)
+      try:
+        path.remove(self._tempdir, recursive=True)
+      except OSError as exc:
+        logger.debug('error:', exc, indent=1)
     Session.current = None
 
   @property
@@ -175,6 +180,23 @@ class Session(object):
 
   def write_cache(self, fp):
     json.dump(self.cache, fp)
+
+  def get_temporary_directory(self):
+    """
+    Returns a writable temporary directory that is primarily used by loaders
+    to store temporary files. The temporary directory will be deleted when
+    the Session context ends unless the ``craftr.keep_temporary_directory``
+    option is set.
+
+    :raise RuntimeError: If the session is not currently in context.
+    """
+
+    if Session.current is not self:
+      raise RuntimeError('session not in context')
+    if not self._tempdir:
+      self._tempdir = tempfile.mkdtemp('craftr')
+      logger.debug('created temporary directory:', self._tempdir)
+    return self._tempdir
 
   def parse_manifest(self, filename):
     """
@@ -202,8 +224,8 @@ class Session(object):
           manifest.version, filename))
       module = None
     else:
-      logger.debug('note: Session parsed manifest for {}-{}'.format(
-          manifest.name, manifest.version))
+      logger.debug('parsed manifest: {}-{} ({})'.format(
+          manifest.name, manifest.version, filename))
       module = Module(path.dirname(filename), manifest)
       versions[manifest.version] = module
 
