@@ -167,6 +167,8 @@ class Session(object):
         path.remove(self._tempdir, recursive=True)
       except OSError as exc:
         logger.debug('error:', exc, indent=1)
+      finally:
+        self._tempdir = None
     Session.current = None
 
   @property
