@@ -76,6 +76,19 @@ class Graph(object):
     self.infiles = {}
     self.outfiles = {}
     self.vars = {}
+    self.tools = {}
+
+  def add_tool(self, tool):
+    """
+    Add a :class:`Tool` to the Graph.
+
+    :raise ValueError: If the :attr:`Tool.name` is already used.
+    """
+
+    if tool.name in self.tools:
+      raise ValueError('a tool with the name {!r} already exists'
+          .format(tool.name))
+    self.tools[tool.name] = tool
 
   def add_target(self, target):
     """
@@ -114,9 +127,17 @@ class Graph(object):
     writer.comment('It is not recommended to edit this file manually.')
     writer.newline()
 
-    for key, value in self.vars.items():
-      writer.variable(key, value)
-    writer.newline()
+    if self.vars:
+      for key, value in self.vars.items():
+        writer.variable(key, value)
+      writer.newline()
+
+    if self.tools:
+      writer.comment('Tools')
+      writer.comment('-----')
+      for tool in self.tools.values():
+        tool.export(writer, context, platform)
+      writer.newline()
 
     for target in self.targets.values():
       target.export(writer, context, platform)
@@ -136,7 +157,7 @@ class Target(object):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
-        {'type': list, 'allowEmpty': False, 'items': {'type': str}}})
+        {'type': list, 'allowEmpty': False, 'items': {'type': [Tool, str]}}})
     argspec.validate('inputs', inputs, {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('outputs', outputs, {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('implicit_deps', implicit_deps, {'type': [list, tuple], 'items': {'type': str}})
@@ -187,14 +208,14 @@ class Target(object):
 
     writer.comment("target: {}".format(self.name))
     writer.comment("--------" + "-" * len(self.name))
-    commands = platform.prepare_commands(self.commands)
+    commands = platform.prepare_commands([list(map(str, c)) for c in self.commands])
 
     # Check if we need to export a command file or can export the command
     # directly.
     if not self.environ and len(commands) == 1:
       commands = [platform.prepare_single_command(commands[0], self.cwd)]
     else:
-      filename = path.join('.cmd', self.name)
+      filename = path.join('.commands', self.name)
       command, __ = platform.write_command_file(filename, commands,
         self.inputs, self.outputs, cwd=self.cwd, environ=self.environ,
         foreach=self.foreach)
@@ -235,6 +256,78 @@ class Target(object):
       writer.build(self.name, 'phony', self.outputs)
 
 
+class Tool(object):
+  """
+  This class represents a program that can be called by by the command in
+  build rules. Usually this is only necessary if the tool requires a special
+  environment.
+
+  Depending on whether its necessary on the current platform, tools might be
+  exported into shell scripts. The actual command to be called in the command
+  can then be retrieved by converting the :class:`Tool` object to a string.
+
+  .. attribute:: name
+
+    The name of the tool. In a build :class:`Graph`, there may only be one tool
+    associated with the same name.
+
+  .. attribute:: command
+
+    The command that is to be executed and to which the additional command-line
+    arguments are forwarded to. Must be a list of strings.
+
+  .. attribute:: preamble
+
+    A list of commands/files that are to be sourced before the :attr:`command`
+    can be executed.
+
+  .. attribute:: environ
+
+    A dictionary of environment variables that will be exported before the
+    command or premable is executed.
+
+  .. attribute:: exported_command
+
+    After :meth:`exported_command` has been called, this member contains the
+    command that was exported for the Tool. This is a single string.
+  """
+
+  def __init__(self, name, command, preamble=None, environ=None):
+    argspec.validate('name', name, {'type': str})
+    argspec.validate('command', command,
+        {'type': [list, tuple], 'allowEmpty': False, 'items': {'type': str}})
+    argspec.validate('preamble', preamble,
+        {'type': [None, list, tuple], 'items':
+          {'type': [list, tuple], 'allowEmpty': False, 'items': {'type': str}}})
+    argspec.validate('environ', environ, {'type': [None, dict]})
+
+    self.name = name
+    self.command = command
+    self.preamble = preamble or []
+    self.environ = environ or {}
+    self.exported_command = None
+
+  def __str__(self):
+    """
+    Returns the name of the command to execute the tool in Ninja. This is
+    always a variable reference.
+    """
+
+    return '$CraftrTool_{}'.format(self.name)
+
+  def export(self, writer, context, platform):
+    name = 'CraftrTool_{}'.format(self.name)
+    if not self.preamble and not self.environ:
+      self.exported_command = shlex.join(self.command)
+    else:
+      filename = path.join('.tools', name)
+      command, filename = platform.write_command_file(
+          filename, list(self.preamble) + [self.command], environ=self.environ,
+          accept_additional_args=True)
+      self.exported_command = shell.join(command)
+    writer.variable('CraftrTool_{}'.format(self.name), self.exported_command)
+
+
 class ExportContext(object):
   """
   An instance of this class is required for :meth:`Graph.export` and
@@ -271,7 +364,8 @@ class PlatformHelper(object, metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
   def write_command_file(self, filename, commands, inputs=None, outputs=None,
-      cwd=None, environ=None, foreach=False, suffix=Default, dry=False):
+      cwd=None, environ=None, foreach=False, suffix=Default, dry=False,
+      accept_additional_args=False):
     """
     Writes a file that can be run by the native shell to execute the *commands*.
     If *suffix* is omitted, the default script suffix for the shell will be
@@ -287,6 +381,9 @@ class PlatformHelper(object, metaclass=abc.ABCMeta):
     to ``$in`` and ``$out`` will then be replaced by the respective placeholder
     in the shells scripting language and the *inputs* and *outputs* parmaeters
     are ignored.
+
+    If *accept_additional_args* is True, the last command in *commands* must
+    accept forward arguments passed to the shell script.
 
     Returns 1) a list of strings that represents the command to execute the
     script. If *foreach* is specified, the two last items of the returned list
@@ -356,7 +453,8 @@ class WindowsPlatformHelper(PlatformHelper):
     return command
 
   def write_command_file(self, filename, commands, inputs=None, outputs=None,
-      cwd=None, environ=None, foreach=False, suffix='.cmd', dry=False):
+      cwd=None, environ=None, foreach=False, suffix='.cmd', dry=False,
+      accept_additional_args=False):
 
     if suffix is not None:
       filename = path.addsuffix(filename, suffix)
@@ -369,7 +467,7 @@ class WindowsPlatformHelper(PlatformHelper):
     if dry:
       return result, filename
 
-    path.makedirs(path.dirname(filename))
+    path.makedirs(path.dirname(path.abs(filename)))
     with open(filename, 'w') as fp:
       fp.write('REM This file is automatically generated with Craftr. It is \n')
       fp.write('REM not recommended to modify it manually.\n\n')
@@ -378,7 +476,9 @@ class WindowsPlatformHelper(PlatformHelper):
       for key, value in environ.items():
         fp.write('set ' + shell.quote('{}={}'.format(key, value), for_ninja=True) + '\n')
       fp.write('\n')
-      for command in commands:
+      for index, command in enumerate(commands):
+        if accept_additional_args and index == len(commands)-1:
+          command.append(shell.safe('%*'))
         # TODO: For some reason, we need to invoke these commands
         # using "cmd /Q /c" too instead of just the command, otherwise
         # there seem to be some problems for example with CMake which
@@ -401,7 +501,8 @@ class UnixPlatformHelper(PlatformHelper):
     return command
 
   def write_command_file(self, filename, commands, inputs=None, outputs=None,
-      cwd=None, environ=None, foreach=False, suffix='.sh', dry=False):
+      cwd=None, environ=None, foreach=False, suffix='.sh', dry=False,
+      accept_additional_args=False):
 
     if suffix is not None:
       filename = path.addsuffix(filename, suffix)
@@ -425,7 +526,9 @@ class UnixPlatformHelper(PlatformHelper):
       for key, value in environ.items():
         fp.write('export {}={}\n'.format(key, shell.quote(value)))
       fp.write('\n')
-      for command in commands:
+      for index, command in enumerate(commands):
+        if accept_additional_args and index == len(commands)-1:
+          command.append(shell.safe('$*'))
         fp.write(shell.join(command))
         fp.write('\n')
 
