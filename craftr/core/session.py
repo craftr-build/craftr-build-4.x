@@ -301,19 +301,16 @@ class Module(object):
   basic information on the module such as its name, version, but also things
   like its dependencies and options.
 
-  Every Craftr project (i.e. module) contains a directory named ``craftr/``
-  that contains the ``manifest.json`` file, the main ``Craftrfile`` and so
-  on. The project directory in return is usually the directory above that
-  ``craftr/`` directory.
+  Every Craftr project (i.e. module) contains a ``manifest.json`` file and the
+  main ``Craftrfile``.
 
   ::
 
     myproject/
-      craftr/
-        manifest.json
-        Craftrfile
-      source/
       include/
+      source/
+      Craftrfile
+      manifest.json
 
   .. attribute:: directory
 
