@@ -201,7 +201,7 @@ class Session(object):
     if Session.current is not self:
       raise RuntimeError('session not in context')
     if not self._tempdir:
-      self._tempdir = tempfile.mkdtemp('craftr')
+      self._tempdir = path.join(self.builddir, '.temp')
       logger.debug('created temporary directory:', self._tempdir)
     return self._tempdir
 
