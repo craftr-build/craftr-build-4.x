@@ -140,7 +140,7 @@ class build(BaseCommand):
       logger.info('==> executing build script')
       with logger.indent():
         module.run()
-    except Module.InvalidOption as exc:
+    except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
       for error in exc.format_errors():
         logger.error(error)
       return 1

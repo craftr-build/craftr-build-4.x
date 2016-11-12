@@ -63,6 +63,20 @@ class InvalidOption(Exception):
           self.module.manifest.version, exc)
 
 
+class LoaderInitializationError(Exception):
+
+  def __init__(self, module, errors):
+    self.module = module
+    self.errors = errors
+
+  def __str__(self):
+    return '\n'.join(self.format_errors())
+
+  def format_errors(self):
+    for exc in self.errors:
+      yield('{}:{}'.format(self.module.ident, str(exc)))
+
+
 class Session(object):
   """
   This class manages the :class:`build.Graph` and loading of Craftr modules.
@@ -347,6 +361,7 @@ class Module(object):
 
   NotFound = ModuleNotFound
   InvalidOption = InvalidOption
+  LoaderInitializationError = LoaderInitializationError
 
   def __init__(self, directory, manifest):
     self.directory = directory
@@ -403,6 +418,7 @@ class Module(object):
 
     :param recursive: Initialize the loaders of all dependencies as well.
     :raise RuntimeError: If there is no current session context.
+    :raise LoaderInitializationError: If none of the loaders matched.
     """
 
     if not session:
@@ -448,9 +464,7 @@ class Module(object):
                 'name': loader.name, 'data': new_data}
             break
       else:
-        # TODO: Proper exception type
-        raise RuntimeError('could not find loader for "{}"\n"'
-            .format(self.ident) + '\n'.join(map(str, errors)))
+        raise LoaderInitializationError(self, errors)
 
   def run(self):
     """
