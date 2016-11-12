@@ -117,7 +117,7 @@ class build(BaseCommand):
     os.chdir(session.builddir)
 
     # Read the cache.
-    cachefile = path.join(args.build_dir, '.craftr_cache.json')
+    cachefile = path.join(session.builddir, '.craftr_cache.json')
     if path.isfile(cachefile):
       with open(cachefile) as fp:
         try:
