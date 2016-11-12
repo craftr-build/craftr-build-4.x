@@ -313,10 +313,10 @@ class Tool(object):
     always a variable reference.
     """
 
-    return '$CraftrTool_{}'.format(self.name)
+    return '$CraftrTool_{}'.format(self.name.replace('.', '_'))
 
   def export(self, writer, context, platform):
-    name = 'CraftrTool_{}'.format(self.name)
+    name = str(self)[1:]
     if not self.preamble and not self.environ:
       self.exported_command = shlex.join(self.command)
     else:
@@ -325,7 +325,7 @@ class Tool(object):
           filename, list(self.preamble) + [self.command], environ=self.environ,
           accept_additional_args=True)
       self.exported_command = shell.join(command)
-    writer.variable('CraftrTool_{}'.format(self.name), self.exported_command)
+    writer.variable(name, self.exported_command)
 
 
 class ExportContext(object):
