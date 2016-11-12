@@ -21,6 +21,7 @@ This module provides the default global namespace for Craftr modules. Names
 starting with an underscore will be ignored.
 """
 
+from craftr.core import build as _build
 from craftr.core.logging import logger
 from craftr.core.session import session, ModuleNotFound
 from craftr.utils import path
@@ -183,3 +184,26 @@ def load_module(name, into=None, get_namespace=True):
   if get_namespace:
     return loaded_module.namespace
   return loaded_module
+
+
+def gentool(command, preamble=None, environ=None, name=None):
+  """
+  Create a :class:`~_build.Tool` object. The name of the tool will be derived
+  from the variable name it is assigned to unless *name* is specified.
+  """
+
+  tool = _build.Tool(gtn(name), command, preamble, environ)
+  session.graph.add_tool(tool)
+  return tool
+
+
+def gentarget(command, inputs=(), outputs=(), *args, **kwargs):
+  """
+  Create a :class:`~_build.Target` object. The name of the target will be
+  derived from the variable name it is assigned to unless *name* is specified.
+  """
+
+  target = _build.Target(gtn(kwargs.pop('name', None)), command, inputs,
+      outputs, *args, **kwargs)
+  session.graph.add_target(target)
+  return target
