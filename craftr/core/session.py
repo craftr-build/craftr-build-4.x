@@ -186,7 +186,7 @@ class Session(object):
     self.cache.setdefault('loaders', {})
 
   def write_cache(self, fp):
-    json.dump(self.cache, fp)
+    json.dump(self.cache, fp, indent='\t')
 
   def get_temporary_directory(self):
     """
