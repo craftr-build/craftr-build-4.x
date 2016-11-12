@@ -112,10 +112,11 @@ class DefaultLogger(BaseLogger):
   def add_indent(self, levels):
     self._indent += levels
 
-  def progress_begin(self, description, spinning=False):
+  def progress_begin(self, description=None, spinning=False):
     self._progress = {'description': description, 'spinning': spinning,
       'index': 0, 'last': 0}
-    self.info(description)
+    if description:
+      self.info(description)
 
   def progress_update(self, progress, info_text='', *, _force=False):
     info_text = str(info_text)
@@ -125,14 +126,15 @@ class DefaultLogger(BaseLogger):
     if not _force and ctime - self._progress['last'] < 0.25:
       return
     tty.clear_line()
-    width = tty.terminal_size()[0] - len(info_text) - 5  # safe margin
+    width = 30
     if self._progress['spinning']:
       sign = ('~--', '-~-', '--~')[self._progress['index'] % 3]
       bar = ''.join(itertools.islice(itertools.cycle(sign), width))
     else:
       intprogress = int(min([1.0, max([0.0, float(progress)])]) * width)
-      bar = '=' * intprogress + ' ' * (width - intprogress)
-    print('[{}] {}'.format(bar, info_text), end='', file=self._stream)
+      bar = '#' * intprogress + ' ' * (width - intprogress)
+    indent = self._indent_seq * self._indent
+    print('{}|{}| {}'.format(indent, bar, info_text), end='', file=self._stream)
     self._progress['index'] += 1
     self._progress['last'] = ctime
 
