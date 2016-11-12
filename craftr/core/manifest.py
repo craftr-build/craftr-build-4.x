@@ -523,72 +523,94 @@ class UrlLoader(BaseLoader):
             path.rel(self.directory, nopar=True)))
         return cache
       else:
-        logger.info('Cached URL invalidated')
+        logger.info('Cached URL is outdated:', cache.get('url'))
 
     directory = None
     archive = None
     delete_after_extract = True
-    for url in self.urls:
-      url_template = url
-      url = context.expand_variables(url)
+    for url_template in self.urls:
+      url = context.expand_variables(url_template)
       if not url: continue
       if url.startswith('file://'):
         name = url[7:]
         if path.isdir(name):
+          logger.info('Using directory', url)
           directory = name
           break
         elif path.isfile(name):
+          logger.info('Using archive', url)
           archive = name
           delete_after_extract = False
           break
         error = None
       else:
-
-        def progress(data):
-          spinning = data['size'] is None
-          if data['downloaded'] == 0:
-            logger.progress_begin('Downloading {} ...'.format(url), spinning)
-          if spinning:
-            # TODO: Bytes to human readable
-            logger.progress_update(None, data['downloaded'])
-          else:
-            progress = data['downloaded'] / data['size']
-            logger.progress_update(progress, '{}%'.format(int(progress * 100)))
-          if data['completed']:
-            logger.progress_end()
-
+        error = None
         try:
+          progress = lambda d: self._download_progress(url, context, d)
           archive, reused = httputils.download_file(
             url, directory = context.get_temporary_directory(),
             on_exists='skip', progress=progress)
         except (httputils.URLError, httputils.HTTPError) as exc:
           error = exc
+        except self.DownloadAlreadyExists as exc:
+          directory = exc.directory
+          logger.info('Reusing existing directory', directory)
         else:
           if reused:
-            logger.info('Reusing cached download "{}" ... '.format(path.basename(archive)))
+            logger.info('Reusing cached download', path.basename(archive))
           break
 
-      logger.info('URL does not apply: {}'.format(url))
       if error:
-        logger.info('error:', error, indent=1)
+        logger.info('Error reading', url, ':', error)
 
     if directory or archive:
       logger.debug('URL applies: {}'.format(url))
 
-    if directory:
-      logger.info('Using directory: {}'.format(path.rel(directory, nopar=True)))
-    elif archive:
-      suffix = nr.misc.archive.get_opener(archive)[0]
-      filename = path.basename(archive)[:-len(suffix)]
-      directory = path.join(context.installdir, filename)
+    if not directory and archive:
+      suffix, directory = self._get_archive_unpack_info(context, archive)
       logger.info('Unpacking "{}" to "{}" ...'.format(
           path.rel(archive, nopar=True), path.rel(directory, nopar=True)))
-      nr.misc.archive.extract(archive, directory, unpack_single_dir=True)
-    else:
+      nr.misc.archive.extract(archive, directory, suffix=suffix,
+          unpack_single_dir=True)
+    elif not directory:
       raise LoaderError(self, 'no URL matched')
 
     self.directory = directory
+    with open(path.join(self.directory, '.craftr_downloadurl'), 'w') as fp:
+      fp.write(url)
     return {'directory': directory, 'url_template': url_template, 'url': url}
+
+  def _download_progress(self, url, context, data):
+    spinning = data['size'] is None
+    if data['downloaded'] == 0:
+      # If what we're trying to download already exists, we don't have
+      # to redownload it.
+      suffix, directory = self._get_archive_unpack_info(context, data['filename'])
+      urlfile = path.join(directory, '.craftr_downloadurl')
+      if path.isfile(urlfile):
+        with open(urlfile) as fp:
+          if fp.read().strip() == url:
+            raise self.DownloadAlreadyExists(directory)
+
+      logger.progress_begin('Downloading {}'.format(url), spinning)
+    if spinning:
+      # TODO: Bytes to human readable
+      logger.progress_update(None, data['downloaded'])
+    else:
+      progress = data['downloaded'] / data['size']
+      logger.progress_update(progress, '{}%'.format(int(progress * 100)))
+    if data['completed']:
+      logger.progress_end()
+
+  def _get_archive_unpack_info(self, context, archive):
+    suffix = nr.misc.archive.get_opener(archive)[0]
+    filename = path.basename(archive)[:-len(suffix)]
+    directory = path.join(context.installdir, filename)
+    return suffix, directory
+
+  class DownloadAlreadyExists(Exception):
+    def __init__(self, directory):
+      self.directory = directory
 
 
 class _aliases:
