@@ -369,7 +369,7 @@ class Module(object):
   def project_directory(self):
     return path.norm(path.join(self.directory, self.manifest.project_directory))
 
-  def init_options(self, recursive=False):
+  def init_options(self, recursive=False, _break_recursion=None):
     """
     Initialize the :attr:`options` member. Requires an active session context.
 
@@ -382,11 +382,13 @@ class Module(object):
 
     if not session:
       raise RuntimeError('no current session')
+    if _break_recursion is self:
+      return
 
     if recursive:
       for name, version in self.manifest.dependencies.items():
         module = session.find_module(name, version)
-        module.init_options(True)
+        module.init_options(True, _break_recursion=self)
 
     if self.options is None:
       errors = []
@@ -395,7 +397,7 @@ class Module(object):
         self.options = None
         raise InvalidOption(self, errors)
 
-  def init_loader(self, recursive=False):
+  def init_loader(self, recursive=False, _break_recursion=None):
     """
     Check all available loaders as defined in the :attr:`manifest` until the
     first loads successfully.
@@ -408,11 +410,13 @@ class Module(object):
       raise RuntimeError('no current session')
     if not self.manifest.loaders:
       return
+    if _break_recursion is self:
+      return
 
     if recursive:
       for name, version in self.manifest.dependencies.items():
         module = session.find_module(name, version)
-        module.init_loader(True)
+        module.init_loader(True, _break_recursion=self)
 
     self.init_options()
     if self.loader is not None:

@@ -172,7 +172,8 @@ def load_module(name, into=None, get_namespace=True):
         'in the dependencies'.format(module.ident, name))
 
   loaded_module = session.find_module(name, module.manifest.dependencies[name])
-  loaded_module.run()
+  if not loaded_module.executed:
+    loaded_module.run()
 
   if into is not None:
     for key, value in vars(loaded_module.namespace).items():
