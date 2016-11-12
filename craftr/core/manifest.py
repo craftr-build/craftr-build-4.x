@@ -514,16 +514,22 @@ class UrlLoader(BaseLoader):
     self.directory = None
 
   def load(self, context, cache):
-    if cache is not None and path.isdir(cache['directory']):
-      self.directory = cache['directory']
-      logger.info('Reusing cached directory: {}'.format(
-          path.rel(self.directory, nopar=True)))
-      return cache
+    if cache is not None and path.isdir(cache.get('directory', '')):
+      # Check if the requested version changes.
+      url_template = context.expand_variables(cache.get('url_template', ''))
+      if url_template == cache.get('url'):
+        self.directory = cache['directory']
+        logger.info('Reusing cached directory: {}'.format(
+            path.rel(self.directory, nopar=True)))
+        return cache
+      else:
+        logger.info('Cached URL invalidated')
 
     directory = None
     archive = None
     delete_after_extract = True
     for url in self.urls:
+      url_template = url
       url = context.expand_variables(url)
       if not url: continue
       if url.startswith('file://'):
@@ -582,7 +588,7 @@ class UrlLoader(BaseLoader):
       raise LoaderError(self, 'no URL matched')
 
     self.directory = directory
-    return {'directory': directory}
+    return {'directory': directory, 'url_template': url_template, 'url': url}
 
 
 class _aliases:
