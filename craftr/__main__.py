@@ -83,6 +83,7 @@ class build(BaseCommand):
     parser.add_argument('version', nargs='?', default='*')
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-c', '--config', default='.craftrconfig')
+    parser.add_argument('-d', '--option', dest='options', action='append', default=[])
 
   def execute(self, parser, args):
     # Determine the module to execute, either from the current working
@@ -101,6 +102,14 @@ class build(BaseCommand):
         parser.error('module not found: ' + str(exc))
 
     session.options.update(read_config_file(args.config))
+    for item in args.options:
+      key, sep, value = item.partition('=')
+      if not sep:
+        value = 'true'
+      elif not value:
+        session.options.pop(key, None)
+      else:
+        session.options[key] = value
 
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
