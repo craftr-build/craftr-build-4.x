@@ -1,9 +1,10 @@
 # examples.csharp
 
-from craftr.lang import csharp
-csc = csharp.CsCompiler()
+csc = load_module('lang.csharp').csc
+
 main = csc.compile(
   srcs = [local('Main.cs')],
   output = 'Main'
 )
+
 run = gentarget([[main]])

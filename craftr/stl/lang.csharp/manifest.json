@@ -1,11 +1,9 @@
 {
-  "name": "examples.csharp",
+  "name": "lang.csharp",
   "version": "1.0.0",
   "author": "",
   "url": "",
-  "dependencies": {
-    "lang.csharp": "*"
-  },
+  "dependencies": {},
   "options": {},
   "loaders": []
 }

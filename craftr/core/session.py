@@ -153,11 +153,14 @@ class Session(object):
   #: it with :meth:`end`.
   current = None
 
+  #: Diretory that contains the Craftr standard library.
+  stl_dir = path.norm(path.join(__file__, '../../stl'))
+
   def __init__(self, maindir=None):
     self.maindir = path.norm(maindir or path.getcwd())
     self.builddir = path.join(self.maindir, 'build')
     self.graph = build.Graph()
-    self.path = [self.maindir, path.join(self.maindir, 'craftr/modules')]
+    self.path = [self.stl_dir, self.maindir, path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
     self.modules = {}
     self.options = {}

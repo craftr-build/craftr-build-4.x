@@ -14,17 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`craftr.lang.csharp`
-=========================
-
 Provides a high-level interface for compiling C# projects.
 """
-
-from craftr import platform
-from craftr.core.session import session
-from craftr.defaults import buildlocal
-from craftr.targetbuilder import gtn, TargetBuilder
-from craftr.utils import path, shell
 
 # Default to the Microsoft C# compiler on Windows, Mono on all other platforms.
 if platform.name == 'win':
@@ -95,3 +86,6 @@ class CsCompiler(object):
 
 
     return builder.build([command], None, [output])
+
+
+csc = CsCompiler()
