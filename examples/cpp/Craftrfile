@@ -1,0 +1,16 @@
+# cpp
+
+msvc = load_module('lang.cxx.msvc').msvc
+
+obj = msvc.compile(
+  language = 'c++',
+  sources = [local('main.cpp')]
+)
+
+main = msvc.link(
+  output_type = 'bin',
+  inputs = obj,
+  output = 'main'
+)
+
+run = gentarget([[main]])

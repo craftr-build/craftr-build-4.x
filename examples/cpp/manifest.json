@@ -1,0 +1,11 @@
+{
+  "name": "examples.cpp",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx.msvc": "*"
+  },
+  "options": {},
+  "loaders": []
+}
