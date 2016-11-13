@@ -104,7 +104,9 @@ class DefaultLogger(BaseLogger):
       tty.clear_line()
     prefix = '' if self._line_alive else self._indent_seq * (self._indent + indent)
     prefix += tty.compile(self.level_colors[level])
-    print(prefix + sep.join(map(str, objects)) + tty.reset, end=end, file=self._stream)
+    content = sep.join(map(str, objects))
+    for line in content.split('\n'):
+      print(prefix + line + tty.reset, end=end, file=self._stream)
     self._line_alive = ('\n' not in end)
     if self._progress and 'progress' in self._progress:
       self.progress_update(self._progress['progress'], self._progress['info_text'], _force=True)
