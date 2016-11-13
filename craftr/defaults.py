@@ -26,6 +26,7 @@ from craftr.core.logging import logger
 from craftr.core.session import session, ModuleNotFound
 from craftr.utils import path
 from craftr.targetbuilder import gtn, TargetBuilder, Framework
+from craftr import platform
 
 import builtins as _builtins
 import itertools as _itertools
