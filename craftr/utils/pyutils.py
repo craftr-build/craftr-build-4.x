@@ -46,6 +46,7 @@ def import_(fqn):
       imp_error = exc
       break
     snake += part + '.'
+    part = None
 
   if result is None and imp_error:
     raise imp_error
@@ -53,7 +54,8 @@ def import_(fqn):
     raise ImportError(snake.rstrip('.'))
 
   try:
-    result = getattr(result, part)
+    if part:
+      result = getattr(result, part)
     for part in parts:
       result = getattr(result, part)
   except AttributeError:
