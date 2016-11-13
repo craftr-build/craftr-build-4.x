@@ -140,7 +140,8 @@ class TargetBuilder(object):
     argspec.validate('frameworks', frameworks,
         {'type': [list, tuple], 'items': {'type': Framework}})
     argspec.validate('inputs', inputs,
-        {'type': [None, list, tuple], 'items': {'type': [str, build.Target]}})
+        {'type': [None, list, tuple, build.Target],
+          'items': {'type': [str, build.Target]}})
     argspec.validate('outputs', outputs,
         {'type': [None, list, tuple], 'items': {'type': str}})
     argspec.validate('implicit_deps', implicit_deps,
@@ -149,6 +150,8 @@ class TargetBuilder(object):
         {'type': [None, list, tuple], 'items': {'type': str}})
 
     self.frameworks = list(frameworks)
+    if isinstance(inputs, build.Target):
+      inputs = [inputs]
 
     # If we find any Target objects in the inputs, expand the outputs
     # and append the frameworks.
@@ -254,7 +257,7 @@ class OptionMerge(object):
     [update(x) for x in frameworks]
 
   def __getitem__(self, key):
-    for options in self.options:
+    for options in self.frameworks:
       try:
         return options[key]
       except KeyError:
@@ -276,7 +279,7 @@ class OptionMerge(object):
     """
 
     result = []
-    for option in self.options:
+    for option in self.frameworks:
       value = option.get(key)
       if value is None:
         continue
