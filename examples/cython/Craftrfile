@@ -1,0 +1,10 @@
+# examples.cython
+
+from craftr.lang import cython
+cythonc = cython.CythonCompiler()
+
+csrcs = cythonc.compile(
+  srcs = [local('Main.pyx')]
+)
+
+# Now compile with C-compiler.
