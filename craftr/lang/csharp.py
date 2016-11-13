@@ -46,26 +46,26 @@ class CsCompiler(object):
     self.program = program
     self.runprefix = shell.split(runprefix)
 
-  def compile(self, filename, sources, target='exe', defines=(),
+  def compile(self, output, srcs, target='exe', defines=(),
       optimize=True, warn=None, warnaserror=False, appconfig=None, baseaddress=None,
       checked=False, debug=False, main=None, platform=None, unsafe=False,
       win32icon=None, win32manifest=None, win32res=None, additional_flags=(),
       no_add_suffix=False, name=None):
 
-    builder = TargetBuilder(gtn(name, 'csharp'), inputs=sources)
-    filename = buildlocal(filename)
+    builder = TargetBuilder(gtn(name, 'csharp'), inputs=srcs)
+    output = buildlocal(output)
     if target in ('appcontainerexe', 'exe', 'winexe'):
       if not no_add_suffix:
-        filename = path.addsuffix(filename, '.exe')
+        output = path.addsuffix(output, '.exe')
     elif target == 'library':
       if not no_add_suffix:
-        filename = path.addsuffix(filename, '.dll')
+        output = path.addsuffix(output, '.dll')
     elif target == 'winmdobj':
       if not no_add_suffix:
-        filename = path.addsuffix(filename, '.winmdobj')
+        output = path.addsuffix(output, '.winmdobj')
     elif target == 'module':
       if not no_add_suffix:
-        filename = path.addsuffix(filename, '.netmodule')
+        output = path.addsuffix(output, '.netmodule')
     else:
       raise ValueError('invalid target: {0!r}'.format(target))
     if warn not in (None, 0, 1, 2, 3, 4):
@@ -94,9 +94,4 @@ class CsCompiler(object):
     command += ['$in']
 
 
-    t = builder.build([command], None, [filename])
-    print(t)
-    print(t.commands)
-    print(t.inputs)
-    print(t.outputs)
-    return t
+    return builder.build([command], None, [output])

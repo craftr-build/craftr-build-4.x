@@ -3,7 +3,7 @@
 from craftr.lang import csharp
 csc = csharp.CsCompiler()
 main = csc.compile(
-  filename = 'Main',
-  sources = [local('Main.cs')]
+  srcs = [local('Main.cs')],
+  output = 'Main'
 )
 run = gentarget([[main]])
