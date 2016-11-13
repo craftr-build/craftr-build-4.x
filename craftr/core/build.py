@@ -157,7 +157,7 @@ class Target(object):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
-        {'type': list, 'allowEmpty': False, 'items': {'type': [Tool, str]}}})
+        {'type': list, 'allowEmpty': False, 'items': {'type': [Tool, Target, str]}}})
     argspec.validate('inputs', inputs, {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('outputs', outputs, {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('implicit_deps', implicit_deps, {'type': [list, tuple], 'items': {'type': str}})
@@ -173,8 +173,28 @@ class Target(object):
     argspec.validate('environ', environ, {'type': [None, dict]})
     argspec.validate('frameworks', frameworks, {'type': [list, tuple], 'items': {'type': dict}})
 
+    # Make sure we have a copy of the implicit_deps so we can modify
+    # it safely.
+    implicit_deps = list(implicit_deps)
+
+    # Expand Target objects listed in the commands.
+    new_commands = []
+    for command in commands:
+      new_command = []
+      for index, arg in enumerate(command):
+        if isinstance(arg, Target):
+          if index == 0 and len(arg.outputs) != 1:
+            raise ValueError('Target as program in commands list must have '
+                'exactly one output, has {} (target: {})'.format(
+                  len(arg.outputs), arg.name))
+          new_command += arg.outputs
+          implicit_deps += arg.outputs
+        else:
+          new_command.append(arg)
+      new_commands.append(new_command)
+
     self.name = name
-    self.commands = commands
+    self.commands = new_commands
     self.inputs = list(map(path.norm, inputs))
     self.outputs = list(map(path.norm, outputs))
     self.implicit_deps = list(map(path.norm, implicit_deps))
