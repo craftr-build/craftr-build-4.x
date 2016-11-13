@@ -1,14 +1,13 @@
 {
-  "name": "lang.csharp",
+  "name": "lang.cython",
   "version": "1.0.0",
   "author": "",
   "url": "",
-  "dependencies": {},
+  "dependencies": {
+    "lang.python": "*"
+  },
   "options": {
-    "csc": {
-      "type": "string"
-    },
-    "runprefix": {
+    "bin": {
       "type": "string"
     }
   },

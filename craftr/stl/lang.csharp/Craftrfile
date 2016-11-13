@@ -32,10 +32,8 @@ class CsCompiler(object):
   """
 
   def __init__(self, program=None, runprefix=None):
-    program = program or session.options.get('csharp.csc', CSC)
-    runprefix = runprefix or session.options.get('csharp.runprefix', RUNPREFIX)
-    self.program = program
-    self.runprefix = shell.split(runprefix)
+    self.program = program or options.csc or CSC
+    self.runprefix = shell.split(runprefix or options.runprefix or RUNPREFIX)
 
   def compile(self, output, srcs, target='exe', defines=(),
       optimize=True, warn=None, warnaserror=False, appconfig=None, baseaddress=None,

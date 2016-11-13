@@ -20,16 +20,13 @@
 This package provides target generators to compile Cython projects.
 """
 
-from craftr.core.session import session
-from craftr.defaults import buildlocal, relocate_files
-from craftr.lang import python
-from craftr.targetbuilder import gtn, Framework, TargetBuilder
-from craftr.utils import path
 from nr.types.recordclass import recordclass
 
 import functools
 import os
 import re
+
+python = load_module('lang.python')
 
 
 class CythonCompiler(object):
@@ -38,9 +35,7 @@ class CythonCompiler(object):
 
   def __init__(self, program=None):
     if not program:
-      program = session.options.get('cython.bin', None)
-    if not program:
-      program = os.getenv('CYTHON', 'cython')
+      program = options.bin or os.getenv('CYTHON', 'cython')
     self.program = program
 
   @property
@@ -98,3 +93,6 @@ class CythonCompiler(object):
 
     return builder.build([command], None, outputs, foreach=True,
       metadata={'cython_outdir': outdir})
+
+
+cythonc = CythonCompiler()

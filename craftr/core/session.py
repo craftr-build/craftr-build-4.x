@@ -273,8 +273,8 @@ class Session(object):
         try:
           self.parse_manifest(filename)
         except Manifest.Invalid as exc:
-          logger.debug('invalid manifest found at "{}": {}'
-              .format(filename, exc), indent=1)
+          logger.warn('invalid manifest found:', filename)
+          logger.warn(exc, indent=1)
 
   def find_module(self, name, version):
     """

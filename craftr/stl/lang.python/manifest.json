@@ -1,14 +1,11 @@
 {
-  "name": "lang.csharp",
+  "name": "lang.python",
   "version": "1.0.0",
   "author": "",
   "url": "",
   "dependencies": {},
   "options": {
-    "csc": {
-      "type": "string"
-    },
-    "runprefix": {
+    "bin": {
       "type": "string"
     }
   },

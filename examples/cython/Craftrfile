@@ -1,7 +1,6 @@
 # examples.cython
 
-from craftr.lang import cython
-cythonc = cython.CythonCompiler()
+cythonc = load_module('lang.cython').cythonc
 
 csrcs = cythonc.compile(
   srcs = [local('Main.pyx')]

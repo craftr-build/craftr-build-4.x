@@ -1,7 +1,6 @@
 # examples.java
 
-from craftr.lang import java
-javac = java.JavaCompiler()
+javac = load_module('lang.java').javac
 
 classes = javac.compile(
   srcs = [local('Main.java')],

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "author": "",
   "url": "",
-  "dependencies": {},
+  "dependencies": {
+    "lang.java": "*"
+  },
   "options": {},
   "loaders": []
 }

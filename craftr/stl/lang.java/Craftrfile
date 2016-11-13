@@ -14,10 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from craftr.core.session import session
-from craftr.defaults import buildlocal
-from craftr.targetbuilder import gtn, TargetBuilder
-from craftr.utils import path, pyutils, shell
+from craftr.utils import pyutils
 
 import functools
 import re
@@ -44,8 +41,8 @@ class JavaCompiler(object):
 
   def __init__(self, javac=None, jar=None):
     super().__init__()
-    self.javac = javac or session.options.get('java.javac', 'javac')
-    self.jar = jar or session.options.get('java.jar', 'jar')
+    self.javac = javac or options.javac
+    self.jar = jar or options.jar
 
   @property
   @functools.lru_cache()
@@ -113,3 +110,6 @@ class JavaCompiler(object):
         ['-C', classdir, path.rel(x, classdir)] for x in builder.inputs])
 
     return builder.build([command], None, [output])
+
+
+javac = JavaCompiler()
