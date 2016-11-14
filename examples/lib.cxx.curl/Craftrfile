@@ -1,0 +1,44 @@
+# lib.cxx.curl
+
+if loader.name != 'source':
+  raise EnvironmentError('currently only supports a source loader')
+
+cURL = Framework('cURL',
+  include = [path.join(loader.directory, 'include')],
+  defines = [],
+  libs = []
+)
+
+if platform.name == 'win':
+  cURL['libs'] += ['Ws2_32', 'Wldap32']
+else:
+  raise EnvironmentError('platform currently not supported: {}'
+      .format(platform.name))
+
+if options.static:
+  cURL['defines'].append('CURL_STATICLIB')
+
+
+cxc = load_module('lang.cxx').cxc
+obj = cxc.compile(
+  language = 'c',
+  sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = loader.directory),
+  include = [path.join(loader.directory, 'lib')],
+  defines = ['BUILDING_LIBCURL'],
+  frameworks = [cURL]
+)
+
+if options.static:
+  lib = cxc.staticlib(
+    inputs = obj,
+    output = 'cURL'
+  )
+  cURL['external_libs'] = [lib.metadata['staticlib_output']]
+else:
+  lib = cxc.link(
+    output_type = 'dll',
+    inputs = obj,
+    output = 'cURL'
+  )
+  cURL['external_libs'] = [lib.metadata['dll_link_target']]
+  cURL['implicit_deps'] = [lib]
