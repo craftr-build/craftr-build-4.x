@@ -425,7 +425,19 @@ class MsvcToolkit(object):
       external_libs += builder.get_list('win64_external_libs')
     debug = builder.get('debug', False)
 
-    command = [self.programs.link, '/nologo', '$in', '/OUT:$out']
+    command = [self.programs.link, '/nologo']
+
+    # The command-line can become too long easily, make sure that doesn't
+    # happen and we use a command-file instead.
+    inputs_str = shell.join(builder.inputs)
+    if len(inputs_str) > 6000:  # Let's say we leave 2000 chars for options
+      with open_buildfile(builder.name + '.txt') as fp:
+        fp.write(inputs_str)
+      command += ['@' + fp.name]
+    else:
+      command += ['$in']
+
+    command += ['/OUT:$out']
     if self.toolkit == 'clang-cl':
       command += ['/machine:' + self.target]
     command += ['/debug'] if debug else []
@@ -462,13 +474,12 @@ class MsvcToolkit(object):
     # happen and we use a command-file instead.
     inputs_str = shell.join(builder.inputs)
     if len(inputs_str) > 6000:  # Let's say we leave 2000 chars for options
-      commandfile = buildlocal('command_files/' + builder.name + '.txt')
-      path.makedirs(path.dirname(commandfile))
-      with open(commandfile, 'w') as fp:
+      with open_buildfile(builder.name + '.txt') as fp:
         fp.write(inputs_str)
-      command += ['@' + commandfile]
+      command += ['@' + fp.name]
     else:
       command += ['$in']
+
     command += ['/OUT:$out']
     return builder.build([command], None, [output],
       description='{} staticlib ($out)'.format(self.info['name']),
