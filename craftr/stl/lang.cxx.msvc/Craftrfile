@@ -31,7 +31,7 @@ import tempfile
 
 
 valid_archs = ('x86', 'amd64', 'ia64')
-real_arch = os.environ.get('PROCESSOR_ARCHITEW6432').lower()
+real_arch = os.environ.get('PROCESSOR_ARCHITEW6432', '').lower()
 if not real_arch:
   real_arch = os.environ.get('PROCESSOR_ARCHITECTURE', 'x86').lower()
 if real_arch not in valid_archs:
@@ -261,8 +261,10 @@ class MsvcToolkit(object):
     if target not in valid_archs:
       raise ValueError('invalid target architecture: {!r}'.format(target))
 
+    version = ()
     if toolkit.startswith('msvc'):
-      version = toolkit[4:]
+      if len(toolkit) > 4:
+        version = (toolkit[4:],)
     elif not toolkit == 'clang-cl':
       raise ValueError('invalid toolkit name: {!r}'.format(toolkit))
 
@@ -274,13 +276,13 @@ class MsvcToolkit(object):
       try:
         self.info = identify(cl)
       except ToolDetectionError as exc:
-        error = exc
+        pass
       else:
         link = self.info['link_program']
         lib =  self.info['lib_program']
 
     if not self.info:
-      self.install_info = find_installation((version,), target)
+      self.install_info = find_installation(version, target)
       cl = path.join(self.install_info['toolsdir'], 'cl.exe')
       link = path.join(self.install_info['toolsdir'], 'link.exe')
       lib = path.join(self.install_info['toolsdir'], 'lib.exe')
@@ -288,8 +290,6 @@ class MsvcToolkit(object):
       with override_environ(self.install_info['env']):
         self.info = identify(self.programs.cl)
 
-    if error:
-      raise error
     self.toolkit = toolkit
     self.target = target
     self.programs = self.Programs(cl, link, lib)
