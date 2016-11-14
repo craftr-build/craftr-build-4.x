@@ -1,6 +1,6 @@
 # cpp
 
-cxc = load_module('lang.cxx.clang').cxc
+cxc = load_module('lang.cxx').cxc
 
 obj = cxc.compile(
   language = 'c++',

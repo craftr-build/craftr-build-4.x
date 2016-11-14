@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from craftr.platform import win32 as platform
+from craftr.utils import pyutils
 from craftr.utils.singleton import Default
 from nr.types.recordclass import recordclass
 
