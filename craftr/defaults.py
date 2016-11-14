@@ -212,3 +212,20 @@ def gentarget(command, inputs=(), outputs=(), *args, **kwargs):
       outputs, *args, **kwargs)
   session.graph.add_target(target)
   return target
+
+
+def open_buildfile(name, mode='w'):
+  """
+  Creates a file with the specified *name* in a buildlocal directory named
+  "buildfiles/". The returned object is file-like but must not necessarily
+  represent the actual file on the filesystem. In case the current Session
+  does not export build files, the returned object will simply be an in-memory
+  file buffer that will be discarded.
+
+  The ``fp.name`` attribute can be read to get the filename in either case.
+  """
+
+  # TODO: Check if the session exports or not.
+  dirname = buildlocal('buildfiles')
+  path.makedirs(dirname)
+  return open(path.join(dirname, name), mode)
