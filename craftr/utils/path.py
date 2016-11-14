@@ -24,6 +24,7 @@ import errno
 import glob2
 import os
 import shutil
+import tempfile as _tempfile
 
 curdir_sep = curdir + sep
 pardir_sep = pardir + sep
@@ -320,3 +321,50 @@ def easy_listdir(directory):
     if exc.errno != errno.ENOENT:
       raise
   return []
+
+class tempfile(object):
+  """
+  A better temporary file class where the #close() function does not delete
+  the file but only #__exit__() does. Obviously, this allows you to close
+  the file and re-use it with some other processing before it finally gets
+  deleted.
+
+  This is especially important on Windows because apparently another
+  process can't read the file while it's still opened in the process
+  that created it.
+
+  ```python
+  from craftr.tools import tempfile
+  with tempfile(suffix='c', text=True) as fp:
+    fp.write('#include <stdio.h>\nint main() { }\n')
+    fp.close()
+    shell.run(['gcc', fp.name])
+  ```
+
+  @param suffix: The suffix of the temporary file.
+  @param prefix: The prefix of the temporary file.
+  @param dir: Override the temporary directory.
+  @param text: True to open the file in text mode. Otherwise, it
+    will be opened in binary mode.
+  """
+
+  def __init__(self, suffix='', prefix='tmp', dir=None, text=False):
+    self.fd, self.name = _tempfile.mkstemp(suffix, prefix, dir, text)
+    self.fp = os.fdopen(self.fd, 'w' if text else 'wb')
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *__):
+    try:
+      self.close()
+    finally:
+      remove(self.name, silent=True)
+
+  def __getattr__(self, name):
+    return getattr(self.fp, name)
+
+  def close(self):
+    if self.fp:
+      self.fp.close()
+      self.fp = None

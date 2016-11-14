@@ -36,6 +36,10 @@ import sys as _sys
 require = require.Require(write_bytecode=False)
 
 
+class ToolDetectionError(Exception):
+  pass
+
+
 def include_defs(filename, globals=None):
   """
   Uses :mod:`require` to load a Python file and then copies all symbols

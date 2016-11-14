@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#from craftr.tools import override_environ, strip_flags
 from craftr.platform import win32 as platform
 from craftr.utils.singleton import Default
 from nr.types.recordclass import recordclass
@@ -56,35 +55,6 @@ def override_environ(new_environ, merge=True):
     # Restore the old enviroment variables.
     os.environ.clear()
     os.environ.update(old_environ)
-
-
-def strip_flags(command, flags):
-  """
-  Remove all occurences of all #flags in the #command list.
-
-  @param command: A list of command-line arguments.
-  @param remove_flags: An iterable of flags to remove.
-  @return: The #command list, but it is also directly altered.
-  """
-
-  # Remove the specified flags and keep every flag that could not
-  # be removed from the command.
-  flags = set(flags)
-  for flag in list(flags):
-    count = 0
-    while True:
-      try:
-        command.remove(flag)
-      except ValueError:
-        break
-      count += 1
-    if count != 0:
-      flags.remove(flag)
-  if flags:
-    fmt = ' '.join(shell.quote(x) for x in flags)
-    logger.warn("flags not removed: " + fmt)
-
-  return command
 
 
 @functools.lru_cache()
@@ -425,7 +395,7 @@ class MsvcToolkit(object):
     if self.install_info:
       environ = self.install_info['env']
 
-    strip_flags(command, remove_flags)
+    pyutils.strip_flags(command, remove_flags)
     t = builder.build([command], None, objects, foreach=True, environ=environ,
       description='{} compile ($out)'.format(self.info['name']),
       **params)
@@ -463,7 +433,7 @@ class MsvcToolkit(object):
     command += [x + '.lib' for x in libs]
     command += external_libs
 
-    strip_flags(command, remove_flags)
+    pyutils.strip_flags(command, remove_flags)
     command += additional_flags
 
     meta = {'link_output': output}
