@@ -168,7 +168,7 @@ class TargetBuilder(object):
 
     self.name = name
     self.option_kwargs = option_kwargs or {}
-    self.options_merge = OptionMerge(option_kwargs or {}, *frameworks)
+    self.options_merge = OptionMerge(option_kwargs or {}, *self.frameworks)
     self.outputs = outputs
     self.implicit_deps = implicit_deps
     self.order_only_deps = order_only_deps
