@@ -219,6 +219,16 @@ class TargetBuilder(object):
     elif self.metadata:
       raise RuntimeError('metadata specified in constructor and build()')
 
+    implicit_deps = list(implicit_deps)
+    for item in self.get_list('implicit_deps'):
+      if isinstance(item, build.Target):
+        implicit_deps += item.outputs
+      elif isinstance(item, str):
+        implicit_deps.append(item)
+      else:
+        raise TypeError('expected Target or str in "implicit_deps", found {}'
+            .format(type(item).__name__))
+
     target = build.Target(self.name, commands, inputs, outputs, implicit_deps,
         order_only_deps, metadata=metadata, frameworks=self.frameworks, **kwargs)
     session.graph.add_target(target)
