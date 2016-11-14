@@ -1,0 +1,449 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from craftr.utils import pyutils
+from craftr.utils.singleton import Default
+
+import configparser
+import functools
+import logging
+import json
+import jsonschema
+import os
+import re
+
+
+def get_toolkit():
+  if not options.toolkit:
+    if platform.name == 'mac':
+      return 'llvm'
+    elif platform.name in ('linux', 'cygwin', 'win'):
+      return 'gcc'
+    else:
+      raise EnvironmentError("can not determine TOOL default value for platform {!r}".format(platform.name))
+  if options.toolkit not in ('llvm', 'gcc'):
+    raise ValueError("invalid value for option TOOL: {!r}".format(options.toolkit))
+  return options.toolkit
+
+
+def re_search_getgroups(pattern, subject, mode=0):
+  """
+  Uses :func:`re.search` and returns a list of the captured groups, #including
+  the complete matched string as the first group. If the regex search was
+  unsuccessful, a list with all elements None is returned.
+  """
+
+  pattern = re.compile(pattern, mode)
+  ngroups = pattern.groups + 1
+
+  res = pattern.search(subject)
+  if not res:
+    return [None] * ngroups
+  else:
+    groups = list(res.groups())
+    groups.insert(0, res.group(0))
+    return groups
+
+
+def __gcc_check(program, output):
+  _e_gcc_version = r'^.*(gcc)\s+version\s+([\d\.\-]+).*\s*$'
+  _e_gcc_target = r'Target:\s*([\w\-\._]+)'
+  _e_gcc_thread = r'--enable-threads=([\w\-\._]+)'
+
+  version = re_search_getgroups(_e_gcc_version, output, re.I | re.M)
+  target = re_search_getgroups(_e_gcc_target, output, re.I)[1]
+  thread_model = re_search_getgroups(_e_gcc_thread, output, re.I)[1]
+
+  if not all(version):
+    raise ToolDetectionError('could not determine GCC version')
+
+  result = {
+    'version': version[2],
+    'version_str': version[0].strip(),
+    'name': version[1],
+    'target': target,
+    'thread_model': thread_model,
+  }
+
+  # Check for a C++ compiler.
+  if program[-2:] == '++':
+    stdlib = detect_cpp_stdlib(program)
+    if stdlib:
+      result['cpp_stdlib'] = stdlib
+  return result
+
+
+def __llvm_check(program, output):
+  _e_llvm_version = r'^.*(clang|llvm)\s+version\s+([\d\.\-]+).*$'
+  _e_llvm_target = r'Target:\s*([\w\-\._]+)'
+  _e_llvm_thread = r'Thread\s+model:\s*([\w\-\._]+)'
+
+  version = re_search_getgroups(_e_llvm_version, output, re.I | re.M)
+  target = re_search_getgroups(_e_llvm_target, output, re.I)[1]
+  thread_model = re_search_getgroups(_e_llvm_thread, output, re.I)[1]
+  del output
+
+  if not all(version):
+    raise ToolDetectionError('could not determine LLVM version')
+
+  name = version[1].lower()
+  if name == 'clang':
+    name = 'llvm'
+  assert name in ('gcc', 'llvm')
+
+  result = {
+    'version': version[2],
+    'version_str': version[0].strip(),
+    'name': version[1].lower(),
+    'target': target,
+    'thread_model': thread_model,
+  }
+
+  # Check for a C++ compiler.
+  if program[-2:] == '++':
+    stdlib = detect_cpp_stdlib(program)
+    if stdlib:
+      result['cpp_stdlib'] = stdlib
+
+  return result
+
+
+def detect_cpp_stdlib(program):
+  """
+  Performs a test compilation of a C++ file with #program and tries to
+  determine the C++ stdlib that is required for linking.
+  """
+
+  # Just create a temporary C++ file to be able to read the link
+  # flags that would be invoked.
+  with pyutils.combine_context(
+      path.tempfile(suffix='.cpp'),
+      path.tempfile(suffix='.out')) as (fp, outfp):
+    fp.close()
+    outfp.close()
+    output = shell.pipe([program, '-v', fp.name, '-o', outfp.name]).output.split('\n')
+    # Check for a line that looks like a linker command.
+    for line in output:
+      try:
+        parts = shell.split(line)
+      except ValueError:
+        continue
+      if not line:
+        continue
+      program = path.basename(parts[0].lower().split(path.sep)[0])
+      if program.startswith('ld') or program.startswith('collect2'):
+        # Looking good. Is it using -lc++ or -lstdc++?
+        if '-lc++' in parts:
+          return 'c++'
+        elif '-lstdc++' in parts:
+          return 'stdc++'
+  logger.warn("{!r} C++ stdlib could not be detected".format(program))
+  return None
+
+
+@functools.lru_cache()
+def identify_compiler(program):
+  program = shell.split(program)[0]
+
+  try:
+    output = shell.pipe([program, '-v']).output
+  except OSError as exc:
+    raise ToolDetectionError(exc)
+
+  errors = []
+  for check in [__gcc_check, __llvm_check]:
+    try:
+      return check(program, output)
+    except ToolDetectionError as exc:
+      if exc not in errors:
+        errors.append(exc)
+
+  raise ToolDetectionError(program, errors)
+
+
+def parse_cross_config(filename, format='ini'):
+  if format == 'ini':
+    parser = configparser.ConfigParser()
+    parser.read([local(filename)])
+    data = {s: dict(parser.items(s)) for s in parser.sections()}
+  elif format == 'json':
+    with open(filename) as fp:
+      data = json.load(fp)
+  else:
+    raise ValueError("unsupported format: {!r}".format(format))
+  jsonschema.validate(data, {
+    "type": "object",
+    "properties": {
+      "binaries": {
+        "type": "object",
+        "required": ["c", "cpp", "ar"],
+        "additionProperties": {"type": "string"}
+      }
+    }
+  })
+  return data
+
+
+def get_default_toolset(tool):
+  if tool == 'llvm':
+    return {
+      'as': 'clang -x assembler',
+      'c': 'clang',
+      'cpp': 'clang++',
+      'ar': 'ar'
+    }
+  elif tool == 'gcc':
+    return {
+      'as': 'gcc -x assembler',
+      'c': 'gcc',
+      'cpp': 'g++',
+      'ar': 'ar'
+    }
+  else:
+    raise ValueError("invalid tool: {!r}".format(tool))
+
+
+class ToolChain(object):
+
+  def __init__(self, toolkit=None, cross_config=None):
+    cross_config = cross_config or options.crossfile
+    if isinstance(cross_config, str):
+      cross_config = parse_cross_config(cross_config, 'ini')
+    if not cross_config:
+      cross_config = {'binaries': {}}
+    defaults = get_default_toolset(toolkit or get_toolkit())
+
+    binaries = cross_config['binaries']
+    def resolve(n, var):
+      if n in binaries:
+        return binaries[n]
+      if getattr(options, n):
+        return getattr(options, n)
+      return os.environ.get(var, defaults[n])
+
+    self.as_ = CompilerLinker('asm', resolve('as', 'AS'))
+    self.cc = CompilerLinker('c', resolve('c', 'CC'))
+    self.cxx = CompilerLinker('c++', resolve('cpp', 'CXX'))
+    self.ar = Ar(resolve('ar', 'AR'))
+
+  def compile(self, language, *args, name=None, **kwargs):
+    compiler = {'asm': self.as_, 'c': self.cc, 'c++': self.cxx}[language]
+    return compiler.compile(*args, name=gtn(name, None), **kwargs)
+
+  def link(self, *args, name=None, **kwargs):
+    return self.cc.link(*args, name=gtn(name, None), **kwargs)
+
+  def staticlib(self, *args, name=None, **kwargs):
+    return self.ar.staticlib(*args, name=gtn(name, None), **kwargs)
+
+
+class CompilerLinker(object):
+
+  def __init__(self, language, program):
+    if language not in ('asm', 'c', 'c++'):
+      raise ValueError("unsupported language: {!r}".format(language))
+    self.language = language
+    self.program = program
+    self.info = identify_compiler(program)
+
+  @property
+  def name(self):
+    return self.info['name']
+
+  def compile(self, sources, frameworks=(), remove_flags=(),
+              additional_flags=(), name=None, **kwargs):
+    builder = TargetBuilder(gtn(name, 'compile'), kwargs, frameworks, sources)
+    objects = relocate_files(builder.inputs, 'obj', suffix=platform.obj)
+    fw = Framework(builder.name)
+    builder.frameworks.append(fw)
+
+    debug = builder.get('debug', options.debug)
+    std = builder.get('std')
+    pedantic = builder.get('pedantic', False)
+    warn = builder.get('warn', 'all')
+    optimize = builder.get('optimize', None)
+    autodeps = builder.get('autodeps', True)
+
+    if platform.name == 'win':
+      osx_fwpath = builder.get_list('osx_fwpath')
+      osx_frameworks = builder.get_list('osx_frameworks')
+    else:
+      osx_fwpath = []
+      osx_frameworks = []
+
+    stdlib = None
+    if self.language == 'c++':
+      stdlib = builder.get('cpp_stdlib', None)
+      if not stdlib:
+        stdlib = self.info.get('cpp_stdlib', 'stdc++')
+      fw['libs'] = [stdlib]
+
+    command = shell.split(self.program)
+    command += ['-c', '$in', '-o', '$out']
+    command += ['-g'] if debug else []
+    command += ['-std=' + std] if std else []
+    command += ['-stdlib=lib' + stdlib] if stdlib else []
+    command += ['-pedantic'] if pedantic else []
+    command += ['-I' + x for x in builder.get_list('include')]
+    command += ['-D' + x for x in builder.get_list('defines')]
+    command += pyutils.flatten([('-include', x) for x in builder.get_list('forced_include')])
+    command += ['-fPIC'] if builder.get('pic', False) else []
+    command += ['-F' + x for x in osx_fwpath]
+    command += ['-fno-exceptions'] if not builder.get('exceptions', True) else []
+    if self.language == 'c++':
+      command += ['-fno-rtti'] if not builder.get('rtti', options.rtti) else []
+    command += pyutils.flatten(['-framework', x] for x in osx_frameworks)
+
+    if warn == 'all':
+      command += ['-Wall']
+    elif warn == 'none':
+      command += ['-w']
+    elif warn is None:
+      pass
+    else:
+      builder.invalid_option('warn')
+
+    if debug:
+      if optimize and optimize != 'debug':
+        builder.invalid_option('optimize', cause='no optimize with debug enabled')
+    elif optimize == 'speed':
+      command += ['-O4']
+    elif optimize == 'size':
+      commandm += ['-Os']
+    elif optimize in ('debug', 'none'):
+      command += ['-O0']
+    elif optimize is not None:
+      builder.invalid_option('optimize')
+
+    params = {}
+    if autodeps:
+      params['depfile'] = '$out.d'
+      params['deps'] = 'gcc'
+      command += ['-MD', '-MP', '-MF', '$depfile']
+
+    # TODO
+    """
+    if session.buildtype == 'external':
+      if language == 'c':
+        command += shell.split(options.get('CFLAGS', ''))
+      elif language == 'c++':
+        command += shell.split(options.get('CPPFLAGS', ''))
+      elif language == 'asm':
+        command += shell.split(options.get('ASMFLAGS', ''))
+    """
+
+    pyutils.strip_flags(command, remove_flags)
+    command += additional_flags
+
+    return builder.build([command], None, objects, foreach=True, **params,
+      description='{} compile ($out)'.format(self.name))
+
+  def link(self, output_type, inputs, output=None, suffix=Default, frameworks=(),
+           remove_flags=(), additional_flags=(), name=None, **kwargs):
+    if output_type not in ('bin', 'dll'):
+      raise ValueError('invalid output_type: {0!r}'.format(output_type))
+    if suffix is Default:
+      suffix = getattr(platform, output_type)
+    if suffix:
+      output = suffix(output)
+    output = buildlocal(output)
+
+    builder = TargetBuilder(gtn(name, 'link'), kwargs, frameworks, inputs)
+    implicit_deps = []
+
+    debug = builder.get('debug', options.debug)
+    libs = builder.get_list('libs')
+    linker_args = builder.get_list('linker_args')
+
+    linker_script = builder.get('linker_script', None)
+    if linker_script:
+      implicit_deps.append(linker_script)
+      linker_args += ['-T', linker_script]
+
+    libpath = builder.get_list('libpath')
+    external_libs = builder.get_list('external_libs')
+    implicit_deps += external_libs
+
+    if platform.name == 'mac':
+      osx_fwpath = builder.get_list('osx_fwpath')
+      osx_frameworks = builder.get_list('osx_frameworks')
+    else:
+      osx_fwpath = []
+      osx_frameworks = []
+
+    command = shell.split(self.program) + ['$in']
+    command += ['-g'] if debug else []
+    command += ['-l' + x for x in pyutils.unique_list(libs)]
+    command += ['-L' + x for x in pyutils.unique_list(libpath)]
+    command += pyutils.unique_list(external_libs)
+    command += ['-shared'] if output_type == 'dll' else []
+    command += ['-F' + x for x in osx_fwpath]
+    command += pyutils.flatten(['-framework', x] for x in osx_frameworks)
+    if linker_args:
+      command += ['-Wl,' + ','.join(linker_args)]
+    command += ['-o', '$out']
+
+    # TODO
+    """
+    if session.buildtype == 'external':
+      command = []
+      flags = shell.split(options.get('LDFLAGS', '').strip())
+      wlflags = sum(1 for s in flags if s.startswith('-Wl,'))
+      if wlflags > 0 and wlflags != len(flags):
+        error('LDFLAGS must be either in -Wl, or raw arguments format. Got:\n::  LDFLAGS=' + options.get('LDFLAGS', ''))
+      if flags and wlflags == 0:
+        # The flags are not in -Wl, format, so we convert them to
+        # a single -Wl, argument.
+        flags = ['-Wl,' + ','.join(flags)]
+
+      command += flags
+      command += shell.split(options.get('LDLIBS', ''))
+    """
+
+    pyutils.strip_flags(command, remove_flags)
+    command += additional_flags
+
+    meta = {'link_output': output}
+    if output_type == 'dll':
+      meta['dll_link_target'] = output
+
+    return builder.build([command], None, [output], metadata=meta,
+      implicit_deps=implicit_deps,
+      description='{} link ($out)'.format(self.name))
+
+
+class Ar(object):
+
+  def __init__(self, program):
+    self.program = program
+
+  def staticlib(self, inputs, output, suffix=Default, ar_flags='',
+                name=None, **kwargs):
+    if suffix is Default:
+      suffix = platform.lib
+    if suffix:
+      output = suffix(output)
+    output = buildlocal(output)
+
+    builder = TargetBuilder(gtn(name, 'staticlib'), kwargs, [], inputs)
+    flags = ''.join(pyutils.unique_list('rcs' + ar_flags))
+    command = shell.split(self.program) + [flags, '$out', '$in']
+    meta = {'staticlib_output': output}
+    return builder.build([command], None, [output], metadata=meta,
+      description='ar staticlib ($out)')
+
+
+cxc = ToolChain()

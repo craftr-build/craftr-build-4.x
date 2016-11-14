@@ -1,13 +1,13 @@
 # cpp
 
-msvc = load_module('lang.cxx.msvc').msvc
+cxc = load_module('lang.cxx.clang').cxc
 
-obj = msvc.compile(
+obj = cxc.compile(
   language = 'c++',
   sources = [local('main.cpp')]
 )
 
-main = msvc.link(
+main = cxc.link(
   output_type = 'bin',
   inputs = obj,
   output = 'main'
