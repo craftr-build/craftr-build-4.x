@@ -7,4 +7,4 @@ main = csc.compile(
   output = 'Main'
 )
 
-run = gentarget([[main]])
+run = gentarget([[main]], explicit=True)

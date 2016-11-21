@@ -9,5 +9,8 @@ classes = javac.compile(
 
 jar = javac.make_jar(
   inputs = classes,
+  entry_point = 'Main',
   output = 'java-example'
 )
+
+run = gentarget([['java', '-jar', jar]], explicit=True)
