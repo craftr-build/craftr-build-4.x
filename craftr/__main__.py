@@ -124,8 +124,11 @@ class build(BaseCommand):
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-c', '--config', default='.craftrconfig')
     parser.add_argument('-d', '--option', dest='options', action='append', default=[])
+    parser.add_argument('-i', '--include-path', action='append', default=[])
 
   def execute(self, parser, args):
+    session.path.extend(map(path.norm, args.include_path))
+
     # Determine the module to execute, either from the current working
     # directory or find it by name if one is specified.
     if not args.module:
