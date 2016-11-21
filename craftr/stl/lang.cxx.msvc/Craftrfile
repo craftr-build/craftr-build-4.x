@@ -486,4 +486,4 @@ class MsvcToolkit(object):
       metadata={'staticlib_output': output})
 
 
-msvc = MsvcToolkit()
+cxc = msvc = MsvcToolkit()
