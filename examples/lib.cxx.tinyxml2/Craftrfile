@@ -28,3 +28,6 @@ if options.build_main:
     output = 'main'
   )
   main = gentarget([[main_bin]], explicit=True)
+
+
+__all__ = ['tinyxml2']

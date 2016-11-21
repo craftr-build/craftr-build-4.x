@@ -10,7 +10,8 @@ load_module('lang.cxx.*')
 cURL = load_module('lib.cxx.curl').cURL
 cURLpp = Framework('cURLpp',
   include = [path.join(loader.directory, 'include')],
-  defines = []
+  defines = [],
+  frameworks = [cURL]
 )
 
 if options.static:
@@ -18,7 +19,7 @@ if options.static:
 
 obj = cpp_compile(
   sources = glob(['src/**/*.cpp'], parent=loader.directory),
-  frameworks = [cURLpp, cURL],
+  frameworks = [cURLpp],
   defines = ['BUILDING_CURLPP']
 )
 
@@ -30,3 +31,5 @@ lib = cxx_library(
 
 cURLpp['external_libs'] = [lib.metadata['link_target']]
 cURLpp['implicit_deps'] = [lib]
+
+__all__ = ['cURLpp']
