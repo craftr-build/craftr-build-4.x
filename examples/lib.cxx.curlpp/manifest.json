@@ -1,0 +1,30 @@
+{
+  "name": "lib.cxx.curlpp",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*",
+    "lib.cxx.curl": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "v0.7.3"
+    },
+    "static": {
+      "type": "bool",
+      "help": "Whether to build a static or dynamic library. Must match the linkage of cURL.",
+      "default": true
+    }
+  },
+  "loaders": [
+    {
+      "name": "source",
+      "type": "url",
+      "urls": [
+        "https://github.com/jpbarrette/curlpp/archive/$version.zip"
+      ]
+    }
+  ]
+}
