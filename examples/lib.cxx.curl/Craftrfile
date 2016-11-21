@@ -1,8 +1,6 @@
 # lib.cxx.curl
 
 load_module('lang.cxx.*')
-if loader.name != 'source':
-  raise EnvironmentError('currently only supports a source loader')
 
 cURL = Framework('cURL',
   include = [path.join(loader.directory, 'include')],
@@ -13,8 +11,7 @@ cURL = Framework('cURL',
 if platform.name == 'win':
   cURL['libs'] += ['Ws2_32', 'Wldap32']
 else:
-  raise EnvironmentError('platform currently not supported: {}'
-      .format(platform.name))
+  error('platform currently not supported: {}'.format(platform.name))
 
 if options.static:
   cURL['defines'].append('CURL_STATICLIB')
