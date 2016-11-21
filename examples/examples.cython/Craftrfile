@@ -1,9 +1,10 @@
 # examples.cython
 
-cythonc = load_module('lang.cython').cythonc
+load_module('lang.cython.*')
 
-csrcs = cythonc.compile(
-  srcs = [local('Main.pyx')]
+project = cython_project(
+  main = local('Main.pyx'),
+  sources = [local('Primes.pyx')]
 )
 
-# Now compile with C-compiler.
+run = gentarget([[project.main]], explicit=True)

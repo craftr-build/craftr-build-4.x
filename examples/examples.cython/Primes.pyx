@@ -14,7 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import Primes
-
-if __name__ == '__main__':
-  print(Primes.primes(42))
+def primes(int kmax):
+    cdef int n, k, i
+    cdef int p[1000]
+    result = []
+    if kmax > 1000:
+        kmax = 1000
+    k = 0
+    n = 2
+    while k < kmax:
+        i = 0
+        while i < k and n % p[i] != 0:
+            i = i + 1
+        if i == k:
+            p[k] = n
+            k = k + 1
+            result.append(n)
+        n = n + 1
+    return result

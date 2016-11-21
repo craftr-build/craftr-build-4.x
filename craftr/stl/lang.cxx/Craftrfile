@@ -48,3 +48,5 @@ def cxx_library(*args, name=None, link_style='static', **kwargs):
 
 def cxx_binary(*args, name=None, **kwargs):
   return cxc.link(*args, name=gtn(name, None), output_type='bin', **kwargs)
+
+__all__ = ['c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary']

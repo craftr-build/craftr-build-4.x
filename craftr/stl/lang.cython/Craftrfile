@@ -27,6 +27,7 @@ import os
 import re
 
 python = load_module('lang.python')
+cxx = load_module('lang.cxx')
 
 
 class CythonCompiler(object):
@@ -47,21 +48,21 @@ class CythonCompiler(object):
       raise ValueError("unable to determine Cython version")
     return match.group(1)
 
-  def compile(self, srcs, py_version=None, outputs=None, outdir='cython/src',
+  def compile(self, sources, py_version=None, outputs=None, outdir='cython/src',
               cpp=False, embed=False, fast_fail=False, include=(),
               additional_flags=(), name=None):
     """
     Compile the Python/Cython source files to C or C++ sources.
 
-    :param srcs: A list of Python/Cython source files.
+    :param sources: A list of Python/Cython source files.
     :param py_version: The Python version to produce the C/C++ files for.
       Must be ``2`` or ``3``.
     :param outputs: Allows you to override the output C/C++ source output
-      for every file in *srcs*.
+      for every file in *sources*.
     :param outdir: Used if *outputs* is not explicitly specified.
     :param cpp: True to translate to C++ source files.
     :param embed: Pass ``--embed`` to Cython. Note that if multiple
-      files are specfied in *srcs*, all of them will have a ``int main()``
+      files are specfied in *sources*, all of them will have a ``int main()``
       function.
     :param fast_fail: True to enable the ``--fast-fail`` flag.
     :param include: Additional include directories for Cython
@@ -74,7 +75,7 @@ class CythonCompiler(object):
     """
 
     assert not isinstance(include, str)
-    builder = TargetBuilder(gtn(name, "cython"), inputs=srcs)
+    builder = TargetBuilder(gtn(name, "cython"), inputs=sources)
 
     outdir = buildlocal(outdir)
     if py_version is None:
@@ -94,5 +95,116 @@ class CythonCompiler(object):
     return builder.build([command], None, outputs, foreach=True,
       metadata={'cython_outdir': outdir})
 
+  def project(self, main=None, sources=[], python_bin='python', defines=(),
+      name=None, toolkit=None, in_working_tree=False, gen_output=None, **kwargs):
+    """
+    Compile a set of Cython source files into dynamic libraries for the
+    Python version specified with "python_bin".
+
+    :param main: Optional filename of a ``.pyx`` file that will
+      be compiled with the ``--embed`` option and compiled to an
+      executable file.
+    :param sources: A list of the `.pyx` source files.
+    :param python_bin: The name of the Python executable to compile for.
+    :param defines: Additional defines for the compiler invokation.
+    :param name: Target name.
+    :param toolkit: The C/C++ compiler toolkit.
+    :param in_working_tree: True if the build output should be inside
+      the working directory, False otherwise.
+    :param gen_output: Callable that takes a source input file and
+      generates the output file. If this is specified, #in_working_tree
+      is ignored. The correct suffix is still added to the returned file,
+      thus this function should return a filename without suffix.
+    :return: A :class:`ProjectResult` object
+    """
+
+    cpp = kwargs.get('cpp', False)
+    name = gtn(name, 'cython_project')
+    pyconf = python.get_config(python_bin)
+    pyfw = python.get_framework(python_bin)
+    py_version = int(pyconf['VERSION'][0])
+    toolkit = toolkit or cxx.cxc
+
+    pyfw['libs'] = ['python3']
+
+    def getout(filename):
+      if gen_output:
+        return gen_output(filename)
+      if in_working_tree:
+        return path.rmvsuffix(filename)
+      else:
+        return path.join('cython', 'bin', path.rel(path.rmvsuffix(filename), session.module.project_directory))
+
+    if sources:
+      sources_target = self.compile(
+        sources = sources,
+        py_version = py_version,
+        name = name + '_source',
+        **kwargs
+      )
+    else:
+      sources_target = None
+
+    if main:
+      main_source = self.compile(
+        sources = [main],
+        py_version = py_version,
+        embed = True,
+        name = name + '_main_source',
+        **kwargs
+      )
+      main_bin = toolkit.link(
+        output = getout(main),
+        output_type = 'bin',
+        inputs = toolkit.compile(
+          language = 'c++' if cpp else 'c',
+          sources = main_source.outputs,
+          frameworks = [pyfw],
+          pic = False,
+          defines = defines,
+          name = name + '_main_compile'
+        ),
+        name = name + '_main_bin'
+      )
+    else:
+      main_source = None
+      main_bin = None
+
+    # Separately compile all source files and link them to C-extensions.
+    libs = []
+    if sources_target:
+      for pyxfile, cfile in zip(sources_target.inputs, sources_target.outputs):
+        libs.append(toolkit.link(
+          output = path.setsuffix(getout(pyxfile), pyconf['SO']),
+          output_type = 'dll',
+          suffix = None, # don't let link() replace the suffix
+          inputs = toolkit.compile(
+            language = 'c++' if cpp else 'c',
+            sources = [cfile],
+            frameworks = [pyfw],
+            pic = True,
+            defines = defines,
+            name = name + '_compile'
+          ),
+          name = name + '_lib'
+        ))
+
+        if main_bin:
+          main_bin.implicit_deps+= libs[-1].outputs
+
+    # TODO: Generate an alias target.
+    return self.Project(sources, main_bin, libs, None)
+
 
 cythonc = CythonCompiler()
+
+
+def cython_compile(*args, name=None, **kwargs):
+  return cythonc.compile(*args, name=gtn(name, None), **kwargs)
+
+
+def cython_project(*args, name=None, **kwargs):
+  return cythonc.project(*args, name=gtn(name, None), **kwargs)
+
+
+__all__ = ['cython_compile', 'cython_project']
