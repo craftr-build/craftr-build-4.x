@@ -32,19 +32,19 @@ cxc = load_module(module).cxc
 
 
 def c_compile(*args, name=None, **kwargs):
-  return cxc.compile(*args, name=gtn(name), language='c', **kwargs)
+  return cxc.compile(*args, name=gtn(name, None), language='c', **kwargs)
 
 def cpp_compile(*args, name=None, **kwargs):
-  return cxc.compile(*args, name=gtn(name), language='c++', **kwargs)
+  return cxc.compile(*args, name=gtn(name, None), language='c++', **kwargs)
 
 def cxx_library(*args, name=None, link_style='static', **kwargs):
   if link_style == 'static':
-    target = cxc.staticlib(*args, name=gtn(name), **kwargs)
+    target = cxc.staticlib(*args, name=gtn(name, None), **kwargs)
     target.metadata['link_target'] = target.metadata['staticlib_output']
   elif link_style == 'shared':
-    target = cxc.link(*args, name=gtn(name), output_type='dll', **kwargs)
+    target = cxc.link(*args, name=gtn(name, None), output_type='dll', **kwargs)
     target.metadata['link_target'] = target.metadata['dll_link_target']
   return target
 
 def cxx_binary(*args, name=None, **kwargs):
-  return cxx.link(*args, name=gtn(name), output_type='bin', **kwargs)
+  return cxc.link(*args, name=gtn(name, None), output_type='bin', **kwargs)
