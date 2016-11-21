@@ -18,7 +18,7 @@ from craftr import core
 from craftr.core.logging import logger
 from craftr.core.session import session, Session, Module
 from craftr.utils import path, shell
-from nr.types.version import Version
+from nr.types.version import Version, VersionCriteria
 
 import abc
 import argparse
@@ -63,6 +63,44 @@ def read_config_file(filename):
   return result
 
 
+def parse_module_spec(spec):
+  """
+  Parses a module spec as it can be specified on the command-line. The
+  format is ``module_name[:version]``.
+  """
+
+  parts = spec.split(':')
+  if len(parts) not in (1, 2):
+    raise ValueError('invalid module spec: {!r}'.format(spec))
+  if len(parts) == 1:
+    parts.append('*')
+  try:
+    version = Version(parts[1])
+  except ValueError as exc:
+    version = VersionCriteria(parts[1])
+  return parts[0], version
+
+
+def get_volatile_module_version(name):
+  """
+  Given a module name of which the exact version number may be appended
+  and separated by a hyphen, returns the raw module name and its version
+  as a tuple. If the module is not suffixed with a version number, the
+  returned version number is :const:`None` instead.
+  """
+
+  parts = name.rpartition('-')[::2]
+  if len(parts) != 2:
+    return name
+  try:
+    version = Version(parts[1])
+  except ValueError:
+    version = None
+  else:
+    name = parts[0]
+  return name, version
+
+
 class BaseCommand(object, metaclass=abc.ABCMeta):
   """
   Base class for Craftr subcommands.
@@ -80,8 +118,8 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
 class build(BaseCommand):
 
   def build_parser(self, parser):
-    parser.add_argument('module', nargs='?')
-    parser.add_argument('version', nargs='?', default='*')
+    parser.add_argument('targets', metavar='TARGET', nargs='*')
+    parser.add_argument('-m', '--module')
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-c', '--config', default='.craftrconfig')
     parser.add_argument('-d', '--option', dest='options', action='append', default=[])
@@ -97,8 +135,14 @@ class build(BaseCommand):
       else:
         parser.error('no Craftr package "manifest.json" found')
     else:
+      # TODO: For some reason, prints to stdout are not visible here.
+      # TODO: Prints to stderr however work fine.
       try:
-        module = session.find_module(args.module, args.version)
+        module_name, version = parse_module_spec(args.module)
+      except ValueError as exc:
+        parser.error('{} (note: you have to escape > and < characters)'.format(exc))
+      try:
+        module = session.find_module(module_name, version)
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
 
@@ -152,6 +196,27 @@ class build(BaseCommand):
     # Write the cache back.
     write_cache(cachefile)
 
+    # Check the targets and if they exist.
+    targets = []
+    for target in args.targets:
+      if '.' not in target:
+        target = module.manifest.name + '.' + target
+        version = module.manifest.version
+      elif target.startswith('.'):
+        target = module.manifest.name + target
+        version = module.manifest.version
+      else:
+        version = None
+
+      module_name, target = target.rpartition('.')[::2]
+      if not version:
+        module_name, version = get_volatile_module_version(module_name)
+      ref_module = session.find_module(module_name, version or '*')
+      target = craftr.targetbuilder.get_full_name(target, ref_module)
+      if target not in session.graph.targets:
+        parser.error('no such target: {}'.format(target))
+      targets.append(target)
+
     # Write the Ninja manifest.
     with open("build.ninja", 'w') as fp:
       platform = core.build.get_platform_helper()
@@ -160,7 +225,7 @@ class build(BaseCommand):
       session.graph.export(writer, context, platform)
 
     # Execute the ninja build.
-    shell.run(['ninja'])
+    shell.run(['ninja'] + targets)
 
 class startpackage(BaseCommand):
 

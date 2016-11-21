@@ -43,7 +43,7 @@ class ModuleNotFound(Exception):
 
   def __str__(self):
     if isinstance(self.version, Version):
-      return '{}-{}'.format(self.name, self.version)
+      return '{}[={}]'.format(self.name, self.version)
     else:
       return '{}[{}]'.format(self.name, self.version)
 
