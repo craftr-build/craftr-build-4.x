@@ -94,7 +94,12 @@ def gtn(target_name=None, name_hint=NotImplemented):
     except ValueError:
       if name_hint is NotImplemented:
         raise
+  elif '-' in target_name:
+    # TODO: We should find a better way to determine if the target is
+    # TODO: already an absolute target name.
+    return target_name
 
+  full_name = None
   if target_name is None:
     if name_hint is None:
       return None
@@ -107,7 +112,10 @@ def gtn(target_name=None, name_hint=NotImplemented):
         break
       index += 1
 
-  return get_full_name(target_name, module)
+  if full_name is None:
+    full_name = get_full_name(target_name, module)
+
+  return full_name
 
 
 class TargetBuilder(object):
