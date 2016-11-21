@@ -245,3 +245,15 @@ def open_buildfile(name, mode='w'):
   dirname = buildlocal('buildfiles')
   path.makedirs(dirname)
   return open(path.join(dirname, name), mode)
+
+
+def error(*message):
+  """
+  Raises a :class:`ModuleError`.
+  """
+
+  raise ModuleError(' '.join(map(str, message)))
+
+
+class ModuleError(Exception):
+  pass

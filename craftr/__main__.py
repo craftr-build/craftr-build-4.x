@@ -24,6 +24,7 @@ import abc
 import argparse
 import atexit
 import configparser
+import craftr
 import json
 import os
 import sys
@@ -143,6 +144,9 @@ class build(BaseCommand):
     except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
       for error in exc.format_errors():
         logger.error(error)
+      return 1
+    except craftr.defaults.ModuleError as exc:
+      logger.error(exc)
       return 1
 
     # Write the cache back.
