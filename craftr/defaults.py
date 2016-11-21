@@ -146,7 +146,7 @@ def zip(*iterables, fill=NotImplemented):
     return list(_itertools.zip_longest(*iterables, fillvalue=fill))
 
 
-def load_module(name, into=None, get_namespace=True):
+def load_module(name, into=None, get_namespace=True, _stackframe=1):
   """
   Load a Craftr module by name and return it. If *into* is specified, it must
   be a dictionary that will be filled with all the members of the module. Note
@@ -156,7 +156,10 @@ def load_module(name, into=None, get_namespace=True):
 
   The version criteria is read from the current module's manifest.
 
-  :param name: The name of the module to load.
+  :param name: The name of the module to load. If this name is suffixed
+    with the two characters ``.*`` and the *into* parameter is :const:`None`,
+    the contents of the module will be exported into the globals of the
+    calling frame.
   :param into: If specified, must be a dictionary.
   :param get_namespace:
   :return: The module namespace object (of type :class:`types.ModuleType`)
@@ -165,7 +168,19 @@ def load_module(name, into=None, get_namespace=True):
   :raise ModuleNotFound: If the module could not be found.
   :raise RuntimeError: If the module that is attempted to be loaded is not
     declared in the current module's manifest.
+
+  Examples:
+
+  .. code:: python
+
+    cxx = load_module('lang.cxx')
+    load_module('lang.cxx.*')
+    assert cxx.c_compile is c_compile
   """
+
+  if name.endswith('.*') and into is None:
+    name = name[:-2]
+    into = _sys._getframe(_stackframe).f_globals
 
   if not session:
     raise RuntimeError('no session context')

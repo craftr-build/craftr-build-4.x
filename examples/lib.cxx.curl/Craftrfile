@@ -1,6 +1,6 @@
 # lib.cxx.curl
 
-load_module('lang.cxx', globals())
+load_module('lang.cxx.*')
 if loader.name != 'source':
   raise EnvironmentError('currently only supports a source loader')
 
