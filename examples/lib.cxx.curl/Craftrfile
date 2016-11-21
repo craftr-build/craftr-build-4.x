@@ -19,7 +19,7 @@ else:
 if options.static:
   cURL['defines'].append('CURL_STATICLIB')
 
-obj = cpp_compile(
+obj = c_compile(
   sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = loader.directory),
   include = [path.join(loader.directory, 'lib')],
   defines = ['BUILDING_LIBCURL'],
