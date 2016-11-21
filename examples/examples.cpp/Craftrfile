@@ -1,9 +1,12 @@
-# cpp
+# examples.cpp
 
 load_module('lang.cxx.*')
+load_module('lib.cxx.curlpp.*')
+load_module('lib.cxx.tinyxml2.*')
 
 obj = cpp_compile(
-  sources = [local('main.cpp')]
+  sources = [local('main.cpp')],
+  frameworks = [tinyxml2, cURLpp]
 )
 
 main = cxx_binary(
