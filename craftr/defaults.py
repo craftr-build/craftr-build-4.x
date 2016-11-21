@@ -182,8 +182,9 @@ def load_module(name, into=None, get_namespace=True):
     loaded_module.run()
 
   if into is not None:
+    module_builtins = frozenset('loader project_dir options'.split())
     for key, value in vars(loaded_module.namespace).items():
-      if not key.startswith('_'):
+      if not key.startswith('_') and not key in module_builtins:
         into[key] = value
 
   if get_namespace:
