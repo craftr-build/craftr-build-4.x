@@ -87,7 +87,7 @@ def buildlocal(rel_path):
   """
 
   if path.isabs(rel_path):
-    raise ValueError('rel_path must be a relative path')
+    return rel_path
   return path.canonical(path.join(session.module.ident, rel_path))
 
 

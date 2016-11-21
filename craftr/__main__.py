@@ -24,7 +24,8 @@ import abc
 import argparse
 import atexit
 import configparser
-import craftr
+import craftr.defaults
+import craftr.targetbuilder
 import json
 import os
 import sys
