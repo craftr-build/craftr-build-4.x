@@ -310,7 +310,7 @@ class MsvcToolkit(object):
       suffix = platform.obj
 
     builder = TargetBuilder(gtn(name, 'msvc_compile'), kwargs, frameworks, sources)
-    objects = relocate_files(builder.inputs, 'obj', suffix)
+    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix)
 
     if language not in ('asm', 'c', 'c++'):
       raise ValueError('unsupported language: {!r}'.format(language))
