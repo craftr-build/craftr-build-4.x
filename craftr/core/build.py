@@ -139,9 +139,14 @@ class Graph(object):
         tool.export(writer, context, platform)
       writer.newline()
 
+    defaults = []
     for target in self.targets.values():
+      if not target.explicit:
+        defaults.append(target.name)
       target.export(writer, context, platform)
 
+    if defaults:
+      writer.default(defaults)
 
 class Target(object):
   """
@@ -152,8 +157,9 @@ class Target(object):
 
   def __init__(self, name, commands, inputs, outputs, implicit_deps=(),
                order_only_deps=(), pool=None, deps=None, depfile=None,
-               msvc_deps_prefix=None, foreach=False, description=None,
-               metadata=None, cwd=None, environ=None, frameworks=()):
+               msvc_deps_prefix=None, explicit=False, foreach=False,
+               description=None, metadata=None, cwd=None, environ=None,
+               frameworks=()):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
@@ -166,6 +172,7 @@ class Target(object):
     argspec.validate('deps', deps, {'type': [None, str], 'enum': ['msvc', 'gcc']})
     argspec.validate('depfile', depfile, {'type': [None, str]})
     argspec.validate('msvc_deps_prefix', msvc_deps_prefix, {'type': [None, str]})
+    argspec.validate('explicit', explicit, {'type': bool})
     argspec.validate('foreach', foreach, {'type': bool})
     argspec.validate('description', description, {'type': [None, str]})
     argspec.validate('metadata', metadata, {'type': [None, dict]})
@@ -203,6 +210,7 @@ class Target(object):
     self.deps = deps
     self.depfile = depfile
     self.msvc_deps_prefix = msvc_deps_prefix
+    self.explicit = explicit
     self.foreach = foreach
     self.description = description
     self.metadata = metadata or {}
@@ -272,7 +280,7 @@ class Target(object):
         implicit=self.implicit_deps,
         order_only=self.order_only_deps)
 
-    if self.outputs and self.name not in self.outputs:
+    if self.outputs and self.name not in self.outputs and not self.explicit:
       writer.build(self.name, 'phony', self.outputs)
 
 
