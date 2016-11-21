@@ -1,16 +1,14 @@
 # cpp
 
-cxc = load_module('lang.cxx').cxc
+load_module('lang.cxx.*')
 
-obj = cxc.compile(
-  language = 'c++',
+obj = cpp_compile(
   sources = [local('main.cpp')]
 )
 
-main = cxc.link(
-  output_type = 'bin',
+main = cxx_binary(
   inputs = obj,
   output = 'main'
 )
 
-run = gentarget([[main]])
+run = gentarget([[main]], explicit=True)
