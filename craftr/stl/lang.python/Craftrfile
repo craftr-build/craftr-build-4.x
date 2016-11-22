@@ -23,6 +23,8 @@ function to extract all the information from a Python installation using its
 :mod:`distutils` module.
 """
 
+from craftr import platform
+
 import json
 import functools
 import os
@@ -74,7 +76,7 @@ def get_framework(python_bin=None):
 
   # LIBDIR seems to be absent from Windows installations, so we
   # figure it from the prefix.
-  if sys.platform.startswith('win32') and 'LIBDIR' not in config:
+  if platform.name == 'win' and 'LIBDIR' not in config:
     config['LIBDIR'] = path.join(config['prefix'], 'libs')
 
   fw = Framework(
@@ -90,5 +92,8 @@ def get_framework(python_bin=None):
     lib = re.search('python\d\.\d(?:d|m|u){0,3}', config['LIBRARY'])
     if lib:
       fw['libs'] = [lib.group(0)]
+  elif platform.name == 'win':
+    # This will make pyconfig.h nominate the correct .lib file.
+    fw['defines'] = ['MS_COREDLL']
 
   return fw
