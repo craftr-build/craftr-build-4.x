@@ -1,0 +1,18 @@
+# lib.cxx.boost
+
+load_module('lang.cxx.*')
+
+if not options.path or not options.arch:
+  error('missing required options "path" and "arch"')
+
+boost = Framework('boost',
+  include = [options.path],
+  libpath = [path.join(options.path, options.arch)],
+  defines = []
+)
+
+if platform.name == 'win':
+  if options.win32_target == 'XP':
+    boost['defines'] = '_WIN32_WINNT=0x0501'
+  else:
+    error('unsupported win32_target: {!r}'.format(options.win32_target))
