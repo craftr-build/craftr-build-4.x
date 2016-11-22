@@ -178,6 +178,7 @@ class build(BaseCommand):
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
     path.makedirs(session.builddir)
+    logger.info('======== cd:', path.rel(session.builddir, nopar=True))
     os.chdir(session.builddir)
 
     # Read the cache.
@@ -192,16 +193,10 @@ class build(BaseCommand):
 
     # Prepare options, loaders and execute.
     try:
-      logger.info('==> initializing options')
-      with logger.indent():
-        module.init_options(True)
-
-      logger.info('==> initializing loaders')
-      with logger.indent():
-        module.init_loader(True)
-
+      module.init_options(True)
       write_cache(cachefile)
-      logger.info('==> executing build script')
+      logger.info('=== execute:', module.ident)
+      logger.info()
       with logger.indent():
         module.run()
     except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
@@ -237,6 +232,8 @@ class build(BaseCommand):
       targets.append(target)
 
     # Write the Ninja manifest.
+    logger.info()
+    logger.info('==== export: build.ninja')
     with open("build.ninja", 'w') as fp:
       platform = core.build.get_platform_helper()
       context = core.build.ExportContext(ninja_version)
@@ -244,7 +241,9 @@ class build(BaseCommand):
       session.graph.export(writer, context, platform)
 
     # Execute the ninja build.
-    shell.run([ninja_bin] + targets)
+    cmd = [ninja_bin] + targets
+    logger.info('======= run:', shell.join(cmd))
+    shell.run(cmd)
 
 class startpackage(BaseCommand):
 
