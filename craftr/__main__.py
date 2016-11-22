@@ -53,9 +53,9 @@ def read_config_file(filename):
   """
 
   filename = path.norm(filename)
-  if not path.isfile(filename):
-    return {}
   logger.debug('reading configuration file:', filename)
+  with open(filename, 'rb') as fp:
+    pass  # Only for exception
   parser = configparser.SafeConfigParser()
   parser.read([filename])
   result = {}
@@ -130,7 +130,8 @@ class build(BaseCommand):
     parser.add_argument('targets', metavar='TARGET', nargs='*')
     parser.add_argument('-m', '--module')
     parser.add_argument('-b', '--build-dir', default='build')
-    parser.add_argument('-c', '--config', default='.craftrconfig')
+    parser.add_argument('-c', '--config', action='append', default=[])
+    parser.add_argument('-C', '--no-config', action='store_true')
     parser.add_argument('-d', '--option', dest='options', action='append', default=[])
     parser.add_argument('-i', '--include-path', action='append', default=[])
 
@@ -158,7 +159,12 @@ class build(BaseCommand):
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
 
-    session.options.update(read_config_file(args.config))
+    if not args.no_config:
+      for filename in args.config:
+        session.options.update(read_config_file(filename))
+      if not args.config and path.exists('.craftrconfig'):
+        session.options.update(read_config_file('.craftrconfig'))
+
     for item in args.options:
       key, sep, value = item.partition('=')
       if not sep:
@@ -241,7 +247,10 @@ class build(BaseCommand):
       session.graph.export(writer, context, platform)
 
     # Execute the ninja build.
-    cmd = [ninja_bin] + targets
+    cmd = [ninja_bin]
+    if args.verbose:
+      cmd += ['-v']
+    cmd += targets
     logger.info('======= run:', shell.join(cmd))
     shell.run(cmd)
 
@@ -312,7 +321,10 @@ def main():
   session = Session()
 
   # Parse the user configuration file.
-  session.options = read_config_file(path.expanduser('~/.craftrconfig'))
+  try:
+    session.options = read_config_file(path.expanduser('~/.craftrconfig'))
+  except FileNotFoundError as exc:
+    session.options = {}
 
   # Execute the command in the session context.
   with session:
