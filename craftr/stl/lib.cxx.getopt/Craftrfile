@@ -1,0 +1,14 @@
+# lib.cxx.getopt
+
+getopt = Framework('getopt',
+  include = [project_dir]
+)
+
+load_module('lang.cxx.*')
+lib = cxx_library(
+  inputs = c_compile(sources = [local('getopt.c')]),
+  output = 'getopt'
+)
+
+getopt['external_libs'] = [lib.metadata['link_target']]
+getopt['implicit_deps'] = [lib]
