@@ -49,4 +49,19 @@ def cxx_library(*args, name=None, link_style='static', **kwargs):
 def cxx_binary(*args, name=None, **kwargs):
   return cxc.link(*args, name=gtn(name, None), output_type='bin', **kwargs)
 
-__all__ = ['c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary']
+def cxx_extend_framework(framework, *targets):
+  """
+  When compiling C/C++ libraries from source, this function can be used to
+  make it easier to embed the output library and implicit dependencies into
+  the *framework*.
+  """
+
+  framework.setdefault('external_libs', [])
+  framework.setdefault('implicit_deps', [])
+  for target in targets:
+    link_target = target.metadata.get('link_target')
+    if link_target:
+      framework['external_libs'].append(link_target)
+    framework['implicit_deps'].append(target)
+
+__all__ = ['c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary', 'cxx_extend_framework']
