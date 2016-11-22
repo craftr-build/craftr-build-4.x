@@ -6,7 +6,7 @@ load_module('lib.cxx.tinyxml2.*')
 
 obj = cpp_compile(
   sources = [local('main.cpp')],
-  frameworks = [tinyxml2, cURLpp]
+  frameworks = [cURLpp, tinyxml2]
 )
 
 main = cxx_binary(
