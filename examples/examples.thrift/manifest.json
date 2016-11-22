@@ -1,0 +1,12 @@
+{
+  "name": "examples.thrift",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*",
+    "lang.thrift": "*"
+  },
+  "options": {},
+  "loaders": []
+}
