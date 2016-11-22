@@ -1,0 +1,89 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_module('lang.cxx.*')
+load_module('utils.cmake.*')
+
+# Create the jconfig.h file.
+jconfig = cmake_configure_file(
+  input = path.join(loader.directory, 'jconfig.h.cmake'),
+  environ = dict(
+    HAVE_STDDEF_H = options.have_stddef_h,
+    HAVE_STDLIB_H = options.have_stdlib_h,
+    TWO_FILE_COMMANDLINE = options.two_file_commandline
+  )
+)
+
+# Framework that contains all the information to use the library.
+libjpeg = Framework('libjpeg',
+  include = [loader.directory, jconfig.directory]
+)
+
+# Additional defines that are only required for building the library.
+building_defines = []
+
+# Check which memory manager to use.
+if not options.jmem:
+  if platform.name in ('win', 'linux'):
+    options.jmem = 'ansi'
+  elif platform.name == 'mac':
+    options.jmem = 'mac'
+  else:
+    error('can not determine jmem for platform {!r}, use jmem option'
+        .format(platform.name))
+if options.jmem == 'dos':
+  building_defines += ['USE_MSDOS_MEMMGR']
+elif options.jmem == 'mac':
+  building_defines += ['USE_MAC_MEMMGR']
+elif options.jmem not in ('ansi', 'name', 'nobs'):
+  error('unsupported jmem: {!r}'.format(options.jmem))
+
+# Gather source files.
+bin_sources = [
+  'ansi2knr.c', 'cjpeg.c', 'ckconfig.c', 'djpeg.c', 'example.c',
+  'jpegtran.c', 'rdjpgcom.c', 'wrjpgcom.c'
+]
+mem_sources = ['jmemansi.c', 'jmemdos.c', 'jmemmac.c', 'jmemname.c', 'jmemnobs.c']
+lib_sources = glob(
+  ['*.c', 'jmem' + options.jmem + '.c'],
+  exclude = mem_sources + bin_sources,
+  parent = loader.directory
+)
+
+# Compile the jpeg library.
+lib = cxx_library(
+  output = 'jpeg',
+  inputs = c_compile(
+    sources = lib_sources,
+    defines = building_defines,
+    frameworks = [libjpeg]
+  )
+)
+
+cxx_extend_framework(libjpeg, lib)
+
+if options.build_binaries:
+  for fn in bin_sources:
+    name = path.rmvsuffix(fn)
+    target = cxx_binary(
+      name = name + '_bin',
+      output = path.rmvsuffix(fn),
+      inputs = c_compile(
+        sources = [path.join(loader.directory, fn)],
+        frameworks = [libjpeg]
+      )
+    )
+    gentarget([[target]], name=name, explicit=True)
