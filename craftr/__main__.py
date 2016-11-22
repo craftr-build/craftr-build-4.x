@@ -26,6 +26,7 @@ import atexit
 import configparser
 import craftr.defaults
 import craftr.targetbuilder
+import functools
 import json
 import os
 import sys
@@ -102,6 +103,13 @@ def get_volatile_module_version(name):
   return name, version
 
 
+@functools.lru_cache()
+def get_ninja_version(ninja_bin):
+  ''' Read the ninja version from the `ninja` program and return it. '''
+
+  return shell.pipe([ninja_bin, '--version'], shell=True).output.strip()
+
+
 class BaseCommand(object, metaclass=abc.ABCMeta):
   """
   Base class for Craftr subcommands.
@@ -159,6 +167,13 @@ class build(BaseCommand):
         session.options.pop(key, None)
       else:
         session.options[key] = value
+
+    # Make sure the Ninja executable exists and find its version.
+    ninja_bin = session.options.get('global.ninja') or \
+        session.options.get('ninja') or os.getenv('NINJA', 'ninja')
+    ninja_version = get_ninja_version(ninja_bin)
+    logger.debug('Ninja executable:', ninja_bin)
+    logger.debug('Ninja version:', ninja_version)
 
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
@@ -224,12 +239,12 @@ class build(BaseCommand):
     # Write the Ninja manifest.
     with open("build.ninja", 'w') as fp:
       platform = core.build.get_platform_helper()
-      context = core.build.ExportContext('1.7.1')  # TODO: Get ninja version
+      context = core.build.ExportContext(ninja_version)
       writer = core.build.NinjaWriter(fp)
       session.graph.export(writer, context, platform)
 
     # Execute the ninja build.
-    shell.run(['ninja'] + targets)
+    shell.run([ninja_bin] + targets)
 
 class startpackage(BaseCommand):
 

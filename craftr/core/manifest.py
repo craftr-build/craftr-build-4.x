@@ -366,7 +366,10 @@ class BoolOption(BaseOption):
         return False
       elif value == '':
         return self.default
-    raise ValueError("invalid value for bool option: {!r}".format(value))
+      else:
+        raise ValueError("invalid value for bool option: {!r}".format(value))
+    else:
+      return bool(value)
 
 
 class TripletOption(BoolOption):
