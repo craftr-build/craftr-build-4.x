@@ -229,6 +229,22 @@ class Target(object):
   def __str__(self):
     return '<{}.Target "{}">'.format(__name__, self.name)
 
+  def __lshift__(self, other):
+    """
+    Adds *other* as an implicit dependency to the target.
+
+    :param other: A :class:`Target` or :class:`str`.
+    :return: ``self``
+    """
+
+    if isinstance(other, Target):
+      self.implicit_deps += other.outputs
+    elif isinstance(other, str):
+      self.implicit_deps.append(path.norm(other))
+    else:
+      raise TypeError("Target.__lshift__() expected Target or str")
+    return self
+
   def export(self, writer, context, platform):
     """
     Export the target to a Ninja manifest.
