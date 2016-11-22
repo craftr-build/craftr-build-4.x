@@ -78,6 +78,14 @@ def glob(patterns, parent=None, excludes=(), include_dotfiles=False):
   that is/contains glob patterns or filenames to be removed from the
   result before returning.
 
+  .. note::
+
+    Every file listed in *excludes* will only remove **one** item from
+    the result list that was generated from *patterns*. Thus, if you
+    want to exclude some files with a pattern except for a specific file
+    that would also match that pattern, simply list that file another
+    time in the *patterns*.
+
   :param patterns: A list of glob patterns or filenames.
   :param parent: The parent directory for relative paths.
   :param excludes: A list of glob patterns or filenames.
@@ -104,7 +112,7 @@ def glob(patterns, parent=None, excludes=(), include_dotfiles=False):
       pattern = join(parent, pattern)
     pattern = norm(pattern)
     if not isglob(pattern):
-      result.remove(patten)
+      result.remove(pattern)
     else:
       for item in glob2.glob(pattern):
         result.remove(item)
