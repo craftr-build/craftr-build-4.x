@@ -113,3 +113,12 @@ class JavaCompiler(object):
 
 
 javac = JavaCompiler()
+
+
+def java_compile(*args, name=None, **kwargs):
+  return javac.compile(*args, name=gtn(name, None), **kwargs)
+
+def java_jar(*args, name=None, **kwargs):
+  return javac.make_jar(*args, name=gtn(name, None), **kwargs)
+
+__all__ = ['java_compile', 'java_jar']

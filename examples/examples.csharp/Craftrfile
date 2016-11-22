@@ -1,8 +1,8 @@
 # examples.csharp
 
-csc = load_module('lang.csharp').csc
+load_module('lang.csharp.*')
 
-main = csc.compile(
+main = csharp_compile(
   srcs = [local('Main.cs')],
   output = 'Main'
 )

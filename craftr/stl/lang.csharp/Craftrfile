@@ -87,3 +87,9 @@ class CsCompiler(object):
 
 
 csc = CsCompiler()
+
+
+def csharp_compile(*args, name=None, **kwargs):
+  return csc.compile(*args, name=gtn(name, None), **kwargs)
+
+__all__ = ['csharp_compile']
