@@ -121,6 +121,8 @@ class DefaultLogger(BaseLogger):
       self.info(description)
 
   def progress_update(self, progress, info_text='', *, _force=False):
+    if not self._progress:
+      return
     info_text = str(info_text)
     self._progress['progress'] = progress
     self._progress['info_text'] = info_text

@@ -59,6 +59,7 @@ from nr.types.recordclass import recordclass
 from nr.types.version import Version, VersionCriteria
 
 import abc
+import fnmatch
 import io
 import json
 import jsonschema
@@ -511,10 +512,11 @@ class UrlLoader(BaseLoader):
     where the sources are located.
   """
 
-  def __init__(self, name, urls):
+  def __init__(self, name, urls, unpack_exclude=()):
     super().__init__(name)
     self.urls = urls
     self.directory = None
+    self.unpack_exclude = unpack_exclude
 
   def load(self, context, cache):
     if cache is not None and path.isdir(cache.get('directory', '')):
@@ -574,7 +576,8 @@ class UrlLoader(BaseLoader):
       logger.info('Unpacking "{}" to "{}" ...'.format(
           path.rel(archive, nopar=True), path.rel(directory, nopar=True)))
       nr.misc.archive.extract(archive, directory, suffix=suffix,
-          unpack_single_dir=True)
+          unpack_single_dir=True, check_extract_file=self._check_extract_file,
+          progress_callback=self._extract_progress)
     elif not directory:
       raise LoaderError(self, 'no URL matched')
 
@@ -610,6 +613,28 @@ class UrlLoader(BaseLoader):
     filename = path.basename(archive)[:-len(suffix)]
     directory = path.join(context.installdir, filename)
     return suffix, directory
+
+  def _check_extract_file(self, arcname):
+    if not self.unpack_exclude:
+      return True
+    for pattern in self.unpack_exclude:
+      if fnmatch.fnmatch(arcname, pattern):
+        return False
+    return True
+
+  def _extract_progress(self, index, count, filename):
+    if index == -1:
+      logger.progress_begin(None, True)
+      logger.progress_update(0.0, 'Reading index...')
+      return
+    progress = index / float(count)
+    if index == 0:
+      logger.progress_end()
+      logger.progress_begin(None, False)
+    elif index == (count - 1):
+      logger.progress_end()
+    else:
+      logger.progress_update(progress, '{} / {}'.format(index, count))
 
   class DownloadAlreadyExists(Exception):
     def __init__(self, directory):
