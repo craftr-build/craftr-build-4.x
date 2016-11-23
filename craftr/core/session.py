@@ -34,7 +34,7 @@ import tempfile
 import types
 import werkzeug
 
-MANIFEST_FILENAME = 'craftrpackage.json'
+MANIFEST_FILENAME = 'manifest.json'
 
 
 class ModuleNotFound(Exception):
@@ -267,6 +267,8 @@ class Session(object):
       choices.append(path.join(directory, MANIFEST_FILENAME))
       for item in path.easy_listdir(directory):
         choices.append(path.join(directory, item, MANIFEST_FILENAME))
+        choices.append(path.join(directory, item, 'craftr', MANIFEST_FILENAME))
+
       for filename in map(path.norm, choices):
         if filename in self._manifest_cache:
           continue  # don't parse a manifest that we already parsed

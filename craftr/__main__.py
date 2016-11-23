@@ -33,7 +33,7 @@ import os
 import sys
 import textwrap
 
-CONFIG_FILENAME = 'craftr.config'
+CONFIG_FILENAME = '.craftrconfig'
 
 
 def write_cache(cachefile):
@@ -122,8 +122,10 @@ class build(BaseCommand):
     # Determine the module to execute, either from the current working
     # directory or find it by name if one is specified.
     if not args.module:
-      if path.isfile(MANIFEST_FILENAME):
-        module = session.parse_manifest(MANIFEST_FILENAME)
+      for fn in [MANIFEST_FILENAME, path.join('craftr', MANIFEST_FILENAME)]:
+        if path.isfile(fn):
+          module = session.parse_manifest(fn)
+          break
       else:
         parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
     else:
@@ -217,6 +219,7 @@ class startpackage(BaseCommand):
   def build_parser(self, parser):
     parser.add_argument('name')
     parser.add_argument('directory', nargs='?', default=None)
+    parser.add_argument('-s', '--subdir', action='store_true')
     parser.add_argument('--version', type=Version, default='1.0.0')
 
   def execute(self, parser, args):
@@ -228,6 +231,10 @@ class startpackage(BaseCommand):
     elif not path.isdir(directory):
       logger.error('"{}" is not a directory'.format(directory))
       return 1
+
+    if args.subdir:
+      directory = path.join(directory, 'craftr')
+      path.makedirs(directory)
 
     mfile = path.join(directory, MANIFEST_FILENAME)
     sfile = path.join(directory, 'Craftrfile')

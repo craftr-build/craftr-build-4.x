@@ -14,7 +14,7 @@ Below you can find an example to compile a simple C++ program to get a taste
 of what Craftr build definitions look like. Note that every module requires a
 `craftrpackage.json` together with a `Craftrfile` to make a *package*.
 
-__craftrpackage.json__
+__manifest.json__
 
 ```json
 {
@@ -60,9 +60,9 @@ Note that you can start a new project easily with the `craftr startproject`
 command.
 
 Options can either be specified on the command-line or in configuration files.
-By default, `~/craftr.config` and `./craftr.config` files are loaded if they
+By default, `~/.craftrconfig` and `./.craftrconfig` files are loaded if they
 exist. The `-c <filename>` option can be used to pass one or more configuration
-filenames that will be loaded instead of `./craftr.config` (note that the file
+filenames that will be loaded instead of `./.craftrconfig` (note that the file
 in the user home directory is still loaded).
 
 ```ini

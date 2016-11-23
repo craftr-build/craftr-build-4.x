@@ -34,7 +34,8 @@ if options.static:
 obj = cpp_compile(
   sources = glob(['src/**/*.cpp'], parent=loader.directory),
   frameworks = [cURLpp],
-  defines = ['BUILDING_CURLPP']
+  defines = ['BUILDING_CURLPP'],
+  rtti = options.rtti
 )
 
 lib = cxx_library(
