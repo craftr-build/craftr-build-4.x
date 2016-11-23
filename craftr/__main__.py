@@ -303,10 +303,19 @@ def main():
 
   # Parse the local configuration file or the ones specified on command-line.
   if not args.no_config:
-    for filename in args.config:
-      session.options.update(read_config_file(filename))
-    if not args.config and path.exists(CONFIG_FILENAME):
-      session.options.update(read_config_file(CONFIG_FILENAME))
+    try:
+      for filename in args.config:
+        session.options.update(read_config_file(filename))
+      if not args.config:
+        choices = [CONFIG_FILENAME, path.join('craftr', CONFIG_FILENAME)]
+        for fn in choices:
+          try:
+            session.options.update(read_config_file(fn))
+          except FileNotFoundError as exc:
+            pass
+    except InvalidConfigError as exc:
+      parser.error(exc)
+      return 1
 
   # Export the command-line options in the session options.
   for item in args.options:
