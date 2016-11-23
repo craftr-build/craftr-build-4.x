@@ -102,6 +102,8 @@ def find_program(name):
     it is not executable.
   """
 
+  if path.dirname(name):
+    name = path.abs(name)
   if path.isabs(name):
     if not path.isfile(name):
       raise FileNotFoundError(name)

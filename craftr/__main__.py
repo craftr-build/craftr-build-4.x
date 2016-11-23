@@ -159,6 +159,7 @@ class build(BaseCommand):
     # Make sure the Ninja executable exists and find its version.
     ninja_bin = session.options.get('global.ninja') or \
         session.options.get('craftr.ninja') or os.getenv('NINJA', 'ninja')
+    ninja_bin = shell.find_program(ninja_bin)
     ninja_version = get_ninja_version(ninja_bin)
     logger.debug('Ninja executable:', ninja_bin)
     logger.debug('Ninja version:', ninja_version)
@@ -166,7 +167,6 @@ class build(BaseCommand):
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
     path.makedirs(session.builddir)
-    logger.info('======== cd:', path.rel(session.builddir, nopar=True))
     os.chdir(session.builddir)
 
     # Read the cache.
@@ -183,10 +183,7 @@ class build(BaseCommand):
     try:
       module.init_options(True)
       write_cache(cachefile)
-      logger.info('=== execute:', module.ident)
-      logger.info()
-      with logger.indent():
-        module.run()
+      module.run()
     except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
       for error in exc.format_errors():
         logger.error(error)
@@ -220,8 +217,6 @@ class build(BaseCommand):
       targets.append(target)
 
     # Write the Ninja manifest.
-    logger.info()
-    logger.info('==== export: build.ninja')
     with open("build.ninja", 'w') as fp:
       platform = core.build.get_platform_helper()
       context = core.build.ExportContext(ninja_version)
@@ -233,7 +228,6 @@ class build(BaseCommand):
     if args.verbose:
       cmd += ['-v']
     cmd += targets
-    logger.info('======= run:', shell.join(cmd))
     shell.run(cmd)
 
 class startpackage(BaseCommand):
