@@ -1,99 +1,56 @@
 # craftr
 
-Craftr is a meta build system that produces [Ninja] build manifests. It
-uses [Python 3] for build scripts, which allows for an ease to use description
-language but also gives you all the power if you need it.
+Craftr is a meta build system based on [Python 3] scripts which produces
+[Ninja] build manifests. It enforces the use of modular and build definitions
+that can be re-used easily. Craftr provides a standard library to support
+various programming languages and common libraries out of the box:
 
-  [Ninja]: https://github.com/ninja-build/ninja
-  [Python 3]: https://www.python.org/
+- C/C++
+- Cython
+- C#
+- Java
 
-## How It Works
+Below you can find an example to compile a simple C++ program to get a taste
+of what Craftr build definitions look like. Note that every module requires a
+`manifest.json` together with a `Craftrfile` to make a *package*.
 
-Craftr is built from versioned modules. As such, every Craftr module must
-provide a `manifest.json` that contains all metadata such as the module
-name, version, dependencies, options, etc. We cann the manifest, build script
-and optionally other files together a *package*.
-
-To start a new package, use the `craftr startpackage` command.
+__manifest.json__
 
 ```json
-$ craftr startpackage cxx.mylib
-$ cat cxx.mylib/manifest.json
 {
-  "name": "cxx.mylib",
+  "name": "myapp",
   "version": "1.0.0",
-  "author": "",
-  "url": "",
-  "dependencies": {},
-  "options": {},
-  "loaders": []
-}
-```
-
-The actual build script is located at `cxx.mylib/Craftrfile`. This
-file is executed in the Craftr runtime and has some additional and alternative
-built-in functions. For more information, see the `craftr.defaults` module.
-
-```python
-# cxx.mylib
-utils = require('./utils.py')
-logger.info(utils.say_hello())
-
-include_defs('./DEFINITIONS')
-logger.info('from ./DEFINITIONS:', VAR_FROM_DEFINITIONS_FILE)
-
-# note that we HAVE to add this to the 'dependencies' section in the
-# manifest in order load it in the build script.
-another_lib = load_module('cxx.anotherlib')
-
-# TODO: Show some sample C++ compilation targets.
-```
-
-### Dependencies
-
-Dependencies are added to the `manifest.json` by specifying the dependency
-name and map it to a version criteria. When using the `load_module()` function,
-Craftr will automatically load the newest Craftr module that is available
-matching the criteria.
-
-```json
-{
   "dependencies": {
-    "cxx.anotherlib": "*",  // any version
-    "cxx.curl": "> 1.2.8"
+    "lang.cxx": "*",
+    "lib.cxx.curlpp": "*"
   }
 }
 ```
 
-> __IMPORTANT__: The version you specify is the version of the Craftr module
-> that is specified in its manifest, NOT NECESSARILY the version of the
-> library.
+__Craftrfile__
 
-### Loaders
+```python
+load_module('lang.cxx.*')
+load_module('lang.cxx.curlpp.*')
 
-Craftr has a feature called "loaders" that we use to load external data into
-a Craftr module before or during the build process. This is useful for
-libraries that don not natively build with Craftr. Instead of the Craftr
-package to contain the source files, they will be downloaded and extracted to
-a temporary directory by a *loader*.
-
-Currently there is only the `"url"` loader support, but in the future there
-will also be a `"pkg_config"` loader.
-
-```json
-{
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "file://$source_dir",
-        "https://curl.haxx.se/download/curl-$load_version.tar.gz"
-      ]
-    }
-  ]
-}
+program = cxx_binary(
+  inputs = cpp_compile(
+    sources = glob(['src/*.cpp']),
+    frameworks = [cURLpp]
+  ),
+  output = 'main'
+)
 ```
+
+This project can now be built using the `craftr build` command. Depending on
+the availability, the `cURLpp` library will be compiled from source or the
+flags will be retrieved with `pkg-config` (TODO).
+
+Note that you can start a new project easily with the `craftr startproject`
+command.
+
+  [Ninja]: https://github.com/ninja-build/ninja
+  [Python 3]: https://www.python.org/
 
 ## Requirements
 
@@ -102,17 +59,9 @@ will also be a `"pkg_config"` loader.
 - [jsonschema](https://pypi.python.org/pypi/jsonschema)
 - [ninja_syntax](https://pypi.python.org/pypi/ninja_syntax)
 - [nr](https://pypi.python.org/pypi/nr)
-- [py-require](https://pypi.python.org/pypi/py-require)\*
+- [py-require](https://pypi.python.org/pypi/py-require)
 - [termcolor](https://pypi.python.org/pypi/termcolor) (optional)
 - [werkzeug](https://pypi.python.org/pypi/werkzeug)
-
-> \* While the `require` module is not directly used by Craftr, it is a
-> common mechanism to load an additional file into a Craftr build script.
->
-> ```python
-> import require
-> utils = require('./utils')
-> ```
 
 ## License
 
