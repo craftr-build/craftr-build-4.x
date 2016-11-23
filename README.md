@@ -1,4 +1,9 @@
-# craftr
+# Craftr 2.x
+
+> Note: This is the development version of the new version of Craftr. It is
+> different from the initial Craftr version in many ways and can not be used
+> interchangibly. The latest version of Craftr 1 can be found under tag
+> [v1.1.4-unreleased](https://github.com/craftr-build/craftr/tree/v1.1.4-unreleased).
 
 Craftr is a meta build system based on [Python 3] scripts which produces
 [Ninja] build manifests. It enforces the use of modular and build definitions
