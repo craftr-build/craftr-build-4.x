@@ -1,4 +1,0 @@
-versionPatterns:
-  "docs/conf.py": "version = '$VERSION'"
-  "setup.py": "version = '$VERSION'"
-  "craftr/__init__.py": "__version__ = '$VERSION'"
