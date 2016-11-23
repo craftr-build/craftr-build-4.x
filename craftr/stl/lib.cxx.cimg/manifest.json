@@ -1,0 +1,23 @@
+{
+  "name": "lib.cxx.cimg",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "version": {
+      "type": "string",
+      "help": "Version of the source to load from Github.",
+      "default": "v.179"
+    }
+  },
+  "loaders": [
+    {
+      "name": "source",
+      "type": "url",
+      "urls": [
+        "https://github.com/dtschump/CImg/archive/$version.zip"
+      ]
+    }
+  ]
+}

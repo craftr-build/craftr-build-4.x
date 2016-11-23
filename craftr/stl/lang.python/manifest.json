@@ -1,0 +1,13 @@
+{
+  "name": "lang.python",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "bin": {
+      "type": "string"
+    }
+  },
+  "loaders": []
+}

@@ -1,0 +1,11 @@
+{
+  "name": "examples.java",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.java": "*"
+  },
+  "options": {},
+  "loaders": []
+}

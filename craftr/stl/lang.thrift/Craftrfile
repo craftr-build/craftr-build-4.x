@@ -1,0 +1,45 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from craftr.utils import pyutils
+
+import os
+
+def thrift_gen(inputs, gen, outdir=None, debug=False, strict=False, name=None):
+  """
+  Generate one or more implementations based on Thriftfiles specified with
+  *inputs*. The *gen* argument must be a string or a list of strings that
+  specify the generator and its options.
+  """
+
+  if isinstance(gen, str):
+    gen = [gen]
+
+  if not outdir:
+    outdir = buildlocal('thrift')
+  path.makedirs(outdir)
+
+  builder = TargetBuilder(gtn(name, 'thrift'), inputs=inputs)
+  command = [options.bin or os.getenv('THRIFT', 'thrift')]
+  command += pyutils.flatten(('--gen', g) for g in gen)
+  command += ['-out', outdir]
+  if debug:
+    command += ['-debug']
+  if strict:
+    command += ['-strict']
+  command += ['$in']
+
+  return builder.build([command])

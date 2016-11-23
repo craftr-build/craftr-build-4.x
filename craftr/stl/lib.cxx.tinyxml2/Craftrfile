@@ -1,0 +1,47 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_module('lang.cxx.*')
+
+tinyxml2 = Framework('tinyxml2',
+ include = [loader.directory]
+)
+
+obj = cpp_compile(
+  sources = [path.join(loader.directory, 'tinyxml2.cpp')],
+  frameworks = [tinyxml2]
+)
+
+lib = cxx_library(
+  inputs = [obj],
+  output = 'tinyxml2',
+)
+
+tinyxml2['external_libs'] = [lib.metadata['link_target']]
+tinyxml2['implicit_deps'] = [lib]
+
+if options.build_main:
+  main_bin = cxx_binary(
+    inputs = [cpp_compile(
+      sources = [local('main.cpp')],
+      frameworks = [tinyxml2]
+    )],
+    output = 'main'
+  )
+  main = gentarget([[main_bin]], explicit=True)
+
+
+__all__ = ['tinyxml2']

@@ -1,0 +1,11 @@
+{
+  "name": "examples.cython",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cython": "*"
+  },
+  "options": {},
+  "loaders": []
+}

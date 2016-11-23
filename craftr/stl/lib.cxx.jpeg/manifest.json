@@ -1,0 +1,40 @@
+{
+  "name": "lib.cxx.jpeg",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*",
+    "utils.cmake": "*"
+  },
+  "options": {
+    "have_stddef_h": {
+      "type": "bool",
+      "default": true
+    },
+    "have_stdlib_h": {
+      "type": "bool",
+      "default": true
+    },
+    "two_file_commandline": {
+      "type": "bool",
+      "default": false
+    },
+    "jmem": {
+      "type": "string",
+      "help": "The memory manager to use for libjpeg. By default, it's determined from the current platform."
+    },
+    "build_binaries": {
+      "type": "bool"
+    }
+  },
+  "loaders": [
+    {
+      "name": "source",
+      "type": "url",
+      "urls": [
+        "https://github.com/LuaDist/libjpeg/archive/master.zip"
+      ]
+    }
+  ]
+}

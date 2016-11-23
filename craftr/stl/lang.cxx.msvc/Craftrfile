@@ -1,0 +1,490 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from craftr.platform import win32 as platform
+from craftr.utils import pyutils
+from craftr.utils.singleton import Default
+from nr.types.recordclass import recordclass
+
+import contextlib
+import craftr.platform.win32
+import functools
+import json
+import logging
+import os
+import sys
+import re
+import tempfile
+
+
+valid_archs = ('x86', 'amd64', 'ia64')
+real_arch = os.environ.get('PROCESSOR_ARCHITEW6432', '').lower()
+if not real_arch:
+  real_arch = os.environ.get('PROCESSOR_ARCHITECTURE', 'x86').lower()
+if real_arch not in valid_archs:
+  raise EnvironmentError('failed to determine current platform architecture, '
+      '{!r} is not supported'.format(real_arch))
+
+
+@contextlib.contextmanager
+def override_environ(new_environ, merge=True):
+  """
+  Context-manager that temporarily overwrites the current process'
+  environment variables.
+  """
+
+  old_environ = os.environ.copy()
+  try:
+    if not merge:
+      os.environ.clear()
+    os.environ.update(new_environ)
+    yield
+  finally:
+    # Restore the old enviroment variables.
+    os.environ.clear()
+    os.environ.update(old_environ)
+
+
+@functools.lru_cache()
+def identify(program):
+  """
+  Detects the version of the MSVC compiler from the specified #program
+  name and returns a dictionary with all the version information.
+
+  This function also supports detecting Clang-CL.
+
+  @param program: The name of the program to execute and check.
+  @return:
+    ```python
+    {
+      "name": "msvc|clang-cl",
+      "version": "...",
+      "version_str": "..."
+      "target": "...",
+      "thread_model": "...",
+      "msvc_deps_prefix": "...",
+      "link_program": "...",
+      "lib_program": "...",
+    }
+    ```
+  @raise ToolDetectionError: If the #program is not MSVC or Clang-CL
+  """
+
+  clang_cl_expr = r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)'
+  msvc_expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+
+  # Determine kind and version. We need to do this separately from
+  # the /showIncludes detection as Clang CL does not display a logo
+  # when being invoked.
+  #
+  # We can't use the /? option if the actual "program" is a batch
+  # script as this will print the help for batch files (Microsoft, pls).
+  # MSVC will error on -v, Clang CL will give us good info.
+  try:
+    output = shell.pipe([program, '-v'], shell=True, check=False).output
+  except OSError as exc:
+    raise ToolDetectionError(exc)
+  match = re.match(clang_cl_expr, output, re.I)
+  if match:
+    # We've detected a version of Clang CL!
+    name = 'clang-cl'
+    version = match.group(1)
+    arch = match.group(2)
+    thread_model = match.group(3)
+  else:
+    # Extract the MSVC compiler version and architecture.
+    match = re.search(msvc_expr, output, re.I)
+    if not match:
+      raise ToolDetectionError('MSVC version and architecture could not be detected\n\n' + output)
+
+    name = 'msvc'
+    version = match.group(1)
+    arch = match.group(2)
+    thread_model = 'win32'
+
+  # Determine the msvc_deps_prefix by making a small test. The
+  # compilation will not succeed since no entry point is defined.
+  deps_prefix = None
+  with tempfile.NamedTemporaryFile(suffix='.cpp', delete=False) as fp:
+    fp.write(b'#include <stddef.h>\n')
+    fp.close()
+    command = [program, '/Zs', '/showIncludes', fp.name]
+    try:
+      output = shell.pipe(command, shell=True, check=False).output
+    except OSError as exc:
+      raise ToolDetectionError(exc)
+    finally:
+      os.remove(fp.name)
+
+    # Find the "Note: including file:" in the current language. We
+    # assume that the structure is the same, only the words different.
+    # After the logo output follows the filename followed by the include
+    # notices.
+    for line in output.split('\n'):
+      if 'stddef.h' in line:
+        if 'C1083' in line:  # C1083: can not open include file
+          msg = 'MSVC can not compile a simple C program.\n  Program: {}\n  Output:\n\n{}'
+          raise ToolDetectionError(msg.format(program, output))
+        match = re.search('[\w\s]+:[\w\s]+:', line)
+        if match:
+          deps_prefix = match.group(0)
+
+  if not deps_prefix:
+    warn('msvc_deps_prefix could not be determined, fallback on english string')
+    deps_prefix = 'Note: including file:'
+
+  return {
+    'name': name,
+    'version': version,
+    'version_str': output.split('\n', 1)[0].strip(),
+    'target': arch,
+    'thread_model': thread_model,
+    'msvc_deps_prefix': deps_prefix,
+    'link_program': 'link' if name == 'msvc' else 'lld-link',
+    'lib_program': 'lib' if name == 'msvc' else 'llvm-lib'
+  }
+
+
+@functools.lru_cache()
+def find_installation(versions=(), arch=None):
+  """
+  Finds the MSVC platform Toolkit of a Visual Studio installation
+  that is installed on the host machine. Note that this
+
+  @param versions: A list of versions that should be looked for.
+    If specified, no version other than the ones specified will
+    be checked. Otherwise, any version is checked.
+  @param arch: Override the target architecture of the platform toolkit.
+    Defaults to the `craftr.tools.msvc.ARCH` option. Must be one of
+    `x86`, `amd64` and `ia64`.
+  @raise ToolDetectionError: If no Visual Studio insallation could be found.
+  """
+
+  for v in versions:
+    if len(v) != 3 or not all(c.isdigit() for c in v):
+      raise ValueError('not a valid VS version: {!r}'.format(v))
+
+  if versions:
+    choices = ['VS{}COMNTOOLS'.format(x) for x in versions]
+  else:
+    choices = []
+    for key, value in os.environ.items():
+      if key.startswith('VS') and key.endswith('COMNTOOLS'):
+        choices.append(key)
+    choices.sort(reverse=True)
+  if not choices:
+    raise ToolDetectionError('Visual Studio installation path could not be detected.')
+
+  paths = []
+  last_error = None
+  for vsvar in choices:
+    vsversion = vsvar[2:5]; assert(all(c.isdigit() for c in vsversion))
+    vspath = os.environ.get(vsvar, '').rstrip('\\')
+    if vspath:
+      vspath = path.join(path.dirname(path.dirname(vspath)), 'VC')
+      if not os.path.isdir(vspath):
+        continue
+      try:
+        return _get_vs_environment(vspath, vsversion, arch)
+      except ToolDetectionError as exc:
+        last_error = exc
+
+  if last_error:
+    raise last_error
+  raise ToolDetectionError('Visual Studio installation path could not be detected.')
+
+
+def _get_vs_environment(install_dir, vsversion, arch=None, _forcecc=None):
+  """
+  Internal method that retrieves the environment information for a
+  Visual Studio installation.
+  """
+
+  arch = arch or options.target
+  if arch not in valid_archs:
+    raise ValueError("invalid architecture: {!r}".format(arch))
+
+  # Select the correct cross-compiler (if necessary).
+  if _forcecc:
+    arch = _forcecc
+  elif real_arch != arch:
+    arch = real_arch + '_' + arch
+
+  if arch == 'x86':
+    toolsdir = basedir = path.join(install_dir, 'bin')
+    batch = path.join(toolsdir, 'vcvars32.bat')
+  else:
+    toolsdir = path.join(install_dir, 'bin', arch)
+    basedir = path.join(install_dir, 'bin', real_arch)
+    if arch == 'amd64':
+      batch = path.join(toolsdir, 'vcvars64.bat')
+    else:
+      batch = path.join(toolsdir, 'vcvars' + arch + '.bat')
+
+  # Run the batch file and print the environment.
+  cmd = [batch, shell.safe('&&'), sys.executable, '-c', 'import os, json; print(json.dumps(dict(os.environ)))']
+  try:
+    output = shell.pipe(cmd, shell=True).output
+  except OSError as exc:
+    # Try alternatives that would also run on this platform (that is, x86
+    # to amd64/ia64 would always run).
+    if real_arch == arch and arch == 'amd64':
+      return _get_vs_environment(install_dir, vsversion, 'x86', _forcecc='x86_amd64')
+    elif real_arch == arch and arch == 'ia64':
+      return _get_vs_environment(install_dir, vsversion, 'x86', _forcecc='x86_ia64')
+    raise ToolDetectionError('Visual Studio Environment could not be detected: {}'.format(exc)) from exc
+
+  env = json.loads(output)
+  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env, 'arch': arch, 'version': vsversion}
+
+
+class MsvcToolkit(object):
+
+  Programs = recordclass.new('Programs', 'cl link lib')
+
+  def __init__(self, toolkit=None, target=None):
+    toolkit = toolkit or options.toolkit or 'msvc'
+    target = target or options.target or real_arch
+    if target not in valid_archs:
+      raise ValueError('invalid target architecture: {!r}'.format(target))
+
+    version = ()
+    if toolkit.startswith('msvc'):
+      if len(toolkit) > 4:
+        version = (toolkit[4:],)
+    elif not toolkit == 'clang-cl':
+      raise ValueError('invalid toolkit name: {!r}'.format(toolkit))
+
+    error = None
+    self.info = None
+    self.install_info = None
+    if toolkit in ('clang-cl', 'msvc'):
+      cl = 'clang-cl' if toolkit == 'clang-cl' else 'cl'
+      try:
+        self.info = identify(cl)
+      except ToolDetectionError as exc:
+        pass
+      else:
+        link = self.info['link_program']
+        lib =  self.info['lib_program']
+
+    if not self.info:
+      self.install_info = find_installation(version, target)
+      cl = path.join(self.install_info['toolsdir'], 'cl.exe')
+      link = path.join(self.install_info['toolsdir'], 'link.exe')
+      lib = path.join(self.install_info['toolsdir'], 'lib.exe')
+      self.programs = self.Programs(cl, link, lib)
+      with override_environ(self.install_info['env']):
+        self.info = identify(self.programs.cl)
+
+    self.toolkit = toolkit
+    self.target = target
+    self.programs = self.Programs(cl, link, lib)
+
+  def __str__(self):
+    return self.info['version_str']
+
+  def __repr__(self):
+    return '<MsvcToolkit version={!r}>'.format(self.version)
+
+  @property
+  def version(self):
+    return self.info['version']
+
+  def compile(self, language, sources, *, frameworks=(), suffix=Default,
+              remove_flags=(), additional_flags=(), name=None, **kwargs):
+    if suffix is Default:
+      suffix = platform.obj
+
+    builder = TargetBuilder(gtn(name, 'msvc_compile'), kwargs, frameworks, sources)
+    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix)
+
+    if language not in ('asm', 'c', 'c++'):
+      raise ValueError('unsupported language: {!r}'.format(language))
+
+    debug = builder.get('debug', options.debug)
+    defines = builder.get_list('defines')
+    if builder.get('msvc_use_default_defines', True):
+      defines += ['WIN32', '_WIN32']
+
+    command = [self.programs.cl, '/nologo', '/c', '$in', '/Fo$out']
+    if self.toolkit == 'clang-cl':
+      command += ['/arch:' + self.target]
+    command += ['/wd' + str(x) for x in builder.get_list('msvc_disable_warnings')]
+    command += ['/we' + str(x) for x in builder.get_list('msvc_warnings_as_errors')]
+    command += ['/I' + x for x in builder.get_list('include')]
+    command += ['/D' + x for x in defines]
+    command += ['/FI' + x for x in builder.get_list('forced_include')]
+    if debug:
+      command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
+      if not self.version or self.version >= 'v18':
+        # Enable parallel writes to .pdb files. We also assume that this
+        # option is necessary by default.
+        command += ['/FS']
+
+    exceptions = builder.get('exceptions', None)
+    if exceptions:
+      if language != 'c++':
+        logger.warn("invalid value for exceptions: {!r} "
+          "(not supported in language {!r})".format(exceptions, language))
+      command += ['/EHsc']
+    elif exceptions is None and language == 'c++':
+      # Enable exceptions by default.
+      command += ['/EHsc']
+
+    if language == 'c++':
+      rtti = builder.get('rtti', options.rtti)
+      if rtti is not None:
+        command += ['/GR'] if rtti else ['/GR-']
+
+    warn = builder.get('warn', None)
+    if warn == 'all':
+      # /Wall really shows too many warnings, /W4 is pretty good.
+      command += ['/W4']
+    elif warn == 'none':
+      command += ['/w']
+    elif warn is None:
+      pass
+    else:
+      logger.warn("invalid value for optimize: {!r}".format(optimize))
+
+    optimize = builder.get('optimize', None)
+    if debug:
+      if optimize and optimize != 'debug':
+        logger.warn("invalid value for optimize: {!r} "
+          "(no optimize with debug enabled)".format(optimize))
+    elif optimize == 'speed':
+      command += ['/O2']
+    elif optimize == 'size':
+      command += ['/O1', '/Os']
+    elif optimize in ('debug', 'none'):
+      command += ['/Od']
+    elif optimize is not None:
+      logger.warn("invalid value for optimize: {!r}".format(optimize))
+
+    msvc_runtime_library = builder.get('msvc_runtime_library', 'dynamic')
+    if msvc_runtime_library == 'dynamic':
+      command += ['/MTd' if debug else '/MT']
+    elif msvc_runtime_library == 'static':
+      command += ['/MDd' if debug else '/MD']
+    elif msvc_runtime_library is not None:
+      raise ValueError('invalid msvc_runtime_library: {!r}'.format(msvc_runtime_library))
+
+    autodeps = builder.get('autodeps', True)
+    params = {}
+    if autodeps:
+      params['deps'] = 'msvc'
+      params['msvc_deps_prefix'] = self.info['msvc_deps_prefix']
+      command += ['/showIncludes']
+    command += builder.get_list('msvc_additional_flags')
+    command += builder.get_list('msvc_compile_additional_flags')
+    command += additional_flags
+
+    environ = None
+    if self.install_info:
+      environ = self.install_info['env']
+
+    pyutils.strip_flags(command, remove_flags)
+    t = builder.build([command], None, objects, foreach=True, environ=environ,
+      description='{} compile ($out)'.format(self.info['name']),
+      **params)
+    return t
+
+  def link(self, output_type, inputs, output, suffix=Default, remove_flags=(),
+           additional_flags=(), frameworks=(), name=None, **kwargs):
+    if output_type not in ('bin', 'dll'):
+      raise ValueError('invalid output_type: {!r}'.format(output_type))
+    if suffix is Default:
+      suffix = getattr(platform, output_type)
+    if suffix is not None:
+      output = suffix(output)
+    output = buildlocal(output)
+    builder = TargetBuilder(gtn(name, "msvc_link"), kwargs, frameworks, inputs)
+
+    libpath = builder.get_list('libpath')
+    libs = builder.get_list('libs')
+    libs += builder.get_list('msvc_libs')
+    external_libs = builder.get_list('external_libs')
+    if self.info['target'] == 'x86':
+      libs += builder.get_list('win32_libs')
+      external_libs += builder.get_list('win32_external_libs')
+    else:
+      libs += builder.get_list('win64_libs')
+      external_libs += builder.get_list('win64_external_libs')
+    debug = builder.get('debug', False)
+
+    command = [self.programs.link, '/nologo']
+
+    # The command-line can become too long easily, make sure that doesn't
+    # happen and we use a command-file instead.
+    inputs_str = shell.join(builder.inputs)
+    if len(inputs_str) > 6000:  # Let's say we leave 2000 chars for options
+      with open_buildfile(builder.name + '.txt') as fp:
+        fp.write(inputs_str)
+      command += ['@' + fp.name]
+    else:
+      command += ['$in']
+
+    command += ['/OUT:$out']
+    if self.toolkit == 'clang-cl':
+      command += ['/machine:' + self.target]
+    command += ['/debug'] if debug else []
+    command += ['/DLL'] if output_type == 'dll' else []
+    command += ['/LIBPATH:{0}'.format(x) for x in libpath]
+    command += [x + '.lib' for x in libs]
+    command += external_libs
+
+    pyutils.strip_flags(command, remove_flags)
+    command += additional_flags
+
+    meta = {'link_output': output}
+    if output_type == 'dll':
+      meta['dll_link_target'] = path.setsuffix(output, '.lib')
+
+    environ = None
+    if self.install_info:
+      environ = self.install_info['env']
+
+    return builder.build([command], None, [output],
+      implicit_deps=external_libs, metadata=meta, environ=environ,
+      description='{} link ($out)'.format(self.info['name']))
+
+  def staticlib(self, inputs, output, export_symbols=(), additional_flags=(),
+                msvc_additional_flags=(), name=None, **kwargs):
+    builder = TargetBuilder(gtn(name, "msvc_staticlib"), kwargs, (), inputs)
+    output = buildlocal(platform.lib(output))
+    command = [self.programs.lib, '/nologo']
+    command += ['/export:' + x for x in export_symbols]
+    command += additional_flags
+    command += msvc_additional_flags
+
+    # The command-line can become too long easily, make sure that doesn't
+    # happen and we use a command-file instead.
+    inputs_str = shell.join(builder.inputs)
+    if len(inputs_str) > 6000:  # Let's say we leave 2000 chars for options
+      with open_buildfile(builder.name + '.txt') as fp:
+        fp.write(inputs_str)
+      command += ['@' + fp.name]
+    else:
+      command += ['$in']
+
+    command += ['/OUT:$out']
+    return builder.build([command], None, [output],
+      description='{} staticlib ($out)'.format(self.info['name']),
+      metadata={'staticlib_output': output})
+
+
+cxc = msvc = MsvcToolkit()

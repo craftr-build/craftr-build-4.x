@@ -1,0 +1,124 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from craftr.utils import pyutils
+
+import functools
+import re
+
+
+def get_class_files(sources, source_dir, output_dir):
+  """
+  This function computes the Java `.class` files that will be
+  generated from the list of source files.
+  """
+
+  classes = []
+  for fn in sources:
+    assert fn.endswith('.java')
+    classes.append(path.join(output_dir, path.rel(fn, source_dir)))
+  return [path.setsuffix(x, '.class') for x in classes]
+
+
+class JavaCompiler(object):
+  """
+  High-level interface for compiling Java source files using the
+  Java compiler.
+  """
+
+  def __init__(self, javac=None, jar=None):
+    super().__init__()
+    self.javac = javac or options.javac
+    self.jar = jar or options.jar
+
+  @property
+  @functools.lru_cache()
+  def version(self):
+    """
+    The version of the Java compiler in the format of `(name, version`).
+    """
+
+    output = shell.pipe([self.javac, '-version']).output
+    return [x.strip() for x in output.split(' ')]
+
+  def compile(self, src_dir, srcs=None, frameworks=(), name=None,
+        additional_flags=(), **kwargs):
+    """
+    Compiles Java source to class files. If *srcs* is None, all ``.java``
+    files in the *src_dir* will be compiled.
+
+    Additional flags:
+
+    :param debug:
+    :param warn:
+    :param classpath:
+
+    Build metadata:
+
+    :param classes_outdir: Output directory of the generated classfiles.
+    """
+
+    output_dir = buildlocal('java')
+    if not srcs:
+      srcs = path.glob(path.join(src_dir, '**/*.java'))
+    builder = TargetBuilder(gtn(name, "java"), kwargs, frameworks, srcs)
+    outputs = get_class_files(builder.inputs, src_dir, output_dir)
+
+    command = [self.javac, '-d', output_dir, '$in']
+    command += ['-g'] if builder.get('debug', False) else []
+    command += [] if builder.get('warn', True) else ['-nowarn']
+    for fn in builder.get_list('classpath'):
+      command += ['-cp', fn]
+    command += additional_flags
+
+    return builder.build([command], None, outputs,
+      metadata={'classes_outdir': output_dir})
+
+  def make_jar(self, output, inputs, entry_point=None, name=None):
+    """
+    Create a JAR file at *output* from the given *inputs* (being class
+    files created with :meth:`compile`).
+    """
+
+    builder = TargetBuilder(gtn(name, "java"), inputs=inputs)
+    classdir = buildlocal('java')
+
+    output = buildlocal(output)
+    if not output.endswith('.jar'):
+      output += '.jar'
+
+    flags = 'cvf'
+    if entry_point:
+      flags += 'e'
+    command = [self.jar, flags, output]
+    if entry_point:
+      command += [entry_point]
+    command += pyutils.flatten([
+        ['-C', classdir, path.rel(x, classdir)] for x in builder.inputs])
+
+    return builder.build([command], None, [output])
+
+
+javac = JavaCompiler()
+
+
+def java_compile(*args, name=None, **kwargs):
+  return javac.compile(*args, name=gtn(name, None), **kwargs)
+
+def java_jar(*args, name=None, **kwargs):
+  return javac.make_jar(*args, name=gtn(name, None), **kwargs)
+
+__all__ = ['java_compile', 'java_jar']

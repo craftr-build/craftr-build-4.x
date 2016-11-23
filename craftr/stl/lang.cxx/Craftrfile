@@ -1,0 +1,67 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+if options.toolkit.startswith('msvc') or options.toolkit.startswith('clang-cl'):
+  module = 'lang.cxx.msvc'
+elif options.toolkit.startswith('llvm') or options.toolkit.startswith('gcc'):
+  module = 'lang.cxx.clang'
+elif options.toolkit.startswith('craftr:'):
+  module = options.toolkit[7:]
+elif options.toolkit:
+  raise EnvironmentError('unsupported toolkit: {}'.format(options.toolkit))
+elif platform.name == 'win':
+  module = 'lang.cxx.msvc'
+else:
+  module = 'lang.cxx.clang'
+
+session.options.setdefault('{}.toolkit'.format(module), options.toolkit)
+cxc = load_module(module).cxc
+
+
+def c_compile(*args, name=None, **kwargs):
+  return cxc.compile(*args, name=gtn(name, None), language='c', **kwargs)
+
+def cpp_compile(*args, name=None, **kwargs):
+  return cxc.compile(*args, name=gtn(name, None), language='c++', **kwargs)
+
+def cxx_library(*args, name=None, link_style='static', **kwargs):
+  if link_style == 'static':
+    target = cxc.staticlib(*args, name=gtn(name, None), **kwargs)
+    target.metadata['link_target'] = target.metadata['staticlib_output']
+  elif link_style == 'shared':
+    target = cxc.link(*args, name=gtn(name, None), output_type='dll', **kwargs)
+    target.metadata['link_target'] = target.metadata['dll_link_target']
+  return target
+
+def cxx_binary(*args, name=None, **kwargs):
+  return cxc.link(*args, name=gtn(name, None), output_type='bin', **kwargs)
+
+def cxx_extend_framework(framework, *targets):
+  """
+  When compiling C/C++ libraries from source, this function can be used to
+  make it easier to embed the output library and implicit dependencies into
+  the *framework*.
+  """
+
+  framework.setdefault('external_libs', [])
+  framework.setdefault('implicit_deps', [])
+  for target in targets:
+    link_target = target.metadata.get('link_target')
+    if link_target:
+      framework['external_libs'].append(link_target)
+    framework['implicit_deps'].append(target)
+
+__all__ = ['c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary', 'cxx_extend_framework']

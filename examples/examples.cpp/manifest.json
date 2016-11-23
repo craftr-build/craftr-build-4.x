@@ -1,0 +1,13 @@
+{
+  "name": "examples.cpp",
+  "version": "1.0.0",
+  "author": "Niklas Rosenstein <rosensteinniklas@gmail.com>",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*",
+    "lib.cxx.curlpp": "*",
+    "lib.cxx.tinyxml2": "*"
+  },
+  "options": {},
+  "loaders": []
+}

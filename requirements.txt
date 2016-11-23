@@ -1,0 +1,8 @@
+colorama
+glob2
+jsonschema
+ninja_syntax
+nr
+py-require
+termcolor
+werkzeug

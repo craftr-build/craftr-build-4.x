@@ -1,0 +1,10 @@
+# examples.csharp
+
+load_module('lang.csharp.*')
+
+main = csharp_compile(
+  srcs = [local('Main.cs')],
+  output = 'Main'
+)
+
+run = gentarget([[main]], explicit=True)

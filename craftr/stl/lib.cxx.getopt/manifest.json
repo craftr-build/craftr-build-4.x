@@ -1,0 +1,11 @@
+{
+  "name": "lib.cxx.getopt",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*"
+  },
+  "options": {},
+  "loaders": []
+}

@@ -1,0 +1,16 @@
+{
+  "name": "lang.csharp",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "csc": {
+      "type": "string"
+    },
+    "runprefix": {
+      "type": "string"
+    }
+  },
+  "loaders": []
+}

@@ -1,0 +1,16 @@
+# examples.java
+
+load_module('lang.java.*')
+
+classes = java_compile(
+  srcs = [local('Main.java')],
+  src_dir = project_dir
+)
+
+jar = java_jar(
+  inputs = classes,
+  entry_point = 'Main',
+  output = 'java-example'
+)
+
+run = gentarget([['java', '-jar', jar]], explicit=True)

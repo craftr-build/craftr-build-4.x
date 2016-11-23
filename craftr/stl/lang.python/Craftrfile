@@ -1,0 +1,99 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+:mod:`craftr.lang.python`
+=========================
+
+This Craftr extension module provides information about Python installations
+that are required for compiling C-extensions. Use the :meth:`get_framework`
+function to extract all the information from a Python installation using its
+:mod:`distutils` module.
+"""
+
+from craftr import platform
+
+import json
+import functools
+import os
+import re
+import sys
+
+
+@functools.lru_cache()
+def get_config(python_bin=None):
+  """
+  Given the name or path to a Python executable, this function returns
+  the dictionary that would be returned by
+  :meth:`distutils.sysconfig.get_config_vars` of that Python version.
+
+  The returned dictionary contains an additional key ``'_PYTHON_BIN'``
+  that is set to the value of the *python_bin* parameter. Note that
+  the parameter defaults to the ``python.bin`` option value and
+  otherwise to the ``PYTHON`` environment variable.
+  """
+
+  if not python_bin:
+    python_bin = options.bin or os.getenv('PYTHON', 'python')
+
+  pyline = 'import json, distutils.sysconfig; '\
+    'print(json.dumps(distutils.sysconfig.get_config_vars()))'
+
+  command = shell.split(python_bin) + ['-c', pyline]
+  output = shell.pipe(command, shell=True).output
+  result = json.loads(output)
+  result['_PYTHON_BIN'] = python_bin
+  return result
+
+def get_framework(python_bin=None):
+  """
+  Uses :func:`get_config` to read the configuration values of the specified
+  Python executable and constructs a #Framework from that can be used in C/C++
+  compiler interfaces.
+
+  The returned :class:`Framework` has the following keys:
+
+  - ``'include'``: A list of include directories where the Python headers
+    can be found.
+  - ``'libpath'``: List of library paths where the Python library can be
+    found.
+  - ``'libs'``: The name of the Python library to link with.
+  """
+
+  config = get_config(python_bin)
+
+  # LIBDIR seems to be absent from Windows installations, so we
+  # figure it from the prefix.
+  if platform.name == 'win' and 'LIBDIR' not in config:
+    config['LIBDIR'] = path.join(config['prefix'], 'libs')
+
+  fw = Framework(
+    config['_PYTHON_BIN'],
+    include = [config['INCLUDEPY']],
+    libpath = [config['LIBDIR']],
+  )
+
+  # The name of the Python library is something like "libpython2.7.a",
+  # but we only want the "python2.7" part. Also take the library flags
+  # m, u and d into account (see PEP 3149).
+  if 'LIBRARY' in config:
+    lib = re.search('python\d\.\d(?:d|m|u){0,3}', config['LIBRARY'])
+    if lib:
+      fw['libs'] = [lib.group(0)]
+  elif platform.name == 'win':
+    # This will make pyconfig.h nominate the correct .lib file.
+    fw['defines'] = ['MS_COREDLL']
+
+  return fw

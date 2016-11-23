@@ -1,0 +1,10 @@
+# examples.cython
+
+load_module('lang.cython.*')
+
+project = cython_project(
+  main = local('Main.pyx'),
+  sources = [local('Primes.pyx')]
+)
+
+run = gentarget([[project.main]], explicit=True)
