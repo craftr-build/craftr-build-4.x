@@ -73,8 +73,11 @@ in the user home directory is still loaded).
 [include "config/another.config"]
 ```
 
+Check out the [Documentation].
+
   [Ninja]: https://github.com/ninja-build/ninja
   [Python 3]: https://www.python.org/
+  [Documentation]: doc
 
 ## Requirements
 

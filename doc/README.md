@@ -1,7 +1,7 @@
 This file documents some features of Craftr that should not be left
 undocumented.
 
-[[_TOC_]]
+# FAQ
 
 ## How to use an alternative Ninja command?
 
