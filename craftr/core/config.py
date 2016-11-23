@@ -72,9 +72,14 @@ def read_config_file(filename, basedir=None, follow_include_directives=True):
         if not if_exists:
           raise InvalidConfigError('file "{}" included by "{}" does not exist'
               .format(str(exc), filename))
+      continue
+    elif section == '__global__':
+      prefix = ''
     else:
-      for option in parser.options(section):
-        result['{}.{}'.format(section, option)] = parser.get(section, option)
+      prefix = section + '.'
+
+    for option in parser.options(section):
+      result[prefix + option] = parser.get(section, option)
 
   return result
 

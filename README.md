@@ -27,6 +27,10 @@ __craftrpackage.json__
   "options": {
     "debug": {
       "type": "bool"
+    },
+    "outbin": {
+      "type": "string",
+      "default": "main"
     }
   }
 }
@@ -41,9 +45,10 @@ load_module('lang.cxx.curlpp.*')
 program = cxx_binary(
   inputs = cpp_compile(
     sources = glob(['src/*.cpp']),
+    defines = ['MYAPP_DEBUG'] if options.debug else [],
     frameworks = [cURLpp]
   ),
-  output = 'main'
+  output = options.outbin
 )
 ```
 
@@ -53,6 +58,20 @@ flags will be retrieved with `pkg-config` (TODO).
 
 Note that you can start a new project easily with the `craftr startproject`
 command.
+
+Options can either be specified on the command-line or in configuration files.
+By default, `~/craftr.config` and `./craftr.config` files are loaded if they
+exist. The `-c <filename>` option can be used to pass one or more configuration
+filenames that will be loaded instead of `./craftr.config` (note that the file
+in the user home directory is still loaded).
+
+```ini
+[__global__]
+  debug = true
+[myapp]
+  outbin = myapp
+[include "config/another.config"]
+```
 
   [Ninja]: https://github.com/ninja-build/ninja
   [Python 3]: https://www.python.org/
