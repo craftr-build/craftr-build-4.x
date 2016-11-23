@@ -345,9 +345,10 @@ class MsvcToolkit(object):
       # Enable exceptions by default.
       command += ['/EHsc']
 
-    rtti = builder.get('rtti', options.rtti)
-    if rtti is not None:
-      command += ['/GR'] if rtti else ['/GR-']
+    if language == 'c++':
+      rtti = builder.get('rtti', options.rtti)
+      if rtti is not None:
+        command += ['/GR'] if rtti else ['/GR-']
 
     warn = builder.get('warn', None)
     if warn == 'all':
