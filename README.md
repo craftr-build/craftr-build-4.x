@@ -12,9 +12,9 @@ various programming languages and common libraries out of the box:
 
 Below you can find an example to compile a simple C++ program to get a taste
 of what Craftr build definitions look like. Note that every module requires a
-`manifest.json` together with a `Craftrfile` to make a *package*.
+`craftrpackage.json` together with a `Craftrfile` to make a *package*.
 
-__manifest.json__
+__craftrpackage.json__
 
 ```json
 {
@@ -23,6 +23,11 @@ __manifest.json__
   "dependencies": {
     "lang.cxx": "*",
     "lib.cxx.curlpp": "*"
+  },
+  "options": {
+    "debug": {
+      "type": "bool"
+    }
   }
 }
 ```

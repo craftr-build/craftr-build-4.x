@@ -15,8 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from craftr import core
+from craftr.core.config import read_config_file, InvalidConfigError
 from craftr.core.logging import logger
-from craftr.core.session import session, Session, Module
+from craftr.core.session import session, Session, Module, MANIFEST_FILENAME
 from craftr.utils import path, shell
 from nr.types.version import Version, VersionCriteria
 
@@ -32,6 +33,8 @@ import os
 import sys
 import textwrap
 
+CONFIG_FILENAME = 'craftr.config'
+
 
 def write_cache(cachefile):
   # Write back the cache.
@@ -44,25 +47,6 @@ def write_cache(cachefile):
     logger.error(exc, indent=1)
   else:
     logger.debug('cache written:', cachefile)
-
-
-def read_config_file(filename):
-  """
-  Parse a configuration file and return a dictionary that contains the
-  option keys concatenated with the section names separated by a dot.
-  """
-
-  filename = path.norm(filename)
-  logger.debug('reading configuration file:', filename)
-  with open(filename, 'rb') as fp:
-    pass  # Only for exception
-  parser = configparser.SafeConfigParser()
-  parser.read([filename])
-  result = {}
-  for section in parser.sections():
-    for option in parser.options(section):
-      result['{}.{}'.format(section, option)] = parser.get(section, option)
-  return result
 
 
 def parse_module_spec(spec):
@@ -141,12 +125,10 @@ class build(BaseCommand):
     # Determine the module to execute, either from the current working
     # directory or find it by name if one is specified.
     if not args.module:
-      for fn in ['manifest.json', 'craftr/manifest.json']:
-        if path.isfile(fn):
-          module = session.parse_manifest(fn)
-          break
+      if path.isfile(MANIFEST_FILENAME):
+        module = session.parse_manifest(MANIFEST_FILENAME)
       else:
-        parser.error('no Craftr package "manifest.json" found')
+        parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
     else:
       # TODO: For some reason, prints to stdout are not visible here.
       # TODO: Prints to stderr however work fine.
@@ -162,8 +144,8 @@ class build(BaseCommand):
     if not args.no_config:
       for filename in args.config:
         session.options.update(read_config_file(filename))
-      if not args.config and path.exists('.craftrconfig'):
-        session.options.update(read_config_file('.craftrconfig'))
+      if not args.config and path.exists(CONFIG_FILENAME):
+        session.options.update(read_config_file(CONFIG_FILENAME))
 
     for item in args.options:
       key, sep, value = item.partition('=')
@@ -271,7 +253,7 @@ class startpackage(BaseCommand):
       logger.error('"{}" is not a directory'.format(directory))
       return 1
 
-    mfile = path.join(directory, 'manifest.json')
+    mfile = path.join(directory, MANIFEST_FILENAME)
     sfile = path.join(directory, 'Craftrfile')
     for fn in [mfile, sfile]:
       if path.isfile(fn):
@@ -322,9 +304,13 @@ def main():
 
   # Parse the user configuration file.
   try:
-    session.options = read_config_file(path.expanduser('~/.craftrconfig'))
+    config_filename = path.expanduser('~/' + CONFIG_FILENAME)
+    session.options = read_config_file(config_filename)
   except FileNotFoundError as exc:
     session.options = {}
+  except InvalidConfigError as exc:
+    logger.error(exc)
+    return 1
 
   # Execute the command in the session context.
   with session:

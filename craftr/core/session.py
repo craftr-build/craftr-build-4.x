@@ -34,6 +34,8 @@ import tempfile
 import types
 import werkzeug
 
+MANIFEST_FILENAME = 'craftrpackage.json'
+
 
 class ModuleNotFound(Exception):
 
@@ -262,9 +264,9 @@ class Session(object):
 
     for directory in self.path:
       choices = []
-      choices.append(path.join(directory, 'manifest.json'))
+      choices.append(path.join(directory, MANIFEST_FILENAME))
       for item in path.easy_listdir(directory):
-        choices.append(path.join(directory, item, 'manifest.json'))
+        choices.append(path.join(directory, item, MANIFEST_FILENAME))
       for filename in map(path.norm, choices):
         if filename in self._manifest_cache:
           continue  # don't parse a manifest that we already parsed
@@ -318,8 +320,8 @@ class Module(object):
   basic information on the module such as its name, version, but also things
   like its dependencies and options.
 
-  Every Craftr project (i.e. module) contains a ``manifest.json`` file and the
-  main ``Craftrfile``.
+  Every Craftr project (i.e. module) contains a ``craftrpackage.json`` file
+  and the main ``Craftrfile``.
 
   ::
 
@@ -327,11 +329,11 @@ class Module(object):
       include/
       source/
       Craftrfile
-      manifest.json
+      craftrpackage.json
 
   .. attribute:: directory
 
-    The directory that contains the ``manifest.json``. Note that the actual
+    The directory that contains the ``craftrpackage.json``. Note that the actual
     project directory depends on the :attr:`Manifest.project_directory` member.
 
   .. attribute:: ident
