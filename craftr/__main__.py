@@ -114,9 +114,6 @@ class build(BaseCommand):
     parser.add_argument('targets', metavar='TARGET', nargs='*')
     parser.add_argument('-m', '--module')
     parser.add_argument('-b', '--build-dir', default='build')
-    parser.add_argument('-c', '--config', action='append', default=[])
-    parser.add_argument('-C', '--no-config', action='store_true')
-    parser.add_argument('-d', '--option', dest='options', action='append', default=[])
     parser.add_argument('-i', '--include-path', action='append', default=[])
 
   def execute(self, parser, args):
@@ -140,21 +137,6 @@ class build(BaseCommand):
         module = session.find_module(module_name, version)
       except Module.NotFound as exc:
         parser.error('module not found: ' + str(exc))
-
-    if not args.no_config:
-      for filename in args.config:
-        session.options.update(read_config_file(filename))
-      if not args.config and path.exists(CONFIG_FILENAME):
-        session.options.update(read_config_file(CONFIG_FILENAME))
-
-    for item in args.options:
-      key, sep, value = item.partition('=')
-      if not sep:
-        value = 'true'
-      elif not value:
-        session.options.pop(key, None)
-      else:
-        session.options[key] = value
 
     # Make sure the Ninja executable exists and find its version.
     ninja_bin = session.options.get('global.ninja') or \
@@ -276,7 +258,11 @@ def main():
   # Create argument parsers and dynamically include all BaseCommand
   # subclasses into it.
   parser = argparse.ArgumentParser(prog='craftr', description='The Craftr build system')
-  parser.add_argument('-v', dest='verbose', action='count', default=0)
+  parser.add_argument('-v', '--verbose', action='store_true')
+  parser.add_argument('-q', '--quiet', action='store_true')
+  parser.add_argument('-c', '--config', action='append', default=[])
+  parser.add_argument('-C', '--no-config', action='store_true')
+  parser.add_argument('-d', '--option', dest='options', action='append', default=[])
   subparsers = parser.add_subparsers(dest='command')
 
   commands = {}
@@ -293,6 +279,8 @@ def main():
 
   if args.verbose:
     logger.set_level(logger.DEBUG)
+  elif args.quiet:
+    logger.set_level(logger.WARNING)
 
   session = Session()
 
@@ -303,8 +291,25 @@ def main():
   except FileNotFoundError as exc:
     session.options = {}
   except InvalidConfigError as exc:
-    logger.error(exc)
+    parser.error(exc)
     return 1
+
+  # Parse the local configuration file or the ones specified on command-line.
+  if not args.no_config:
+    for filename in args.config:
+      session.options.update(read_config_file(filename))
+    if not args.config and path.exists(CONFIG_FILENAME):
+      session.options.update(read_config_file(CONFIG_FILENAME))
+
+  # Export the command-line options in the session options.
+  for item in args.options:
+    key, sep, value = item.partition('=')
+    if not sep:
+      value = 'true'
+    if not value:
+      session.options.pop(key, None)
+    else:
+      session.options[key] = value
 
   # Execute the command in the session context.
   with session:

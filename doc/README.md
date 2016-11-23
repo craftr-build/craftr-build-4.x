@@ -7,7 +7,7 @@ undocumented.
 
 You can set the `craftr.ninja` option or use the `NINJA` environment variable.
 
-    $ craftr build -d craftr.ninja=ninja-1.7.2
+    $ craftr -d craftr.ninja=ninja-1.7.2 build
 
 ## Is there a way to create a Python function that is called from Ninja?
 
