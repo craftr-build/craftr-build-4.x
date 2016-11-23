@@ -158,7 +158,7 @@ class build(BaseCommand):
 
     # Make sure the Ninja executable exists and find its version.
     ninja_bin = session.options.get('global.ninja') or \
-        session.options.get('ninja') or os.getenv('NINJA', 'ninja')
+        session.options.get('craftr.ninja') or os.getenv('NINJA', 'ninja')
     ninja_version = get_ninja_version(ninja_bin)
     logger.debug('Ninja executable:', ninja_bin)
     logger.debug('Ninja version:', ninja_version)
