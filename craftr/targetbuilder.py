@@ -174,9 +174,13 @@ class TargetBuilder(object):
     else:
       self.inputs = None
 
+    if option_kwargs is None:
+      option_kwargs = {}
+
     self.name = name
-    self.option_kwargs = option_kwargs or {}
-    self.options_merge = OptionMerge(option_kwargs or {}, *self.frameworks)
+    self.option_kwargs = Framework(name, **option_kwargs)
+    self.options_merge = OptionMerge(self.option_kwargs, *self.frameworks)
+    assert self.option_kwargs in self.options_merge.frameworks
     self.outputs = outputs
     self.implicit_deps = implicit_deps
     self.order_only_deps = order_only_deps
@@ -190,6 +194,10 @@ class TargetBuilder(object):
   def get_list(self, key):
     self.used_option_keys.add(key)
     return self.options_merge.get_list(key)
+
+  def add_local_framework(self, *args, **kwargs):
+    fw = Framework(*args, **kwargs)
+    self.options_merge.append(fw)
 
   def build(self, commands, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, metadata=None, **kwargs):
@@ -269,10 +277,7 @@ class OptionMerge(object):
 
   def __init__(self, *frameworks):
     self.frameworks = []
-    def update(fw):
-      pyutils.unique_append(self.frameworks, fw)
-      [update(x) for x in fw.get('frameworks', [])]
-    [update(x) for x in frameworks]
+    [self.append(x) for x in frameworks]
 
   def __getitem__(self, key):
     for options in self.frameworks:
@@ -281,6 +286,14 @@ class OptionMerge(object):
       except KeyError:
         pass  # intentional
     raise KeyError(key)
+
+  def append(self, framework):
+    def update(fw):
+      if not isinstance(framework, Framework):
+        raise TypeError('expected Framework, got {}'.format(type(fw).__name__))
+      pyutils.unique_append(self.frameworks, fw, id_compare=True)
+      [update(x) for x in fw.get('frameworks', [])]
+    update(framework)
 
   def get(self, key, default=None):
     try:

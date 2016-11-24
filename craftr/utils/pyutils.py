@@ -68,22 +68,26 @@ def import_(fqn):
   return result
 
 
-def unique_append(lst, item):
-  if item not in lst:
-    lst.append(item)
+def unique_append(lst, item, id_compare=False):
+  if id_compare:
+    for x in lst:
+      if x is item:
+        return
+  else:
+    if item in lst:
+      return
+  lst.append(item)
 
 
-def unique_extend(lst, iterable):
+def unique_extend(lst, iterable, id_compare=False):
   for item in iterable:
-    if item not in lst:
-      lst.append(item)
+    unique_append(lst, item, id_compare)
 
 
-def unique_list(iterable):
+def unique_list(iterable, id_compare=False):
   result = []
   for item in iterable:
-    if item not in result:
-      result.append(item)
+    unique_append(result, item)
   return result
 
 
