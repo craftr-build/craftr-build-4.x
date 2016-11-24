@@ -8,6 +8,8 @@ Also, there can be a `.craftrconfig` depending on where the `manifest.json`
 is located which will be loaded before anything else. For more information on
 configuration, see the [Config documentation](config.md).
 
+      Standard                   Nested
+
     |  project/               |  project/
     |    .craftrconfig        |    craftr/
     |    manifest.json        |      .craftrconfig
