@@ -84,6 +84,21 @@ Check out the [Documentation].
   [Python 3]: https://www.python.org/
   [Documentation]: doc
 
+## Installation
+
+Craftr 2.x is currently not on PyPI so you have to install it from the Git
+repository. Note that the most recent version of Craftr might also require
+an unreleased version of the `nr` module, thus it is recommended to install
+it from the Git repository as well.
+
+    $ virtualenv -p python3 env && source env/bin/activate
+    $ git clone https://github.com/NiklasRosenstein/py-nr.git
+    $ pip install -e py-nr
+    $ git clone https://github.com/craftr-build/craftr.git
+    $ pip install -e craftr
+    $ craftr version
+    2.0.0-dev
+
 ## Requirements
 
 - [colorama](https://pypi.python.org/pypi/colorama) (optional, Windows)
