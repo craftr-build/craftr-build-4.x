@@ -129,6 +129,9 @@ similar to `npm` version selectors. Examples:
     "lib.cxx.curl": "1.3 - 1.8"  // any version between 1.3.0 and 1.8.0
     "lib.cxx.curl": "2.x.2"      // major and patch version 2, but any minor version
 
+Note that Craftr will refuse to load modules with `load_module()` that are not
+listed in the manifest `dependencies`!
+
 > __Important__: Keep in mind that the version number defined in the
 > `dependencies` are the version numbers of Craftr packages, not necessarily
 > the version of the actual library that can be used with it.

@@ -3,7 +3,8 @@ undocumented.
 
 Goto:
 
-- [Craftr package documentation](package.md)
+- [Package documentation](package.md)
+- [Built-ins documentation](builtins.md)
 
 # FAQ
 
