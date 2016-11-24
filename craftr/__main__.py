@@ -218,7 +218,7 @@ class startpackage(BaseCommand):
   def build_parser(self, parser):
     parser.add_argument('name')
     parser.add_argument('directory', nargs='?', default=None)
-    parser.add_argument('-s', '--subdir', action='store_true')
+    parser.add_argument('-n', '--nested', action='store_true')
     parser.add_argument('--version', type=Version, default='1.0.0')
 
   def execute(self, parser, args):
@@ -231,7 +231,7 @@ class startpackage(BaseCommand):
       logger.error('"{}" is not a directory'.format(directory))
       return 1
 
-    if args.subdir:
+    if args.nested:
       directory = path.join(directory, 'craftr')
       path.makedirs(directory)
 
@@ -242,18 +242,23 @@ class startpackage(BaseCommand):
         logger.error('"{}" already exists'.format(fn))
         return 1
 
+
     logger.debug('creating file "{}"'.format(mfile))
     with open(mfile, 'w') as fp:
-      fp.write(textwrap.dedent('''
+      lines = textwrap.dedent('''
         {
           "name": "%s",
           "version": "%s",
+          "project_dir": "..",
           "author": "",
           "url": "",
           "dependencies": {},
           "options": {},
           "loaders": []
-        }\n''' % (args.name, args.version)).lstrip())
+        }\n''' % (args.name, args.version)).lstrip().split('\n')
+      if not args.nested:
+        del lines[3]
+      fp.write('\n'.join(lines))
 
     logger.debug('creating file "{}"'.format(sfile))
     with open(sfile, 'w') as fp:

@@ -336,13 +336,13 @@ class Module(object):
   .. attribute:: directory
 
     The directory that contains the ``craftrpackage.json``. Note that the actual
-    project directory depends on the :attr:`Manifest.project_directory` member.
+    project directory depends on the :attr:`Manifest.project_dir` member.
 
   .. attribute:: ident
 
     A concentation of the name and version defined in the :attr:`manifest`.
 
-  .. attribute:: project_directory
+  .. attribute:: project_dir
 
     Path to the project directory as specified in the :attr:`manifest`.
 
@@ -387,8 +387,8 @@ class Module(object):
     return '{}-{}'.format(self.manifest.name, self.manifest.version)
 
   @property
-  def project_directory(self):
-    return path.norm(path.join(self.directory, self.manifest.project_directory))
+  def project_dir(self):
+    return path.norm(path.join(self.directory, self.manifest.project_dir))
 
   def init_options(self, recursive=False, _break_recursion=None):
     """
@@ -506,7 +506,7 @@ class Module(object):
       '__version__': str(self.manifest.version),
       'options': self.options,
       'loader': self.loader,
-      'project_dir': self.project_directory,
+      'project_dir': self.project_dir,
     })
 
     try:

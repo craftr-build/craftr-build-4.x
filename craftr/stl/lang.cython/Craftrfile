@@ -133,7 +133,7 @@ class CythonCompiler(object):
       if in_working_tree:
         return path.rmvsuffix(filename)
       else:
-        return path.join('cython', 'bin', path.rel(path.rmvsuffix(filename), session.module.project_directory))
+        return path.join('cython', 'bin', path.rel(path.rmvsuffix(filename), session.module.project_dir))
 
     if sources:
       sources_target = self.compile(

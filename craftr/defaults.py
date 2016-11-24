@@ -65,7 +65,7 @@ def glob(patterns, parent=None, exclude=(), include_dotfiles=False):
   """
 
   if parent is None and session and session.module:
-    parent = session.module.project_directory
+    parent = session.module.project_dir
 
   return path.glob(patterns, parent, exclude, include_dotfiles)
 
@@ -76,7 +76,7 @@ def local(rel_path):
   module's project directory.
   """
 
-  parent = session.module.project_directory
+  parent = session.module.project_dir
   return path.norm(rel_path, parent)
 
 
