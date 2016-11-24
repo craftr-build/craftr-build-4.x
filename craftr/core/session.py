@@ -322,7 +322,7 @@ class Module(object):
   basic information on the module such as its name, version, but also things
   like its dependencies and options.
 
-  Every Craftr project (i.e. module) contains a ``craftrpackage.json`` file
+  Every Craftr project (i.e. module) contains a ``manifest.json`` file
   and the main ``Craftrfile``.
 
   ::
@@ -331,11 +331,11 @@ class Module(object):
       include/
       source/
       Craftrfile
-      craftrpackage.json
+      manifest.json
 
   .. attribute:: directory
 
-    The directory that contains the ``craftrpackage.json``. Note that the actual
+    The directory that contains the ``manifest.json``. Note that the actual
     project directory depends on the :attr:`Manifest.project_dir` member.
 
   .. attribute:: ident

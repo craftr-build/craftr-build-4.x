@@ -17,7 +17,7 @@ various programming languages and common libraries out of the box:
 
 Below you can find an example to compile a simple C++ program to get a taste
 of what Craftr build definitions look like. Note that every module requires a
-`craftrpackage.json` together with a `Craftrfile` to make a *package*.
+`manifest.json` together with a `Craftrfile` to make a *package*.
 
 __manifest.json__
 
