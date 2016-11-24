@@ -1,6 +1,10 @@
 This file documents some features of Craftr that should not be left
 undocumented.
 
+Goto:
+
+- [Craftr package documentation](package.md)
+
 # FAQ
 
 ## How to use an alternative Ninja command?
