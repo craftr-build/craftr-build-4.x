@@ -264,6 +264,13 @@ class startpackage(BaseCommand):
     with open(sfile, 'w') as fp:
       print('# {}'.format(args.name), file=fp)
 
+class version(BaseCommand):
+
+  def build_parser(self, parser):
+    pass
+
+  def execute(self, parser, args):
+    print(craftr.__version__)
 
 def main():
   # Create argument parsers and dynamically include all BaseCommand
