@@ -23,6 +23,7 @@ starting with an underscore will be ignored.
 
 from craftr.core import build as _build
 from craftr.core.logging import logger
+from craftr.core.manifest import Namespace
 from craftr.core.session import session, ModuleNotFound
 from craftr.utils import path, shell
 from craftr.targetbuilder import gtn, TargetBuilder, Framework
@@ -210,6 +211,26 @@ def load_module(name, into=None, get_namespace=True, _stackframe=1):
   if get_namespace:
     return loaded_module.namespace
   return loaded_module
+
+
+def load_file(filename):
+  """
+  Loads a Python file into a new module-like object and returns it. The
+  *filename* is assumed relative to the currently executed module's
+  directory (NOT the project directory which can be different).
+  """
+
+  if not path.isabs(filename):
+    filename = path.join(session.module.directory, filename)
+    print(filename)
+
+  with open(filename, 'r') as fp:
+    code = compile(fp.read(), filename, 'exec')
+
+  scope = Namespace()
+  vars(scope).update(globals())
+  exec(code, vars(scope))
+  return scope
 
 
 def gentool(command, preamble=None, environ=None, name=None):
