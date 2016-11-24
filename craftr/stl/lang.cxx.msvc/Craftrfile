@@ -301,19 +301,27 @@ class MsvcToolkit(object):
     return '<MsvcToolkit version={!r}>'.format(self.version)
 
   @property
+  def name(self):
+    return self.info['name']
+
+  @property
   def version(self):
     return self.info['version']
 
-  def compile(self, language, sources, *, frameworks=(), suffix=Default,
-              remove_flags=(), additional_flags=(), name=None, **kwargs):
-    if suffix is Default:
-      suffix = platform.obj
+  @property
+  def target_arch(self):
+    return self.info['target']
 
-    builder = TargetBuilder(gtn(name, 'msvc_compile'), kwargs, frameworks, sources)
-    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix)
-
+  def compile(self, language, sources, *, frameworks=(), name=None, **kwargs):
     if language not in ('asm', 'c', 'c++'):
       raise ValueError('unsupported language: {!r}'.format(language))
+
+    builder = TargetBuilder(gtn(name, 'msvc_compile'), kwargs, frameworks, sources)
+    for callback in builder.get_list('cxc_compile_prepare_callbacks'):
+      callback(self, builder)
+
+    suffix = builder.get('suffix', platform.obj)
+    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix)
 
     debug = builder.get('debug', options.debug)
     defines = builder.get_list('defines')
@@ -391,28 +399,30 @@ class MsvcToolkit(object):
       command += ['/showIncludes']
     command += builder.get_list('msvc_additional_flags')
     command += builder.get_list('msvc_compile_additional_flags')
-    command += additional_flags
+    if self.name == 'clang-cl':
+      command += builder.get_list('clangcl_compile_additional_flags')
+    command += builder.get_list('additional_flags')
 
     environ = None
     if self.install_info:
       environ = self.install_info['env']
 
-    pyutils.strip_flags(command, remove_flags)
+    pyutils.strip_flags(command, builder.get_list('remove_flags'))
     t = builder.build([command], None, objects, foreach=True, environ=environ,
       description='{} compile ($out)'.format(self.info['name']),
       **params)
     return t
 
-  def link(self, output_type, inputs, output, suffix=Default, remove_flags=(),
-           additional_flags=(), frameworks=(), name=None, **kwargs):
+  def link(self, output_type, inputs, output, frameworks=(), name=None, **kwargs):
     if output_type not in ('bin', 'dll'):
       raise ValueError('invalid output_type: {!r}'.format(output_type))
-    if suffix is Default:
-      suffix = getattr(platform, output_type)
-    if suffix is not None:
-      output = suffix(output)
-    output = buildlocal(output)
+
     builder = TargetBuilder(gtn(name, "msvc_link"), kwargs, frameworks, inputs)
+    for callback in builder.get_list('cxc_link_prepare_callbacks'):
+      callback(self, builder)
+
+    suffix = builder.get('suffix', getattr(platform, output_type))
+    output = buildlocal(path.addsuffix(output, suffix))
 
     libpath = builder.get_list('libpath')
     libs = builder.get_list('libs')
@@ -447,8 +457,8 @@ class MsvcToolkit(object):
     command += [x + '.lib' for x in libs]
     command += external_libs
 
-    pyutils.strip_flags(command, remove_flags)
-    command += additional_flags
+    pyutils.strip_flags(command, builder.get_list('remove_flags'))
+    command += builder.get_list('additional_flags')
 
     meta = {'link_output': output}
     if output_type == 'dll':
@@ -464,7 +474,11 @@ class MsvcToolkit(object):
 
   def staticlib(self, inputs, output, export_symbols=(), additional_flags=(),
                 msvc_additional_flags=(), name=None, **kwargs):
+
     builder = TargetBuilder(gtn(name, "msvc_staticlib"), kwargs, (), inputs)
+    for callback in builder.get_list('cxc_staticlib_prepare_callbacks'):
+      callback(self, builder)
+
     output = buildlocal(platform.lib(output))
     command = [self.programs.lib, '/nologo']
     command += ['/export:' + x for x in export_symbols]

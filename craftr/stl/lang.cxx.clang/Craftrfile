@@ -263,9 +263,11 @@ class CompilerLinker(object):
   def name(self):
     return self.info['name']
 
-  def compile(self, sources, frameworks=(), remove_flags=(),
-              additional_flags=(), name=None, **kwargs):
+  def compile(self, sources, frameworks=(), name=None, **kwargs):
     builder = TargetBuilder(gtn(name, 'compile'), kwargs, frameworks, sources)
+    for callback in builder.get_list('cxc_compile_prepare_callbacks'):
+      callback(self, builder)
+
     objects = relocate_files(builder.inputs, buildlocal('obj'), suffix=platform.obj)
     fw = Framework(builder.name)
     builder.frameworks.append(fw)
@@ -345,25 +347,24 @@ class CompilerLinker(object):
         command += shell.split(options.get('ASMFLAGS', ''))
     """
 
-    pyutils.strip_flags(command, remove_flags)
-    command += additional_flags
+    pyutils.strip_flags(command, builder.get_list('remove_flags'))
+    command += builder.get_list('additional_flags')
 
     return builder.build([command], None, objects, foreach=True, **params,
       description='{} compile ($out)'.format(self.name))
 
-  def link(self, output_type, inputs, output=None, suffix=Default, frameworks=(),
-           remove_flags=(), additional_flags=(), name=None, **kwargs):
+  def link(self, output_type, inputs, output=None, frameworks=(), name=None, **kwargs):
     if output_type not in ('bin', 'dll'):
       raise ValueError('invalid output_type: {0!r}'.format(output_type))
-    if suffix is Default:
-      suffix = getattr(platform, output_type)
-    if suffix:
-      output = suffix(output)
-    output = buildlocal(output)
 
     builder = TargetBuilder(gtn(name, 'link'), kwargs, frameworks, inputs)
-    implicit_deps = []
+    for callback in builder.get_list('cxc_link_prepare_callbacks'):
+      callback(self, builder)
 
+    suffix = builder.get('suffix', getattr(platform, output_type))
+    output = buildlocal(path.addsuffix(output, suffix))
+
+    implicit_deps = []
     debug = builder.get('debug', options.debug)
     libs = builder.get_list('libs')
     linker_args = builder.get_list('linker_args')
@@ -413,8 +414,8 @@ class CompilerLinker(object):
       command += shell.split(options.get('LDLIBS', ''))
     """
 
-    pyutils.strip_flags(command, remove_flags)
-    command += additional_flags
+    pyutils.strip_flags(command, builder.get('remove_flags'))
+    command += builder.get_list('additional_flags')
 
     meta = {'link_output': output}
     if output_type == 'dll':
@@ -430,15 +431,16 @@ class Ar(object):
   def __init__(self, program):
     self.program = program
 
-  def staticlib(self, inputs, output, suffix=Default, ar_flags='',
-                name=None, **kwargs):
-    if suffix is Default:
-      suffix = platform.lib
-    if suffix:
-      output = suffix(output)
-    output = buildlocal(output)
+  def staticlib(self, inputs, output, ar_flags='', name=None, **kwargs):
+
 
     builder = TargetBuilder(gtn(name, 'staticlib'), kwargs, [], inputs)
+    for callback in builder.get_list('cxc_staticlib_prepare_callback'):
+      callback(self, builder)
+
+    suffix = builder.get('suffix', getattr(platform, output_type))
+    output = buildlocal(path.addsuffix(output, suffix))
+
     flags = ''.join(pyutils.unique_list('rcs' + ar_flags))
     command = shell.split(self.program) + [flags, '$out', '$in']
     meta = {'staticlib_output': output}
