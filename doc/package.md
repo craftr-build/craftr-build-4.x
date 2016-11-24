@@ -15,6 +15,9 @@ configuration, see the [Config documentation](config.md).
     |    source/              |      Craftrfile
     |                         |    source/
 
+Note that in the nested format, you want to make sure to set the
+`project_dir` field in the manifest to `".."`.
+
 ## Package manifest
 
 Below you can find a list of all the available fields in a `manifest.json` file.
@@ -156,3 +159,20 @@ on loaders, see `craftr.core.manifest.BaseLoader`.
 *Required*. The name of the loader. This can be an arbitrary string. Later in
 the build script, you can check the `loader` variable and compare the
 `loader.name` member to find which loader succeeded.
+
+
+### main
+
+*Optional*. The name of the build script. Usually you don't need/want to set
+this field. The default value is `"Craftrfile"`.
+
+### project_dir
+
+*Optional*. A relative path the alters the `project_dir` variable in the Craftr
+build script. This influences the way the `local()` built-in function behaves.
+For more information on built-in functions, see the [Builtins documentation](builtins.md).
+
+Note that you usually want this field to be set to `".."` if you are using the
+nested project structure. The `craftr startpackage` command has a `-n/--nested`
+option which creates a nested project structure and also sets this `project_dir`
+field.
