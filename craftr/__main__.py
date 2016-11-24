@@ -165,7 +165,6 @@ class build(BaseCommand):
 
     # Prepare options, loaders and execute.
     try:
-      module.init_options(True)
       write_cache(cachefile)
       module.run()
     except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
