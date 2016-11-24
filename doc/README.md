@@ -6,6 +6,7 @@ Goto:
 - [Package documentation](package.md)
 - [Built-ins documentation](builtins.md)
 - [Config documentation](config.md)
+- [Transition from Craftr 1](transition.md)
 
 # FAQ
 
