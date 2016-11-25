@@ -79,7 +79,7 @@ def __gcc_check(program, output):
   }
 
   # Check for a C++ compiler.
-  if program[-2:] == '++':
+  if program[-2:] == '++' and result['name'] == 'llvm':
     stdlib = detect_cpp_stdlib(program)
     if stdlib:
       result['cpp_stdlib'] = stdlib
