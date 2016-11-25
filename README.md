@@ -85,6 +85,17 @@ Check out the [Documentation].
   [Python 3]: https://www.python.org/
   [Documentation]: doc
 
+## Features
+
+- [x] Moduler build scripts (Craftr packages) with dependency management
+- [x] Loaders: if required, automatically download and build libraries from source!
+- [ ] Package manager (hosted on [Craftr.net])
+- [ ] Dependency-version lockfiles
+- [ ] RTS and Tasks (as Craftr 1 used to have)
+
+
+  [Craftr.net]: https://craftr.net
+
 ## Installation
 
 Craftr 2.x is currently not on PyPI so you have to install it from the Git
