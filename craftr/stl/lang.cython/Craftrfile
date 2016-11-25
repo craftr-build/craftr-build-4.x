@@ -125,8 +125,6 @@ class CythonCompiler(object):
     py_version = int(pyconf['VERSION'][0])
     toolkit = toolkit or cxx.cxc
 
-    pyfw['libs'] = ['python3']
-
     def getout(filename):
       if gen_output:
         return gen_output(filename)
