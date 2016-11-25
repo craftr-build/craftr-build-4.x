@@ -297,7 +297,8 @@ class CompilerLinker(object):
     command += ['-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
     command += ['-std=' + std] if std else []
-    command += ['-stdlib=lib' + stdlib] if stdlib else []
+    if self.name == 'llvm':
+      command += ['-stdlib=lib' + stdlib] if stdlib else []
     command += ['-pedantic'] if pedantic else []
     command += ['-I' + x for x in builder.get_list('include')]
     command += ['-D' + x for x in builder.get_list('defines')]
@@ -414,7 +415,7 @@ class CompilerLinker(object):
       command += shell.split(options.get('LDLIBS', ''))
     """
 
-    pyutils.strip_flags(command, builder.get('remove_flags'))
+    pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
 
     meta = {'link_output': output}
@@ -438,7 +439,7 @@ class Ar(object):
     for callback in builder.get_list('cxc_staticlib_prepare_callback'):
       callback(self, builder)
 
-    suffix = builder.get('suffix', getattr(platform, output_type))
+    suffix = builder.get('suffix', platform.lib)
     output = buildlocal(path.addsuffix(output, suffix))
 
     flags = ''.join(pyutils.unique_list('rcs' + ar_flags))
