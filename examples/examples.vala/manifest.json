@@ -1,0 +1,11 @@
+{
+  "name": "examples.vala",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.vala": "*"
+  },
+  "options": {},
+  "loaders": []
+}

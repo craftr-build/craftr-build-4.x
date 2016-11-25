@@ -14,6 +14,7 @@ various programming languages and common libraries out of the box:
 - Cython
 - C#
 - Java
+- Vala
 
 Below you can find an example to compile a simple C++ program to get a taste
 of what Craftr build definitions look like. Note that every module requires a
