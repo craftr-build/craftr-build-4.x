@@ -256,21 +256,48 @@ def gentarget(command, inputs=(), outputs=(), *args, **kwargs):
   return target
 
 
-def open_buildfile(name, mode='w'):
+def write_response_file(arguments, builder=None, name=None, force_file=False):
   """
-  Creates a file with the specified *name* in a buildlocal directory named
-  "buildfiles/". The returned object is file-like but must not necessarily
-  represent the actual file on the filesystem. In case the current Session
-  does not export build files, the returned object will simply be an in-memory
-  file buffer that will be discarded.
+  Creates a response-file with the specified *name* in the in the
+  ``buildfiles/`` directory and writes the *arguments* list quoted into
+  the file. If *builder* is specified, it must be a :class:`TargetBuilder`
+  and the response file will be added to the implicit dependencies.
 
-  The ``fp.name`` attribute can be read to get the filename in either case.
+  If *force_file* is set to True, a file will always be written. Otherwise,
+  the function will into possible limitations of the platform and decide
+  whether to write a response file or to return the *arguments* as is.
+
+  Returns a tuple of ``(filename, arguments)``. If a response file is written,
+  the returned *arguments* will be a list with a single string that is the
+  filename prepended with ``@``. The *filename* part can be None if no
+  response file needed to be exported.
   """
 
-  # TODO: Check if the session exports or not.
-  dirname = buildlocal('buildfiles')
-  path.makedirs(dirname)
-  return open(path.join(dirname, name), mode)
+  if not name:
+    if not builder:
+      raise ValueError('builder must be specified if name is bot')
+    name = builder.name + '.response.txt'
+
+  if platform.name != 'win':
+    return None, arguments
+
+  # We'll just assume that there won't be more than 2048 characters for
+  # other flags. The windows max buffer size is 8192.
+  content = shell.join(arguments)
+  if len(content) < 6144:
+    return None, arguments
+
+  filename = buildlocal(path.join('buildfiles', name))
+  if builder:
+    if builder.implicit_deps is None:
+      builder.implicit_deps = []
+    builder.implicit_deps.append(filename)
+
+  if session.builddir:
+    path.makedirs(path.dirname(filename))
+    with open(filename, 'w') as fp:
+      fp.write(content)
+  return filename, ['@' + filename]
 
 
 def error(*message):

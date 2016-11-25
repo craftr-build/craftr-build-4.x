@@ -386,7 +386,14 @@ class CompilerLinker(object):
       osx_fwpath = []
       osx_frameworks = []
 
-    command = shell.split(self.program) + ['$in']
+    command = shell.split(self.program)
+
+    response_file, response_args = write_response_file(builder.inputs, builder)
+    if response_file:
+      command += response_args
+    else:
+      command += ['$in']
+
     command += ['-g'] if debug else []
     command += ['-l' + x for x in pyutils.unique_list(libs)]
     command += ['-L' + x for x in pyutils.unique_list(libpath)]
@@ -434,16 +441,26 @@ class Ar(object):
 
   def staticlib(self, inputs, output, ar_flags='', name=None, **kwargs):
 
-
     builder = TargetBuilder(gtn(name, 'staticlib'), kwargs, [], inputs)
     for callback in builder.get_list('cxc_staticlib_prepare_callback'):
       callback(self, builder)
+
+    # When using Clang on Windows, llvm-ar does not handle backslashes,
+    # thus we need to convert them to forward slashes.
+    builder.inputs = [x.replace('\\', '/') for x in builder.inputs]
 
     suffix = builder.get('suffix', platform.lib)
     output = buildlocal(path.addsuffix(output, suffix))
 
     flags = ''.join(pyutils.unique_list('rcs' + ar_flags))
-    command = shell.split(self.program) + [flags, '$out', '$in']
+    command = shell.split(self.program) + [flags, '$out']
+
+    response_file, response_args = write_response_file(builder.inputs, builder)
+    if response_file:
+      command += response_args
+    else:
+      command += ['$in']
+
     meta = {'staticlib_output': output}
     return builder.build([command], None, [output], metadata=meta,
       description='ar staticlib ($out)')

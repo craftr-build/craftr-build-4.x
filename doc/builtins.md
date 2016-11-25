@@ -73,7 +73,7 @@ or retrieve the currently executed Craftr module from its `.module` member.
 
 ### `gentarget()`
 
-### `open_buildfile()`
+### `write_response_file()`
 
 ### `error()`
 

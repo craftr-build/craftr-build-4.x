@@ -438,13 +438,9 @@ class MsvcToolkit(object):
 
     command = [self.programs.link, '/nologo']
 
-    # The command-line can become too long easily, make sure that doesn't
-    # happen and we use a command-file instead.
-    inputs_str = shell.join(builder.inputs)
-    if len(inputs_str) > 6000:  # Let's say we leave 2000 chars for options
-      with open_buildfile(builder.name + '.txt') as fp:
-        fp.write(inputs_str)
-      command += ['@' + fp.name]
+    response_file, response_args = write_response_file(builder.inputs, builder)
+    if response_file:
+      command += response_args
     else:
       command += ['$in']
 
@@ -485,13 +481,9 @@ class MsvcToolkit(object):
     command += additional_flags
     command += msvc_additional_flags
 
-    # The command-line can become too long easily, make sure that doesn't
-    # happen and we use a command-file instead.
-    inputs_str = shell.join(builder.inputs)
-    if len(inputs_str) > 6000:  # Let's say we leave 2000 chars for options
-      with open_buildfile(builder.name + '.txt') as fp:
-        fp.write(inputs_str)
-      command += ['@' + fp.name]
+    response_file, response_args = write_response_file(builder.inputs, builder)
+    if response_file:
+      command += response_args
     else:
       command += ['$in']
 
