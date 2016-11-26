@@ -27,15 +27,18 @@ if pip.__version__ >= '6.0':
 
 setup(
   name = 'craftr-build',
-  version = '2.0.0-dev',
+  version = '2.0.0.dev0',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   url = 'https://gitlab.niklasrosenstein.com/niklas/craftr',
-  packages = find_packages(),
   install_requires = [str(x.req) for x in parse_requirements('requirements.txt')],
   entry_points = dict(
     console_scripts = [
       'craftr = craftr.__main__:main_and_exit'
     ]
-  )
+  ),
+  packages = find_packages(),
+  package_data = {
+    'craftr': ['stl/**/*']
+  }
 )
