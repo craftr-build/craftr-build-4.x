@@ -6,7 +6,7 @@
 > [v1.1.4-unreleased](https://github.com/craftr-build/craftr/tree/v1.1.4-unreleased).
 
 Craftr is a meta build system based on [Python 3] scripts which produces
-[Ninja] build manifests. It enforces the use of modular and build definitions
+[Ninja] build manifests. It enforces the use of modular build definitions
 that can be re-used easily. Craftr provides a standard library to support
 various programming languages and common libraries out of the box:
 
@@ -17,10 +17,10 @@ various programming languages and common libraries out of the box:
 - Vala
 
 Below you can find an example to compile a simple C++ program to get a taste
-of what Craftr build definitions look like. Note that every module requires a
-`manifest.json` together with a `Craftrfile` to make a *package*.
+of what Craftr looks like. Note that every module requires a `manifest.json`
+together with a `Craftrfile` to make a *package*.
 
-> __Note__: You can start a new project easily with the `craftr startproject`
+> __Note__: You can start a new package easily with the `craftr startpackage`
 > command.
 
 __manifest.json__
@@ -75,6 +75,7 @@ filenames that will be loaded instead of `./.craftrconfig` (note that the file
 in the user home directory is still loaded).
 
 ```ini
+# .craftrconfig
 [__global__]
   debug = true
 [myapp]
