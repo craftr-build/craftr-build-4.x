@@ -124,6 +124,8 @@ def detect_cpp_stdlib(program):
   determine the C++ stdlib that is required for linking.
   """
 
+  program = shell.split(program)
+
   # Just create a temporary C++ file to be able to read the link
   # flags that would be invoked.
   with pyutils.combine_context(
@@ -131,7 +133,7 @@ def detect_cpp_stdlib(program):
       path.tempfile(suffix='.out')) as (fp, outfp):
     fp.close()
     outfp.close()
-    output = shell.pipe([program, '-v', fp.name, '-o', outfp.name]).output.split('\n')
+    output = shell.pipe(program + ['-v', fp.name, '-o', outfp.name]).output.split('\n')
     # Check for a line that looks like a linker command.
     for line in output:
       try:
@@ -247,6 +249,10 @@ class ToolChain(object):
   def target_arch(self):
     return self.cc.target_arch
 
+  @property
+  def version(self):
+    return self.cc.version
+
   def compile(self, language, *args, name=None, **kwargs):
     compiler = {'asm': self.as_, 'c': self.cc, 'c++': self.cxx}[language]
     return compiler.compile(*args, name=gtn(name, None), **kwargs)
@@ -274,6 +280,10 @@ class CompilerLinker(object):
   @property
   def target_arch(self):
     return self.info['target']
+
+  @property
+  def version(self):
+    return self.info['version']
 
   def compile(self, sources, frameworks=(), name=None, **kwargs):
     builder = TargetBuilder(gtn(name, 'compile'), kwargs, frameworks, sources)

@@ -30,6 +30,11 @@ else:
 session.options.setdefault('{}.toolkit'.format(module), options.toolkit)
 cxc = load_module(module).cxc
 
+logger.info('lang.cxx: loading "{0}" (with {0}.toolkit="{1}")'.format(module, options.toolkit))
+logger.info('lang.cxx:   cxc.name="{}"'.format(cxc.name))
+logger.info('lang.cxx:   cxc.target_arch="{}"'.format(cxc.target_arch))
+logger.info('lang.cxx:   cxc.version="{}"'.format(cxc.version))
+
 
 def c_compile(*args, name=None, **kwargs):
   return cxc.compile(*args, name=gtn(name, None), language='c', **kwargs)
