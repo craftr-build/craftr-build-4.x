@@ -48,11 +48,14 @@ def parse_cmdline_options(options):
 
 
 def read_cache(cachefile):
-  with open(cachefile) as fp:
-    try:
-      session.read_cache(fp)
-    except ValueError as exc:
-      return False
+  try:
+    with open(cachefile) as fp:
+      try:
+        session.read_cache(fp)
+      except ValueError as exc:
+        return False
+  except IOError as exc:
+    return False
   return True
 
 
