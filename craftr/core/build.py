@@ -523,12 +523,7 @@ class WindowsPlatformHelper(PlatformHelper):
       for index, command in enumerate(commands):
         if accept_additional_args and index == len(commands)-1:
           command.append(shell.safe('%*'))
-        # TODO: For some reason, we need to invoke these commands
-        # using "cmd /Q /c" too instead of just the command, otherwise
-        # there seem to be some problems for example with CMake which
-        # causes the bash script to exit immediately after CMake
-        # is finished.
-        fp.write('cmd /Q /c ' + shell.join(command) + '\n')
+        fp.write(shell.join(command) + '\n')
         fp.write('if %errorlevel% neq 0 exit %errorlevel%\n\n')
 
     return result, filename
