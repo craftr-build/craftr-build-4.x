@@ -41,6 +41,10 @@ class ToolDetectionError(Exception):
   pass
 
 
+class ModuleError(Exception):
+  pass
+
+
 def include_defs(filename, globals=None):
   """
   Uses :mod:`require` to load a Python file and then copies all symbols
@@ -222,7 +226,6 @@ def load_file(filename):
 
   if not path.isabs(filename):
     filename = path.join(session.module.directory, filename)
-    print(filename)
 
   with open(filename, 'r') as fp:
     code = compile(fp.read(), filename, 'exec')
@@ -306,7 +309,3 @@ def error(*message):
   """
 
   raise ModuleError(' '.join(map(str, message)))
-
-
-class ModuleError(Exception):
-  pass
