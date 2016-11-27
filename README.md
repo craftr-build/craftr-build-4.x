@@ -20,6 +20,9 @@ Below you can find an example to compile a simple C++ program to get a taste
 of what Craftr build definitions look like. Note that every module requires a
 `manifest.json` together with a `Craftrfile` to make a *package*.
 
+> __Note__: You can start a new project easily with the `craftr startproject`
+> command.
+
 __manifest.json__
 
 ```json
@@ -58,12 +61,12 @@ program = cxx_binary(
 )
 ```
 
-This project can now be built using the `craftr build` command. Depending on
-the availability, the `cURLpp` library will be compiled from source or the
-flags will be retrieved with `pkg-config` (TODO).
+Depending on the availability, the `cURLpp` library will be compiled from
+source or the flags will be retrieved with `pkg-config` (TODO). To build
+the project, use
 
-Note that you can start a new project easily with the `craftr startproject`
-command.
+    $ craftr export
+    $ craftr build
 
 Options can either be specified on the command-line or in configuration files.
 By default, `~/.craftrconfig` and `./.craftrconfig` files are loaded if they

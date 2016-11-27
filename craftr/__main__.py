@@ -36,6 +36,26 @@ import textwrap
 CONFIG_FILENAME = '.craftrconfig'
 
 
+def parse_cmdline_options(options):
+  for item in options:
+    key, sep, value = item.partition('=')
+    if not sep:
+      value = 'true'
+    if not value:
+      session.options.pop(key, None)
+    else:
+      session.options[key] = value
+
+
+def read_cache(cachefile):
+  with open(cachefile) as fp:
+    try:
+      session.read_cache(fp)
+    except ValueError as exc:
+      return False
+  return True
+
+
 def write_cache(cachefile):
   # Write back the cache.
   try:
@@ -94,6 +114,17 @@ def get_ninja_version(ninja_bin):
   return shell.pipe([ninja_bin, '--version'], shell=True).output.strip()
 
 
+def get_ninja_info():
+  # Make sure the Ninja executable exists and find its version.
+  ninja_bin = session.options.get('global.ninja') or \
+      session.options.get('craftr.ninja') or os.getenv('NINJA', 'ninja')
+  ninja_bin = shell.find_program(ninja_bin)
+  ninja_version = get_ninja_version(ninja_bin)
+  logger.debug('Ninja executable:', ninja_bin)
+  logger.debug('Ninja version:', ninja_version)
+  return ninja_bin, ninja_version
+
+
 class BaseCommand(object, metaclass=abc.ABCMeta):
   """
   Base class for Craftr subcommands.
@@ -108,112 +139,116 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
     pass
 
 
-class build(BaseCommand):
+class ExportOrBuildCommand(BaseCommand):
+
+  def __init__(self, is_export):
+    self.is_export = is_export
 
   def build_parser(self, parser):
-    parser.add_argument('targets', metavar='TARGET', nargs='*')
-    parser.add_argument('-m', '--module')
+    if self.is_export:
+      parser.add_argument('-m', '--module')
+    else:
+      parser.add_argument('targets', metavar='TARGET', nargs='*')
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-i', '--include-path', action='append', default=[])
 
   def execute(self, parser, args):
     session.path.extend(map(path.norm, args.include_path))
 
-    # Determine the module to execute, either from the current working
-    # directory or find it by name if one is specified.
-    if not args.module:
-      for fn in [MANIFEST_FILENAME, path.join('craftr', MANIFEST_FILENAME)]:
-        if path.isfile(fn):
-          module = session.parse_manifest(fn)
-          break
+    if self.is_export:
+      # Determine the module to execute, either from the current working
+      # directory or find it by name if one is specified.
+      if not args.module:
+        for fn in [MANIFEST_FILENAME, path.join('craftr', MANIFEST_FILENAME)]:
+          if path.isfile(fn):
+            module = session.parse_manifest(fn)
+            break
+        else:
+          parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
       else:
-        parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
+        # TODO: For some reason, prints to stdout are not visible here.
+        # TODO: Prints to stderr however work fine.
+        try:
+          module_name, version = parse_module_spec(args.module)
+        except ValueError as exc:
+          parser.error('{} (note: you have to escape > and < characters)'.format(exc))
+        try:
+          module = session.find_module(module_name, version)
+        except Module.NotFound as exc:
+          parser.error('module not found: ' + str(exc))
     else:
-      # TODO: For some reason, prints to stdout are not visible here.
-      # TODO: Prints to stderr however work fine.
-      try:
-        module_name, version = parse_module_spec(args.module)
-      except ValueError as exc:
-        parser.error('{} (note: you have to escape > and < characters)'.format(exc))
-      try:
-        module = session.find_module(module_name, version)
-      except Module.NotFound as exc:
-        parser.error('module not found: ' + str(exc))
+      module = None
 
-    # Make sure the Ninja executable exists and find its version.
-    ninja_bin = session.options.get('global.ninja') or \
-        session.options.get('craftr.ninja') or os.getenv('NINJA', 'ninja')
-    ninja_bin = shell.find_program(ninja_bin)
-    ninja_version = get_ninja_version(ninja_bin)
-    logger.debug('Ninja executable:', ninja_bin)
-    logger.debug('Ninja version:', ninja_version)
+    ninja_bin, ninja_version = get_ninja_info()
 
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
     path.makedirs(session.builddir)
     os.chdir(session.builddir)
 
-    # Read the cache.
+    # Read the cache and parse command-line options.
     cachefile = path.join(session.builddir, '.craftrcache')
-    if path.isfile(cachefile):
-      with open(cachefile) as fp:
-        try:
-          session.read_cache(fp)
-        except ValueError as exc:
-          logger.error('error reading cache file:', cachefile)
-          logger.error(exc, indent=1)
+    if not read_cache(cachefile) and not self.is_export:
+      logger.error('Unable to load "{}", can not build'.format(cachefile))
+      return 1
 
     # Prepare options, loaders and execute.
-    try:
+    if self.is_export:
+      session.cache['build'] = {}
+      try:
+        write_cache(cachefile)
+        module.run()
+      except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
+        for error in exc.format_errors():
+          logger.error(error)
+        return 1
+      except craftr.defaults.ModuleError as exc:
+        logger.error(exc)
+        return 1
+
+      # Write the cache back.
+      session.cache['build']['targets'] = list(session.graph.targets.keys())
+      session.cache['build']['main'] = module.ident
+      session.cache['build']['options'] = args.options
       write_cache(cachefile)
-      module.run()
-    except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
-      for error in exc.format_errors():
-        logger.error(error)
-      return 1
-    except craftr.defaults.ModuleError as exc:
-      logger.error(exc)
-      return 1
 
-    # Write the cache back.
-    write_cache(cachefile)
+      # Write the Ninja manifest.
+      with open("build.ninja", 'w') as fp:
+        platform = core.build.get_platform_helper()
+        context = core.build.ExportContext(ninja_version)
+        writer = core.build.NinjaWriter(fp)
+        session.graph.export(writer, context, platform)
 
-    # Check the targets and if they exist.
-    targets = []
-    for target in args.targets:
-      if '.' not in target:
-        target = module.manifest.name + '.' + target
-        version = module.manifest.version
-      elif target.startswith('.'):
-        target = module.manifest.name + target
-        version = module.manifest.version
-      else:
-        version = None
+    else:
+      parse_cmdline_options(session.cache['build']['options'])
+      main = session.cache['build']['main']
+      available_targets = frozenset(session.cache['build']['targets'])
 
-      module_name, target = target.rpartition('.')[::2]
-      if not version:
+      # Check the targets and if they exist.
+      targets = []
+      for target in args.targets:
+        if '.' not in target:
+          target = main + '.' + target
+        elif target.startswith('.'):
+          target = main + target
+
+        module_name, target = target.rpartition('.')[::2]
         module_name, version = get_volatile_module_version(module_name)
-      ref_module = session.find_module(module_name, version or '*')
-      target = craftr.targetbuilder.get_full_name(target, ref_module)
-      if target not in session.graph.targets:
-        parser.error('no such target: {}'.format(target))
-      targets.append(target)
+        ref_module = session.find_module(module_name, version or '*')
+        target = craftr.targetbuilder.get_full_name(target, ref_module)
+        if target not in available_targets:
+          parser.error('no such target: {}'.format(target))
+        targets.append(target)
 
-    # Write the Ninja manifest.
-    with open("build.ninja", 'w') as fp:
-      platform = core.build.get_platform_helper()
-      context = core.build.ExportContext(ninja_version)
-      writer = core.build.NinjaWriter(fp)
-      session.graph.export(writer, context, platform)
+      # Execute the ninja build.
+      cmd = [ninja_bin]
+      if args.verbose:
+        cmd += ['-v']
+      cmd += targets
+      shell.run(cmd)
 
-    # Execute the ninja build.
-    cmd = [ninja_bin]
-    if args.verbose:
-      cmd += ['-v']
-    cmd += targets
-    shell.run(cmd)
 
-class startpackage(BaseCommand):
+class StartpackageCommand(BaseCommand):
 
   def build_parser(self, parser):
     parser.add_argument('name')
@@ -283,11 +318,13 @@ def main():
   parser.add_argument('-d', '--option', dest='options', action='append', default=[])
   subparsers = parser.add_subparsers(dest='command')
 
-  commands = {}
-  for class_ in BaseCommand.__subclasses__():
-    cmd = class_()
-    cmd.build_parser(subparsers.add_parser(class_.__name__))
-    commands[class_.__name__] = cmd
+  commands = {
+    'export': ExportOrBuildCommand(is_export=True),
+    'build': ExportOrBuildCommand(is_export=False),
+    'startpackage': StartpackageCommand()
+  }
+  for key, cmd in commands.items():
+    cmd.build_parser(subparsers.add_parser(key))
 
   # Parse the arguments.
   args = parser.parse_args()
@@ -328,18 +365,9 @@ def main():
       parser.error(exc)
       return 1
 
-  # Export the command-line options in the session options.
-  for item in args.options:
-    key, sep, value = item.partition('=')
-    if not sep:
-      value = 'true'
-    if not value:
-      session.options.pop(key, None)
-    else:
-      session.options[key] = value
-
   # Execute the command in the session context.
   with session:
+    parse_cmdline_options(args.options)
     return commands[args.command].execute(parser, args)
 
 
