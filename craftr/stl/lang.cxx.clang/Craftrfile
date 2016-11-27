@@ -78,11 +78,7 @@ def __gcc_check(program, output):
     'thread_model': thread_model,
   }
 
-  # Check for a C++ compiler.
-  if program[-2:] == '++' and result['name'] == 'llvm':
-    stdlib = detect_cpp_stdlib(program)
-    if stdlib:
-      result['cpp_stdlib'] = stdlib
+  logger.debug('matched gcc: "{}":'.format(program, result))
   return result
 
 
@@ -107,7 +103,7 @@ def __llvm_check(program, output):
   result = {
     'version': version[2],
     'version_str': version[0].strip(),
-    'name': version[1].lower(),
+    'name': name.lower(),
     'target': target,
     'thread_model': thread_model,
   }
@@ -118,6 +114,7 @@ def __llvm_check(program, output):
     if stdlib:
       result['cpp_stdlib'] = stdlib
 
+  logger.debug('matched llvm: "{}":'.format(program), result)
   return result
 
 
@@ -156,10 +153,8 @@ def detect_cpp_stdlib(program):
 
 @functools.lru_cache()
 def identify_compiler(program):
-  program = shell.split(program)[0]
-
   try:
-    output = shell.pipe([program, '-v']).output
+    output = shell.pipe(shell.split(program) + ['-v']).output
   except OSError as exc:
     raise ToolDetectionError(exc)
 
@@ -200,16 +195,16 @@ def parse_cross_config(filename, format='ini'):
 def get_default_toolset(tool):
   if tool == 'llvm':
     return {
-      'as': 'clang -x assembler',
+      'as': '$c -x assembler',
       'c': 'clang',
-      'cpp': 'clang++',
+      'cpp': '$c -x c++',
       'ar': 'ar'
     }
   elif tool == 'gcc':
     return {
-      'as': 'gcc -x assembler',
+      'as': '$c -x assembler',
       'c': 'gcc',
-      'cpp': 'g++',
+      'cpp': '$c -x c++',
       'ar': 'ar'
     }
   else:
@@ -234,10 +229,23 @@ class ToolChain(object):
         return getattr(options, n)
       return os.environ.get(var, defaults[n])
 
-    self.as_ = CompilerLinker('asm', resolve('as', 'AS'))
-    self.cc = CompilerLinker('c', resolve('c', 'CC'))
-    self.cxx = CompilerLinker('c++', resolve('cpp', 'CXX'))
-    self.ar = Ar(resolve('ar', 'AR'))
+    c = resolve('c', 'CC')
+    as_ = resolve('as', 'AS').replace('$c', c)
+    cpp = resolve('cpp', 'CXX').replace('$c', c)
+    ar = resolve('ar', 'AR')
+
+    self.as_ = CompilerLinker('asm', as_)
+    self.cc = CompilerLinker('c', c)
+    self.cxx = CompilerLinker('c++', cpp)
+    self.ar = Ar(ar)
+
+  @property
+  def name(self):
+    return self.cc.name
+
+  @property
+  def target_arch(self):
+    return self.cc.target_arch
 
   def compile(self, language, *args, name=None, **kwargs):
     compiler = {'asm': self.as_, 'c': self.cc, 'c++': self.cxx}[language]
@@ -262,6 +270,10 @@ class CompilerLinker(object):
   @property
   def name(self):
     return self.info['name']
+
+  @property
+  def target_arch(self):
+    return self.info['target']
 
   def compile(self, sources, frameworks=(), name=None, **kwargs):
     builder = TargetBuilder(gtn(name, 'compile'), kwargs, frameworks, sources)
@@ -424,6 +436,12 @@ class CompilerLinker(object):
 
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
+    if self.name == 'llvm':
+      command += builder.get_list('llvm_compile_additional_flags')
+    elif self.name == 'gcc':
+      command += builder.get_list('gcc_compile_additional_flags')
+    else:
+      assert False, self.name
 
     meta = {'link_output': output}
     if output_type == 'dll':
