@@ -421,7 +421,9 @@ class MsvcToolkit(object):
     for callback in builder.get_list('cxc_link_prepare_callbacks'):
       callback(self, builder)
 
-    suffix = builder.get('suffix', getattr(platform, output_type))
+    suffix = builder.get(output_type + '_suffix')
+    if not suffix:
+      suffix = builder.get('suffix', getattr(platform, output_type))
     output = buildlocal(path.addsuffix(output, suffix))
 
     libpath = builder.get_list('libpath')

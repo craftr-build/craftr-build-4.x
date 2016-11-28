@@ -179,7 +179,9 @@ class TargetBuilder(object):
 
     self.name = name
     self.option_kwargs = Framework(name, **option_kwargs)
-    self.options_merge = OptionMerge(self.option_kwargs, *self.frameworks)
+    self.option_kwargs_defaults = Framework(name + "_defaults")
+    self.options_merge = OptionMerge(self.option_kwargs,
+        self.option_kwargs_defaults, *self.frameworks)
     assert self.option_kwargs in self.options_merge.frameworks
     self.outputs = outputs
     self.implicit_deps = implicit_deps
@@ -198,6 +200,9 @@ class TargetBuilder(object):
   def add_local_framework(self, *args, **kwargs):
     fw = Framework(*args, **kwargs)
     self.options_merge.append(fw)
+
+  def setdefault(self, key, value):
+    self.option_kwargs_defaults[key] = value
 
   def build(self, commands, inputs=None, outputs=None, implicit_deps=None,
       order_only_deps=None, metadata=None, **kwargs):
