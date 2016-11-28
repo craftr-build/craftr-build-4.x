@@ -14,12 +14,11 @@
       "help": "The name of the target platform. Valid values are \"x86\", \"amd64\" and \"ia64\""
     },
     "debug": {
-      "type": "bool",
-      "inherit": true
+      "type": "bool"
     },
     "rtti": {
       "type": "bool",
-      "inherit": true
+      "default": true
     }
   },
   "loaders": []
