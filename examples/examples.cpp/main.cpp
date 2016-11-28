@@ -20,25 +20,51 @@
 #include <curlpp/cURLpp.hpp>
 #include <curlpp/Easy.hpp>
 #include <curlpp/Options.hpp>
+#include <dlib/config_reader.h>
 #include <tinyxml2.h>
 
-void DumpXML(tinyxml2::XMLNode* node) {
+void dump_xml(tinyxml2::XMLNode* node) {
   auto* elem = node->ToElement();
   if (elem) {
-    std::cout << elem->Name() << std::endl;
+    std::cout << "  " << elem->Name() << std::endl;
   }
   for (auto* child = node->FirstChild(); child; child = child->NextSibling()) {
-    DumpXML(child);
+    dump_xml(child);
   }
 }
 
-int main() {
+
+std::string read_url(std::string const& fn) {
+  try {
+    dlib::config_reader cfg(fn);
+    return cfg.block("example")["url"];
+  }
+  catch (std::exception& e) {
+    std::cerr << "error: could not read config file: " << e.what() << std::endl;
+    return "";
+  }
+}
+
+
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::cerr << "usage: main <config-file>" << std::endl;
+    return 1;
+  }
+
+  std::string url = read_url(argv[1]);
+  if (!url.size()) {
+    std::cerr << "error: none or empty url" << std::endl;
+    return 1;
+  }
+
+  std::cout << "retrieving XML from \"" << url << "\" ..." << std::endl;
   std::ostringstream data;
   try {
     curlpp::Cleanup cleanup;
     curlpp::Easy request;
     request.setOpt<curlpp::options::WriteStream>(&data);
-    request.setOpt<curlpp::options::Url>("http://www.w3schools.com/xml/note.xml");
+    request.setOpt<curlpp::options::Url>(url);
     request.perform();
   }
   catch (std::exception& e) {
@@ -46,6 +72,7 @@ int main() {
     return 1;
   }
 
+  std::cout << "listing tags in XML document ..." << std::endl;
   tinyxml2::XMLDocument doc;
   tinyxml2::XMLError error = doc.Parse(data.str().c_str());
   if (error != tinyxml2::XML_SUCCESS) {
@@ -53,6 +80,6 @@ int main() {
     return 1;
   }
 
-  DumpXML(doc.RootElement());
+  dump_xml(doc.RootElement());
   return 0;
 }

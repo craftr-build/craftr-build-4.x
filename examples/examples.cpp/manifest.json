@@ -6,6 +6,7 @@
   "dependencies": {
     "lang.cxx": "*",
     "lib.cxx.curlpp": "*",
+    "lib.cxx.dlib": "*",
     "lib.cxx.tinyxml2": "*"
   },
   "options": {},

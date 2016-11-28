@@ -2,11 +2,12 @@
 
 load_module('lang.cxx.*')
 load_module('lib.cxx.curlpp.*')
+load_module('lib.cxx.dlib.*')
 load_module('lib.cxx.tinyxml2.*')
 
 obj = cpp_compile(
   sources = [local('main.cpp')],
-  frameworks = [cURLpp, tinyxml2]
+  frameworks = [cURLpp, dlib, tinyxml2]
 )
 
 main = cxx_binary(
@@ -14,4 +15,4 @@ main = cxx_binary(
   output = 'main'
 )
 
-run = gentarget([[main]], explicit=True)
+run = gentarget([[main, local('example.ini')]], explicit=True)
