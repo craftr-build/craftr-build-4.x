@@ -23,15 +23,12 @@
 #include <dlib/config_reader.h>
 #include <tinyxml2.h>
 
-void dump_xml(tinyxml2::XMLNode* node) {
-  auto* elem = node->ToElement();
-  if (elem) {
-    std::cout << "  " << elem->Name() << std::endl;
-  }
-  for (auto* child = node->FirstChild(); child; child = child->NextSibling()) {
-    dump_xml(child);
-  }
-}
+#ifdef HAVE_QT5
+  #include <QtWidgets/QMainWindow>
+  #include <QtWidgets/QApplication>
+  #include <QtWidgets/QLabel>
+  #include <QtWidgets/QBoxLayout>
+#endif // HAVE_QT5
 
 
 std::string read_url(std::string const& fn) {
@@ -42,6 +39,17 @@ std::string read_url(std::string const& fn) {
   catch (std::exception& e) {
     std::cerr << "error: could not read config file: " << e.what() << std::endl;
     return "";
+  }
+}
+
+
+void dump_xml(std::ostream& out, tinyxml2::XMLNode* node) {
+  auto* elem = node->ToElement();
+  if (elem) {
+    out << "  " << elem->Name() << std::endl;
+  }
+  for (auto* child = node->FirstChild(); child; child = child->NextSibling()) {
+    dump_xml(out, child);
   }
 }
 
@@ -72,7 +80,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::cout << "listing tags in XML document ..." << std::endl;
+  std::cout << "parsing XML document ..." << std::endl << std::endl;
   tinyxml2::XMLDocument doc;
   tinyxml2::XMLError error = doc.Parse(data.str().c_str());
   if (error != tinyxml2::XML_SUCCESS) {
@@ -80,6 +88,23 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  dump_xml(doc.RootElement());
-  return 0;
+  data << "\n\nTags:\n\n";
+  dump_xml(data, doc.RootElement());
+
+  #ifdef HAVE_QT5
+    QApplication app(argc, argv);
+    QWidget window;
+
+    QHBoxLayout layout(&window);
+    window.setLayout(&layout);
+
+    QLabel label(data.str().c_str());
+    layout.addWidget(&label);
+
+    window.show();
+    return app.exec();
+  #else
+    std::cout << data.str() << std::endl;
+    return 0;
+  #endif
 }

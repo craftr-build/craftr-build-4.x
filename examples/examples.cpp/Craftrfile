@@ -5,9 +5,23 @@ load_module('lib.cxx.curlpp.*')
 load_module('lib.cxx.dlib.*')
 load_module('lib.cxx.tinyxml2.*')
 
+defines = []
+frameworks = [cURLpp, dlib, tinyxml2]
+
+try:
+  qt5 = load_module('lib.cxx.qt5')
+except ModuleError as exc:
+  logger.warn('note: Qt5 can not be found, disabling Qt5 example')
+  logger.warn('note: message:', exc)
+  qt5 = None
+else:
+  defines.append('HAVE_QT5')
+  frameworks.append(qt5.framework('Qt5Widgets'))
+
 obj = cpp_compile(
   sources = [local('main.cpp')],
-  frameworks = [cURLpp, dlib, tinyxml2]
+  frameworks = frameworks,
+  defines = defines
 )
 
 main = cxx_binary(
@@ -15,4 +29,11 @@ main = cxx_binary(
   output = 'main'
 )
 
-run = gentarget([[main, local('example.ini')]], explicit=True)
+# Make a target that runs the application that we just compiled. If Qt5
+# is available, the directory with binaries (with shared libraries) will
+# be added to the PATH.
+run = gentarget(
+  commands = [[main, local('example.ini')]],
+  explicit=True,
+  environ = {'PATH': append_PATH(qt5.bin_dir if qt5 else None)}
+)
