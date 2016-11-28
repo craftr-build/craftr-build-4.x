@@ -1,0 +1,14 @@
+{
+  "name": "lib.cxx.qt5",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "path": {
+      "type": "string",
+      "inherit": false
+    }
+  },
+  "loaders": []
+}
