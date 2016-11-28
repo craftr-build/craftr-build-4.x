@@ -140,22 +140,22 @@ class TargetBuilder(object):
   :param order_only_deps: A list of filenames added as order only dependencies.
   """
 
-  def __init__(self, name, option_kwargs=None, frameworks=(), inputs=None,
-      outputs=None, implicit_deps=None, order_only_deps=None):
+  def __init__(self, name, option_kwargs=None, frameworks=(), inputs=(),
+      outputs=(), implicit_deps=(), order_only_deps=()):
     argspec.validate('name', name, {'type': str})
     argspec.validate('option_kwargs', option_kwargs,
         {'type': [None, dict, Framework]})
     argspec.validate('frameworks', frameworks,
         {'type': [list, tuple], 'items': {'type': Framework}})
     argspec.validate('inputs', inputs,
-        {'type': [None, list, tuple, build.Target],
+        {'type': [list, tuple, build.Target],
           'items': {'type': [str, build.Target]}})
     argspec.validate('outputs', outputs,
-        {'type': [None, list, tuple], 'items': {'type': str}})
+        {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('implicit_deps', implicit_deps,
-        {'type': [None, list, tuple], 'items': {'type': str}})
+        {'type': [list, tuple], 'items': {'type': str}})
     argspec.validate('order_only_deps', order_only_deps,
-        {'type': [None, list, tuple], 'items': {'type': str}})
+        {'type': [list, tuple], 'items': {'type': str}})
 
     self.frameworks = list(frameworks)
     if isinstance(inputs, build.Target):
@@ -183,9 +183,9 @@ class TargetBuilder(object):
     self.options_merge = OptionMerge(self.option_kwargs,
         self.option_kwargs_defaults, *self.frameworks)
     assert self.option_kwargs in self.options_merge.frameworks
-    self.outputs = outputs
-    self.implicit_deps = implicit_deps
-    self.order_only_deps = order_only_deps
+    self.outputs = list(outputs)
+    self.implicit_deps = list(implicit_deps)
+    self.order_only_deps = list(order_only_deps)
     self.metadata = {}
     self.used_option_keys = set()
 
@@ -204,8 +204,8 @@ class TargetBuilder(object):
   def setdefault(self, key, value):
     self.option_kwargs_defaults[key] = value
 
-  def build(self, commands, inputs=None, outputs=None, implicit_deps=None,
-      order_only_deps=None, metadata=None, **kwargs):
+  def build(self, commands, inputs=(), outputs=(), implicit_deps=(),
+      order_only_deps=(), metadata=None, **kwargs):
     """
     Create a :class:`build.Target` from the information in the builder,
     add it to the build graph and return it.
@@ -219,22 +219,10 @@ class TargetBuilder(object):
           logger.warn('[-] {}={!r}'.format(key, self.option_kwargs[key]))
 
     # TODO: We could make this a bit shorter..
-    if inputs is None:
-      inputs = self.inputs or ()
-    elif self.inputs is not None:
-      raise RuntimeError('inputs specified in constructor and build()')
-    if outputs is None:
-      outputs = self.outputs or ()
-    elif self.outputs is not None:
-      raise RuntimeError('outputs specified in constructor and build()')
-    if implicit_deps is None:
-      implicit_deps = self.implicit_deps or ()
-    elif self.implicit_deps is not None:
-      raise RuntimeError('implicit_deps specified in constructor and build()')
-    if order_only_deps is None:
-      order_only_deps = self.order_only_deps or ()
-    elif self.order_only_deps is not None:
-      raise RuntimeError('order_only_deps specified in constructor and build()')
+    inputs = self.inputs + list(inputs or ())
+    outputs = self.outputs + list(outputs or ())
+    implicit_deps = self.implicit_deps + list(implicit_deps or ())
+    order_only_deps = self.order_only_deps + list(order_only_deps or ())
     if metadata is None:
       metadata = self.metadata
     elif self.metadata:

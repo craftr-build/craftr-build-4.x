@@ -97,7 +97,7 @@ def buildlocal(rel_path):
   return path.canonical(path.join(session.module.ident, rel_path))
 
 
-def relocate_files(files, outdir, suffix, replace_suffix=True):
+def relocate_files(files, outdir, suffix, replace_suffix=True, parent=None):
   """
   Converts a list of filenames, relocating them to *outdir* and replacing
   their existing suffix. If *suffix* is a callable, it will be passed the
@@ -105,10 +105,11 @@ def relocate_files(files, outdir, suffix, replace_suffix=True):
   a different suffix.
   """
 
-  base = path.common(files)
+  if parent is None:
+    parent = session.module.project_dir
   result = []
   for filename in files:
-    filename = path.join(outdir, path.rel(filename, base))
+    filename = path.join(outdir, path.rel(filename, parent))
     filename = path.addsuffix(filename, suffix, replace=replace_suffix)
     result.append(filename)
   return result
@@ -293,8 +294,6 @@ def write_response_file(arguments, builder=None, name=None, force_file=False):
 
   filename = buildlocal(path.join('buildfiles', name))
   if builder:
-    if builder.implicit_deps is None:
-      builder.implicit_deps = []
     builder.implicit_deps.append(filename)
 
   if session.builddir:
