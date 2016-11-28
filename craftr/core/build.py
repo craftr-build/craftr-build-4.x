@@ -35,11 +35,20 @@ import stat
 import sys
 
 
-class DuplicateOutputError(object):
+class DuplicateOutputError(Exception):
   """
   This exception is raised if the same output file would be built by
   multiple targets.
   """
+
+  def __init__(self, filename, new_target, target):
+    self.filename = filename
+    self.new_target = new_target
+    self.target = target
+
+  def __str__(self):
+    return '"{}" produced by {} and {}'.format(self.filename,
+        self.new_target.name, self.target.name)
 
 
 class Graph(object):
@@ -110,8 +119,9 @@ class Graph(object):
     for infile in target.inputs:
       self.infiles.setdefault(infile, []).append(target)
     for outfile in target.outputs:
-      if self.outfiles.setdefault(outfile, target) is not target:
-        raise DuplicateOutputError(outfile)
+      other = self.outfiles.setdefault(outfile, target)
+      if other is not target:
+        raise DuplicateOutputError(outfile, target, other)
 
   def export(self, writer, context, platform):
     """
