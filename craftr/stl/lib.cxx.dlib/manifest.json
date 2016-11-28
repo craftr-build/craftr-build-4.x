@@ -1,0 +1,24 @@
+{
+  "name": "lib.cxx.dlib",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "19.2"
+    }
+  },
+  "loaders": [
+    {
+      "name": "source",
+      "type": "url",
+      "urls": [
+        "http://dlib.net/files/dlib-$version.zip"
+      ]
+    }
+  ]
+}
