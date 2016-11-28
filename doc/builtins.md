@@ -77,6 +77,8 @@ or retrieve the currently executed Craftr module from its `.module` member.
 
 ### `error()`
 
+### `append_PATH()`
+
 
 ## Classes
 

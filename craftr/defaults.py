@@ -31,6 +31,7 @@ from craftr import platform
 
 import builtins as _builtins
 import itertools as _itertools
+import os as _os
 import require
 import sys as _sys
 
@@ -236,24 +237,24 @@ def load_file(filename):
   return scope
 
 
-def gentool(command, preamble=None, environ=None, name=None):
+def gentool(commands, preamble=None, environ=None, name=None):
   """
   Create a :class:`~_build.Tool` object. The name of the tool will be derived
   from the variable name it is assigned to unless *name* is specified.
   """
 
-  tool = _build.Tool(gtn(name), command, preamble, environ)
+  tool = _build.Tool(gtn(name), commands, preamble, environ)
   session.graph.add_tool(tool)
   return tool
 
 
-def gentarget(command, inputs=(), outputs=(), *args, **kwargs):
+def gentarget(commands, inputs=(), outputs=(), *args, **kwargs):
   """
   Create a :class:`~_build.Target` object. The name of the target will be
   derived from the variable name it is assigned to unless *name* is specified.
   """
 
-  target = _build.Target(gtn(kwargs.pop('name', None)), command, inputs,
+  target = _build.Target(gtn(kwargs.pop('name', None)), commands, inputs,
       outputs, *args, **kwargs)
   session.graph.add_target(target)
   return target
@@ -309,3 +310,25 @@ def error(*message):
   """
 
   raise ModuleError(' '.join(map(str, message)))
+
+
+def append_PATH(*paths):
+  """
+  This is a helper function that is used to generate a ``PATH`` environment
+  variable from the value that already exists and add the specified *paths*
+  to it. It is typically used for example like this:
+
+  .. code:: python
+
+    run = gentarget(
+      commands = [[main, local('example.ini')]],
+      explicit=True,
+      environ = {'PATH': append_PATH(qt5.bin_dir if qt5 else None)}
+    )
+  """
+
+  result = _os.getenv('PATH')
+  paths = _os.path.pathsep.join(filter(bool, paths))
+  if paths:
+    result += _os.path.pathsep + paths
+  return result
