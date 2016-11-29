@@ -1,0 +1,116 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+A very small interface for querying information about a Git repository.
+
+Examples
+--------
+
+Display a note in console if build is started with unversioned changes
+in the Git repository.
+
+.. code:: python
+
+  git = load_module('git').Git(project_dir)
+  info('Current Version:', git.describe())
+  if git.status(exclude='??'):
+    info('Unversioned changes present.')
+
+Export a ``GIT_VERSION.h`` header file into the build directory (not
+to mess with your source tree!)
+
+.. code:: python
+
+  from craftr import *
+  from craftr.ext import git
+
+  def write_gitversion():
+    filename = path.buildlocal('include/GIT_VERSION.h')
+    dirname = path.dirname(filename)
+    if session.export:
+      path.makedirs(dirname)
+      description = git.Git(project_dir).describe()
+      with open(filename, 'w') as fp:
+        fp.write('#pragma once\\n#define GIT_VERSION "{}"\\n'.format(description))
+    return dirname
+
+  gitversion_dir = write_gitversion()  # Add this to your includes
+
+Classes
+-------
+
+.. autoclass:: Git
+  :members:
+  :undoc-members:
+'''
+
+__all__ = ['Git']
+
+
+class Git(object):
+
+  def __init__(self, git_dir):
+    super().__init__()
+    self.git_dir = git_dir
+
+  def _popen(self, *args, **kwargs):
+    return shell.pipe(*args, check=True, merge=False, cwd=self.git_dir, **kwargs)
+
+  def status(self, include=None, exclude=None):
+    result = []
+    output = self._popen(['git', 'status', '--porcelain']).stdout
+    for line in output.split('\n'):
+      status, filename = line[:2].strip(), line[3:]
+      if not status or not filename:
+        continue
+      if include is not None and status not in include:
+        continue
+      if exclude is not None and status in exclude:
+        continue
+      result.append((status, filename))
+    return result
+
+  def describe(self, mode='tags', all=False, fallback=True):
+    if mode not in ('tags', 'contains'):
+      raise ValueError('invalid describe mode {!r}'.format(mode))
+    command = ['git', 'describe', '--{}'.format(mode)]
+    if all:
+      command.append('--all')
+    try:
+      return self._popen(command).stdout.strip()
+    except shell.CalledProcessError as exc:
+      if fallback and 'No names found' in exc.stderr:
+        # Let's create an alternative description instead.
+        sha = self._popen(['git', 'rev-parse', 'HEAD']).output[:7]
+        count = int(self._popen(['git', 'rev-list', 'HEAD', '--count']).output.strip())
+        return '{}-{}'.format(count, sha)
+      raise
+
+  def branches(self):
+    command = ['git', 'branch']
+    for line in self._popen(command).stdout.split('\n'):
+      parts = line.split()
+      if len(parts) == 2:
+        yield parts
+      else:
+        yield ['', parts[0]]
+
+  def branch(self):
+    command = ['git', 'symbolic-ref', '--short', 'HEAD']
+    try:
+      return self._popen(command).stdout.strip()
+    except Process.ExitCodeError as exc:
+      raise ValueError(exc.process.stderr.strip())
