@@ -30,8 +30,7 @@ __manifest.json__
   "name": "myapp",
   "version": "1.0.0",
   "dependencies": {
-    "lang.cxx": "*",
-    "lib.cxx.curlpp": "*"
+    "lang.cxx": "*"
   },
   "options": {
     "debug": {
@@ -49,13 +48,10 @@ __Craftrfile__
 
 ```python
 load_module('lang.cxx.*')
-load_module('lang.cxx.curlpp.*')
 
 program = cxx_binary(
   inputs = cpp_compile(
-    sources = glob(['src/*.cpp']),
-    defines = ['MYAPP_DEBUG'] if options.debug else [],
-    frameworks = [cURLpp]
+    sources = glob(['src/*.cpp'])
   ),
   output = options.outbin
 )
