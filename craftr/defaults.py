@@ -261,6 +261,17 @@ def gentarget(commands, inputs=(), outputs=(), *args, **kwargs):
   return target
 
 
+def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
+  """
+  Simplification of :func:`gentarget` to make it more obvious that a
+  generate target is actually executed.
+  """
+
+  name = gtn(kwargs.pop('name', None))
+  kwargs.setdefault('explicit', True)
+  return gentarget([[target] + list(args)], inputs, outputs, name=name, **kwargs)
+
+
 def write_response_file(arguments, builder=None, name=None, force_file=False):
   """
   Creates a response-file with the specified *name* in the in the
