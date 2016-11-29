@@ -1,0 +1,13 @@
+# examples.c
+
+from os import environ
+load_module('lang.cxx.*')
+
+program = cxx_binary(
+  inputs = c_compile(
+    sources = glob(['src/*.c'])
+  ),
+  output = options.outbin
+)
+
+run = runtarget(program, environ.get('USERNAME', 'John'), "sunny")

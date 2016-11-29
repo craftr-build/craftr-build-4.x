@@ -27,7 +27,7 @@ __manifest.json__
 
 ```json
 {
-  "name": "myapp",
+  "name": "examples.c",
   "version": "1.0.0",
   "dependencies": {
     "lang.cxx": "*"
@@ -38,7 +38,7 @@ __manifest.json__
     },
     "outbin": {
       "type": "string",
-      "default": "main"
+      "default": "my_app"
     }
   }
 }
@@ -47,22 +47,44 @@ __manifest.json__
 __Craftrfile__
 
 ```python
+# examples.c
+
+from os import environ
 load_module('lang.cxx.*')
 
 program = cxx_binary(
-  inputs = cpp_compile(
-    sources = glob(['src/*.cpp'])
+  inputs = c_compile(
+    sources = glob(['src/*.c'])
   ),
   output = options.outbin
 )
+
+run = runtarget(program, environ.get('USERNAME', 'John'), "sunny")
+
 ```
 
-Depending on the availability, the `cURLpp` library will be compiled from
-source or the flags will be retrieved with `pkg-config` (TODO). To build
-the project, use
+To build the project, use
 
     $ craftr export
     $ craftr build
+    $ craftr build run
+    Hello, John. You are facing a sunny day
+
+Note that the `build` command accepts target names as additional arguments.
+Since `run` is just another target, that's how we can invoke the test command
+that we created with `runtarget()`.
+
+Due to the way Craftr organizes the build tree, the output file will be
+located in `build/examples.c-1.0.0/my_app`. If you want to define an exact path
+for the output file, use an absolute path. For example `local()` gives you
+an absolute path assuming the path you give it is relative to your project
+directory.
+
+```python
+# ...
+  output = local(options.outbin)
+# ...
+```
 
 Options can either be specified on the command-line or in configuration files.
 By default, `~/.craftrconfig` and `./.craftrconfig` files are loaded if they
@@ -74,10 +96,12 @@ in the user home directory is still loaded).
 # .craftrconfig
 [__global__]
   debug = true
-[myapp]
-  outbin = myapp
+[examples.c]
+  outbin = my_app
 [include "config/another.config"]
 ```
+
+You can also find this example in [`examples/examples.c`](examples/examples.c).
 
 Check out the [Documentation].
 
