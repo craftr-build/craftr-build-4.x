@@ -557,7 +557,7 @@ class UnixPlatformHelper(PlatformHelper):
     path.makedirs(path.dirname(filename))
     with open(filename, 'w') as fp:
       # TODO: Make sure this also works for shells other than bash.
-      fp.write('#!' + utils.find_program(environ['SHELL']) + '\n')
+      fp.write('#!' + shell.find_program(environ.get('SHELL', 'bash')) + '\n')
       fp.write('set -e\n')
       if cwd:
         fp.write('cd ' + shell.quote(cwd) + '\n')
