@@ -137,6 +137,11 @@ it from the Git repository as well.
 
 ## Requirements
 
+- [Ninja] 1.7.1 or newer
+- [Python][Python 3] 3.4, 3.5
+
+### Python
+
 - [colorama](https://pypi.python.org/pypi/colorama) (optional, Windows)
 - [glob2](https://pypi.python.org/pypi/glob2)
 - [jsonschema](https://pypi.python.org/pypi/jsonschema)
