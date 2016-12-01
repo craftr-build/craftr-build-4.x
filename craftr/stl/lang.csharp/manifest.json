@@ -11,6 +11,5 @@
     "runprefix": {
       "type": "string"
     }
-  },
-  "loaders": []
+  }
 }

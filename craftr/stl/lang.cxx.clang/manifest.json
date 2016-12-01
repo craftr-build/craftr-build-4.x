@@ -33,6 +33,5 @@
     "ar": {
       "type": "string"
     }
-  },
-  "loaders": []
+  }
 }

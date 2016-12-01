@@ -11,6 +11,5 @@
     "bin": {
       "type": "string"
     }
-  },
-  "loaders": []
+  }
 }

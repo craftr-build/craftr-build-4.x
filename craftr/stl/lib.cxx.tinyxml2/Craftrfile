@@ -14,14 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.loaders import external_archive
+source_directory = external_archive(
+  "https://github.com/leethomason/tinyxml2/archive/{}.zip".format(options.version)
+)
+
 load_module('lang.cxx.*')
 
 tinyxml2 = Framework('tinyxml2',
- include = [loader.directory]
+ include = [source_directory]
 )
 
 obj = cpp_compile(
-  sources = [path.join(loader.directory, 'tinyxml2.cpp')],
+  sources = [path.join(source_directory, 'tinyxml2.cpp')],
   frameworks = [tinyxml2]
 )
 

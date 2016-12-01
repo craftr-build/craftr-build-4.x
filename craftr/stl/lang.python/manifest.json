@@ -8,6 +8,5 @@
     "bin": {
       "type": "string"
     }
-  },
-  "loaders": []
+  }
 }

@@ -6,6 +6,5 @@
   "dependencies": {
     "lang.csharp": "*"
   },
-  "options": {},
-  "loaders": []
+  "options": {}
 }

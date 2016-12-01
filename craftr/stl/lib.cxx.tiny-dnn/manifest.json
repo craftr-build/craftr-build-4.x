@@ -17,15 +17,5 @@
     "build_examples": {
       "type": "bool"
     }
-  },
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "file://$directory",
-        "https://github.com/tiny-dnn/tiny-dnn/archive/$version.zip"
-      ]
-    }
-  ]
+  }
 }

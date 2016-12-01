@@ -14,17 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ['dlib']
+from craftr.loaders import external_archive
 
+source_directory = external_archive(
+  "http://dlib.net/files/dlib-{}.zip".format(options.version)
+)
+
+__all__ = ['dlib']
 load_module('lang.cxx.*')
 
 dlib = Framework('dlib',
-  include = [loader.directory]
+  include = [source_directory]
 )
 
 _lib = cxx_library(
   inputs = cpp_compile(
-    sources = [path.join(loader.directory, 'dlib/all/source.cpp')],
+    sources = [path.join(source_directory, 'dlib/all/source.cpp')],
     frameworks = [dlib]
   ),
   output = 'dlib'

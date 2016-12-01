@@ -10,6 +10,5 @@
     "lib.cxx.qt5": "*",
     "lib.cxx.tinyxml2": "*"
   },
-  "options": {},
-  "loaders": []
+  "options": {}
 }

@@ -11,14 +11,5 @@
       "type": "string",
       "default": "19.2"
     }
-  },
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "http://dlib.net/files/dlib-$version.zip"
-      ]
-    }
-  ]
+  }
 }

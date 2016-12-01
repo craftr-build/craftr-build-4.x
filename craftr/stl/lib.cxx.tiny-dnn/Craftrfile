@@ -1,9 +1,16 @@
 # lib.cxx.tinydnn
 
+from craftr.loaders import external_archive
+
+if not options.directory:
+  options.directory = external_archive(
+    "https://github.com/tiny-dnn/tiny-dnn/archive/{}.zip".format(options.version)
+  )
+
 __all__ = ['tiny_dnn']
 
 tiny_dnn = Framework('tiny_dnn',
-  include = [loader.directory]
+  include = [options.directory]
 )
 
 if options.build_examples:
@@ -11,10 +18,10 @@ if options.build_examples:
 
   example_bin = cxx_binary(
     inputs = cpp_compile(
-      sources = [path.join(loader.directory, 'examples', 'main.cpp')],
+      sources = [path.join(options.directory, 'examples', 'main.cpp')],
       frameworks = [tiny_dnn]
     ),
     output = 'example'
   )
 
-  example = runtarget(example_bin, cwd = path.join(loader.directory, 'examples'))
+  example = runtarget(example_bin, cwd = path.join(options.directory, 'examples'))

@@ -9,6 +9,5 @@
       "type": "string",
       "help": "Name of the thrift executable. Defaults to $THRIFT or \"thrift\"."
     }
-  },
-  "loaders": []
+  }
 }

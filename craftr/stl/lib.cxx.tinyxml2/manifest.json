@@ -15,14 +15,5 @@
       "type": "bool",
       "help": "Whether to build the main.cpp example or not. Default is false"
     }
-  },
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "https://github.com/leethomason/tinyxml2/archive/$version.zip"
-      ]
-    }
-  ]
+  }
 }

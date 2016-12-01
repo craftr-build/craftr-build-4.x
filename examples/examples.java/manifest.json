@@ -6,6 +6,5 @@
   "dependencies": {
     "lang.java": "*"
   },
-  "options": {},
-  "loaders": []
+  "options": {}
 }

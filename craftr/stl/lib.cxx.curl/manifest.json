@@ -17,14 +17,5 @@
       "help": "If building from source, defines whether to build a static or dynamic library.",
       "default": true
     }
-  },
-  "loaders": [
-    {
-      "type": "url",
-      "name": "source",
-      "urls": [
-        "https://curl.haxx.se/download/curl-$version.tar.gz"
-      ]
-    }
-  ]
+  }
 }

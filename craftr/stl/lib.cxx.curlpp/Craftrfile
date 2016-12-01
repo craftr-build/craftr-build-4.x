@@ -14,6 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.loaders import external_archive
+
+source_directory = external_archive(
+  "https://github.com/jpbarrette/curlpp/archive/{}.zip".format(options.version)
+)
+
 if options.static:
   session.options.setdefault('lib.cxx.curl.static', True)
 else:
@@ -23,7 +29,7 @@ load_module('lang.cxx.*')
 
 cURL = load_module('lib.cxx.curl').cURL
 cURLpp = Framework('cURLpp',
-  include = [path.join(loader.directory, 'include')],
+  include = [path.join(source_directory, 'include')],
   defines = [],
   frameworks = [cURL]
 )
@@ -32,7 +38,7 @@ if options.static:
   cURLpp['defines'] += ['CURLPP_STATICLIB']
 
 obj = cpp_compile(
-  sources = glob(['src/**/*.cpp'], parent=loader.directory),
+  sources = glob(['src/**/*.cpp'], parent=source_directory),
   frameworks = [cURLpp],
   defines = ['BUILDING_CURLPP'],
   rtti = options.rtti

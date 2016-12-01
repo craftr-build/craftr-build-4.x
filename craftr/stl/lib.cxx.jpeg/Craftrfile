@@ -14,12 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.loaders import external_archive
+source_directory = external_archive(
+  "https://github.com/LuaDist/libjpeg/archive/master.zip"
+)
+
 load_module('lang.cxx.*')
 load_module('utils.cmake.*')
 
 # Create the jconfig.h file.
 jconfig = cmake_configure_file(
-  input = path.join(loader.directory, 'jconfig.h.cmake'),
+  input = path.join(source_directory, 'jconfig.h.cmake'),
   environ = dict(
     HAVE_STDDEF_H = options.have_stddef_h,
     HAVE_STDLIB_H = options.have_stdlib_h,
@@ -29,7 +34,7 @@ jconfig = cmake_configure_file(
 
 # Framework that contains all the information to use the library.
 libjpeg = Framework('libjpeg',
-  include = [loader.directory, jconfig.directory]
+  include = [source_directory, jconfig.directory]
 )
 
 # Additional defines that are only required for building the library.
@@ -60,7 +65,7 @@ mem_sources = ['jmemansi.c', 'jmemdos.c', 'jmemmac.c', 'jmemname.c', 'jmemnobs.c
 lib_sources = glob(
   ['*.c', 'jmem' + options.jmem + '.c'],
   exclude = mem_sources + bin_sources,
-  parent = loader.directory
+  parent = source_directory
 )
 
 # Compile the jpeg library.
@@ -82,7 +87,7 @@ if options.build_binaries:
       name = name + '_bin',
       output = path.rmvsuffix(fn),
       inputs = c_compile(
-        sources = [path.join(loader.directory, fn)],
+        sources = [path.join(source_directory, fn)],
         frameworks = [libjpeg]
       )
     )

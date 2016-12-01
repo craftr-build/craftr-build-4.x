@@ -21,14 +21,5 @@
       "type": "bool",
       "default": true
     }
-  },
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "https://github.com/jpbarrette/curlpp/archive/$version.zip"
-      ]
-    }
-  ]
+  }
 }

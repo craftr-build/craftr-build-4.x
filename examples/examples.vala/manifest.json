@@ -6,6 +6,5 @@
   "dependencies": {
     "lang.vala": "*"
   },
-  "options": {},
-  "loaders": []
+  "options": {}
 }

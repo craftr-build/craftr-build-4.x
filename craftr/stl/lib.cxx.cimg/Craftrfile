@@ -14,8 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.loaders import external_archive
+
+source_directory = external_archive(
+  "https://github.com/dtschump/CImg/archive/{}.zip".format(options.version)
+)
+
 CImg = Framework('CImg',
-  include = [loader.directory],
+  include = [source_directory],
   libs = []
 )
 

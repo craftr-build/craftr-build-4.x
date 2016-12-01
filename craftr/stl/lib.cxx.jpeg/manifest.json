@@ -27,14 +27,5 @@
     "build_binaries": {
       "type": "bool"
     }
-  },
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "https://github.com/LuaDist/libjpeg/archive/master.zip"
-      ]
-    }
-  ]
+  }
 }

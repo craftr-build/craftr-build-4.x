@@ -7,6 +7,5 @@
     "lang.cxx": "*",
     "lang.thrift": "*"
   },
-  "options": {},
-  "loaders": []
+  "options": {}
 }

@@ -14,10 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.loaders import external_archive
+
+source_directory = external_archive(
+  "https://curl.haxx.se/download/curl-{}.tar.gz".format(options.version)
+)
+
 load_module('lang.cxx.*')
 
 cURL = Framework('cURL',
-  include = [path.join(loader.directory, 'include')],
+  include = [path.join(source_directory, 'include')],
   defines = [],
   libs = []
 )
@@ -31,8 +37,8 @@ if options.static:
   cURL['defines'].append('CURL_STATICLIB')
 
 obj = c_compile(
-  sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = loader.directory),
-  include = [path.join(loader.directory, 'lib')],
+  sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = source_directory),
+  include = [path.join(source_directory, 'lib')],
   defines = ['BUILDING_LIBCURL'],
   frameworks = [cURL]
 )

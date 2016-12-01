@@ -9,6 +9,5 @@
       "type": "string",
       "inherit": false
     }
-  },
-  "loaders": []
+  }
 }

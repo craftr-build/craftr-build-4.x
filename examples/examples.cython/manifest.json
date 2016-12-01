@@ -6,6 +6,5 @@
   "dependencies": {
     "lang.cython": "*"
   },
-  "options": {},
-  "loaders": []
+  "options": {}
 }
