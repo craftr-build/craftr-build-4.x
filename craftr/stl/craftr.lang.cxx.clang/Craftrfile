@@ -418,9 +418,9 @@ class CompilerLinker(object):
 
     command += ['-o', '$out']
     command += ['-g'] if debug else []
-    command += ['-l' + x for x in pyutils.unique_list(libs)]
     command += ['-L' + x for x in pyutils.unique_list(libpath)]
     command += pyutils.unique_list(external_libs)
+    command += ['-l' + x for x in pyutils.unique_list(libs)]
     command += ['-shared'] if output_type == 'dll' else []
     command += ['-F' + x for x in osx_fwpath]
     command += pyutils.flatten(['-framework', x] for x in osx_frameworks)
