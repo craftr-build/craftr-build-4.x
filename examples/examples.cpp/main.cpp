@@ -15,6 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if __linux__ || __unix__ || defined(_POSIX_VERSION)
+  #include <sys/select.h>
+#endif
+
 #include <iostream>
 #include <sstream>
 #include <curlpp/cURLpp.hpp>
