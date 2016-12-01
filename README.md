@@ -1,4 +1,5 @@
 # Craftr 2.x
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/530/badge)](https://bestpractices.coreinfrastructure.org/projects/530)
 
 > Note: This is the development version of the new version of Craftr. It is
 > different from the initial Craftr version in many ways and can not be used
