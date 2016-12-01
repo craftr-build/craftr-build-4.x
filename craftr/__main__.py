@@ -152,6 +152,7 @@ class ExportOrBuildCommand(BaseCommand):
       parser.add_argument('-m', '--module')
     else:
       parser.add_argument('targets', metavar='TARGET', nargs='*')
+    parser.add_argument('-d', '--option', dest='options', action='append', default=[])
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-i', '--include-path', action='append', default=[])
 
