@@ -24,7 +24,7 @@ for the meta build process (such as a :class:`craftr.core.build.Graph`).
 
 from craftr.core import build, manifest
 from craftr.core.logging import logger
-from craftr.core.manifest import Manifest, LoaderContext
+from craftr.core.manifest import Manifest
 from craftr.utils import argspec, path
 from nr.types.version import Version, VersionCriteria
 
@@ -63,20 +63,6 @@ class InvalidOption(Exception):
     for option, value, exc in self.errors:
       yield '{}.{} ({}): {}'.format(self.module.manifest.name, option.name,
           self.module.manifest.version, exc)
-
-
-class LoaderInitializationError(Exception):
-
-  def __init__(self, module, errors):
-    self.module = module
-    self.errors = errors
-
-  def __str__(self):
-    return '\n'.join(self.format_errors())
-
-  def format_errors(self):
-    for exc in self.errors:
-      yield('{}:{}'.format(self.module.ident, str(exc)))
 
 
 class Session(object):
@@ -136,19 +122,7 @@ class Session(object):
     be assured that no name conflicts and accidental modifications/deletes
     occur.
 
-    Currently the cache is mainly used for loaders. The information is saved
-    in the ``'loaders'`` key.
-
-    .. code:: json
-
-      {
-        "loaders": {
-          "modulename-1.0.0": {
-            "name": "source",
-            "data": {"directory": "..."}
-          }
-        }
-      }
+    Reserved keywords in the cache are ``"build"`` and ``"loaders"``.
   """
 
   #: The current session object. Create it with :meth:`start` and destroy
@@ -166,7 +140,7 @@ class Session(object):
     self.modulestack = []
     self.modules = {}
     self.options = {}
-    self.cache = {'loaders': {}}
+    self.cache = {}
     self._tempdir = None
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
@@ -371,16 +345,10 @@ class Module(object):
     A :class:`~craftr.core.manifest.Namespace` that contains all the options
     for the module. This member is only initialized when the module is run
     or with :meth:`init_options`.
-
-  .. attribute:: loader
-
-    The loader that was specified in the manifest and initialized with
-    :meth:`init_loader`.
   """
 
   NotFound = ModuleNotFound
   InvalidOption = InvalidOption
-  LoaderInitializationError = LoaderInitializationError
 
   def __init__(self, directory, manifest):
     self.directory = directory
@@ -388,7 +356,6 @@ class Module(object):
     self.namespace = types.ModuleType(self.manifest.name)
     self.executed = False
     self.options = None
-    self.loader = None
 
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
@@ -430,61 +397,6 @@ class Module(object):
         self.options = None
         raise InvalidOption(self, errors)
 
-  def init_loader(self, recursive=False, _break_recursion=None):
-    """
-    Check all available loaders as defined in the :attr:`manifest` until the
-    first loads successfully.
-
-    :param recursive: Initialize the loaders of all dependencies as well.
-    :raise RuntimeError: If there is no current session context.
-    :raise LoaderInitializationError: If none of the loaders matched.
-    """
-
-    if not session:
-      raise RuntimeError('no current session')
-    if not self.manifest.loaders:
-      return
-    if _break_recursion is self:
-      return
-
-    if recursive:
-      for name, version in self.manifest.dependencies.items():
-        module = session.find_module(name, version)
-        module.init_loader(True, _break_recursion=self)
-
-    self.init_options()
-    if self.loader is not None:
-      return
-
-    logger.info('running loaders for {}'.format(self.ident))
-    with logger.indent():
-      # Read the cached loader data and create the context.
-      installdir = path.join(session.builddir, self.ident, 'src')
-      cache = session.cache['loaders'].get(self.ident)
-      context = LoaderContext(self.directory, self.manifest, self.options,
-          installdir = installdir)
-      context.get_temporary_directory = session.get_temporary_directory
-
-      # Check all loaders in-order.
-      errors = []
-      for loader in self.manifest.loaders:
-        logger.info('[+]', loader.name)
-        with logger.indent():
-          try:
-            if cache and loader.name == cache['name']:
-              new_data = loader.load(context, cache['data'])
-            else:
-              new_data = loader.load(context, None)
-          except manifest.LoaderError as exc:
-            errors.append(exc)
-          else:
-            self.loader = loader
-            session.cache['loaders'][self.ident] = {
-                'name': loader.name, 'data': new_data}
-            break
-      else:
-        raise LoaderInitializationError(self, errors)
-
   def run(self):
     """
     Loads the code of the main Craftr build script as specified in the modules
@@ -502,7 +414,6 @@ class Module(object):
 
     self.executed = True
     self.init_options()
-    self.init_loader()
 
     script_fn = path.norm(path.join(self.directory, self.manifest.main))
     with open(script_fn) as fp:
@@ -517,7 +428,6 @@ class Module(object):
       '__name__': self.manifest.name,
       '__version__': str(self.manifest.version),
       'options': self.options,
-      'loader': self.loader,
       'project_dir': self.project_dir,
     })
 

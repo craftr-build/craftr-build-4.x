@@ -21,12 +21,6 @@ if options.bad_weather:
   logger.warn('be careful, you are choosing a build environment with bad weather')
 ```
 
-### `loader`
-
-The `craftr.core.manifest.BaseLoader` object that succeeded. This is always set
-if the manifest specifies at least one loader (because Craftr will not proceed
-if none of the loaders succeed). If no loaders are defined in the manifest, this
-variable is `None`.
 
 ## Variables
 

@@ -50,16 +50,7 @@ Example manifest:
       "type": "bool",
       "default": true
     }
-  },
-  "loaders": [
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "https://github.com/jpbarrette/curlpp/archive/$version.zip"
-      ]
-    }
-  ]
+  }
 }
 ```
 
@@ -89,9 +80,21 @@ address. If given, the email address should be enclosed in angle brackets, like
 
 ### options
 
-*Optional*. An object that describes available options for the package. They
+*Optional*. An object that describes available options for the package. The
 fields for this object are the option names. These fields again map to objects
-that describe the option parameter. Available fields:
+that describe the option parameter *or* simply the option type name. Example:
+
+```json
+  "options": {
+    "directory": "path",
+    "build_examples": {
+      "type": "bool",
+      "help": "Whether to build example files"
+    }
+  }
+```
+
+Available fields:
 
 #### type
 
@@ -135,36 +138,6 @@ listed in the manifest `dependencies`!
 > __Important__: Keep in mind that the version number defined in the
 > `dependencies` are the version numbers of Craftr packages, not necessarily
 > the version of the actual library that can be used with it.
-
-### loaders
-
-*Optional*. A list of loader description objects. Loaders are used to find any
-required information or data before the build script is executed. For example,
-many libraries can be used with `pkg-config` on Linux system, but on Windows,
-many of them have to be built from source. This is where loaders come into play.
-
-The first loader that can successfully *load* will be used. Loaders are tested
-in the order they are listed in the manifest. If none of the loaders succeed,
-the build fails.
-
-> __Todo__: Option to explicitly specify a loader that is to be used and all
-> others to be ignored for a specific Craftr package.
-
-To define a loader, the object must provide at least two fields. All additional
-fields are passed to the constructor of the loader class of the specified type.
-Currently there is only the `"url"` loader available. For a developer insight
-on loaders, see `craftr.core.manifest.BaseLoader`.
-
-#### type
-
-*Required*. The type of the loader. Currently only `"url"` is available.
-
-#### name
-
-*Required*. The name of the loader. This can be an arbitrary string. Later in
-the build script, you can check the `loader` variable and compare the
-`loader.name` member to find which loader succeeded.
-
 
 ### main
 

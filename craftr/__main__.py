@@ -204,7 +204,7 @@ class ExportOrBuildCommand(BaseCommand):
       try:
         write_cache(cachefile)
         module.run()
-      except (Module.InvalidOption, Module.LoaderInitializationError) as exc:
+      except Module.InvalidOption as exc:
         for error in exc.format_errors():
           logger.error(error)
         return 1
@@ -267,7 +267,7 @@ class StartpackageCommand(BaseCommand):
 
   def execute(self, parser, args):
     directory = args.directory or args.name
-    if directory.endswith('/') or directory.endswith('\\'):
+    if path.maybedir(directory):
       directory = path.join(directory, args.name)
 
     if not path.exists(directory):

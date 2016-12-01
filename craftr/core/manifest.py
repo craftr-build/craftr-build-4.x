@@ -35,19 +35,9 @@ Example manifest:
       "another_user.another_package": "1.x"
     },
     "options": {
-      "SOURCE_DIR": {"type": "string"},
-      "VERSION": {"type": "string"}
-    },
-    "loaders": [
-      {
-        "name": "source",
-        "type": "url",
-        "urls": [
-          "$SOURCE_DIR",
-          "http://some-mirror.org/ftp/packagename/tree/$VERSION.tar.gz"
-        ]
-      }
-    ]
+      "directory": "path",
+      "version": "string"
+    }
   }
 """
 
@@ -146,12 +136,6 @@ class Manifest(recordclass):
     A dictionary of options that can be provided by the user before
     Craftr is being executed. The option name maps to a :class:`BaseOption`
     instance.
-
-  .. attribute:: loaders
-
-    A list of zero or more :class:`BaseLoader` objects that will be used
-    by Craftr to load additional requirements of a module such as source
-    files or prebuilt binaries.
   """
 
   Schema = {
@@ -171,22 +155,20 @@ class Manifest(recordclass):
       "options": {
         "type": "object",
         "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "type": {"type": "string"}
-          },
-          "additionalProperties": True
-        }
-      },
-      "loaders": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "name": {"type": "string"},
-            "type": {"type": "string"}
-          },
-          "additionalProperties": True
+          "oneOf": [
+            # Plain type description
+            {
+              "type": "string"
+            },
+            # Detailed option description
+            {
+              "type": "object",
+              "properties": {
+                "type": {"type": "string"}
+              },
+              "additionalProperties": True
+            }
+          ]
         }
       }
     }
@@ -197,8 +179,7 @@ class Manifest(recordclass):
   __slots__ = tuple(Schema['properties'].keys())
 
   def __init__(self, name, version, main='Craftrfile', project_dir='.',
-               author=None, url=None, dependencies=None, options=None,
-               loaders=None):
+               author=None, url=None, dependencies=None, options=None):
     if version is not None:
       version = Version(version)
     self.name = name
@@ -209,7 +190,6 @@ class Manifest(recordclass):
     self.url = url
     self.dependencies = dependencies or {}
     self.options = options or {}
-    self.loaders = loaders or []
 
   def get_options_namespace(self, provider, errors=None):
     """
@@ -300,22 +280,6 @@ class Manifest(recordclass):
         data['options'][key] = option_type(key, **value)
       except TypeError as exc:
         raise Manifest.Invalid(exc)
-
-    loaders, data['loaders'] = data.pop('loaders', []), []
-    taken_loader_names = set()
-    for loader_data in loaders:
-      name, type_name = loader_data.pop('name'), loader_data.pop('type')
-      if name in taken_loader_names:
-        raise Manifest.Invalid('duplicate loader name: {!r}'.format(name))
-      if '.' not in type_name:
-        type_name = __name__ + '._aliases.' + type_name
-      try:
-        loader_type = pyutils.import_(type_name)
-      except ImportError:
-        loader_type = None
-      if not isinstance(loader_type, type) or not issubclass(loader_type, BaseLoader):
-        raise Manifest.Invalid('invalid loader type: {!r}'.format(type_name))
-      data['loaders'].append(loader_type(name, **loader_data))
 
     try:
       return Manifest(**data)
@@ -421,239 +385,6 @@ class PathOption(StringOption):
     return path.norm(value)
 
 
-class LoaderError(Exception):
-  """
-  Raised by :class:`BaseLoader.load`.
-  """
-
-  def __init__(self, loader, message):
-    self.loader = loader
-    self.message = message
-
-  def __str__(self):
-    return '{}: {}'.format(self.loader.name, self.message)
-
-
-class LoaderContext(object):
-  """
-  The LoaderContext is required for the :class:`BaseLoader.load` method.
-
-  .. attribute:: directory
-
-  .. attribute:: manifest
-
-  .. attribute:: options
-
-  .. attribute:: installdir
-  """
-
-  def __init__(self, directory, manifest, options, installdir):
-    self.directory = directory
-    self.manifest = manifest
-    self.options = options
-    self.installdir = installdir
-
-  def expand_variables(self, value):
-    templ = string.Template(value)
-    return templ.safe_substitute(vars(self.options))
-
-  def get_temporary_directory(self):
-    """
-    Return the path to a temporary directory that a loader can use to
-    temporarily store downloaded files.
-    """
-
-    raise NotImplementedError
-
-
-class BaseLoader(object, metaclass=abc.ABCMeta):
-  """
-  Base class for loader types. Craftr executes the loaders in the order they
-  are defined in the :class:`Manifest` until one loader succeeds. This happens
-  in the same step in which dependencies are satisfied. In the execute step,
-  the loader will be initialized from cache.
-  """
-
-  def __init__(self, name):
-    self.name = name
-
-  @abc.abstractmethod
-  def load(self, context, cache):
-    """
-    (Down-)load the data. If the process fails, a :class:`LoaderError` should
-    be raised. The function must return a dictionary that will be cached in
-    the project so that the loader can be initialized with this cache to re-use
-    what has been loaded in this method (see :meth:`init_cache`).
-
-    :param context: A :class:`LoaderContext` object.
-    :param cache: The cache of a former load operation. This is the data
-      returned by a former call to this :meth:`load` method.
-    :raise LoaderError: If the loader was unable to load or detect the source.
-    :return: A :class:`dict` that will be serialized into a cache.
-    """
-
-
-class UrlLoader(BaseLoader):
-  """
-  This loader implementation can be used to load source archives from online
-  mirrors and automatically unpack them into a directory where they can be
-  accessed by the build script, but it can also be used to fall back on
-  existing source directories.
-
-  The URLs that are passed to the constructor can contain variables which will
-  be expanded given the options of the same manifest. This is usually used to
-  allow users to configure the version of the source that is being downloaded
-  or to point to an existing directory.
-
-  .. code:: json
-
-    {
-      "name": "source",
-      "type": "url",
-      "urls": [
-        "file://$SOURCE_DIR",
-        "http://some-mirror.org/ftp/packagename-$SOURCE_VERSION.tar.gz"
-      ]
-    }
-
-  .. attribute:: urls
-
-  .. attribute:: directory
-
-    If the UrlLoader successfully loaded the source archives or detected the
-    source directory, this member is available and points to the directory
-    where the sources are located.
-  """
-
-  def __init__(self, name, urls, unpack_exclude=()):
-    super().__init__(name)
-    self.urls = urls
-    self.directory = None
-    self.unpack_exclude = unpack_exclude
-
-  def load(self, context, cache):
-    if cache is not None and path.isdir(cache.get('directory', '')):
-      # Check if the requested version changes.
-      url_template = context.expand_variables(cache.get('url_template', ''))
-      if url_template == cache.get('url'):
-        self.directory = cache['directory']
-        logger.info('Reusing cached directory: {}'.format(
-            path.rel(self.directory, nopar=True)))
-        return cache
-      else:
-        logger.info('Cached URL is outdated:', cache.get('url'))
-
-    directory = None
-    archive = None
-    delete_after_extract = True
-    for url_template in self.urls:
-      url = context.expand_variables(url_template)
-      if not url: continue
-      if url.startswith('file://'):
-        name = url[7:]
-        if path.isdir(name):
-          logger.info('Using directory', url)
-          directory = name
-          break
-        elif path.isfile(name):
-          logger.info('Using archive', url)
-          archive = name
-          delete_after_extract = False
-          break
-        error = None
-      else:
-        error = None
-        try:
-          progress = lambda d: self._download_progress(url, context, d)
-          archive, reused = httputils.download_file(
-            url, directory = context.get_temporary_directory(),
-            on_exists='skip', progress=progress)
-        except (httputils.URLError, httputils.HTTPError) as exc:
-          error = exc
-        except self.DownloadAlreadyExists as exc:
-          directory = exc.directory
-          logger.info('Reusing existing directory', directory)
-        else:
-          if reused:
-            logger.info('Reusing cached download', path.basename(archive))
-          break
-
-      if error:
-        logger.info('Error reading', url, ':', error)
-
-    if directory or archive:
-      logger.debug('URL applies: {}'.format(url))
-
-    if not directory and archive:
-      suffix, directory = self._get_archive_unpack_info(context, archive)
-      logger.info('Unpacking "{}" to "{}" ...'.format(
-          path.rel(archive, nopar=True), path.rel(directory, nopar=True)))
-      nr.misc.archive.extract(archive, directory, suffix=suffix,
-          unpack_single_dir=True, check_extract_file=self._check_extract_file,
-          progress_callback=self._extract_progress)
-    elif not directory:
-      raise LoaderError(self, 'no URL matched')
-
-    self.directory = directory
-    with open(path.join(self.directory, '.craftr_downloadurl'), 'w') as fp:
-      fp.write(url)
-    return {'directory': directory, 'url_template': url_template, 'url': url}
-
-  def _download_progress(self, url, context, data):
-    spinning = data['size'] is None
-    if data['downloaded'] == 0:
-      # If what we're trying to download already exists, we don't have
-      # to redownload it.
-      suffix, directory = self._get_archive_unpack_info(context, data['filename'])
-      urlfile = path.join(directory, '.craftr_downloadurl')
-      if path.isfile(urlfile):
-        with open(urlfile) as fp:
-          if fp.read().strip() == url:
-            raise self.DownloadAlreadyExists(directory)
-
-      logger.progress_begin('Downloading {}'.format(url), spinning)
-    if spinning:
-      # TODO: Bytes to human readable
-      logger.progress_update(None, data['downloaded'])
-    else:
-      progress = data['downloaded'] / data['size']
-      logger.progress_update(progress, '{}%'.format(int(progress * 100)))
-    if data['completed']:
-      logger.progress_end()
-
-  def _get_archive_unpack_info(self, context, archive):
-    suffix = nr.misc.archive.get_opener(archive)[0]
-    filename = path.basename(archive)[:-len(suffix)]
-    directory = path.join(context.installdir, filename)
-    return suffix, directory
-
-  def _check_extract_file(self, arcname):
-    if not self.unpack_exclude:
-      return True
-    for pattern in self.unpack_exclude:
-      if fnmatch.fnmatch(arcname, pattern):
-        return False
-    return True
-
-  def _extract_progress(self, index, count, filename):
-    if index == -1:
-      logger.progress_begin(None, True)
-      logger.progress_update(0.0, 'Reading index...')
-      return
-    progress = index / float(count)
-    if index == 0:
-      logger.progress_end()
-      logger.progress_begin(None, False)
-    elif index == (count - 1):
-      logger.progress_end()
-    else:
-      logger.progress_update(progress, '{} / {}'.format(index, count))
-
-  class DownloadAlreadyExists(Exception):
-    def __init__(self, directory):
-      self.directory = directory
-
-
 class _aliases:
   """
   This class serves as a namespace in order to be able to specify the
@@ -665,5 +396,3 @@ class _aliases:
   triplet = TripletOption
   string = StringOption
   path = PathOption
-
-  url = UrlLoader

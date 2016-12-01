@@ -29,6 +29,7 @@ import tempfile as _tempfile
 curdir_sep = curdir + sep
 pardir_sep = pardir + sep
 
+
 def rel(path, parent=None, nopar=False):
   """
   Like :func:`os.path.relpath`, but the *nopar* parameter can be set to return
@@ -139,6 +140,24 @@ def issub(path):
   if path.startswith(curdir_sep) or path.startswith(pardir_sep):
     return False
   return True
+
+def maybedir(path):
+  """
+  Returns True if *path* ends with a separator. This information can be used
+  to interpret a path as a directory or a filename only from its
+  representation.
+
+  .. code:: python
+
+    >>> maybedir('foobar/')
+    True
+    >>> maybedir('foo/bar')
+    False
+  """
+
+  if os.name == 'nt':
+    return path.endswith('/') or path.endswith('\\')
+  return path.endswith('/')
 
 def addprefix(subject, prefix):
   """
