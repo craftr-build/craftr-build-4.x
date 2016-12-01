@@ -1,0 +1,18 @@
+# lib.cxx.tinydnn
+
+__all__ = ['tinydnn']
+
+tinydnn = Framework('tinydnn',
+  include = [loader.directory]
+)
+
+if options.build_examples:
+  load_module('lang.cxx.*')
+  example_bin = cxx_binary(
+    inputs = cpp_compile(
+      sources = [path.join(loader.directory, 'examples', 'main.cpp')],
+      frameworks = [tinydnn]
+    ),
+    output = 'example'
+  )
+  example = runtarget(example_bin)
