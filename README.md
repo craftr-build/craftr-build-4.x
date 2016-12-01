@@ -63,7 +63,30 @@ run = runtarget(program, environ.get('USERNAME', 'John'), "sunny")
 
 ```
 
-To build the project, use
+__C Sources__
+```c
+$ cat src/hello.c
+
+#include <stdio.h>
+
+void say_hello(char const* name, char const* weather) {
+  printf("Hello, %s. You are facing a %s day\n", name, weather);
+}
+
+$ cat src/main.c
+
+extern void say_hello(char const* name, char const* weather);
+
+int main(int argc, char** argv) {
+  if (argc != 3) {
+    printf("error: usage: %s name weather\n");
+    return 0;
+  }
+  say_hello(argv[1], argv[2]);
+  return 0;
+}
+```
+To export, build and run the project, use
 
     $ craftr export
     $ craftr build
