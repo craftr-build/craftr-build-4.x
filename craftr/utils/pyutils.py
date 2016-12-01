@@ -140,3 +140,28 @@ def combine_context(*inputs):
         raise_later.append(sys.exc_info())
     for exc_type, exc_value, exc_tb in raise_later:
       raise exc_value.with_traceback(exc_tb)
+
+
+def copyfileobj(sfp, dfp, size=None, chunksize=4096):
+  """
+  Generator that yields the progress after every chunk has been copied
+  from *sfp* to *dfp*. If *size* is not specified, *sfp* will be seeked
+  first. The yielded progress is a tuple of ``(bytes_copied, size)``.
+  """
+
+  if size is None:
+    pos = sfp.tell()
+    sfp.seek(os.SEEK_END)
+    size = sfp.tell()
+    sfp.seek(pos)
+
+  bytes_copied = 0
+  while True:
+    yield bytes_copied, size
+    data = dfp.read(chunksize)
+    if not data:
+      break
+    written = sfp.write(data)
+    if written is not None and written != len(data):
+      raise IOError('wrote {} of {} bytes'.format(written, len(data)))
+    bytes_copied += len(data)

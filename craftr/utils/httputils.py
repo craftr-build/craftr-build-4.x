@@ -101,7 +101,7 @@ def download_file(url, filename=None, file=None, directory=None,
     size = None
 
   progress_info = {'response': response, 'size': size, 'downloaded': 0,
-    'completed': False, 'filename': filename}
+    'completed': False, 'filename': filename, 'url': url}
   if progress and progress(progress_info) is False:
     raise UserInterrupt
 
