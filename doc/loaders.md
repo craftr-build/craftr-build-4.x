@@ -32,3 +32,19 @@ source_directory = external_archive(
 ### `external_file(*urls, filename = None, directory = None, copy_file_urls = False, name = None)`
 
 ### `external_archive(*urls, directory = None, name = None)`
+
+### `pkg_config(pkg_name)`
+
+Uses `pkg-config` to read the flags for the library specified with *pkg_name*
+and returns a Framework object. If `pkg-config` is not available on the platform
+or the library can not be found, `pkg_config.Error` is raised.
+
+```python
+from craftr.loaders import pkg_config
+try:
+  cURL = pkg_config('libcurl')
+except pkg_config.Error:
+  # compile from source or whatever
+```
+
+  
