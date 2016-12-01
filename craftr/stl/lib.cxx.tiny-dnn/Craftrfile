@@ -1,8 +1,8 @@
 # lib.cxx.tinydnn
 
-__all__ = ['tinydnn']
+__all__ = ['tiny_dnn']
 
-tinydnn = Framework('tinydnn',
+tiny_dnn = Framework('tiny_dnn',
   include = [loader.directory]
 )
 
@@ -12,9 +12,9 @@ if options.build_examples:
   example_bin = cxx_binary(
     inputs = cpp_compile(
       sources = [path.join(loader.directory, 'examples', 'main.cpp')],
-      frameworks = [tinydnn]
+      frameworks = [tiny_dnn]
     ),
     output = 'example'
   )
 
-  example = runtarget(example_bin, cwd = path.join(loader.directory, 'examples', 'benchmarks'))
+  example = runtarget(example_bin, cwd = path.join(loader.directory, 'examples'))
