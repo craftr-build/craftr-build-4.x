@@ -8,6 +8,7 @@ Goto:
 - [Config documentation](config.md)
 - [Transition from Craftr 1](transition.md)
 - [Writing Target generators](generators.md)
+- [Using external files/source archives](loaders.md)
 
 
 # FAQ
