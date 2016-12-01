@@ -142,6 +142,7 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
     pass
 
 
+
 class ExportOrBuildCommand(BaseCommand):
 
   def __init__(self, is_export):
@@ -262,6 +263,8 @@ class StartpackageCommand(BaseCommand):
 
   def execute(self, parser, args):
     directory = args.directory or args.name
+    if directory.endswith('/') or directory.endswith('\\'):
+      directory = path.join(directory, args.name)
 
     if not path.exists(directory):
       logger.debug('creating directory "{}"'.format(directory))
@@ -303,6 +306,7 @@ class StartpackageCommand(BaseCommand):
     with open(sfile, 'w') as fp:
       print('# {}'.format(args.name), file=fp)
 
+
 class version(BaseCommand):
 
   def build_parser(self, parser):
@@ -310,6 +314,7 @@ class version(BaseCommand):
 
   def execute(self, parser, args):
     print(craftr.__version__)
+
 
 def main():
   # Create argument parsers and dynamically include all BaseCommand
