@@ -256,11 +256,11 @@ def pkg_config(pkg_name):
   """
 
   try:
-    flags = shell.pipe(['pkg-config', pkg_name, '--cflags', '--libs']).stdout
+    flags = shell.pipe(['pkg-config', pkg_name, '--cflags', '--libs'], check = True).stdout
   except FileNotFoundError as exc:
     raise PkgConfigError('pkg-config is not available ({})'.format(exc))
   except shell.CalledProcessError as exc:
-    raise PkgConfigError('{} not installed on this system ({})'.format(
+    raise PkgConfigError('{} not installed on this system\n\n{}'.format(
         pkg_name, exc.stderr or exc.stdout))
 
   # Parse the flags.
