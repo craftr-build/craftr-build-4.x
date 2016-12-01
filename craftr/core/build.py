@@ -20,6 +20,7 @@
 This module provides all the API to generate a Ninja build manifest.
 """
 
+from craftr import platform
 from craftr.utils import argspec
 from craftr.utils import path
 from craftr.utils import pyutils
@@ -588,8 +589,8 @@ class UnixPlatformHelper(PlatformHelper):
 
 
 def get_platform_helper():
-  if sys.platform.startswith('win32'):
+  if platform.name == 'win':
     return WindowsPlatformHelper()
-  elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+  elif platform.name in ('cygwin', 'linux', 'darwin'):
     return UnixPlatformHelper()
   raise EnvironmentError('unsupported platform: {}'.format(sys.platform))

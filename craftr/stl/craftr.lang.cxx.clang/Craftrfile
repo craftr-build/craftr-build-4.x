@@ -373,8 +373,8 @@ class CompilerLinker(object):
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
 
-    return builder.build([command], None, objects, foreach=True, **params,
-      description='{} compile ($out)'.format(self.name))
+    return builder.build([command], None, objects, foreach=True,
+      description='{} compile ($out)'.format(self.name), **params)
 
   def link(self, output_type, inputs, output=None, frameworks=(), name=None, **kwargs):
     if output_type not in ('bin', 'dll'):
