@@ -11,6 +11,9 @@
       "type": "string",
       "default": "v1.0.0a3"
     },
+    "directory": {
+      "type": "path"
+    },
     "build_examples": {
       "type": "bool"
     }
@@ -20,6 +23,7 @@
       "name": "source",
       "type": "url",
       "urls": [
+        "file://$directory",
         "https://github.com/tiny-dnn/tiny-dnn/archive/$version.zip"
       ]
     }

@@ -8,6 +8,7 @@ tinydnn = Framework('tinydnn',
 
 if options.build_examples:
   load_module('lang.cxx.*')
+
   example_bin = cxx_binary(
     inputs = cpp_compile(
       sources = [path.join(loader.directory, 'examples', 'main.cpp')],
@@ -15,4 +16,5 @@ if options.build_examples:
     ),
     output = 'example'
   )
-  example = runtarget(example_bin)
+
+  example = runtarget(example_bin, cwd = path.join(loader.directory, 'examples', 'benchmarks'))
