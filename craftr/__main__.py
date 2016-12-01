@@ -299,8 +299,7 @@ class StartpackageCommand(BaseCommand):
           "author": "",
           "url": "",
           "dependencies": {},
-          "options": {},
-          "loaders": []
+          "options": {}
         }\n''' % (args.name, args.version)).lstrip().split('\n')
       if not args.nested:
         del lines[3]
