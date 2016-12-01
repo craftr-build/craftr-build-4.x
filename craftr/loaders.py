@@ -72,12 +72,16 @@ def _external_file_download_callback(progress_text, directory, filename, cache, 
 
 class NoExternalFileMatch(Exception):
 
-  def __init__(self, name, urls):
+  def __init__(self, name, urls, excs):
+    if len(urls) != len(excs):
+      raise ValueError("number of exceptions must match number of urls")
     self.name = name
     self.urls = urls
+    self.excs = excs
 
   def __str__(self):
-    return self.name
+    urls = ['  - {} ({})'.format(u, e) for (u, e) in zip(self.urls, self.excs)]
+    return '\n'.join([self.name] + urls)
 
 
 def external_file(*urls, filename = None, directory = None,
@@ -113,6 +117,7 @@ def external_file(*urls, filename = None, directory = None,
   # TODO: expand variables of the current module.
 
   target_filename = None
+  exceptions = []
   for url in urls:
     if url == cache.get('download_url'):
       existing_file = cache.get('download_file')
@@ -141,7 +146,7 @@ def external_file(*urls, filename = None, directory = None,
         # TODO: Copy file permissions
         break
       else:
-        logger.debug('url does not exist:', url)
+        exceptions.append(FileNotFoundError(url))
     else:
       progress = lambda data: _external_file_download_callback(
           progress_info, directory, filename, cache, data)
@@ -151,7 +156,7 @@ def external_file(*urls, filename = None, directory = None,
           url, filename = filename, directory = directory, on_exists = 'skip',
           progress = progress)
       except (httputils.URLError, httputils.HTTPError) as exc:
-        logger.debug(exc)
+        exceptions.append(exc)
       else:
         break
       finally:
@@ -162,7 +167,7 @@ def external_file(*urls, filename = None, directory = None,
     cache['download_file'] = target_filename
     return target_filename
 
-  raise NoExternalFileMatch(name, urls)
+  raise NoExternalFileMatch(name, urls, exceptions)
 
 
 def external_archive(*urls, exclude_files = (), directory = None, name = None):
