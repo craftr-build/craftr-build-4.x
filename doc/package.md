@@ -30,11 +30,11 @@ Example manifest:
 
 ```json
 {
-  "name": "lib.cxx.curlpp",
+  "name": "craftr.lib.curlpp",
   "version": "1.0.0",
   "dependencies": {
-    "lang.cxx": "*",
-    "lib.cxx.curl": "*"
+    "craftr.lang.cxx": "*",
+    "craftr.lib.curl": "*"
   },
   "options": {
     "version": {
@@ -127,10 +127,10 @@ value of each field is a *version criteria*, that is a string which specifies
 one exact version number or a range of accepted version numbers. The format is
 similar to `npm` version selectors. Examples:
 
-    "lib.cxx.curl": "*"          // any version, but the newest we can get
-    "lib.cxx.curl": "=1.2.9"     // exactly version 1.2.9
-    "lib.cxx.curl": "1.3 - 1.8"  // any version between 1.3.0 and 1.8.0
-    "lib.cxx.curl": "2.x.2"      // major and patch version 2, but any minor version
+    "craftr.lib.curl": "*"          // any version, but the newest we can get
+    "craftr.lib.curl": "=1.2.9"     // exactly version 1.2.9
+    "craftr.lib.curl": "1.3 - 1.8"  // any version between 1.3.0 and 1.8.0
+    "craftr.lib.curl": "2.x.2"      // major and patch version 2, but any minor version
 
 Note that Craftr will refuse to load modules with `load_module()` that are not
 listed in the manifest `dependencies`!

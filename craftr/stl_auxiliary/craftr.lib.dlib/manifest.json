@@ -1,0 +1,15 @@
+{
+  "name": "craftr.lib.dlib",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "19.2"
+    }
+  }
+}

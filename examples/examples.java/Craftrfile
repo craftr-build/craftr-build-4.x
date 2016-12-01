@@ -1,6 +1,6 @@
 # examples.java
 
-load_module('lang.java.*')
+load_module('craftr.lang.java.*')
 
 classes = java_compile(
   srcs = [local('Main.java')],

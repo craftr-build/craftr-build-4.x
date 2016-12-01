@@ -1,15 +1,15 @@
 # examples.cpp
 
-load_module('lang.cxx.*')
-load_module('lib.cxx.curlpp.*')
-load_module('lib.cxx.dlib.*')
-load_module('lib.cxx.tinyxml2.*')
+load_module('craftr.lang.cxx.*')
+load_module('craftr.lib.curlpp.*')
+load_module('craftr.lib.dlib.*')
+load_module('craftr.lib.tinyxml2.*')
 
 defines = []
 frameworks = [cURLpp, dlib, tinyxml2]
 
 try:
-  qt5 = load_module('lib.cxx.qt5')
+  qt5 = load_module('craftr.lib.qt5')
 except ModuleError as exc:
   logger.warn('note: Qt5 can not be found, disabling Qt5 example')
   logger.warn('note: message:', exc)

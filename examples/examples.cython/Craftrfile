@@ -1,6 +1,6 @@
 # examples.cython
 
-load_module('lang.cython.*')
+load_module('craftr.lang.cython.*')
 
 project = cython_project(
   main = local('Main.pyx'),

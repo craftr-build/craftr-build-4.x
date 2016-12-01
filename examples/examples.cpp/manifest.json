@@ -4,11 +4,11 @@
   "author": "Niklas Rosenstein <rosensteinniklas@gmail.com>",
   "url": "",
   "dependencies": {
-    "lang.cxx": "*",
-    "lib.cxx.curlpp": "*",
-    "lib.cxx.dlib": "*",
-    "lib.cxx.qt5": "*",
-    "lib.cxx.tinyxml2": "*"
+    "craftr.lang.cxx": "*",
+    "craftr.lib.curlpp": "*",
+    "craftr.lib.dlib": "*",
+    "craftr.lib.qt5": "*",
+    "craftr.lib.tinyxml2": "*"
   },
   "options": {}
 }

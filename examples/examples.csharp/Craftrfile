@@ -1,6 +1,6 @@
 # examples.csharp
 
-load_module('lang.csharp.*')
+load_module('craftr.lang.csharp.*')
 
 main = csharp_compile(
   srcs = [local('Main.cs')],

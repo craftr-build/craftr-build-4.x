@@ -2,7 +2,7 @@
   "name": "examples.c",
   "version": "1.0.0",
   "dependencies": {
-    "lang.cxx": "*"
+    "craftr.lang.cxx": "*"
   },
   "options": {
     "debug": {

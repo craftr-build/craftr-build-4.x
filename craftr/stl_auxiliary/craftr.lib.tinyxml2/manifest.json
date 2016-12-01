@@ -1,0 +1,19 @@
+{
+  "name": "craftr.lib.tinyxml2",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "4.0.1"
+    },
+    "build_main": {
+      "type": "bool",
+      "help": "Whether to build the main.cpp example or not. Default is false"
+    }
+  }
+}

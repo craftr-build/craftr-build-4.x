@@ -1,0 +1,21 @@
+{
+  "name": "craftr.lib.curl",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "help": "The version of the cURL source to download.",
+      "default": "7.51.0"
+    },
+    "static": {
+      "type": "bool",
+      "help": "If building from source, defines whether to build a static or dynamic library.",
+      "default": true
+    }
+  }
+}

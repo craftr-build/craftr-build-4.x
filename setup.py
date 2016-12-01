@@ -27,7 +27,7 @@ if pip.__version__ >= '6.0':
 
 setup(
   name = 'craftr-build',
-  version = '2.0.0.dev0',
+  version = '2.0.0.dev1',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   url = 'https://gitlab.niklasrosenstein.com/niklas/craftr',
@@ -39,6 +39,6 @@ setup(
   ),
   packages = find_packages(),
   package_data = {
-    'craftr': ['stl/**/*']
+    'craftr': ['stl/**/*', 'stl_auxiliary/**/*']
   }
 )

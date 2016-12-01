@@ -4,8 +4,8 @@
   "author": "",
   "url": "",
   "dependencies": {
-    "lang.cxx": "*",
-    "lang.thrift": "*"
+    "craftr.lang.cxx": "*",
+    "craftr.lang.thrift": "*"
   },
   "options": {}
 }

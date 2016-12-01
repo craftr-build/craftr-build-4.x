@@ -1,0 +1,15 @@
+{
+  "name": "craftr.lang.cython",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*",
+    "craftr.lang.python": "*"
+  },
+  "options": {
+    "bin": {
+      "type": "string"
+    }
+  }
+}

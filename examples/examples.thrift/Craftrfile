@@ -1,7 +1,7 @@
 # examples.thrift
 
-load_module('lang.cxx.*')
-load_module('lang.thrift.*')
+load_module('craftr.lang.cxx.*')
+load_module('craftr.lang.thrift.*')
 
 thriftfiles = thrift_gen(
   inputs = [local('tutorial.thrift')],

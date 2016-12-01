@@ -1,7 +1,7 @@
 # examples.c
 
 from os import environ
-load_module('lang.cxx.*')
+load_module('craftr.lang.cxx.*')
 
 program = cxx_binary(
   inputs = c_compile(

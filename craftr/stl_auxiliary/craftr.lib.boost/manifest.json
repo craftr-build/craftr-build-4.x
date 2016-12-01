@@ -1,0 +1,24 @@
+{
+  "name": "craftr.lib.boost",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "path": {
+      "type": "string",
+      "help": "The path where the Boost prebuilt files can be found."
+    },
+    "arch": {
+      "type": "string",
+      "help": "The name of the target platform, architecture and eventually compiler that gives an indication of where to find the prebuilt binaries. For example: \"lib64-msvc-12.0\""
+    },
+    "win32_target": {
+      "type": "string",
+      "help": "A number that identifies the Windows target version. Currently only the value \"XP\" is supported.",
+      "default": "XP"
+    }
+  }
+}

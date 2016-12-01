@@ -1,0 +1,13 @@
+{
+  "name": "craftr.lang.thrift",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "bin": {
+      "type": "string",
+      "help": "Name of the thrift executable. Defaults to $THRIFT or \"thrift\"."
+    }
+  }
+}

@@ -180,8 +180,8 @@ def load_module(name, into=None, get_namespace=True, _stackframe=1):
 
   .. code:: python
 
-    cxx = load_module('lang.cxx')
-    load_module('lang.cxx.*')
+    cxx = load_module('craftr.lang.cxx')
+    load_module('craftr.lang.cxx.*')
     assert cxx.c_compile is c_compile
   """
 

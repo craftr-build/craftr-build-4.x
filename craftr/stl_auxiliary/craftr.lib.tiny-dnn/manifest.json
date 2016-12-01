@@ -1,0 +1,21 @@
+{
+  "name": "craftr.lib.tiny-dnn",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "v1.0.0a3"
+    },
+    "directory": {
+      "type": "path"
+    },
+    "build_examples": {
+      "type": "bool"
+    }
+  }
+}

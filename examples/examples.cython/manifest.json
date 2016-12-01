@@ -4,7 +4,7 @@
   "author": "",
   "url": "",
   "dependencies": {
-    "lang.cython": "*"
+    "craftr.lang.cython": "*"
   },
   "options": {}
 }

@@ -30,7 +30,7 @@ __manifest.json__
   "name": "examples.c",
   "version": "1.0.0",
   "dependencies": {
-    "lang.cxx": "*"
+    "craftr.lang.cxx": "*"
   },
   "options": {
     "debug": {
@@ -50,7 +50,7 @@ __Craftrfile__
 # examples.c
 
 from os import environ
-load_module('lang.cxx.*')
+load_module('craftr.lang.cxx.*')
 
 program = cxx_binary(
   inputs = c_compile(

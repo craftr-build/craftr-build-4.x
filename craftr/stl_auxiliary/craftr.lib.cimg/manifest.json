@@ -1,0 +1,14 @@
+{
+  "name": "craftr.lib.cimg",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "version": {
+      "type": "string",
+      "help": "Version of the source to load from Github.",
+      "default": "v.179"
+    }
+  }
+}

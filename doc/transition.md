@@ -8,14 +8,14 @@ target generators.
 
 ```python
 from craftr.ext.platform import cc, cxx, ld, ar    # old
-cxc = load_module('lang.cxx').cxc                  # new
+cxc = load_module('craftr.lang.cxx').cxc                  # new
 ```
 
 However what we usually do in Craftr 2 now is to use star-imports to
 load the contents of the module into the global namespace.
 
 ```python
-load_module('lang.cxx.*')
+load_module('craftr.lang.cxx.*')
 ```
 
 ## Doing the transition
@@ -28,7 +28,7 @@ files in your project. If you want to keep your root directory clean, use the
     $ craftr startpackage my_project . --nested
 
 Open the `manifest.json` file and make sure to include all the dependencies
-that you need (eg. `"lang.cxx": "*"`). Craftr 2 refuses to load a module if
+that you need (eg. `"craftr.lang.cxx": "*"`). Craftr 2 refuses to load a module if
 it is not defined in the package's dependencies.
 
 Now you can basically copy the content from your old `Craftfile.py` to the
