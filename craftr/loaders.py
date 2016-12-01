@@ -16,8 +16,8 @@
 
 __all__ = ['external_file', 'external_archive']
 
-from craftr.defaults import buildlocal, gtn, logger, session
-from craftr.utils import httputils, path, pyutils
+from craftr.defaults import buildlocal, gtn, logger, session, Framework, path, shell
+from craftr.utils import httputils, pyutils
 
 import nr.misc.archive
 
@@ -241,3 +241,47 @@ def external_archive(*urls, exclude_files = (), directory = None, name = None):
   cache['archive_source'] = archive
   cache['archive_dir'] = directory
   return directory
+
+
+class PkgConfigError(Exception):
+  pass
+
+
+def pkg_config(pkg_name):
+  """
+  If available, this function uses ``pkg-config`` to extract flags for
+  compiling and linking with the package specified with *pkg_name*. If
+  ``pkg-config`` is not available or the it can not find the package,
+  :class:`PkgConfigError` is raised.
+  """
+
+  try:
+    flags = shell.pipe(['pkg-config', pkg_name, '--cflags', '--libs']).stdout
+  except FileNotFoundError as exc:
+    raise PkgConfigError('pkg-config is not available ({})'.format(exc))
+  except shell.CalledProcessError as exc:
+    raise PkgConfigError('{} not installed on this system ({})'.format(
+        pkg_name, exc.stderr or exc.stdout))
+
+  # Parse the flags.
+  result = Framework('pkg-config:{}'.format(pkg_name),
+      include = [], defines = [], libs = [], libpath = [],
+      compile_additional_flags = [], link_additional_flags = [])
+  for flag in shell.split(flags):
+    if flag.startswith('-I'):
+      result['include'].append(flag[2:])
+    elif flag.startswith('-D'):
+      result['defines'].append(flag[2:])
+    elif flag.startswith('-l'):
+      result['libs'].append(flag[2:])
+    elif flag.startswith('-L'):
+      result['libpath'].append(flag[2:])
+    elif flag.startswith('-Wl,'):
+      result['link_additional_flags'].append(flag[4:])
+    else:
+      result['compile_additional_flags'].append(flag)
+
+  return result
+
+
+pkg_config.Error = PkgConfigError

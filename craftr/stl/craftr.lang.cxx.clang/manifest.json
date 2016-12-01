@@ -13,25 +13,14 @@
       "type": "string",
       "help": "Path to a cross-compilation definitions file"
     },
-    "debug": {
-      "type": "bool",
-      "inherit": true
-    },
+    "debug": "bool",
     "rtti": {
       "type": "bool",
-      "inherit": true
+      "default": true
     },
-    "as": {
-      "type": "string"
-    },
-    "c": {
-      "type": "string"
-    },
-    "cpp": {
-      "type": "string"
-    },
-    "ar": {
-      "type": "string"
-    }
+    "as": "string",
+    "c": "string",
+    "cpp": "string",
+    "ar": "string"
   }
 }
