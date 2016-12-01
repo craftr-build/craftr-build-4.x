@@ -416,6 +416,7 @@ class CompilerLinker(object):
     else:
       command += ['$in']
 
+    command += ['-o', '$out']
     command += ['-g'] if debug else []
     command += ['-l' + x for x in pyutils.unique_list(libs)]
     command += ['-L' + x for x in pyutils.unique_list(libpath)]
@@ -425,7 +426,6 @@ class CompilerLinker(object):
     command += pyutils.flatten(['-framework', x] for x in osx_frameworks)
     if linker_args:
       command += ['-Wl,' + ','.join(linker_args)]
-    command += ['-o', '$out']
 
     # TODO
     """
