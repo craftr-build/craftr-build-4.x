@@ -10,6 +10,7 @@
     "version": {
       "type": "string",
       "default": "19.2"
-    }
+    },
+    "nogui": "bool"
   }
 }

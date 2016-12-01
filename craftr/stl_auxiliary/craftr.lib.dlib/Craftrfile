@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from craftr.loaders import external_archive
+from craftr.loaders import external_archive, pkg_config
 
 source_directory = external_archive(
   "http://dlib.net/files/dlib-{}.zip".format(options.version)
@@ -24,15 +24,27 @@ __all__ = ['dlib']
 load_module('craftr.lang.cxx.*')
 
 dlib = Framework('dlib',
-  include = [source_directory]
+  include = [source_directory],
+  defines = ['DLIB_NO_GUI_SUPPORT'] if options.nogui else [],
+  frameworks = [],
+  libs = []
 )
 
-_lib = cxx_library(
+if platform.name == 'win':
+  dlib['libs'] += ['ws2_32', 'winmm']
+  if not options.nogui:
+    dlib['libs'] += ['comctl32', 'gdi32', 'imm32']
+else:
+  dlib['libs'] += ['pthread']
+  dlib['frameworks'] += [pkg_config('x11')]
+
+dlib_library = cxx_library(
   inputs = cpp_compile(
     sources = [path.join(source_directory, 'dlib/all/source.cpp')],
-    frameworks = [dlib]
+    frameworks = [dlib],
+     std = 'c++11'
   ),
   output = 'dlib'
 )
 
-cxx_extend_framework(dlib, _lib)
+cxx_extend_framework(dlib, dlib_library)
