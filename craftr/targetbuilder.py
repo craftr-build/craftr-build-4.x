@@ -250,9 +250,9 @@ class Framework(dict):
   are used to represent build options.
   """
 
-  def __init__(self, __name, **kwargs):
+  def __init__(self, __name=None, **kwargs):
     super().__init__(**kwargs)
-    self.name = __name
+    self.name = gtn(__name)
 
   def __repr__(self):
     return '<Framework "{}": {}>'.format(self.name, super().__repr__())
