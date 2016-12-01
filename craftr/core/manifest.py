@@ -334,12 +334,15 @@ class BaseOption(object, metaclass=abc.ABCMeta):
   .. attribute:: inherit
 
   .. attribute:: help
+
+  .. attribute:: default
   """
 
-  def __init__(self, name, inherit=True, help=None):
+  def __init__(self, name, inherit=True, help=None, default=None):
     self.name = name
     self.inherit = inherit
     self.help = None
+    self.default = default
 
   @abc.abstractmethod
   def __call__(self, value):
@@ -355,8 +358,7 @@ class BoolOption(BaseOption):
   """
 
   def __init__(self, name, default=False, **kwargs):
-    super().__init__(name, **kwargs)
-    self.default = default
+    super().__init__(name, default=default, **kwargs)
 
   def __call__(self, value):
     if isinstance(value, str):
@@ -378,9 +380,6 @@ class TripletOption(BoolOption):
   Just like the :class:`BoolOption` but with a third option, accepting
   "null" and "none" (which maps to :const:`None`).
   """
-
-  def __init__(self, name, default=None, **kwargs):
-    super().__init__(name, default, **kwargs)
 
   def __call__(self, value):
     try:
@@ -406,6 +405,20 @@ class StringOption(BaseOption):
 
   def __call__(self, string):
     return string
+
+
+class PathOption(StringOption):
+  """
+  Option for paths. Relative paths are automatically converted to absolute
+  paths. It is assumed that relative paths are specified relative to
+  :attr:`Session.maindir`.
+  """
+
+  def __call__(self, value):
+    from craftr.core.session import session
+    if not path.isabs(value):
+      value = path.join(session.maindir, value)
+    return path.norm(value)
 
 
 class LoaderError(Exception):
@@ -651,5 +664,6 @@ class _aliases:
   bool = BoolOption
   triplet = TripletOption
   string = StringOption
+  path = PathOption
 
   url = UrlLoader
