@@ -199,6 +199,7 @@ class ExportOrBuildCommand(BaseCommand):
 
     # Prepare options, loaders and execute.
     if self.is_export:
+      session.expand_relative_options(module.manifest.name)
       session.cache['build'] = {}
       try:
         write_cache(cachefile)
@@ -228,6 +229,9 @@ class ExportOrBuildCommand(BaseCommand):
       parse_cmdline_options(session.cache['build']['options'])
       main = session.cache['build']['main']
       available_targets = frozenset(session.cache['build']['targets'])
+
+      logger.debug('build main module:', main)
+      session.expand_relative_options(get_volatile_module_version(main)[0])
 
       # Check the targets and if they exist.
       targets = []

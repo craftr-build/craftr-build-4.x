@@ -202,10 +202,22 @@ class Session(object):
       raise ValueError('Craftr Session cache must be a JSON object, got {}'
           .format(type(cache).__name__))
     self.cache = cache
-    self.cache.setdefault('loaders', {})
 
   def write_cache(self, fp):
     json.dump(self.cache, fp, indent='\t')
+
+  def expand_relative_options(self, main_module):
+    """
+    After the main module has been detected, relative option names (starting
+    with ``.``) should be converted to absolute option names. This is what
+    the method does.
+
+    :param main_module: The name of the main module.
+    """
+
+    for key in tuple(self.options.keys()):
+      if key.startswith('.'):
+        self.options[main_module + key] = self.options.pop(key)
 
   def get_temporary_directory(self):
     """
