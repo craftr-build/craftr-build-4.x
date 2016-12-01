@@ -1,0 +1,25 @@
+# craftr.lib.sparsepp
+
+from craftr.loaders import external_archive
+
+source_directory = external_archive(
+  "https://github.com/greg7mdp/sparsepp/archive/{}.zip".format(options.version)
+)
+
+sparsepp = Framework(
+  include = [source_directory]
+)
+print(sparsepp)
+
+if options.build_tests:
+  load_module('craftr.lang.cxx.*')
+
+  test = runtarget(
+    cxx_binary(
+      inputs = cpp_compile(
+        sources = [path.join(source_directory, 'spp_test.cc')],
+        frameworks = [sparsepp]
+      ),
+      output = 'test'
+    )
+  )

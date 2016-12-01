@@ -1,0 +1,16 @@
+{
+  "name": "craftr.lib.sparsepp",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "build_tests": "bool",
+    "version": {
+      "type": "string",
+      "default": "master"
+    }
+  }
+}
