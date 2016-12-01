@@ -37,12 +37,12 @@ if platform.name == 'win':
 else:
   dlib['libs'] += ['pthread']
   dlib['frameworks'] += [pkg_config('x11')]
+  dlib['std'] = 'gnu++11'
 
 dlib_library = cxx_library(
   inputs = cpp_compile(
     sources = [path.join(source_directory, 'dlib/all/source.cpp')],
-    frameworks = [dlib],
-     std = 'c++11'
+    frameworks = [dlib]
   ),
   output = 'dlib'
 )

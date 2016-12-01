@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+options = session.module.options
 from craftr.loaders import external_archive
 
 source_directory = external_archive(
