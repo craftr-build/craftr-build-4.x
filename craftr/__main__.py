@@ -209,7 +209,7 @@ class ExportOrBuildCommand(BaseCommand):
           logger.error(error)
         return 1
       except craftr.defaults.ModuleError as exc:
-        logger.error(exc)
+        logger.error('error:', exc)
         return 1
 
       # Write the cache back.
