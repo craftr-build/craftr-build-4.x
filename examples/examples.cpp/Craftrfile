@@ -21,8 +21,7 @@ else:
 obj = cpp_compile(
   sources = [local('main.cpp')],
   frameworks = frameworks,
-  defines = defines,
-  std = 'c++11'
+  defines = defines
 )
 
 main = cxx_binary(
