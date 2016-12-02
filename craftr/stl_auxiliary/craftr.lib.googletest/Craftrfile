@@ -27,8 +27,12 @@ googletest = Framework(
   include = [
     path.join(options.directory, 'googlemock/include'),
     path.join(options.directory, 'googletest/include')
-  ]
+  ],
+  libs = []
 )
+
+if platform.name != 'win':
+  googletest['libs'].append('pthread')
 
 
 load_module('craftr.lang.cxx.*')
