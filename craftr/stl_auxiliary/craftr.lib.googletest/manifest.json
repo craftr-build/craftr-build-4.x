@@ -1,0 +1,16 @@
+{
+  "name": "craftr.lib.googletest",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "directory": "path",
+    "version": {
+      "type": "string",
+      "default": "1.8.0"
+    }
+  }
+}
