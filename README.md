@@ -17,129 +17,20 @@ various programming languages and common libraries out of the box:
 - Java
 - Vala
 
-Below you can find an example to compile a simple C++ program to get a taste
-of what Craftr looks like. Note that every module requires a `manifest.json`
-together with a `Craftrfile` to make a *package*.
-
-> __Note__: You can start a new package easily with the `craftr startpackage`
-> command.
-
-__manifest.json__
-
-```json
-{
-  "name": "examples.c",
-  "version": "1.0.0",
-  "dependencies": {
-    "craftr.lang.cxx": "*"
-  },
-  "options": {
-    "debug": {
-      "type": "bool"
-    },
-    "outbin": {
-      "type": "string",
-      "default": "my_app"
-    }
-  }
-}
-```
-
-__Craftrfile__
-
-```python
-# examples.c
-
-from os import environ
-load_module('craftr.lang.cxx.*')
-
-program = cxx_binary(
-  inputs = c_compile(
-    sources = glob(['src/*.c'])
-  ),
-  output = options.outbin
-)
-
-run = runtarget(program, environ.get('USERNAME', 'John'), "sunny")
-
-```
-
-__C Sources__
-```c
-$ cat src/hello.c
-
-#include <stdio.h>
-
-void say_hello(char const* name, char const* weather) {
-  printf("Hello, %s. You are facing a %s day\n", name, weather);
-}
-
-$ cat src/main.c
-
-extern void say_hello(char const* name, char const* weather);
-
-int main(int argc, char** argv) {
-  if (argc != 3) {
-    printf("error: usage: %s name weather\n");
-    return 0;
-  }
-  say_hello(argv[1], argv[2]);
-  return 0;
-}
-```
-To export, build and run the project, use
-
-    $ craftr export
-    $ craftr build
-    $ craftr build run
-    Hello, John. You are facing a sunny day
-
-Note that the `build` command accepts target names as additional arguments.
-Since `run` is just another target, that's how we can invoke the test command
-that we created with `runtarget()`.
-
-Due to the way Craftr organizes the build tree, the output file will be
-located in `build/examples.c-1.0.0/my_app`. If you want to define an exact path
-for the output file, use an absolute path. For example `local()` gives you
-an absolute path assuming the path you give it is relative to your project
-directory.
-
-```python
-# ...
-  output = local(options.outbin)
-# ...
-```
-
-Options can either be specified on the command-line or in configuration files.
-By default, `~/.craftrconfig` and `./.craftrconfig` files are loaded if they
-exist. The `-c <filename>` option can be used to pass one or more configuration
-filenames that will be loaded instead of `./.craftrconfig` (note that the file
-in the user home directory is still loaded).
-
-```ini
-# .craftrconfig
-[__global__]
-  debug = true
-[examples.c]
-  outbin = my_app
-[include "config/another.config"]
-```
-
-You can also find this example in [`examples/examples.c`](examples/examples.c).
-
-Check out the [Documentation].
+Check out the [Documentation] and the [Getting Started] page.
 
   [Ninja]: https://github.com/ninja-build/ninja
   [Python 3]: https://www.python.org/
   [Documentation]: doc
+  [Getting Started]: doc/getting-started.md
 
 ## Features
 
 - [x] Moduler build scripts (Craftr packages) with dependency management
 - [x] Loaders: if required, automatically download and build libraries from source!
 - [ ] Package manager (hosted on [Craftr.net])
+- [ ] Embed actual Python functions into the build graph
 - [ ] Dependency-version lockfiles
-- [ ] RTS and Tasks (as Craftr 1 used to have)
 
 
   [Craftr.net]: https://craftr.net

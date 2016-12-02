@@ -1,16 +1,10 @@
 {
   "name": "examples.c",
   "version": "1.0.0",
+  "author": "",
+  "url": "",
   "dependencies": {
-    "craftr.lang.cxx": "*"
+    "craftr.lang.cxx": "1.x"
   },
-  "options": {
-    "debug": {
-      "type": "bool"
-    },
-    "outbin": {
-      "type": "string",
-      "default": "main"
-    }
-  }
+  "options": {}
 }

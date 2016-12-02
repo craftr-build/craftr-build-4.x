@@ -1,5 +1,0 @@
-# .craftrconfig
-[__global__]
-  debug = true
-[examples.c]
-  outbin = my_app
