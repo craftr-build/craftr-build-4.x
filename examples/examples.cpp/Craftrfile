@@ -18,14 +18,12 @@ else:
   defines.append('HAVE_QT5')
   frameworks.append(qt5.framework('Qt5Widgets'))
 
-obj = cpp_compile(
-  sources = [local('main.cpp')],
-  frameworks = frameworks,
-  defines = defines
-)
-
 main = cxx_binary(
-  inputs = obj,
+  inputs = cpp_compile(
+    sources = [local('main.cpp')],
+    frameworks = frameworks,
+    defines = defines
+  ),
   output = 'main'
 )
 
