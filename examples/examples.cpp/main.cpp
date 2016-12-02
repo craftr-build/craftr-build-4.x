@@ -15,17 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if __linux__ || __unix__ || defined(_POSIX_VERSION)
-  #include <sys/select.h>
-#endif
 
 #include <iostream>
 #include <sstream>
+#include <tinyxml2.h>
+
+#if __CYGWIN__
+  // Missing include from curl/multi.h on Cygwin.
+  #include <sys/select.h>
+#endif
 #include <curlpp/cURLpp.hpp>
 #include <curlpp/Easy.hpp>
 #include <curlpp/Options.hpp>
+
+#if !defined(DLIB_ISO_CPP_ONLY) && !defined(DLIB_NO_GUI_SUPPORT)
+  #include <dlib/gui_core.h>
+  #include <dlib/gui_widgets.h>
+  #define HAVE_DLIB_GUI
+#endif
 #include <dlib/config_reader.h>
-#include <tinyxml2.h>
 
 #ifdef HAVE_QT5
   #include <QtWidgets/QMainWindow>
@@ -95,7 +103,8 @@ int main(int argc, char** argv) {
   data << "\n\nTags:\n\n";
   dump_xml(data, doc.RootElement());
 
-  #ifdef HAVE_QT5
+  #if defined(HAVE_QT5)
+  {
     QApplication app(argc, argv);
     QWidget window;
 
@@ -107,8 +116,27 @@ int main(int argc, char** argv) {
 
     window.show();
     return app.exec();
+  }
+  #elif defined(HAVE_DLIB_GUI)
+  {
+    class window : public dlib::drawable_window {
+    public:
+      window() { show(); }
+      ~window() { close_window(); }
+    };
+    window win;
+    win.set_size(400, 300);
+    win.set_title("dlib window");
+    dlib::label label(win);
+    label.set_text(data.str());
+    win.wait_until_closed();
+    return 0;
+  }
   #else
+  {
+    std::cerr << "note: no GUI available (could be Qt5/dlib)" << std::endl;
     std::cout << data.str() << std::endl;
     return 0;
+  }
   #endif
 }
