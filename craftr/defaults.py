@@ -219,22 +219,30 @@ def load_module(name, into=None, get_namespace=True, _stackframe=1):
   return loaded_module
 
 
-def load_file(filename):
+def load_file(filename, export_default_namespace=True):
   """
   Loads a Python file into a new module-like object and returns it. The
   *filename* is assumed relative to the currently executed module's
   directory (NOT the project directory which can be different).
   """
 
+  module = session.module
+  __name__ = module.ident + ':' + filename
   if not path.isabs(filename):
-    filename = path.join(session.module.directory, filename)
+    filename = path.join(module.directory, filename)
+  filename = path.norm(filename)
 
   with open(filename, 'r') as fp:
     code = compile(fp.read(), filename, 'exec')
 
   scope = Namespace()
-  vars(scope).update(globals())
+  if export_default_namespace:
+    vars(scope).update(module.get_init_globals())
+    scope.__module__ = module.namespace
+  scope.__file__ = filename
+  scope.__name__ = __name__
   exec(code, vars(scope))
+
   return scope
 
 

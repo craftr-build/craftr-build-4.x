@@ -421,23 +421,32 @@ class Module(object):
     with open(script_fn) as fp:
       code = compile(fp.read(), script_fn, 'exec')
 
-    from craftr import defaults
-    for key, value in vars(defaults).items():
-      if not key.startswith('_'):
-        vars(self.namespace)[key] = value
-    vars(self.namespace).update({
-      '__file__': script_fn,
-      '__name__': self.manifest.name,
-      '__version__': str(self.manifest.version),
-      'options': self.options,
-      'project_dir': self.project_dir,
-    })
-
+    vars(self.namespace).update(self.get_init_globals())
+    self.namespace.__file__ = script_fn
+    self.namespace.__name__ = self.manifest.name
+    self.namespace.__version__ = str(self.manifest.version)
     try:
       session.modulestack.append(self)
       exec(code, vars(self.namespace))
     finally:
       assert session.modulestack.pop() is self
+
+  def get_init_globals(self):
+    """
+    Returns a dictionary initialized with the default built-in values for a
+    build script.
+    """
+
+    from craftr import defaults
+    result = {}
+    for key, value in vars(defaults).items():
+      if not key.startswith('_'):
+        result[key] = value
+    result.update({
+      'options': self.options,
+      'project_dir': self.project_dir
+    })
+    return result
 
 
 #: Proxy object that points to the current :class:`Session` object.
