@@ -25,10 +25,15 @@ load_module('craftr.lang.cxx.*')
 
 dlib = Framework('dlib',
   include = [source_directory],
-  defines = ['DLIB_NO_GUI_SUPPORT'] if options.nogui else [],
+  defines = [],
   frameworks = [],
   libs = []
 )
+
+if options.nogui:
+  dlib['defines'].append('DLIB_NO_GUI_SUPPORT')
+if options.isocpp:
+  dlib['defines'].append('DLIB_ISO_CPP_ONLY')
 
 if platform.name == 'win':
   dlib['libs'] += ['ws2_32', 'winmm']
