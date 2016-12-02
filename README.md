@@ -11,7 +11,7 @@ Craftr is a meta build system based on [Python 3] scripts which produces
 that can be re-used easily. Craftr provides a standard library to support
 various programming languages and common libraries out of the box:
 
-- C/C++
+- C/C++ (cURL, DLib, GoogleTest, tiny-dnn, Qt5, Boost, getopt)
 - Cython
 - C#
 - Java
