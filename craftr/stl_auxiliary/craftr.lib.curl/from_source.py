@@ -17,34 +17,45 @@
 options = session.module.options
 from craftr.loaders import external_archive
 
-cURL = Framework('cURL',
+# Framework that is used by other libraries/applications.
+cURL = Framework(
   include = [],
-  defines = [],
+  defines = ['CURL_STATICLIB'] if options.static else [],
   libs = []
 )
 
+# Framework for building libcURL.
+cURL_building = Framework(
+  frameworks = [cURL],
+  defines = ['BUILDING_LIBCURL'],
+  include = []
+)
+
+# Platform dependent settings.
 if platform.name == 'win':
-  cURL['libs'] += ['Ws2_32', 'Wldap32']
+  cURL['libs'] += 'kernel32 user32 gdi32 winspool shell32 ole32 oleaut32 uuid comdlg32 advapi32 wldap32 winmm ws2_32 crypt32'.split()
+  cURL_building['defines'] += ['HAVE_CONFIG_H', '_WIN32_WINNT=0x0501']
+  # Note: Yes, a bit hacky. Workaround until we can either maybe evaluate
+  # CMake files or have CMake like feature checks (see craftr-build/craftr#134).
+  cURL_building['include'] += [local('windows')]
 else:
+  # TODO
   error('platform currently not supported: {}'.format(platform.name))
 
+# Grab the cURL source and update the include directory in the public framework.
 source_directory = external_archive(
   "https://curl.haxx.se/download/curl-{}.tar.gz".format(options.version)
 )
-cURL['include'].append(path.join(source_directory, 'include'))
+cURL['include'] += [path.join(source_directory, 'include')]
 
-if options.static:
-  cURL['defines'].append('CURL_STATICLIB')
-
+# Compile the library.
 load_module('craftr.lang.cxx.*')
-
 libcURL = cxx_library(
   link_style = 'static' if options.static else 'shared',
   inputs = c_compile(
     sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = source_directory),
     include = [path.join(source_directory, 'lib')],
-    defines = ['BUILDING_LIBCURL'],
-    frameworks = [cURL]
+    frameworks = [cURL, cURL_building]
   ),
   output = 'cURL'
 )

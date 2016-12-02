@@ -22,5 +22,3 @@ try:
   cURLpp = pkg_config('curlpp')
 except pkg_config.Error:
   cURLpp = load_file('./from_source.py').cURLpp
-
-
