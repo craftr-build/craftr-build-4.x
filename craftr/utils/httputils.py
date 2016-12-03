@@ -119,6 +119,7 @@ def download_file(url, filename=None, file=None, directory=None,
       raise UserInterrupt
 
   if filename:
+    path.makedirs(path.dirname(filename))
     try:
       with open(filename, 'wb') as fp:
         copy_to_file(fp)
@@ -129,9 +130,7 @@ def download_file(url, filename=None, file=None, directory=None,
   elif file:
     copy_to_file(file)
 
-  if directory:
-    return filename, False
-  return progress_info['downloaded']
+  return filename, False
 
 
 def parse_content_disposition(value):

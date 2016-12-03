@@ -109,7 +109,7 @@ def external_file(*urls, filename = None, directory = None,
   """
 
   name = gtn(name)
-  if not directory:
+  if not directory and not filename:
     directory = buildlocal('data')
 
   cache = get_loader_cache(name)
