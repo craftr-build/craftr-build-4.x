@@ -19,6 +19,11 @@
     "rtti": {
       "type": "bool",
       "default": true
+    },
+    "embedd_debug_symbols": {
+      "type": "bool",
+      "default": true,
+      "help": "Embed debug symbols into the .obj and .lib file (on by default), otherwise generate .pdb files"
     }
   }
 }

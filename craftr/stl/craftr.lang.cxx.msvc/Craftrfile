@@ -341,11 +341,15 @@ class MsvcToolkit(object):
     command += ['/D' + x for x in defines]
     command += ['/FI' + x for x in builder.get_list('forced_include')]
     if debug:
-      command += ['/Od', '/Zi', '/RTC1', '/FC', '/Fd$out.pdb']
+      command += ['/Od', '/RTC1', '/FC']
       if not self.version or self.version >= 'v18':
         # Enable parallel writes to .pdb files. We also assume that this
         # option is necessary by default.
         command += ['/FS']
+      if options.embedd_debug_symbols:
+        command += ['/Z7']
+      else:
+        command += ['/Zi', '/Fd$out.pdb']
 
     exceptions = builder.get('exceptions', None)
     if exceptions:
@@ -440,7 +444,7 @@ class MsvcToolkit(object):
     else:
       libs += builder.get_list('win64_libs')
       external_libs += builder.get_list('win64_external_libs')
-    debug = builder.get('debug', False)
+    debug = builder.get('debug', options.debug)
 
     command = [self.programs.link, '/nologo']
 
@@ -453,7 +457,8 @@ class MsvcToolkit(object):
     command += ['/OUT:$out']
     if self.toolkit == 'clang-cl':
       command += ['/machine:' + self.target]
-    command += ['/debug'] if debug else []
+    if debug:
+      command += ['/DEBUG', '/PDB:$out.pdb']
     command += ['/DLL'] if output_type == 'dll' else []
     command += ['/LIBPATH:{0}'.format(x) for x in libpath]
     command += [x + '.lib' for x in libs]
