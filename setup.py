@@ -53,6 +53,8 @@ setup(
   version = '2.0.0.dev1',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
+  description = 'Meta build system based on Ninja and Python',
+  long_description = long_description,
   url = 'https://gitlab.niklasrosenstein.com/niklas/craftr',
   install_requires = [str(x.req) for x in parse_requirements('requirements.txt')],
   entry_points = dict(
