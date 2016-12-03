@@ -18,12 +18,35 @@ from pip.req import parse_requirements
 from setuptools import setup, find_packages
 
 import functools
+import os
 import pip
+import sys
+
+if sys.version < '3.4' or sys.version >= '3.6':
+  print('-----------------------------------------------------------------')
+  print("WARNING: Craftr officially supports Python 3.4, 3.5")
+  print("WARNING: Your current version is Python {}".format(sys.version[:5]))
+  print('-----------------------------------------------------------------')
 
 # parse_requirements() interface has changed in Pip 6.0
 if pip.__version__ >= '6.0':
   parse_requirements = functools.partial(
       parse_requirements, session=pip.download.PipSession())
+
+# Convert README.md to reST.
+if os.path.isfile('README.md'):
+  if os.system('pandoc -s README.md -o README.rst') != 0:
+    print('-----------------------------------------------------------------')
+    print('WARNING: README.rst could not be generated, pandoc command failed')
+    print('-----------------------------------------------------------------')
+    if sys.stdout.isatty():
+      input("Enter to continue... ")
+
+if os.path.isfile('README.rst'):
+  with open('README.rst', encoding='utf8') as fp:
+    long_description = fp.read()
+else:
+  long_description = None
 
 setup(
   name = 'craftr-build',
@@ -40,5 +63,15 @@ setup(
   packages = find_packages(),
   package_data = {
     'craftr': ['stl/**/*', 'stl_auxiliary/**/*']
-  }
+  },
+  license = 'MIT',
+  classifiers = [
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "License :: OSI Approved :: MIT License"
+  ],
 )

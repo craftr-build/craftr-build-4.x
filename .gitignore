@@ -1,4 +1,6 @@
 *.egg-info/
+.env/
 __pycache__/
 build/
-.env/
+dist/
+/README.rst
