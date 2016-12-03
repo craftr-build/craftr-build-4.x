@@ -547,7 +547,7 @@ class UnixPlatformHelper(PlatformHelper):
 
   def prepare_single_command(self, command, cwd):
     if cwd is not None:
-      command = [[shell.safe('('), 'cd', cwd, shell.safe('&&')] + command + [shell.safe(')')]]
+      command = [shell.safe('('), 'cd', cwd, shell.safe('&&')] + command + [shell.safe(')')]
     return command
 
   def write_command_file(self, filename, commands, inputs=None, outputs=None,
@@ -591,6 +591,6 @@ class UnixPlatformHelper(PlatformHelper):
 def get_platform_helper():
   if platform.name == 'win':
     return WindowsPlatformHelper()
-  elif platform.name in ('cygwin', 'linux', 'darwin'):
+  elif platform.name in ('cygwin', 'linux', 'mac'):
     return UnixPlatformHelper()
-  raise EnvironmentError('unsupported platform: {}'.format(sys.platform))
+  raise EnvironmentError('unsupported platform: {}'.format(platform.name))
