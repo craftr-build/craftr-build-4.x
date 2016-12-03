@@ -1,6 +1,6 @@
 # Craftr Documentation
 
-Version: 2.0.0.dev2
+Version: 2.0.0.dev3
 
 - [Getting Started](getting-started.md)
 - [Package documentation](package.md)
