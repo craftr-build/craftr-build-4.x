@@ -254,7 +254,7 @@ class ExportOrBuildCommand(BaseCommand):
       if args.verbose:
         cmd += ['-v']
       cmd += targets
-      shell.run(cmd)
+      return shell.run(cmd).returncode
 
 
 class StartpackageCommand(BaseCommand):
