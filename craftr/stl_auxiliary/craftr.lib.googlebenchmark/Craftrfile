@@ -9,7 +9,8 @@ if not options.directory:
 
 googlebenchmark = Framework(
   include = [path.join(options.directory, 'include')],
-  libs = []
+  libs = [],
+  std = 'c++11'
 )
 
 if platform.name == 'win':
