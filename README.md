@@ -22,8 +22,8 @@ Check out the [Documentation] and the [Getting Started] page.
 
   [Ninja]: https://github.com/ninja-build/ninja
   [Python 3]: https://www.python.org/
-  [Documentation]: doc
-  [Getting Started]: doc/getting-started.md
+  [Documentation]: https://github.com/craftr-build/craftr/tree/master/doc
+  [Getting Started]: https://github.com/craftr-build/craftr/tree/master/doc/getting-started.md
 
 ## Features
 
