@@ -110,6 +110,7 @@ class DefaultLogger(BaseLogger):
     self._line_alive = ('\n' not in end)
     if self._progress and 'progress' in self._progress:
       self.progress_update(self._progress['progress'], self._progress['info_text'], _force=True)
+    self._stream.flush()
 
   def add_indent(self, levels):
     self._indent += levels
@@ -141,6 +142,7 @@ class DefaultLogger(BaseLogger):
     print('{}|{}| {}'.format(indent, bar, info_text), end='', file=self._stream)
     self._progress['index'] += 1
     self._progress['last'] = ctime
+    self._stream.flush()
 
   def progress_end(self):
     tty.clear_line()
