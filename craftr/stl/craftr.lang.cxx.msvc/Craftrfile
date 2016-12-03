@@ -327,6 +327,10 @@ class MsvcToolkit(object):
     defines = builder.get_list('defines')
     if builder.get('msvc_use_default_defines', True):
       defines += ['WIN32', '_WIN32']
+    if debug:
+      pyutils.unique_extend(defines, ['_DEBUG', 'DEBUG'])
+    else:
+      pyutils.unique_extend(defines, ['NDEBUG'])
 
     command = [self.programs.cl, '/nologo', '/c', '$in', '/Fo$out']
     if self.toolkit == 'clang-cl':

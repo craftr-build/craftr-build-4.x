@@ -319,6 +319,12 @@ class CompilerLinker(object):
         stdlib = self.info.get('cpp_stdlib', 'stdc++')
       fw['libs'] = [stdlib]
 
+    defines = builder.get_list('defines')
+    if debug:
+      pyutils.unique_extend(defines, ['_DEBUG', 'DEBUG'])
+    else:
+      pyutils.unique_extend(defines, ['NDEBUG'])
+
     command = shell.split(self.program)
     command += ['-c', '$in', '-o', '$out']
     command += ['-g'] if debug else []
@@ -327,7 +333,7 @@ class CompilerLinker(object):
       command += ['-stdlib=lib' + stdlib] if stdlib else []
     command += ['-pedantic'] if pedantic else []
     command += ['-I' + x for x in builder.get_list('include')]
-    command += ['-D' + x for x in builder.get_list('defines')]
+    command += ['-D' + x for x in defines]
     command += pyutils.flatten([('-include', x) for x in builder.get_list('forced_include')])
     command += ['-fPIC'] if builder.get('pic', False) else []
     command += ['-F' + x for x in osx_fwpath]
