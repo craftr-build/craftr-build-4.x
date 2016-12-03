@@ -131,9 +131,13 @@ def detect_cpp_stdlib(program):
   with pyutils.combine_context(
       path.tempfile(suffix='.cpp'),
       path.tempfile(suffix='.out')) as (fp, outfp):
+    fp.write(b'#include <iostream>\nint main() { std::cout << "foo"; }\n')
     fp.close()
     outfp.close()
-    output = shell.pipe(program + ['-v', fp.name, '-o', outfp.name]).output.split('\n')
+
+    cmd = program + ['-v', fp.name, '-o', outfp.name]
+    output = shell.pipe(cmd).output.split('\n')
+
     # Check for a line that looks like a linker command.
     for line in output:
       try:
@@ -142,8 +146,8 @@ def detect_cpp_stdlib(program):
         continue
       if not line:
         continue
-      program = path.basename(parts[0].lower().split(path.sep)[0])
-      if program.startswith('ld') or program.startswith('collect2'):
+      invocation = path.basename(parts[0].lower())
+      if invocation.startswith('ld') or invocation.startswith('collect2'):
         # Looking good. Is it using -lc++ or -lstdc++?
         if '-lc++' in parts:
           return 'c++'
@@ -199,14 +203,14 @@ def get_default_toolset(tool):
     return {
       'as': '$c -x assembler',
       'c': 'clang',
-      'cpp': '$c -x c++',
+      'cpp': '$c++',
       'ar': 'ar'
     }
   elif tool == 'gcc':
     return {
       'as': '$c -x assembler',
       'c': 'gcc',
-      'cpp': '$c -x c++',
+      'cpp': '$c++',
       'ar': 'ar'
     }
   else:
