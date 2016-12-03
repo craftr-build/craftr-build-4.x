@@ -1,0 +1,30 @@
+# craftr.lib.googlebenchmark
+
+from craftr.loaders import external_archive
+
+if not options.directory:
+  options.directory = external_archive(
+    "https://github.com/google/benchmark/archive/{}.zip".format(options.version)
+  )
+
+googlebenchmark = Framework(
+  include = [path.join(options.directory, 'include')],
+  libs = []
+)
+
+if platform.name == 'win':
+  googlebenchmark['libs'].append('Shlwapi')
+
+load_module('craftr.lang.cxx.*')
+
+library = cxx_library(
+  link_style = 'static',
+  inputs = cpp_compile(
+    sources = glob(['src/*.cc'], parent = options.directory),
+    frameworks = [googlebenchmark],
+    defines = ['HAVE_STD_REGEX']  # TODO: detect and decide between STD, GNU and POSIX regex
+  ),
+  output = 'gbenchmark'
+)
+
+cxx_extend_framework(googlebenchmark, library)

@@ -1,11 +1,15 @@
 # googletest
 
-Use *gtest* and *gmock* in your C++ project. This package will always download
+Use [googletest][] in your C++ project. This package will always download
 a source archive from the Git repository and compile the libraries from source.
 To use googletest, simply load this Craftr package and compile a test binary.
 
+  [googletest]: https://github.com/google/googletest
+
+## Usage
 
 ```python
+load_module('craftr.lang.cxx.*')
 load_module('craftr.lib.googletest.*')
 
 test = runtarget(
@@ -30,4 +34,3 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 ```
-
