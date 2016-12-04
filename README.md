@@ -1,5 +1,6 @@
 # Craftr 2.x
 
+[![PyPI Version](https://img.shields.io/pypi/v/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/530/badge)](https://bestpractices.coreinfrastructure.org/projects/530)
 
 > Note: Craftr 2.x is different from the initial Craftr version in many ways
