@@ -11,6 +11,10 @@
     "version": {
       "type": "string",
       "default": "v1.1.0"
+    },
+    "regex_backend": {
+      "type": "string",
+      "default": "std"
     }
   }
 }

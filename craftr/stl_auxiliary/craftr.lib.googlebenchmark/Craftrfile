@@ -20,12 +20,22 @@ else:
 
 load_module('craftr.lang.cxx.*')
 
+defines = []
+if options.regex_backend == 'std':
+  defines.append('HAVE_STD_REGEX')
+elif options.regex_backend == 'gnu':
+  defines.append('HAVE_GNU_POSIX_REGEX')
+elif options.regex_backend == 'posix':
+  defines.append('HAVE_POSIX_REGEX')
+else:
+  error('invalid value for {}.regex_backend="{}"'.format(__name__, options.regex_backend))
+
 library = cxx_library(
   link_style = 'static',
   inputs = cpp_compile(
     sources = glob(['src/*.cc'], parent = options.directory),
     frameworks = [googlebenchmark],
-    defines = ['HAVE_STD_REGEX']  # TODO: detect and decide between STD, GNU and POSIX regex
+    defines = defines
   ),
   output = 'gbenchmark'
 )
