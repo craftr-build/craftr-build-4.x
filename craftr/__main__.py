@@ -200,8 +200,9 @@ class BuildCommand(BaseCommand):
 
     # Read the cache and parse command-line options.
     cachefile = path.join(session.builddir, '.craftrcache')
-    if not read_cache(cachefile) and not self.is_export:
-      logger.error('Unable to load "{}", can not build'.format(cachefile))
+    if not read_cache(cachefile) and self.mode != 'export':
+      logger.error('Unable to load "{}", can not {}'.format(cachefile, self.mode))
+      logger.error("Make sure to generate a build tree with 'craftr export'")
       return 1
 
     # Prepare options, loaders and execute.
