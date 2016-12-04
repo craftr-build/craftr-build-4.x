@@ -143,16 +143,19 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
 
 
 
-class ExportOrBuildCommand(BaseCommand):
+class BuildCommand(BaseCommand):
 
-  def __init__(self, is_export):
-    self.is_export = is_export
+  def __init__(self, mode):
+    assert mode in ('clean', 'build', 'export')
+    self.mode = mode
 
   def build_parser(self, parser):
-    if self.is_export:
+    if self.mode == 'export':
       parser.add_argument('-m', '--module')
     else:
       parser.add_argument('targets', metavar='TARGET', nargs='*')
+    if self.mode == 'clean':
+      parser.add_argument('-r', '--recursive', action='store_true')
     parser.add_argument('-d', '--option', dest='options', action='append', default=[])
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-i', '--include-path', action='append', default=[])
@@ -160,7 +163,7 @@ class ExportOrBuildCommand(BaseCommand):
   def execute(self, parser, args):
     session.path.extend(map(path.norm, args.include_path))
 
-    if self.is_export:
+    if self.mode == 'export':
       # Determine the module to execute, either from the current working
       # directory or find it by name if one is specified.
       if not args.module:
@@ -198,7 +201,7 @@ class ExportOrBuildCommand(BaseCommand):
       return 1
 
     # Prepare options, loaders and execute.
-    if self.is_export:
+    if self.mode == 'export':
       session.expand_relative_options(module.manifest.name)
       session.cache['build'] = {}
       try:
@@ -253,6 +256,10 @@ class ExportOrBuildCommand(BaseCommand):
       cmd = [ninja_bin]
       if args.verbose:
         cmd += ['-v']
+      if self.mode == 'clean':
+        cmd += ['-t', 'clean']
+        if not args.recursive:
+          cmd += ['-r']
       cmd += targets
       return shell.run(cmd).returncode
 
@@ -310,7 +317,7 @@ class StartpackageCommand(BaseCommand):
       print('# {}'.format(args.name), file=fp)
 
 
-class version(BaseCommand):
+class VersionCommand(BaseCommand):
 
   def build_parser(self, parser):
     pass
@@ -331,10 +338,13 @@ def main():
   subparsers = parser.add_subparsers(dest='command')
 
   commands = {
-    'export': ExportOrBuildCommand(is_export=True),
-    'build': ExportOrBuildCommand(is_export=False),
-    'startpackage': StartpackageCommand()
+    'clean': BuildCommand('clean'),
+    'build': BuildCommand('build'),
+    'export': BuildCommand('export'),
+    'startpackage': StartpackageCommand(),
+    'version': VersionCommand()
   }
+
   for key, cmd in commands.items():
     cmd.build_parser(subparsers.add_parser(key))
 
