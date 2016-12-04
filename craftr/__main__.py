@@ -150,13 +150,17 @@ class BuildCommand(BaseCommand):
     self.mode = mode
 
   def build_parser(self, parser):
+    # Inherit options from main parser so they can also be specified
+    # after the sub-command.
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-d', '--option', dest='options', action='append', default=[])
+
     if self.mode == 'export':
       parser.add_argument('-m', '--module')
     else:
       parser.add_argument('targets', metavar='TARGET', nargs='*')
     if self.mode == 'clean':
       parser.add_argument('-r', '--recursive', action='store_true')
-    parser.add_argument('-d', '--option', dest='options', action='append', default=[])
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-i', '--include-path', action='append', default=[])
 
