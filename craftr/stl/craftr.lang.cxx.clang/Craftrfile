@@ -336,6 +336,8 @@ class CompilerLinker(object):
       stdlib = builder.get('cpp_stdlib', options.cpp_stdlib)
       if not stdlib:
         stdlib = self.info.get('cpp_stdlib', None)
+      if not stdlib and platform.name != 'win':
+        stdlib = 'stdc++' if self.name == 'gcc' else 'c++'
       if stdlib:
         fw['libs'] = [stdlib]
 
