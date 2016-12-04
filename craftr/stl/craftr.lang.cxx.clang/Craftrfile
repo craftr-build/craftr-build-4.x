@@ -34,7 +34,7 @@ def get_toolkit():
       return 'gcc'
     else:
       raise EnvironmentError("can not determine TOOL default value for platform {!r}".format(platform.name))
-  if options.toolkit not in ('llvm', 'gcc'):
+  if options.toolkit not in ('clang', 'llvm', 'gcc'):
     raise ValueError("invalid value for option TOOL: {!r}".format(options.toolkit))
   return options.toolkit
 
@@ -124,8 +124,6 @@ def detect_cpp_stdlib(program):
   determine the C++ stdlib that is required for linking.
   """
 
-  program = shell.split(program)
-
   # Just create a temporary C++ file to be able to read the link
   # flags that would be invoked.
   with pyutils.combine_context(
@@ -135,7 +133,7 @@ def detect_cpp_stdlib(program):
     fp.close()
     outfp.close()
 
-    cmd = program + ['-v', fp.name, '-o', outfp.name]
+    cmd = shell.split(program) + ['-v', fp.name, '-o', outfp.name]
     output = shell.pipe(cmd).output.split('\n')
 
     # Check for a line that looks like a linker command.
@@ -153,7 +151,8 @@ def detect_cpp_stdlib(program):
           return 'c++'
         elif '-lstdc++' in parts:
           return 'stdc++'
-  logger.warn("{!r} C++ stdlib could not be detected".format(program))
+
+  logger.warn("'{}': C++ stdlib could not be detected".format(program))
   return None
 
 
@@ -199,12 +198,13 @@ def parse_cross_config(filename, format='ini'):
 
 
 def get_default_toolset(tool):
-  if tool == 'llvm':
+  if tool in ('clang', 'llvm'):
+    ar = 'llvm-ar' if platform.name == 'win' else 'ar'
     return {
       'as': '$c -x assembler',
       'c': 'clang',
       'cpp': '$c++',
-      'ar': 'ar'
+      'ar': ar
     }
   elif tool == 'gcc':
     return {
@@ -316,14 +316,17 @@ class CompilerLinker(object):
     if self.language == 'c++':
       stdlib = builder.get('cpp_stdlib', options.cpp_stdlib)
       if not stdlib:
-        stdlib = self.info.get('cpp_stdlib', 'stdc++' if self.name == 'gcc' else 'c++')
-      fw['libs'] = [stdlib]
+        stdlib = self.info.get('cpp_stdlib', None)
+      if stdlib:
+        fw['libs'] = [stdlib]
 
     defines = builder.get_list('defines')
     if debug:
       pyutils.unique_extend(defines, ['_DEBUG', 'DEBUG'])
     else:
       pyutils.unique_extend(defines, ['NDEBUG'])
+    if platform.name == 'win':
+      defines.append('_CRT_SECURE_NO_WARNINGS')
 
     command = shell.split(self.program)
     command += ['-c', '$in', '-o', '$out']

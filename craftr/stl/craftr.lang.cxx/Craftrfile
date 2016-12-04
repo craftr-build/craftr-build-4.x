@@ -16,7 +16,8 @@
 
 if options.toolkit.startswith('msvc') or options.toolkit.startswith('clang-cl'):
   module = 'craftr.lang.cxx.msvc'
-elif options.toolkit.startswith('llvm') or options.toolkit.startswith('gcc'):
+elif options.toolkit.startswith('llvm') or options.toolkit.startswith('gcc') \
+    or options.toolkit.startswith('clang'):
   module = 'craftr.lang.cxx.clang'
 elif options.toolkit.startswith('craftr:'):
   module = options.toolkit[7:]
