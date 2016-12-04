@@ -49,9 +49,10 @@ def read_config_file(filename, basedir=None, follow_include_directives=True):
   if not basedir:
     basedir = path.dirname(filename)
 
-  logger.debug('reading configuration file:', filename)
   if not path.isfile(filename):
     raise FileNotFoundError(filename)
+
+  logger.debug('reading configuration file:', filename)
   parser = configparser.SafeConfigParser()
   try:
     parser.read([filename])
