@@ -240,10 +240,27 @@ class ToolChain(object):
     cpp = resolve('cpp', 'CXX').replace('$c', c)
     ar = resolve('ar', 'AR')
 
-    self.as_ = CompilerLinker('asm', as_)
+    try:
+      self.as_ = CompilerLinker('asm', as_)
+    except ToolDetectionError as exc:
+      self.as_ = None
+      self.as_exc = None
+
+    # We expect a C compiler to always be present. After all we use
+    # it for the linking process always.
     self.cc = CompilerLinker('c', c)
-    self.cxx = CompilerLinker('c++', cpp)
-    self.ar = Ar(ar)
+
+    try:
+      self.cxx = CompilerLinker('c++', cpp)
+    except ToolDetectionError as exc:
+      self.cxx = None
+      self.cxx_exc = exc
+
+    try:
+      self.ar = Ar(ar)
+    except ToolDetectionError as exc:
+      self.ar = None
+      self.ar_exc = ex
 
   @property
   def name(self):
@@ -259,6 +276,8 @@ class ToolChain(object):
 
   def compile(self, language, *args, name=None, **kwargs):
     compiler = {'asm': self.as_, 'c': self.cc, 'c++': self.cxx}[language]
+    if compiler is None:
+      raise getattr(self, '{}_exc'.format(language.replace('++', 'xx'))) from None
     return compiler.compile(*args, name=gtn(name, None), **kwargs)
 
   def link(self, *args, name=None, **kwargs):
