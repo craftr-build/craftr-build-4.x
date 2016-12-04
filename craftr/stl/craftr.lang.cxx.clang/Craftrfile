@@ -109,7 +109,7 @@ def __llvm_check(program, output):
   }
 
   # Check for a C++ compiler.
-  if program[-2:] == '++':
+  if '++' in program:
     stdlib = detect_cpp_stdlib(program)
     if stdlib:
       result['cpp_stdlib'] = stdlib
