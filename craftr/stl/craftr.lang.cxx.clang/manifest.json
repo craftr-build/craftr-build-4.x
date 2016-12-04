@@ -21,6 +21,7 @@
     "as": "string",
     "c": "string",
     "cpp": "string",
-    "ar": "string"
+    "ar": "string",
+    "cpp_stdlib": "string"
   }
 }

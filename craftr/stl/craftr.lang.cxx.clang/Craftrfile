@@ -314,9 +314,9 @@ class CompilerLinker(object):
 
     stdlib = None
     if self.language == 'c++':
-      stdlib = builder.get('cpp_stdlib', None)
+      stdlib = builder.get('cpp_stdlib', options.cpp_stdlib)
       if not stdlib:
-        stdlib = self.info.get('cpp_stdlib', 'stdc++')
+        stdlib = self.info.get('cpp_stdlib', 'stdc++' if self.name == 'gcc' else 'c++')
       fw['libs'] = [stdlib]
 
     defines = builder.get_list('defines')
