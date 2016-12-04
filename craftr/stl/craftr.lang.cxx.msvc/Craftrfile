@@ -257,8 +257,8 @@ class MsvcToolkit(object):
 
   def __init__(self, toolkit=None, target=None):
     toolkit = toolkit or options.toolkit or 'msvc'
-    target = target or options.target or real_arch
-    if target not in valid_archs:
+    target = target or options.target
+    if target and target not in valid_archs:
       raise ValueError('invalid target architecture: {!r}'.format(target))
 
     version = ()
@@ -268,7 +268,6 @@ class MsvcToolkit(object):
     elif not toolkit == 'clang-cl':
       raise ValueError('invalid toolkit name: {!r}'.format(toolkit))
 
-    error = None
     self.info = None
     self.install_info = None
     if toolkit in ('clang-cl', 'msvc'):
@@ -282,7 +281,7 @@ class MsvcToolkit(object):
         lib =  self.info['lib_program']
 
     if not self.info:
-      self.install_info = find_installation(version, target)
+      self.install_info = find_installation(version, target or real_target)
       cl = path.join(self.install_info['toolsdir'], 'cl.exe')
       link = path.join(self.install_info['toolsdir'], 'link.exe')
       lib = path.join(self.install_info['toolsdir'], 'lib.exe')
@@ -290,8 +289,22 @@ class MsvcToolkit(object):
       with override_environ(self.install_info['env']):
         self.info = identify(self.programs.cl)
 
+    real_target = target
+    if self.name == 'clang-cl':
+      if self.info['target'] == 'x86_64-pc-windows-msvc':
+        real_target = 'x64'
+      else:
+        error('unsupported clang-cl target: {}'.format(self.info['target']))
+    if target and real_target != target:
+      logger.warn('{}: expected target "{}" does not match with real target "{}"'
+          .format(self.name, target, real_target))
+    if real_target:
+      target = real_target
+    if not target:
+      target = real_arch
+
     self.toolkit = toolkit
-    self.target = target
+    self.target_arch = target
     self.programs = self.Programs(cl, link, lib)
 
   def __str__(self):
@@ -307,10 +320,6 @@ class MsvcToolkit(object):
   @property
   def version(self):
     return self.info['version']
-
-  @property
-  def target_arch(self):
-    return self.info['target']
 
   def compile(self, language, sources, *, frameworks=(), name=None, **kwargs):
     if language not in ('asm', 'c', 'c++'):
@@ -333,8 +342,6 @@ class MsvcToolkit(object):
       pyutils.unique_extend(defines, ['NDEBUG'])
 
     command = [self.programs.cl, '/nologo', '/c', '$in', '/Fo$out']
-    if self.toolkit == 'clang-cl':
-      command += ['/arch:' + self.target]
     command += ['/wd' + str(x) for x in builder.get_list('msvc_disable_warnings')]
     command += ['/we' + str(x) for x in builder.get_list('msvc_warnings_as_errors')]
     command += ['/I' + x for x in builder.get_list('include')]
@@ -455,8 +462,6 @@ class MsvcToolkit(object):
       command += ['$in']
 
     command += ['/OUT:$out']
-    if self.toolkit == 'clang-cl':
-      command += ['/machine:' + self.target]
     if debug:
       command += ['/DEBUG', '/PDB:$out.pdb']
     command += ['/DLL'] if output_type == 'dll' else []
