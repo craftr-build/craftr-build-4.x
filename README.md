@@ -37,20 +37,33 @@ Check out the [Documentation] and the [Getting Started] page.
 
   [Craftr.net]: https://craftr.net
 
+## Contributions
+
+Craftr is a one-man-show and an immature piece of software. I am happy about
+every contribution and feedback, be it questions, criticism, feature requests,
+bug reports or pull requests!
+
+I would love to see Craftr used by more people. If you think it's worth to
+give it a shot, don't hesitate to ask if you're getting stuck!
+
+Issue Tracker: https://github.com/craftr-build/craftr/issues
+Twitter: [@rosensteinn](twitter.com/rosensteinn) [@craftr_build](https://twitter.com/craftr_build)
+
 ## Installation
 
-Craftr 2.x is currently not on PyPI so you have to install it from the Git
-repository. Note that the most recent version of Craftr might also require
-an unreleased version of the `nr` module, thus it is recommended to install
-it from the Git repository as well.
+Craftr 2.x does not have a stable release yet, though the `2.0.0.devx` tags
+are already available on PyPI. If you do not explicitly specify the version
+number, Pip will install Craftr 1.x.
+
+    $ pip install craftr-build==2.0.0.dev4
+
+To get the cutting edge development version, I suggest installing Craftr
+from the Git repository into a virtualenv.
 
     $ virtualenv -p python3 env && source env/bin/activate
-    $ git clone https://github.com/NiklasRosenstein/py-nr.git
-    $ pip install -e py-nr
-    $ git clone https://github.com/craftr-build/craftr.git
-    $ pip install -e craftr
-    $ craftr version
-    2.0.0-dev
+    $ git clone https://github.com/craftr-build/craftr.git -b development
+    $ cd craftr
+    $ pip install -e .
 
 ## Requirements
 
