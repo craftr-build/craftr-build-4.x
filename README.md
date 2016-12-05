@@ -19,12 +19,17 @@ various programming languages and common libraries out of the box:
 - Java
 - Vala
 
-Check out the [Documentation] and the [Getting Started] page.
+Additional links:
 
-  [Ninja]: https://github.com/ninja-build/ninja
-  [Python 3]: https://www.python.org/
-  [Documentation]: https://github.com/craftr-build/craftr/tree/master/doc
-  [Getting Started]: https://github.com/craftr-build/craftr/tree/master/doc/getting-started.md
+- [Documentation]
+- [Getting Started]
+- [Craftr 2.x Wiki][Wiki]
+
+[Ninja]: https://github.com/ninja-build/ninja
+[Python 3]: https://www.python.org/
+[Documentation]: https://github.com/craftr-build/craftr/tree/master/doc
+[Getting Started]: https://github.com/craftr-build/craftr/tree/master/doc/getting-started.md
+[Wiki]: https://github.com/craftr-build/craftr/wiki
 
 ## Features
 
