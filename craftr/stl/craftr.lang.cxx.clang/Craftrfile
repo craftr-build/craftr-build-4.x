@@ -406,6 +406,12 @@ class CompilerLinker(object):
 
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
+    if self.name == 'llvm':
+      command += builder.get_list('llvm_compile_additional_flags')
+    elif self.name == 'gcc':
+      command += builder.get_list('gcc_compile_additional_flags')
+    else:
+      assert False, self.name
 
     return builder.build([command], None, objects, foreach=True,
       description='{} compile ($out)'.format(self.name), **params)
@@ -481,9 +487,9 @@ class CompilerLinker(object):
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
     if self.name == 'llvm':
-      command += builder.get_list('llvm_compile_additional_flags')
+      command += builder.get_list('llvm_link_additional_flags')
     elif self.name == 'gcc':
-      command += builder.get_list('gcc_compile_additional_flags')
+      command += builder.get_list('gcc_link_additional_flags')
     else:
       assert False, self.name
 
