@@ -1,0 +1,15 @@
+{
+  "name": "craftr.lib.strict-variant",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {},
+  "options": {
+    "directory": "path",
+    "version": {
+      "type": "string",
+      "default": "v0.3",
+      "help": "The version to download from GitHub"
+    }
+  }
+}

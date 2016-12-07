@@ -281,7 +281,7 @@ class MsvcToolkit(object):
         lib =  self.info['lib_program']
 
     if not self.info:
-      self.install_info = find_installation(version, target or real_target)
+      self.install_info = find_installation(version, target or real_arch)
       cl = path.join(self.install_info['toolsdir'], 'cl.exe')
       link = path.join(self.install_info['toolsdir'], 'link.exe')
       lib = path.join(self.install_info['toolsdir'], 'lib.exe')

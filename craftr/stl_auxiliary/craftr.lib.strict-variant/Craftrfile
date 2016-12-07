@@ -16,25 +16,13 @@
 
 from craftr.loaders import external_archive
 
-source_directory = external_archive(
-  "https://github.com/greg7mdp/sparsepp/archive/{}.zip".format(options.version)
-)
-
-__all__ = ['sparsepp']
-
-sparsepp = Framework(
-  include = [source_directory]
-)
-
-if options.build_tests:
-  load_module('craftr.lang.cxx.*')
-
-  test = runtarget(
-    cxx_binary(
-      inputs = cpp_compile(
-        sources = [path.join(source_directory, 'spp_test.cc')],
-        frameworks = [sparsepp]
-      ),
-      output = 'test'
-    )
+if not options.directory:
+  options.directory = external_archive(
+    "https://github.com/cbeck88/strict-variant/archive/{}.zip".format(options.version)
   )
+
+__all__ = ['strict_variant']
+
+strict_variant = Framework(
+  include = [path.join(options.directory, 'include')]
+)
