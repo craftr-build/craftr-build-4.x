@@ -270,7 +270,7 @@ class MsvcToolkit(object):
     version = ()
     if toolkit.startswith('msvc'):
       if len(toolkit) > 4:
-        version = (toolkit[4:],)
+        version = (toolkit[4:].lstrip('-'),)
     elif not toolkit == 'clang-cl':
       raise ValueError('invalid toolkit name: {!r}'.format(toolkit))
 
