@@ -269,6 +269,16 @@ def gentarget(commands, inputs=(), outputs=(), *args, **kwargs):
   return target
 
 
+def genalias(*targets, name = None, **kwargs):
+  """
+  Create a target that serves as an alias for all targets list in *targets*.
+  """
+
+  name = gtn(name)
+  return gentarget([['echo', 'alias: ' + name]], name = name,
+    implicit_deps = targets)
+
+
 def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
   """
   Simplification of :func:`gentarget` to make it more obvious that a

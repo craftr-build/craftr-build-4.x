@@ -67,6 +67,8 @@ or retrieve the currently executed Craftr module from its `.module` member.
 
 ### `gentarget()`
 
+### `genalias()`
+
 ### `runtarget()`
 
 ### `write_response_file()`
