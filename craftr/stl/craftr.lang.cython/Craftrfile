@@ -96,7 +96,8 @@ class CythonCompiler(object):
       metadata={'cython_outdir': outdir})
 
   def project(self, main=None, sources=[], python_bin='python', defines=(),
-      name=None, toolkit=None, in_working_tree=False, gen_output=None, **kwargs):
+      name=None, toolkit=None, in_working_tree=False, gen_output=None,
+      compile_kwargs=None, link_kwargs=None, link_main_kwargs=None, **kwargs):
     """
     Compile a set of Cython source files into dynamic libraries for the
     Python version specified with "python_bin".
@@ -124,6 +125,11 @@ class CythonCompiler(object):
     pyfw = python.get_framework(python_bin)
     py_version = int(pyconf['VERSION'][0])
     toolkit = toolkit or cxx.cxc
+
+    compile_kwargs = compile_kwargs or {}
+    compile_kwargs['defines'] = list(compile_kwargs.get('defines', [])) + list(defines)
+    link_kwargs = link_kwargs or {}
+    link_main_kwargs = link_main_kwargs or {}
 
     def getout(filename):
       if gen_output:
@@ -159,10 +165,11 @@ class CythonCompiler(object):
           sources = main_source.outputs,
           frameworks = [pyfw],
           pic = False,
-          defines = defines,
-          name = name + '_main_compile'
+          name = name + '_main_compile',
+          **compile_kwargs
         ),
-        name = name + '_main_bin'
+        name = name + '_main_bin',
+        **link_main_kwargs
       )
     else:
       main_source = None
@@ -182,10 +189,11 @@ class CythonCompiler(object):
             sources = [cfile],
             frameworks = [pyfw],
             pic = True,
-            defines = defines,
             name = name + '_compile_' + filename,
+            **compile_kwargs
           ),
-          name = name + '_lib_' + filename
+          name = name + '_lib_' + filename,
+          **link_kwargs
         ))
 
         if main_bin:
