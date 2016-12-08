@@ -177,22 +177,27 @@ def find_installation(versions=(), arch=None):
     if len(v) != 3 or not all(c.isdigit() for c in v):
       raise ValueError('not a valid VS version: {!r}'.format(v))
 
+  choices = []
   if versions:
-    choices = ['VS{}COMNTOOLS'.format(x) for x in versions]
+    for ver in versions:
+      if len(ver) not in (2, 3) or not all(c.isidigt() for c in ver):
+        raise ValueError('invalid MSVC version: {}'.format(ver))
+      key = 'VS{}COMNTOOLS'.format(ver)
+      choices.append((key, ver))
   else:
-    choices = []
     for key, value in os.environ.items():
       if key.startswith('VS') and key.endswith('COMNTOOLS'):
-        choices.append(key)
+        ver = key[2:-9]
+        choices.append((key, ver))
     choices.sort(reverse=True)
   if not choices:
     raise ToolDetectionError('Visual Studio installation path could not be detected.')
 
+  logger.info('detected available MSVC versions:', choices)
+
   paths = []
   last_error = None
-  for vsvar in choices:
-    vsversion = vsvar[2:5]
-    assert (all(c.isdigit() for c in vsversion)), (vsvar, vsversion)
+  for vsvar, vsversion in choices:
     vspath = os.environ.get(vsvar, '').rstrip('\\')
     if vspath:
       vspath = path.join(path.dirname(path.dirname(vspath)), 'VC')
