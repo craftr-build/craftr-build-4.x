@@ -191,7 +191,8 @@ def find_installation(versions=(), arch=None):
   paths = []
   last_error = None
   for vsvar in choices:
-    vsversion = vsvar[2:5]; assert(all(c.isdigit() for c in vsversion))
+    vsversion = vsvar[2:5]
+    assert (all(c.isdigit() for c in vsversion)), (vsvar, vsversion)
     vspath = os.environ.get(vsvar, '').rstrip('\\')
     if vspath:
       vspath = path.join(path.dirname(path.dirname(vspath)), 'VC')
