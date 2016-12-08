@@ -438,7 +438,7 @@ class CompilerLinker(object):
       linker_args += ['-T', linker_script]
 
     libpath = builder.get_list('libpath')
-    external_libs = builder.get_list('external_libs')
+    external_libs = [path.abs(x) for x in builder.get_list('external_libs')]
     implicit_deps += external_libs
 
     if platform.name == 'mac':

@@ -451,6 +451,7 @@ class MsvcToolkit(object):
     else:
       libs += builder.get_list('win64_libs')
       external_libs += builder.get_list('win64_external_libs')
+    external_libs = [path.abs(x) for x in external_libs]
     debug = builder.get('debug', options.debug)
 
     command = [self.programs.link, '/nologo']
