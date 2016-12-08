@@ -210,7 +210,6 @@ class BuildCommand(BaseCommand):
       session.expand_relative_options(module.manifest.name)
       session.cache['build'] = {}
       try:
-        write_cache(cachefile)
         module.run()
       except Module.InvalidOption as exc:
         for error in exc.format_errors():
@@ -219,6 +218,12 @@ class BuildCommand(BaseCommand):
       except craftr.defaults.ModuleError as exc:
         logger.error('error:', exc)
         return 1
+      finally:
+        if sys.exc_info():
+          # We still want to write the cache, especially so that data already
+          # loaded with loaders doesn't need to be re-loaded. They'll find out
+          # when the cached information was not valid.
+          write_cache(cachefile)
 
       # Write the cache back.
       session.cache['build']['targets'] = list(session.graph.targets.keys())
