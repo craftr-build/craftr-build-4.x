@@ -276,7 +276,7 @@ def genalias(*targets, name = None, **kwargs):
 
   name = gtn(name)
   return gentarget([['echo', 'alias: ' + name]], name = name,
-    implicit_deps = targets)
+    implicit_deps = targets, **kwargs)
 
 
 def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
