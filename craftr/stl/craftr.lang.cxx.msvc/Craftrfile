@@ -174,13 +174,13 @@ def find_installation(versions=(), arch=None):
   """
 
   for v in versions:
-    if len(v) != 3 or not all(c.isdigit() for c in v):
+    if len(v) not in (2, 3) or not all(c.isdigit() for c in v) or v[-1] != '0':
       raise ValueError('not a valid VS version: {!r}'.format(v))
 
   choices = []
   if versions:
     for ver in versions:
-      if len(ver) not in (2, 3) or not all(c.isidigt() for c in ver):
+      if len(ver) not in (2, 3) or not all(c.isdigit() for c in ver):
         raise ValueError('invalid MSVC version: {}'.format(ver))
       key = 'VS{}COMNTOOLS'.format(ver)
       choices.append((key, ver))
