@@ -175,10 +175,10 @@ class Target(object):
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
         {'type': list, 'allowEmpty': False, 'items': {'type': [Tool, Target, str]}}})
-    argspec.validate('inputs', inputs, {'type': [list, tuple], 'items': {'type': str}})
+    argspec.validate('inputs', inputs, {'type': [list, tuple], 'items': {'type': [Target, str]}})
     argspec.validate('outputs', outputs, {'type': [list, tuple], 'items': {'type': str}})
-    argspec.validate('implicit_deps', implicit_deps, {'type': [list, tuple], 'items': {'type': str}})
-    argspec.validate('order_only_deps', order_only_deps, {'type': [list, tuple], 'items': {'type': str}})
+    argspec.validate('implicit_deps', implicit_deps, {'type': [list, tuple], 'items': {'type': [Target, str]}})
+    argspec.validate('order_only_deps', order_only_deps, {'type': [list, tuple], 'items': {'type': [Target, str]}})
     argspec.validate('pool', pool, {'type': [None, str]})
     argspec.validate('deps', deps, {'type': [None, str], 'enum': ['msvc', 'gcc']})
     argspec.validate('depfile', depfile, {'type': [None, str]})
@@ -191,32 +191,39 @@ class Target(object):
     argspec.validate('environ', environ, {'type': [None, dict]})
     argspec.validate('frameworks', frameworks, {'type': [list, tuple], 'items': {'type': dict}})
 
-    # Make sure we have a copy of the implicit_deps so we can modify
-    # it safely.
-    implicit_deps = list(implicit_deps)
+    def expand_mixed_list(mixed, implicit_deps, mode):
+      result = []
+      for item in mixed:
+        if isinstance(item, Target):
+          if mode == 'implicit':
+            names = [item.name]
+          elif mode == 'inputs':
+            names = item.outputs
+          elif mode == 'cmd':
+            names = [path.abs(x) for x in item.outputs]
+          else:
+            raise RuntimeError(mode)
 
-    # Expand Target objects listed in the commands.
-    new_commands = []
-    for command in commands:
-      new_command = []
-      for index, arg in enumerate(command):
-        if isinstance(arg, Target):
-          if index == 0 and len(arg.outputs) != 1:
-            raise ValueError('Target as program in commands list must have '
-                'exactly one output, has {} (target: {})'.format(
-                  len(arg.outputs), arg.name))
-          new_command += arg.outputs
-          implicit_deps += arg.outputs
-        else:
-          new_command.append(arg)
-      new_commands.append(new_command)
+          if implicit_deps is not None:
+            implicit_deps += names
+          result += names
+
+        elif isinstance(item, str):
+          if mode != 'cmd':
+            item = path.abs(item)
+          result.append(item)
+        else: raise RuntimeError
+
+      return result
+
+    self.implicit_deps = []
+    self.inputs = expand_mixed_list(inputs, None, 'inputs')
+    self.outputs = [path.abs(x) for x in outputs]
+    self.commands = [expand_mixed_list(cmd, self.implicit_deps, 'cmd') for cmd in commands]
+    self.implicit_deps += expand_mixed_list(implicit_deps, None, 'implicit')
+    self.order_only_deps = expand_mixed_list(order_only_deps, None, 'implicit')
 
     self.name = name
-    self.commands = new_commands
-    self.inputs = list(map(path.norm, inputs))
-    self.outputs = list(map(path.norm, outputs))
-    self.implicit_deps = list(map(path.norm, implicit_deps))
-    self.order_only_deps = list(map(path.norm, order_only_deps))
     self.pool = pool
     self.deps = deps
     self.depfile = depfile
