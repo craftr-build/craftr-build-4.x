@@ -48,6 +48,25 @@ if os.path.isfile('README.rst'):
 else:
   long_description = None
 
+def find_files(directory, strip):
+  """
+  Using glob patterns in ``package_data`` that matches a directory can
+  result in setuptools trying to install that directory as a file and
+  the installation to fail.
+
+  This function walks over the contents of *directory* and returns a list
+  of only filenames found. The filenames will be stripped of the *strip*
+  directory part.
+  """
+
+  result = []
+  for root, dirs, files in os.walk(directory):
+    for filename in files:
+      filename = os.path.join(root, filename)
+      result.append(os.path.relpath(filename, strip))
+  return result
+
+
 setup(
   name = 'craftr-build',
   version = '2.0.0.dev4',
@@ -64,7 +83,7 @@ setup(
   ),
   packages = find_packages(),
   package_data = {
-    'craftr': ['stl/**/*', 'stl_auxiliary/**/*']
+    'craftr': find_files('craftr/stl', strip='craftr') + find_files('craftr/stl_auxiliary', strip='craftr')
   },
   license = 'MIT',
   classifiers = [
