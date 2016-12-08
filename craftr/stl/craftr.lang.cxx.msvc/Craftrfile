@@ -472,6 +472,7 @@ class MsvcToolkit(object):
 
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
+    command += builder.get_list('msvc_link_additional_flags')
 
     meta = {'link_output': output}
     if output_type == 'dll':
