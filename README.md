@@ -60,7 +60,7 @@ Craftr 2.x does not have a stable release yet, though the `2.0.0.devx` tags
 are already available on PyPI. If you do not explicitly specify the version
 number, Pip will install Craftr 1.x.
 
-    $ pip install craftr-build==2.0.0.dev4
+    $ pip install craftr-build==2.0.0.dev5
 
 To get the cutting edge development version, I suggest installing Craftr
 from the Git repository into a virtualenv.

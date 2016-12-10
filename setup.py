@@ -71,7 +71,7 @@ def find_files(directory, strip):
 
 setup(
   name = 'craftr-build',
-  version = '2.0.0.dev4',
+  version = '2.0.0.dev5',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   description = 'Meta build system based on Ninja and Python',
