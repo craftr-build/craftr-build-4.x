@@ -18,7 +18,7 @@ if options.toolkit.startswith('msvc') or options.toolkit.startswith('clang-cl'):
   module = 'craftr.lang.cxx.msvc'
 elif options.toolkit.startswith('llvm') or options.toolkit.startswith('gcc') \
     or options.toolkit.startswith('clang'):
-  module = 'craftr.lang.cxx.clang'
+  module = 'craftr.lang.cxx.common'
 elif options.toolkit.startswith('craftr:'):
   module = options.toolkit[7:]
 elif options.toolkit:
@@ -26,7 +26,7 @@ elif options.toolkit:
 elif platform.name == 'win':
   module = 'craftr.lang.cxx.msvc'
 else:
-  module = 'craftr.lang.cxx.clang'
+  module = 'craftr.lang.cxx.common'
 
 session.options.setdefault('{}.toolkit'.format(module), options.toolkit)
 cxc = load_module(module).cxc

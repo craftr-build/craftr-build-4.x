@@ -144,6 +144,7 @@ class Manifest(recordclass):
     "properties": {
       "name": {"type": "string"},
       "version": {"type": "string"},
+      "description": {"type": "string"},
       "main": {"type": "string"},
       "project_dir": {"type": "string"},
       "author": {"type": "string"},
@@ -179,13 +180,15 @@ class Manifest(recordclass):
   __slots__ = tuple(Schema['properties'].keys())
 
   def __init__(self, name, version, main='Craftrfile', project_dir='.',
-               author=None, url=None, dependencies=None, options=None):
+               description=None, author=None, url=None, dependencies=None,
+               options=None):
     if version is not None:
       version = Version(version)
     self.name = name
     self.version = version
     self.main = main
     self.project_dir = project_dir
+    self.description = description
     self.author = author
     self.url = url
     self.dependencies = dependencies or {}

@@ -22,7 +22,7 @@ process of Craftr modules and contains all the important root datastructures
 for the meta build process (such as a :class:`craftr.core.build.Graph`).
 """
 
-from craftr.core import build, manifest
+from craftr.core import build, manifest, renames
 from craftr.core.logging import logger
 from craftr.core.manifest import Manifest
 from craftr.utils import argspec, path
@@ -282,6 +282,11 @@ class Session(object):
 
     argspec.validate('name', name, {'type': str})
     argspec.validate('version', version, {'type': [str, Version, VersionCriteria]})
+
+    if name in renames.renames:
+      logger.warn('"{}" is deprecated, use "{}" instead'.format(
+          name, renames.renames[name]))
+      name = renames.renames[name]
 
     if isinstance(version, str):
       try:

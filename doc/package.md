@@ -68,6 +68,11 @@ is used to find and load the correct package version when resoloving dependencie
 Note that Craftr can load the same package multiple times, given they have
 different version numbers.
 
+### description
+
+*Optional*. A short description of what the package does and what it is used
+for.
+
 ### author
 
 *Optional*. The name of the author of the package and optionally his/her email
