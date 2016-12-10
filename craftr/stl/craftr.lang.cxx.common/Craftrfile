@@ -346,6 +346,10 @@ class CompilerLinker(object):
       pyutils.unique_extend(defines, ['_DEBUG', 'DEBUG'])
     else:
       pyutils.unique_extend(defines, ['NDEBUG'])
+    if platform.name == 'cygwin':
+      # See craftr-build/craftr#160
+      defines.append('_GNU_SOURCE')
+
     if platform.name == 'win':
       defines.append('_CRT_SECURE_NO_WARNINGS')
 
