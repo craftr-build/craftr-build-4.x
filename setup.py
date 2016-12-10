@@ -34,13 +34,15 @@ if pip.__version__ >= '6.0':
       parse_requirements, session=pip.download.PipSession())
 
 # Convert README.md to reST.
-if os.path.isfile('README.md'):
+if os.path.isfile('README.md') and any('dist' in x for x in sys.argv[1:]):
   if os.system('pandoc -s README.md -o README.rst') != 0:
     print('-----------------------------------------------------------------')
     print('WARNING: README.rst could not be generated, pandoc command failed')
     print('-----------------------------------------------------------------')
     if sys.stdout.isatty():
       input("Enter to continue... ")
+  else:
+    print("Generated REAMDE.rst with Pandoc")
 
 if os.path.isfile('README.rst'):
   with open('README.rst', encoding='utf8') as fp:
