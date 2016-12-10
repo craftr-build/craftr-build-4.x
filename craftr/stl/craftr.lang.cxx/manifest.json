@@ -10,7 +10,7 @@
   "options": {
     "toolkit": {
       "type": "string",
-      "help": "The name of the toolkit to use. If unspecified, a toolkit based on the current platform will be selected, otherwise supported values are \"clang\", \"gcc\", \"msvc*\" or \"clang-cl\". If the value of this option is prefixed with the string \"craftr:\" the module following the double-colon will be loaded and used."
+      "help": "The name of the toolkit to use. If unspecified, a toolkit based on the current platform will be selected, otherwise supported values are \"clang\", \"gcc\", \"msvc*\" or \"clang-cl\"."
     }
   }
 }
