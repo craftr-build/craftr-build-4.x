@@ -5,7 +5,7 @@
   "url": "",
   "dependencies": {
     "craftr.lang.cxx.msvc": "*",
-    "craftr.lang.cxx.clang": "*"
+    "craftr.lang.cxx.common": "*"
   },
   "options": {
     "toolkit": {
