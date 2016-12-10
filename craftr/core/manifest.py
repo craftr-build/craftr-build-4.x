@@ -19,7 +19,7 @@
 
 This module implemenets parsing and representing the manifest files of
 Craftr packages. Every Craftr package also provides a Craftr module which
-can be loaded with the ``require()`` function.
+can be loaded with the ``load_module()`` function.
 
 Example manifest:
 

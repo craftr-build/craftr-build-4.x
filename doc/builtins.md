@@ -103,5 +103,3 @@ or retrieve the currently executed Craftr module from its `.module` member.
 ### `shell`
 
 ### `platform`
-
-### `require`

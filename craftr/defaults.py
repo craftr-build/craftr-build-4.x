@@ -32,10 +32,7 @@ from craftr import platform
 import builtins as _builtins
 import itertools as _itertools
 import os as _os
-import require
 import sys as _sys
-
-require = require.Require(write_bytecode=False)
 
 
 class ToolDetectionError(Exception):
@@ -44,22 +41,6 @@ class ToolDetectionError(Exception):
 
 class ModuleError(Exception):
   pass
-
-
-def include_defs(filename, globals=None):
-  """
-  Uses :mod:`require` to load a Python file and then copies all symbols
-  that do not start with an underscore into the *globals* dictionary. If
-  *globals* is not specified, it will fall back to the globals of the frame
-  that calls the function.
-  """
-
-  module = require(filename, _stackdepth=1)
-  if globals is None:
-    globals = _sys._getframe(1).f_globals
-  for key, value in vars(module).items():
-    if not key.startswith('_'):
-      globals[key] = value
 
 
 def glob(patterns, parent=None, exclude=(), include_dotfiles=False):
@@ -244,6 +225,22 @@ def load_file(filename, export_default_namespace=True):
   exec(code, vars(scope))
 
   return scope
+
+
+def include_defs(filename, globals=None):
+  """
+  Uses :mod:`load_file` to load a Python file and then copies all symbols
+  that do not start with an underscore into the *globals* dictionary. If
+  *globals* is not specified, it will fall back to the globals of the frame
+  that calls the function.
+  """
+
+  module = load_file(filename)
+  if globals is None:
+    globals = _sys._getframe(1).f_globals
+  for key, value in vars(module).items():
+    if not key.startswith('_'):
+      globals[key] = value
 
 
 def gentool(commands, preamble=None, environ=None, name=None):

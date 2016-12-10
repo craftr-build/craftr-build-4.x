@@ -77,11 +77,6 @@ class Session(object):
 
     A list of paths that will be searched for Craftr modules.
 
-  .. attribute:: require
-
-    An instance of :class:`Require` that is used to load other Craftr
-    modules conveniently.
-
   .. attribute:: module
 
     The Craftr module that is currently being executed. This is an instance
