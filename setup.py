@@ -42,7 +42,7 @@ if os.path.isfile('README.md') and any('dist' in x for x in sys.argv[1:]):
     if sys.stdout.isatty():
       input("Enter to continue... ")
   else:
-    print("Generated REAMDE.rst with Pandoc")
+    print("Generated README.rst with Pandoc")
 
 if os.path.isfile('README.rst'):
   with open('README.rst', encoding='utf8') as fp:
