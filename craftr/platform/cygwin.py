@@ -13,10 +13,34 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Platform MSYS2 and Cygwin.
+"""
 
 from craftr.utils import path
 
-name = "cygwin"
+import os
+import sys
+
+
+def _check():
+  """
+  Checks if we're in a Cygwin or MSYS2 environment. Returns the name, i.e.
+  either ``'cygwin'`` or ``'msys'``, or None if we're currently in neither of
+  the two environments.
+  """
+
+  if sys.platform.startswith('cygwin'):
+    return 'cygwin'
+  elif sys.platform.startswith('msys'):
+    return 'msys'
+  elif sys.platform.startswith('win32'):
+    if os.path.sep == '/':
+      return 'msys'
+  return None
+
+
+name = _check()
 standard = "posix"
 
 def obj(x): return path.addsuffix(x, ".obj")

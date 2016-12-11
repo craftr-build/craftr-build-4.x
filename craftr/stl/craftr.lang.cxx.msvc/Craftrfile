@@ -253,7 +253,11 @@ def _get_vs_environment(install_dir, vsversion, arch=None, _forcecc=None):
       return _get_vs_environment(install_dir, vsversion, 'x86', _forcecc='x86_ia64')
     raise ToolDetectionError('Visual Studio Environment could not be detected: {}'.format(exc)) from exc
 
-  env = json.loads(output)
+  try:
+    env = json.loads(output)
+  except json.JSONDecodeError:
+    logger.debug('failed to parse output of "{}"'.format(batch))
+    raise ToolDetectionError('Visual Studio Environment could not be detected')
   return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env, 'arch': arch, 'version': vsversion}
 
 

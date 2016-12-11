@@ -598,6 +598,6 @@ class UnixPlatformHelper(PlatformHelper):
 def get_platform_helper():
   if platform.name == 'win':
     return WindowsPlatformHelper()
-  elif platform.name in ('cygwin', 'linux', 'mac'):
+  elif platform.name in ('cygwin', 'msys', 'linux', 'mac'):
     return UnixPlatformHelper()
   raise EnvironmentError('unsupported platform: {}'.format(platform.name))

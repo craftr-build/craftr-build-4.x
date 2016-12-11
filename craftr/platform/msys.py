@@ -14,11 +14,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-
-from . import cygwin as _cygwin
-if _cygwin.name is not None:
-  from .cygwin import *
-else:
-  # I shall burn in hell for this.
-  exec('from .' + sys.platform + ' import *', globals(), locals())
+from .cygwin import *
