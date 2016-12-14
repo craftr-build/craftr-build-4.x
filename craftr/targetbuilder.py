@@ -146,7 +146,7 @@ class TargetBuilder(object):
     argspec.validate('option_kwargs', option_kwargs,
         {'type': [None, dict, Framework]})
     argspec.validate('frameworks', frameworks,
-        {'type': [list, tuple], 'items': {'type': Framework}})
+        {'type': [list, tuple], 'items': {'type': [Framework, build.Target]}})
     argspec.validate('inputs', inputs,
         {'type': [list, tuple, build.Target],
           'items': {'type': [str, build.Target]}})
@@ -157,9 +157,12 @@ class TargetBuilder(object):
     argspec.validate('order_only_deps', order_only_deps,
         {'type': [list, tuple], 'items': {'type': str}})
 
-    self.frameworks = list(frameworks)
     if isinstance(inputs, build.Target):
       inputs = [inputs]
+
+    self.frameworks = []
+    self.implicit_deps = list(implicit_deps)
+    self.order_only_deps = list(order_only_deps)
 
     # If we find any Target objects in the inputs, expand the outputs
     # and append the frameworks.
@@ -174,20 +177,27 @@ class TargetBuilder(object):
     else:
       self.inputs = None
 
+    # Unpack the frameworks list, which may also container Targets.
+    for fw in frameworks:
+      if isinstance(fw, build.Target):
+        self.implicit_deps.append(fw)
+        self.frameworks += fw.frameworks
+      else:
+        self.frameworks.append(fw)
+
     if option_kwargs is None:
       option_kwargs = {}
 
     self.name = name
+    self.outputs = list(outputs)
+    self.metadata = {}
+    self.used_option_keys = set()
+
     self.option_kwargs = Framework(name, **option_kwargs)
     self.option_kwargs_defaults = Framework(name + "_defaults")
     self.options_merge = OptionMerge(self.option_kwargs,
         self.option_kwargs_defaults, *self.frameworks)
     assert self.option_kwargs in self.options_merge.frameworks
-    self.outputs = list(outputs)
-    self.implicit_deps = list(implicit_deps)
-    self.order_only_deps = list(order_only_deps)
-    self.metadata = {}
-    self.used_option_keys = set()
 
   def get(self, key, default=None):
     self.used_option_keys.add(key)

@@ -208,11 +208,16 @@ class Target(object):
             implicit_deps += names
           result += names
 
+        elif isinstance(item, Tool):
+          result.append(str(item))
+
         elif isinstance(item, str):
           if mode != 'cmd':
             item = path.abs(item)
           result.append(item)
-        else: raise RuntimeError
+
+        else:
+          raise RuntimeError
 
       return result
 
@@ -364,7 +369,7 @@ class Tool(object):
     argspec.validate('environ', environ, {'type': [None, dict]})
 
     self.name = name
-    self.command = command
+    self.command = list(command)
     self.preamble = preamble or []
     self.environ = environ or {}
     self.exported_command = None
@@ -380,7 +385,7 @@ class Tool(object):
   def export(self, writer, context, platform):
     name = str(self)[1:]
     if not self.preamble and not self.environ:
-      self.exported_command = shlex.join(self.command)
+      self.exported_command = shell.join(self.command)
     else:
       filename = path.join('.tools', name)
       command, filename = platform.write_command_file(
