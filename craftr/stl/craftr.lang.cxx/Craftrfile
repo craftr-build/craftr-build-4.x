@@ -43,7 +43,7 @@ def c_compile(*args, name=None, **kwargs):
 def cpp_compile(*args, name=None, **kwargs):
   return cxc.compile(*args, name=gtn(name, None), language='c++', **kwargs)
 
-def cxx_library(*args, name=None, link_style='static', **kwargs):
+def library(*args, name=None, link_style='static', **kwargs):
   if link_style == 'static':
     target = cxc.staticlib(*args, name=gtn(name, None), **kwargs)
     target.metadata['link_target'] = target.metadata['staticlib_output']
@@ -52,10 +52,10 @@ def cxx_library(*args, name=None, link_style='static', **kwargs):
     target.metadata['link_target'] = target.metadata['dll_link_target']
   return target
 
-def cxx_binary(*args, name=None, **kwargs):
+def binary(*args, name=None, **kwargs):
   return cxc.link(*args, name=gtn(name, None), output_type='bin', **kwargs)
 
-def cxx_extend_framework(framework, *targets):
+def extend_framework(framework, *targets):
   """
   When compiling C/C++ libraries from source, this function can be used to
   make it easier to embed the output library and implicit dependencies into
@@ -70,4 +70,8 @@ def cxx_extend_framework(framework, *targets):
       framework['external_libs'].append(link_target)
     framework['implicit_deps'].append(target)
 
+
+cxx_binary = binary
+cxx_library = library
+cxx_extend_framework = extend_framework
 __all__ = ['cxc', 'c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary', 'cxx_extend_framework']
