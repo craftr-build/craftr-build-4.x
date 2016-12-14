@@ -1,6 +1,8 @@
 # Qt5 (`craftr.lib.qt5`)
 
-Configuration:
+Static prebuilt binaries of Qt5 for Windows can be found [here](http://www.npcglib.org/~stathis/blog/precompiled-qt4-qt5/).
+
+__Configuration__:
 
 - `.dir` &ndash; Directory of the prebuilt binaries with the standard Qt5
   folder structure.
@@ -14,19 +16,19 @@ Configuration:
   dir = D:\lib\qt5-5.7.0-vs2015\qt5-x64-static-release
 ```
 
-Features:
+__Features__:
 
 - Automatic detection of Qt5 prebuilt binaries link-style.
 - Adds `CRAFTRQT5_STATIC` or `CRAFTRQT5_DYNAMIC` preprocessor macro respectively
 
-Todolist:
+__Todolist__:
 
 - Support and test platforms other than **Windows**
 - Update `PATH` for testing with dynamically linked Qt5 binaries when using
   `runtarget()`
 - Ability to gather a list of all dynamic dependencies
 
-Example:
+__Example__:
 
 ```python
 cxx = load_module('craftr.lang.cxx')
