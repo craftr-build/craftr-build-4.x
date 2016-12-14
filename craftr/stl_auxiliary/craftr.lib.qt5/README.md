@@ -9,8 +9,14 @@ __Configuration__:
 - `.link_style` &ndash; Link-style of the Qt5 prebuilt binaries. The default
   value of this option is `detect`, other available options are `static` and
   `dynamic`.
+- `.debug` &ndash; Set this option when linking against debug binaries. Also,
+  keep in mind that almost all options in Craftr are inheritable from the
+  global namespace, thus setting the global `debug` option to true will set
+  this option to true as well unless there is an explicit override.
 
 ```ini
+[__global__]
+  debug = false
 [craftr.lib.qt5]
   link_style = detect
   dir = D:\lib\qt5-5.7.0-vs2015\qt5-x64-static-release

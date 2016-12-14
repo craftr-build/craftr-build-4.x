@@ -13,6 +13,7 @@
       "type": "string",
       "default": "detect",
       "help": "The link style of Qt. Can be 'detect', 'static' or 'dynamic'"
-    }
+    },
+    "debug": "bool"
   }
 }

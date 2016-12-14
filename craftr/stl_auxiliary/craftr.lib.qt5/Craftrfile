@@ -54,7 +54,12 @@ if platform.name == 'win':
   else:
     Qt5Core['libs'] += 'libEGL libGLESv2'.split()
 
+if options.debug:
+  Qt5Core['libs'] = [x + 'd' if x[0] in 'Qq' else x for x in Qt5Core['libs']]
+
 def framework(*components):
+  if options.debug:
+    components = [x + 'd' for x in components]
   return Framework(','.join(components), libs=list(components), frameworks=[Qt5Core])
 
 def moc(sources, outputs = None, output_directory = None, source_directory = None,
