@@ -5,9 +5,14 @@
   "url": "",
   "dependencies": {},
   "options": {
-    "path": {
-      "type": "string",
+    "dir": {
+      "type": "path",
       "inherit": false
+    },
+    "link_style": {
+      "type": "string",
+      "default": "detect",
+      "help": "The link style of Qt. Can be 'detect', 'static' or 'dynamic'"
     }
   }
 }

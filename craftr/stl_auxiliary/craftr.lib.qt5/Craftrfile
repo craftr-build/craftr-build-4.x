@@ -14,19 +14,41 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-if not options.path or not path.isdir(options.path):
-  error('{}.path is not set or does not exist'.format(__name__))
+if not options.dir or not path.isdir(options.dir):
+  error('{}.dir is not set or does not exist'.format(__name__))
 
-bin_dir = path.join(options.path, 'bin')
-lib_dir = path.join(options.path, 'lib')
+if options.link_style == 'detect':
+  if platform.name == 'win':
+    if glob(['bin/*.dll'], parent = options.dir):
+      options.link_style = 'dynamic'
+    else:
+      options.link_style = 'static'
+    logger.info('detected Qt link_style: "{}"'.format(options.link_style))
+  else:
+    error('link_style detection for platform "{}" not available'.format(platform.name))
+
+if options.link_style not in ('dynamic', 'static'):
+  error('invalid link_style: {}"'.format(options.link_style))
+
+bin_dir = path.join(options.dir, 'bin')
+lib_dir = path.join(options.dir, 'lib')
 
 Qt5Core = Framework('Qt5Core',
-  include = [path.join(options.path, 'include')],
-  libpath = [lib_dir],
-  libs = ['Qt5Core']
+  include = [path.join(options.dir, 'include')],
+  libpath = [lib_dir] + glob(['plugins/*'], parent = options.dir),
+  libs = ['Qt5Core', 'Qt5PlatformSupport', 'qtmain'],
+  defines = ['CRAFTRQT5_STATIC'] if options.link_style == 'static' else ['CRAFTRQT5_DYNAMIC']
 )
+
 if platform.name == 'win':
-  Qt5Core['libs'] += ['libEGL', 'libGLESv2']
+  Qt5Core['libs'] += 'gdi32 ole32 user32 winspool imm32 winmm oleaut32 '\
+                     'opengl32 shlwapi shell32 advapi32 rpcrt4 glu32 kernel32 '\
+                     'uuid ws2_32 mpr'.split()
+
+  if options.link_style == 'static':
+    Qt5Core['libs'] += 'qwindows qminimal qoffscreen qtpcre qtfreetype qtharfbuzzng'.split()
+  else:
+    Qt5Core['libs'] += 'libEGL libGLESv2'.split()
 
 def framework(*components):
   return Framework(','.join(components), libs=list(components), frameworks=[Qt5Core])
