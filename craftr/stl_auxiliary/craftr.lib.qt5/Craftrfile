@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from craftr.utils.pyutils import flatten
+
 if not options.dir or not path.isdir(options.dir):
   error('{}.dir is not set or does not exist'.format(__name__))
 
@@ -32,6 +34,8 @@ if options.link_style not in ('dynamic', 'static'):
 
 bin_dir = path.join(options.dir, 'bin')
 lib_dir = path.join(options.dir, 'lib')
+moc_bin = path.join(bin_dir, platform.bin('moc'))
+uic_bin = path.join(bin_dir, platform.bin('uic'))
 
 Qt5Core = Framework('Qt5Core',
   include = [path.join(options.dir, 'include')],
@@ -52,3 +56,98 @@ if platform.name == 'win':
 
 def framework(*components):
   return Framework(','.join(components), libs=list(components), frameworks=[Qt5Core])
+
+def moc(sources, outputs = None, output_directory = None, source_directory = None,
+        frameworks = (), name = None, **kwargs):
+  """
+  :param sources: A list of input C++ header files to compile.
+  :param outputs: Optionally a list of the respective output files for
+      the specified *sources*. Will be automatically generated if omitted.
+  :param output_directory: The directory to put output files into. This is
+      only used when *outputs* are computed automatically.
+  :param source_directory: The parent directory of all files in *sources*.
+      Defaults to the current module's project directory. Used to find
+      an appropriate structure when generating *outputs*.
+  :param frameworks: A list of frameworks with additional options.
+  :param name: Explicit target name.
+  :param kwargs: Additional options.
+
+  Additional options:
+
+  :param include: A list of additional include directories.
+  :param defines: Preprocessor defines.
+  :param suffix: Suffix for the generated output files. Defaults to ``.cpp``.
+  """
+
+  builder = TargetBuilder(gtn(name, 'moc'), kwargs, frameworks, sources)
+  if not outputs:
+    suffix = builder.get('suffix', '.cpp')
+    if not output_directory:
+      output_directory = buildlocal('moc')
+    outputs = relocate_files(builder.inputs, output_directory, suffix,
+                             parent = source_directory)
+    outputs = [path.addprefix(x, 'moc_') for x in outputs]
+  else:
+    assert len(builder.inputs) == len(outputs)
+
+  cmd = [moc_bin, '$in', '-o', '$out']
+  cmd += flatten(['-D', x] for x in builder.get_list('defines'))
+  cmd += flatten(['-I', x] for x in builder.get_list('include'))
+  return builder.build([cmd], outputs = outputs, foreach = True)
+
+def uic(sources, outputs = None, output_directory = None, source_directory = None,
+        postfix = None, translate = None, idbased = False, generator = 'cpp',
+        include_prefix = 'ui', frameworks = (), name = None, **kwargs):
+  """
+  :param sources: A list of input .ui files to compile.
+  :param outputs: Optionally a list of the respective output files for the
+      specified *sources*. WIll be automatically generated if omitted.
+  :param output_directory:
+  :param source_directory:
+  :param postfix: Postfix to add to all generated classnames.
+  :param translate: Function name for the i18n translator.
+  :param idbased: Use id based function for i18n.
+  :param generator: Select generator (java or cpp).
+  :param include_prefix: The prefix for the files that are generated into
+      the *output_directory*.
+  :param frameworks:
+  :param name:
+  :param kwargs:
+
+  Additional options:
+
+  :param suffix: Defaults to ``.hpp``
+
+  Meta variables:
+
+  :param output_directory:
+  """
+
+  builder = TargetBuilder(gtn(name, 'uic'), kwargs, frameworks, sources)
+  if not outputs:
+    suffix = builder.get('suffix', '.hpp')
+    if not output_directory:
+      output_directory = buildlocal('uic')
+    if not source_directory:
+      source_directory = path.common(builder.inputs)
+    prefix = output_directory
+    if include_prefix:
+      prefix = path.join(prefix, include_prefix)
+    outputs = relocate_files(builder.inputs, prefix, suffix,
+                             parent = source_directory)
+  else:
+    assert len(builder.inputs) == len(outputs)
+
+  cmd = [uic_bin, '-o', '$out']
+  if postfix:
+    cmd += ['--postix', postfix]
+  if translate:
+    cmd += ['--translate', translate]
+  if idbased:
+    cmd += ['--idbased']
+  cmd += ['-g', generator, '$in']
+
+  fw = Framework(builder.name, include = [output_directory])
+  builder.frameworks.append(fw)
+  return builder.build([cmd], outputs = outputs, foreach = True,
+      metadata = {'output_directory': output_directory})

@@ -29,18 +29,24 @@ Example:
 cxx = load_module('craftr.lang.cxx')
 qt5 = load_module('craftr.lib.qt5')
 
+mocfiles = qt5.moc(sources = glob(['src/*.h']))
+uifiles = qt5.uic(sources = glob(['ui/*.ui']))
+
 app = cxx.binary(
   inputs = cxx.cpp_compile(
-    sources = glob(['src/**/*.cpp']),
-    frameworks = [qt5.framework('Qt5Widgets', 'Qt5Gui')]
+    sources = [mocfiles] + glob(['src/*.cpp']),
+    frameworks = [uifiles, qt5.framework('Qt5Widgets', 'Qt5Gui')]
   ),
-  output = 'myqtapp'
+  output = 'installer'
 )
+
+run = runtarget(app, cwd = project_dir)
 ```
 
 ```cpp
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QWidget>
+#include "MainWindow.h"
 
 #ifdef CRAFTRQT5_STATIC
   #include <QtCore/QtPlugin>
@@ -49,7 +55,7 @@ app = cxx.binary(
 
 int main(int argc, char** argv) {
   QApplication app(argc, argv);
-  QWidget wnd;
+  MainWindow wnd;
   wnd.show();
   return app.exec();
 }
