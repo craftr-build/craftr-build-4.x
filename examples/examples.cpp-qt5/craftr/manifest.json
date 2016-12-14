@@ -1,0 +1,12 @@
+{
+  "name": "NiklasRosenstein.installer",
+  "version": "1.0.0",
+  "project_dir": "..",
+  "author": "Niklas Rosenstein <rosensteinniklas@gmail.com>",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*",
+    "craftr.lib.qt5": "*"
+  },
+  "options": {}
+}

@@ -1,0 +1,3 @@
+[craftr.lib.qt5]
+  link_style = detect
+  dir = D:\lib\qt5-5.7.0-vs2015\qt5-x64-static-release

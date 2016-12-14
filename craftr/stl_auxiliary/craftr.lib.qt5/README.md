@@ -19,9 +19,12 @@ Features:
 - Automatic detection of Qt5 prebuilt binaries link-style.
 - Adds `CRAFTRQT5_STATIC` or `CRAFTRQT5_DYNAMIC` preprocessor macro respectively
 
-Known issues:
+Todolist:
 
-- Currently only tested and supported on **Windows**
+- Support and test platforms other than **Windows**
+- Update `PATH` for testing with dynamically linked Qt5 binaries when using
+  `runtarget()`
+- Ability to gather a list of all dynamic dependencies
 
 Example:
 

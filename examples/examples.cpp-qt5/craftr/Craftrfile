@@ -1,0 +1,17 @@
+# NiklasRosenstein.installer
+
+cxx = load_module('craftr.lang.cxx')
+qt5 = load_module('craftr.lib.qt5')
+
+mocfiles = qt5.moc(sources = glob(['src/*.h']))
+uifiles = qt5.uic(sources = glob(['ui/*.ui']))
+
+app = cxx.binary(
+  inputs = cxx.cpp_compile(
+    sources = [mocfiles] + glob(['src/*.cpp']),
+    frameworks = [uifiles, qt5.framework('Qt5Widgets', 'Qt5Gui')]
+  ),
+  output = 'installer'
+)
+
+run = runtarget(app, cwd = project_dir)
