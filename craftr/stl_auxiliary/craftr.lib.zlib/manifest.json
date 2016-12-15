@@ -1,0 +1,31 @@
+{
+  "name": "craftr.lib.zlib",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "1.2.8",
+      "help": "If compiled from source, the version to obtain."
+    },
+    "url": {
+      "type": "string",
+      "default": "http://zlib.net/zlib-${VERSION}.tar.gz",
+      "help": "If compiled from source, the URL to obtain the source from. Takes precedence over the 'version' option."
+    },
+    "directory": {
+      "type": "path",
+      "help": "If compiled from source, the source directory. Takes predence over the 'url' and 'version' options."
+    },
+    "static": {
+      "type": "bool",
+      "default": "true",
+      "help": "Use static linkage, and if compiled from source, compile static libraries."
+    },
+    "build_examples": "bool"
+  }
+}
