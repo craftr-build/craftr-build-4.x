@@ -44,7 +44,7 @@ cURLpp_library = cxx_library(
     sources = glob(['src/**/*.cpp'], parent = source_directory),
     frameworks = [cURLpp],
     defines = ['BUILDING_CURLPP'],
-    rtti = options.rtti
+    rtti = True
   ),
   output = 'cURLpp'
 )

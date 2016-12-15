@@ -16,10 +16,6 @@
       "type": "bool",
       "help": "Whether to build a static or dynamic library. Must match the linkage of cURL.",
       "default": true
-    },
-    "rtti": {
-      "type": "bool",
-      "default": true
     }
   }
 }
