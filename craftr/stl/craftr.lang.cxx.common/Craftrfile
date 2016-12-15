@@ -346,11 +346,14 @@ class CompilerLinker(object):
       pyutils.unique_extend(defines, ['_DEBUG', 'DEBUG'])
     else:
       pyutils.unique_extend(defines, ['NDEBUG'])
-    if platform.name in ('cygwin', 'msys'):
+
+    undefines = builder.get_list('undefines')
+
+    if platform.name in ('cygwin', 'msys') and '_GNU_SOURCE' not in undefines:
       # See craftr-build/craftr#160
       defines.append('_GNU_SOURCE')
-
-    if platform.name == 'win':
+    if platform.name == 'win' and '_CRT_SECURE_NO_WARNINGS' not in undefines:
+      # For LLVM on Windows.
       defines.append('_CRT_SECURE_NO_WARNINGS')
 
     command = shell.split(self.program)
@@ -362,6 +365,7 @@ class CompilerLinker(object):
     command += ['-pedantic'] if pedantic else []
     command += ['-I' + x for x in builder.get_list('include')]
     command += ['-D' + x for x in defines]
+    command += ['-U' + x for x in undefines]
     command += pyutils.flatten([('-include', x) for x in builder.get_list('forced_include')])
     command += ['-fPIC'] if builder.get('pic', False) else []
     command += ['-F' + x for x in osx_fwpath]

@@ -350,12 +350,14 @@ class MsvcToolkit(object):
       pyutils.unique_extend(defines, ['_DEBUG', 'DEBUG'])
     else:
       pyutils.unique_extend(defines, ['NDEBUG'])
+    undefines = builder.get_list('undefines')
 
     command = [self.programs.cl, '/nologo', '/c', '$in', '/Fo$out']
     command += ['/wd' + str(x) for x in builder.get_list('msvc_disable_warnings')]
     command += ['/we' + str(x) for x in builder.get_list('msvc_warnings_as_errors')]
     command += ['/I' + x for x in builder.get_list('include')]
     command += ['/D' + x for x in defines]
+    command += ['/U' + x for x in undefines]
     command += ['/FI' + x for x in builder.get_list('forced_include')]
     if debug:
       command += ['/Od', '/RTC1', '/FC']
