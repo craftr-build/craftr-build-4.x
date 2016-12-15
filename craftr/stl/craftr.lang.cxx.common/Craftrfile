@@ -308,12 +308,13 @@ class CompilerLinker(object):
   def version(self):
     return self.info['version']
 
-  def compile(self, sources, frameworks=(), name=None, **kwargs):
+  def compile(self, sources, frameworks=(), source_directory=None, name=None, **kwargs):
     builder = TargetBuilder(gtn(name, 'compile'), kwargs, frameworks, sources)
     for callback in builder.get_list('cxc_compile_prepare_callbacks'):
       callback(self, builder)
 
-    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix=platform.obj)
+    objects = relocate_files(builder.inputs, buildlocal('obj'),
+        suffix=platform.obj, parent=source_directory)
     fw = Framework(builder.name)
     builder.frameworks.append(fw)
 

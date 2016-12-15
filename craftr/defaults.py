@@ -358,3 +358,6 @@ def append_PATH(*paths):
   if paths:
     result += _os.path.pathsep + paths
   return result
+
+
+from craftr.loaders import pkg_config, external_file, external_archive

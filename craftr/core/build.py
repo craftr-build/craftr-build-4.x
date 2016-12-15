@@ -472,9 +472,9 @@ class PlatformHelper(object, metaclass=abc.ABCMeta):
         return [value]
       if match.group(0) == '$' + var:
         return files
-      if len(files) != 1:
-        raise RuntimeError('embedded in an argument, `$' + var +
-          '` can only expand with one filename')
+      #if len(files) != 1:
+      #  raise RuntimeError('embedded in an argument, `$' + var +
+      #    '` can only expand with one filename')
       return [value[:match.start(1)] + files[0] + value[match.end(1):]]
 
     result = replace_var('in', arg, inputs)

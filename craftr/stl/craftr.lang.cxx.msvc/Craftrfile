@@ -331,7 +331,7 @@ class MsvcToolkit(object):
   def version(self):
     return self.info['version']
 
-  def compile(self, language, sources, *, frameworks=(), name=None, **kwargs):
+  def compile(self, language, sources, *, frameworks=(), source_directory=None, name=None, **kwargs):
     if language not in ('asm', 'c', 'c++'):
       raise ValueError('unsupported language: {!r}'.format(language))
 
@@ -340,7 +340,7 @@ class MsvcToolkit(object):
       callback(self, builder)
 
     suffix = builder.get('suffix', platform.obj)
-    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix)
+    objects = relocate_files(builder.inputs, buildlocal('obj'), suffix, parent=source_directory)
 
     debug = builder.get('debug', options.debug)
     defines = builder.get_list('defines')
@@ -451,7 +451,10 @@ class MsvcToolkit(object):
     suffix = builder.get(output_type + '_suffix')
     if not suffix:
       suffix = builder.get('suffix', getattr(platform, output_type))
+
     output = buildlocal(path.addsuffix(output, suffix))
+    outputs = [output]
+    meta = {'link_output': output}
 
     libpath = builder.get_list('libpath')
     libs = builder.get_list('libs')
@@ -474,11 +477,15 @@ class MsvcToolkit(object):
     else:
       command += ['$in']
 
-    command += ['/OUT:$out']
+    if output_type == 'dll':
+      implib = path.setsuffix(output, '.lib')
+      command += ['/DLL', '/IMPLIB:' + implib]
+      outputs.append(implib)
+      meta['dll_link_target'] = implib
     if debug:
       command += ['/DEBUG', '/PDB:$out.pdb']
-    command += ['/DLL'] if output_type == 'dll' else []
     command += ['/LIBPATH:{0}'.format(x) for x in libpath]
+    command += ['/OUT:$out']
     command += [x + '.lib' for x in libs]
     command += external_libs
 
@@ -486,15 +493,11 @@ class MsvcToolkit(object):
     command += builder.get_list('additional_flags')
     command += builder.get_list('msvc_link_additional_flags')
 
-    meta = {'link_output': output}
-    if output_type == 'dll':
-      meta['dll_link_target'] = path.setsuffix(output, '.lib')
-
     environ = None
     if self.install_info:
       environ = self.install_info['env']
 
-    return builder.build([command], None, [output],
+    return builder.build([command], None, outputs,
       implicit_deps=external_libs, metadata=meta, environ=environ,
       description='{} link ($out)'.format(self.info['name']))
 

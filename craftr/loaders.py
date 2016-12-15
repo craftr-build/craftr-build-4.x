@@ -247,7 +247,7 @@ class PkgConfigError(Exception):
   pass
 
 
-def pkg_config(pkg_name):
+def pkg_config(pkg_name, static = False):
   """
   If available, this function uses ``pkg-config`` to extract flags for
   compiling and linking with the package specified with *pkg_name*. If
@@ -255,8 +255,12 @@ def pkg_config(pkg_name):
   :class:`PkgConfigError` is raised.
   """
 
+  command = ['pkg-config', pkg_name, '--cflags', '--libs']
+  if static:
+    command.append('--static')
+
   try:
-    flags = shell.pipe(['pkg-config', pkg_name, '--cflags', '--libs'], check = True).stdout
+    flags = shell.pipe(command, check = True).stdout
   except FileNotFoundError as exc:
     raise PkgConfigError('pkg-config is not available ({})'.format(exc))
   except shell.CalledProcessError as exc:
