@@ -1,0 +1,252 @@
+# The Craftr build system
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+try:
+  SDL2 = SDL2main = pkg_config('sdl2', static = options.static)
+except pkg_config.Error:
+  pass
+else:
+  return_()
+
+# If we have no directory to compile from source, we'll just grab a version
+# of the source from the URL specified in the options (standard mirror by
+# default).
+options.url = options.url.replace('${VERSION}', options.version)
+if not options.directory:
+  options.directory = external_archive(options.url)
+
+# Update our project directory so Craftr knows all of our input files are
+# coming from this directory.
+project_dir = options.directory
+
+# Import packages
+cxx = load_module('craftr.lang.cxx')
+
+
+SDL2 = Framework(
+  include = [local('include')],
+  defines = [],
+  libs = [],
+  msvc_compile_additional_flags = [],
+  msvc_link_additional_flags = [],
+  gcc_link_additional_flags = []
+)
+
+SDL2main = Framework(
+  frameworks = [SDL2]
+)
+
+if options.no_stdio_redirect:
+  SDL2['defines'].append('NO_STDIO_REDIRECT')
+
+# Find out which files to compile.
+# ================================
+
+sources = []
+main_source = None
+
+def add_sources(*patterns):
+  files = glob(patterns)
+  assert files, patterns
+  sources.extend(files)
+
+def add_defines(*defines):
+  SDL2['defines'] += defines
+
+def add_libs(*libs):
+  SDL2['libs'] += libs
+
+# As long as craftr-build/craftr#134 is not implemented yet, just
+# say we can find a default number of these headers.
+try:
+  check_include_file = cxx.check_include_file
+except AttributeError:
+  def check_include_file(name):
+    return name in [
+      'xinput.h', 'd3d9.h', 'ddraw.h', 'dsound.h', 'xaudio2.h', 'dxgi.h', # Win
+    ]
+
+add_sources('src/*.c', 'src/*/*.c', 'src/*/dummy/*.c', 'src/render/*/*.c')
+
+if platform.name == 'win':
+
+  add_sources('src/core/windows/*.c')
+
+  # Prevent codegen that would use the VC runtime libraries.
+  SDL2['msvc_compile_additional_flags'] += ['/GS-']
+  if '64' not in cxx.cxc.target_arch:
+    SDL2['msvc_compile_additional_flags'] += ['/arch:SSE']
+
+  if any(check_include_file(x) for x in
+      ('d3d9.h', 'd3d11_1.h', 'ddraw.h', 'dsound.h', 'dinput.h', 'xaudio2.h')):
+    add_defines('HAVE_DIRECTX')
+
+  if options.enable_audio:
+    add_defines('HAVE_SDL_AUDIO', 'SDL_AUDIO_DRIVER_WINMM')
+    add_sources('src/audio/winmm/*.c', 'src/audio/disk/*.c')
+
+    if check_include_file('dsound.h'):
+      add_defines('SDL_AUDIO_DRIVER_DSOUND')
+      add_sources('src/audio/directsound/*.c')
+
+    if check_include_file('xaudio2.h'):
+      add_defines('SDL_AUDIO_DRIVER_XAUDIO2')
+      add_sources('src/audio/xaudio2/*.c')
+
+  if options.enable_video:
+    if not options.enable_loadso:
+      error("enable_video requires enable_loadso, which is not enabled")
+    add_defines('SDL_VIDEO_DRIVER_WINDOWS')
+    add_sources('src/video/windows/*.c')
+
+    if check_include_file('d3d9.h'):
+      add_defines('HAVE_RENDER_D3D', 'SDL_VIDEO_RENDER_D3D')
+    if check_include_file('d3d11_1.h'):
+      add_defines('HAVE_RENDER_D3D', 'SDL_VIDEO_RENDER_D3D11')
+
+  if options.enable_thread:
+    add_defines('SDL_THREAD_WINDOWS', 'HAVE_SDL_THREADS')
+    add_sources('src/thread/windows/*.c', 'src/thread/generic/SDL_syscond.c')
+
+  if options.enable_power:
+    add_defines('SDL_POWER_WINDOWS')
+    add_sources('src/power/windows/SDL_syspower.c')
+
+  if options.enable_filesystem:
+    add_defines('SDL_FILESYSTEM_WINDOWS', 'HAVE_SDL_FILESYSTEM')
+    add_sources('src/filesystem/windows/*.c')
+
+  if options.enable_timers:
+    add_defines('SDL_TIMER_WINDOWS', 'HAVE_SDL_TIMERS')
+    add_sources('src/timer/windows/*.c')
+
+  if options.enable_loadso:
+    add_defines('SDL_LOADSO_WINDOWS', 'HAVE_SDL_LOADSO')
+    add_sources('src/loadso/windows/*.c')
+
+  if options.enable_video:
+    if options.video_opengl:
+      add_defines('SDL_VIDEO_OPENGL', 'SDL_VIDEO_OPENGL_WGL',
+        'SDL_VIDEO_OPENGL_OGL', 'HAVE_VIDEO_OPENGL', 'HAVE_OPENGL')
+      add_libs('opengl32')
+    if options.video_opengles:
+      add_defines('SDL_VIDEO_OPENGL_EGL', 'SDL_VIDEO_OPENGL_ES2',
+        'SDL_VIDEO_OPENGL_OGL_ES2', 'HAVE_VIDEO_OPENGLES', 'HAVE_OPENGL')
+      add_libs('opengles')
+
+  if options.enable_joystick:
+    add_defines('HAVE_SDL_JOYSTICK')
+    add_sources('src/joystick/windows/*.c')
+    if check_include_file('dinput.h'):
+      add_defines('SDL_JOYSTICK_DINPUT')
+      add_libs('dinput8')
+      # TODO: Check if the compiler is MinGW?
+      # TODO: Find out if we should use the WinSDK direct X?
+      is_mingw = False
+      use_winsdk_directx = False
+      if is_mingw:
+        add_libs('dxerr8')
+      elif not use_winsdk_directx:
+        add_libs('dxerr')
+    if check_include_file('xinput.h'):
+      add_defines('SDL_JOYSTICK_XINPUT')
+    if not check_include_file('xinput.h') and not check_include_file('xinput.h'):
+      add_defines('SDL_JOYSTICK_WINMM')
+
+  if options.enable_haptic:
+    add_defines('HAVE_SDL_HAPTIC')
+    if check_include_file('dinput.h') or check_include_file('xinput.h'):
+      add_sources('src/haptic/windows/*.c')
+      if check_include_file('dinput.h'):
+        add_defines('SDL_HAPTIC_DINPUT')
+      if check_include_file('xinput.h'):
+        add_defines('SDL_HAPTIC_XINPUT')
+    else:
+      add_sources('src/haptic/dummy/*.c')
+      add_defines('SDL_HAPTIC_DUMMY')
+
+  if platform.name in ('cygwin', 'msys'):  # TODO: Also for MinGW
+    add_libs('mingw32')
+    add_defines('main=SDL_main')
+    SDL2['gcc_link_additional_flags'] += ['-mwindows']
+
+  main_source = local('src/main/windows/SDL_windows_main.c')
+
+  # We need this to link programs with SDL.
+  SDL2['msvc_link_additional_flags'] += ['/SUBSYSTEM:WINDOWS']
+
+  # Libraries for Win32 native and MinGW
+  add_libs('user32', 'gdi32', 'winmm', 'imm32', 'ole32', 'oleaut32', 'version', 'uuid', 'shell32')
+  #add_defines('_CRT_SECURE_NO_DEPRECATE', '_WINDOWS', '_WIN32',
+  #  '__WIN32__', '_WIN32_WINNT=0x0400')
+
+else:
+  error('The platform "{}" is currently not supported.'.format(platform.name))
+
+# TODO: Include dummy sources for features that are disabled.
+
+# Generate build targets
+# ======================
+
+lib = cxx.library(
+  link_style = 'static' if options.static else 'shared',
+  output = 'SDL2',
+  inputs = cxx.c_compile(
+    sources = sources,
+    frameworks = [SDL2],
+    pic = not options.static
+  ),
+  name = 'SDL'
+)
+cxx.extend_framework(SDL2, lib)
+
+lib_main = cxx.library(
+  link_style = 'static',
+  output = 'SDL2main',
+  inputs = cxx.c_compile(sources = [main_source], frameworks = [SDL2main]),
+  name = 'SDL2main'
+)
+cxx.extend_framework(SDL2main, lib_main)
+
+if options.build_tests:
+  for fn in glob(['test/test*.c'], exclude = [
+    'test/testnative*.c', 'test/testautomation*.c'
+  ]):
+    name = path.rmvsuffix(path.basename(fn))
+    target = cxx.binary(
+      output = 'test/' + name,
+      inputs = cxx.c_compile(sources = [fn], frameworks = [SDL2main]),
+      name = name + '_bin'
+    )
+    runtarget(target, cwd = local('test'), name = name)
+
+  testnative = runtarget(
+    cxx.binary(
+      output = 'test/testnative',
+      inputs = cxx.c_compile(sources = glob(['test/testnative*.c']), frameworks = [SDL2main]),
+      name = 'testnative_bin'
+    ),
+    cwd = local('test')
+  )
+
+  testautomation = runtarget(
+    cxx.binary(
+      output = 'test/testautomation',
+      inputs = cxx.c_compile(sources = glob(['test/testautomation*.c']), frameworks = [SDL2main]),
+      name = 'testautomation_bin'
+    ),
+    cwd = local('test')
+  )

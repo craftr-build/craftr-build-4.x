@@ -1,0 +1,31 @@
+{
+  "name": "craftr.lib.sdl2",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*"
+  },
+  "options": {
+    "version": {"type": "string", "default": "2.0.5"},
+    "url": {"type": "string", "default": "https://www.libsdl.org/release/SDL2-${VERSION}.tar.gz"},
+    "directory": "path",
+
+    "static": {"type": "bool", "default": true},
+    "build_tests": "bool",
+    "no_stdio_redirect": {"type": "bool", "default": true},
+
+    "enable_audio": {"type": "bool", "default": true},
+    "enable_thread": {"type": "bool", "default": true},
+    "enable_power": {"type": "bool", "default": true},
+    "enable_filesystem": {"type": "bool", "default": true},
+    "enable_timers": {"type": "bool", "default": true},
+    "enable_loadso": {"type": "bool", "default": true},
+    "enable_video": {"type": "bool", "default": true},
+    "enable_joystick": {"type": "bool", "default": true},
+    "enable_haptic": {"type": "bool", "default": true},
+
+    "video_opengl": {"type": "bool", "default": true},
+    "video_opengles": {"type": "bool", "default": false}
+  }
+}
