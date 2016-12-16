@@ -51,7 +51,7 @@ def glob(patterns, parent=None, exclude=(), include_dotfiles=False):
   """
 
   if parent is None and session and session.module:
-    parent = session.module.project_dir
+    parent = session.module.namespace.project_dir
 
   return path.glob(patterns, parent, exclude, include_dotfiles)
 
@@ -62,7 +62,7 @@ def local(rel_path):
   module's project directory.
   """
 
-  parent = session.module.project_dir
+  parent = session.module.namespace.project_dir
   return path.norm(rel_path, parent)
 
 
@@ -87,7 +87,7 @@ def relocate_files(files, outdir, suffix, replace_suffix=True, parent=None):
   """
 
   if parent is None:
-    parent = session.module.project_dir
+    parent = session.module.namespace.project_dir
   result = []
   for filename in files:
     filename = path.join(outdir, path.rel(filename, parent))
