@@ -43,7 +43,7 @@ class ModuleError(Exception):
   pass
 
 
-def glob(patterns, parent=None, exclude=(), include_dotfiles=False):
+def glob(patterns, parent=None, exclude=(), include_dotfiles=False, ignore_false_excludes=False):
   """
   Wrapper for :func:`path.glob` that automatically uses the current modules
   project directory for the *parent* argument if it has not been specifically
@@ -53,7 +53,8 @@ def glob(patterns, parent=None, exclude=(), include_dotfiles=False):
   if parent is None and session and session.module:
     parent = session.module.namespace.project_dir
 
-  return path.glob(patterns, parent, exclude, include_dotfiles)
+  return path.glob(patterns, parent, exclude, include_dotfiles,
+    ignore_false_excludes)
 
 
 def local(rel_path):

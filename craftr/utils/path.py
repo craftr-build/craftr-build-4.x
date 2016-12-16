@@ -64,9 +64,12 @@ def canonical(path):
   A synonym for :meth:`os.path.normpath`.
   """
 
-  return os.path.normpath(path)
+  path = os.path.normpath(path)
+  if os.name == 'nt':
+    path = path.lower()
+  return path
 
-def glob(patterns, parent=None, excludes=(), include_dotfiles=False):
+def glob(patterns, parent=None, excludes=(), include_dotfiles=False, ignore_false_excludes=False):
   """
   Wrapper for :func:`glob2.glob` that accepts an arbitrary number of
   patterns and matches them. The paths are normalized with :func:`norm`.
@@ -92,6 +95,8 @@ def glob(patterns, parent=None, excludes=(), include_dotfiles=False):
   :param excludes: A list of glob patterns or filenames.
   :param include_dotfiles: If True, ``*`` and ``**`` can also capture
     file or directory names starting with a dot.
+  :param ignore_false_excludes: False by default. If True, items listed
+    in *excludes* that have not been globbed will raise an exception.
   :return: A list of filenames.
   """
 
@@ -113,10 +118,18 @@ def glob(patterns, parent=None, excludes=(), include_dotfiles=False):
       pattern = join(parent, pattern)
     pattern = norm(pattern)
     if not isglob(pattern):
-      result.remove(pattern)
+      try:
+        result.remove(pattern)
+      except ValueError as exc:
+        if not ignore_false_excludes:
+          raise ValueError('{} ({})'.format(exc, pattern))
     else:
       for item in glob2.glob(pattern):
-        result.remove(item)
+        try:
+          result.remove(item)
+        except ValueError as exc:
+          if not ignore_false_excludes:
+            raise ValueError('{} ({})'.format(exc, pattern))
 
   return result
 

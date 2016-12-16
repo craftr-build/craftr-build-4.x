@@ -15,3 +15,8 @@ __v2.0.0.dev6__:
 - add `pkg_config(static = False)` parameter
 - `craftr/defaults.py` now makes `pkg_config()`, `external_file()` and
   `external_archive()` available to the built-ins
+- add `glob(ignore_false_excludes=False)` parameter
+- add `Manifest.filename` attribute
+- `Manifest.parse()` no longer accepts a file-like object
+- update verbose logging behaviour when the same module was detected twice
+- `path.norm()` now makes sure that path is lowercased on Windows

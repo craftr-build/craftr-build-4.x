@@ -136,6 +136,10 @@ class Manifest(recordclass):
     A dictionary of options that can be provided by the user before
     Craftr is being executed. The option name maps to a :class:`BaseOption`
     instance.
+
+  .. attribute:: filename
+
+    Not a field in the JSON manifest. The filename of the loaded manifest.
   """
 
   Schema = {
@@ -179,9 +183,10 @@ class Manifest(recordclass):
 
   __slots__ = tuple(Schema['properties'].keys())
 
-  def __init__(self, name, version, main='Craftrfile', project_dir='.',
+  def __init__(self, filename, name, version, main='Craftrfile', project_dir='.',
                description=None, author=None, url=None, dependencies=None,
                options=None):
+    self.filename = filename
     if version is not None:
       version = Version(version)
     self.name = name
@@ -233,7 +238,7 @@ class Manifest(recordclass):
     return Manifest.parse(io.StringIO(string))
 
   @staticmethod
-  def parse(file):
+  def parse(filename):
     """
     Parses a manifest file and returns a new :class:`Manifest` object.
 
@@ -244,11 +249,8 @@ class Manifest(recordclass):
     """
 
     try:
-      if isinstance(file, str):
-        with open(file) as fp:
-          data = json.load(fp)
-      else:
-        data = json.load(file)
+      with open(filename) as fp:
+        data = json.load(fp)
       jsonschema.validate(data, Manifest.Schema)
     except (json.JSONDecodeError, jsonschema.ValidationError) as exc:
       raise Manifest.Invalid(exc)
@@ -285,7 +287,7 @@ class Manifest(recordclass):
         raise Manifest.Invalid(exc)
 
     try:
-      return Manifest(**data)
+      return Manifest(filename, **data)
     except TypeError as exc:
       raise Manifest.Invalid(exc)
 

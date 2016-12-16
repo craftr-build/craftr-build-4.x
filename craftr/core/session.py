@@ -228,9 +228,9 @@ class Session(object):
     self._manifest_cache[filename] = manifest
     versions = self.modules.setdefault(manifest.name, {})
     if manifest.version in versions:
-      logger.debug('multiple occurences of "{}-{}" found, '
-          'one of which is located at "{}"'.format(manifest.name,
-          manifest.version, filename))
+      other = versions[manifest.version].manifest.filename
+      logger.debug('multiple occurences of "{}-{}" found\n'
+          '  - {}\n  - {}'.format(manifest.name, manifest.version, filename, other))
       module = None
     else:
       logger.debug('parsed manifest: {}-{} ({})'.format(
