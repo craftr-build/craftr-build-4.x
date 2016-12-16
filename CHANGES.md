@@ -2,6 +2,8 @@
 
 __v2.0.0.dev6__:
 
+API Changes
+
 - `Target` objects can now be passed to the `frameworks = [...]` argument
   of target generators that use the `TargetBuilder` class. These input targets
   will automatically added to the implicit dependencies and their frameworks
@@ -20,3 +22,11 @@ __v2.0.0.dev6__:
 - `Manifest.parse()` no longer accepts a file-like object
 - update verbose logging behaviour when the same module was detected twice
 - `path.norm()` now makes sure that path is lowercased on Windows
+- renamed `load_module()` to `load()`, using the old name displays a warning
+
+Library Changes
+
+- add `craftr.lib.sdl2` (tested on Windows only)
+- add `craftr.lib.zlib` (tested on Windows only)
+- add `uic()` and `moc()` target generators to `craftr.lib.qt5` (tested on Windows only)
+- `craftr.lib.cURLpp` always requires RTTI enabled

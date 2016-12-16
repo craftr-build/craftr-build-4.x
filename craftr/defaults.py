@@ -142,7 +142,7 @@ def zip(*iterables, fill=NotImplemented):
     return list(_itertools.zip_longest(*iterables, fillvalue=fill))
 
 
-def load_module(name, into=None, get_namespace=True, _stackframe=1):
+def load(name, into=None, get_namespace=True, _stackframe=1):
   """
   Load a Craftr module by name and return it. If *into* is specified, it must
   be a dictionary that will be filled with all the members of the module. Note
@@ -377,3 +377,9 @@ def append_PATH(*paths):
 
 
 from craftr.loaders import pkg_config, external_file, external_archive
+
+
+# Backwards compatibility < 2.0.0dev6
+def load_module(*args, **kwargs):
+  logger.warn('load_module() is deprecated, use load() instead')
+  return load(*args, **kwargs)
