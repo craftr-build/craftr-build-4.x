@@ -75,6 +75,8 @@ or retrieve the currently executed Craftr module from its `.module` member.
 
 ### `error()`
 
+### `return_()`
+
 ### `append_PATH()`
 
 ### `external_file(*urls, filename = None, directory = None, copy_file_urls = False, name = None)`
@@ -108,6 +110,8 @@ except pkg_config.Error:
 ## Exceptions
 
 ### `ModuleError`
+
+### `ModuleReturn`
 
 ### `ModuleNotFound`
 

@@ -421,6 +421,8 @@ class Module(object):
     with open(script_fn) as fp:
       code = compile(fp.read(), script_fn, 'exec')
 
+    from craftr.defaults import ModuleReturn
+
     vars(self.namespace).update(self.get_init_globals())
     self.namespace.__file__ = script_fn
     self.namespace.__name__ = self.manifest.name
@@ -428,6 +430,8 @@ class Module(object):
     try:
       session.modulestack.append(self)
       exec(code, vars(self.namespace))
+    except ModuleReturn:
+      pass
     finally:
       assert session.modulestack.pop() is self
 

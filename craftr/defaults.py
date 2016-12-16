@@ -43,6 +43,13 @@ class ModuleError(Exception):
   pass
 
 
+class ModuleReturn(Exception):
+  """
+  This exception is raised to "return" form a module execution pre-emptively
+  without causing an error. See :func:`return_()`
+  """
+
+
 def glob(patterns, parent=None, exclude=(), include_dotfiles=False, ignore_false_excludes=False):
   """
   Wrapper for :func:`path.glob` that automatically uses the current modules
@@ -333,10 +340,18 @@ def write_response_file(arguments, builder=None, name=None, force_file=False):
 
 def error(*message):
   """
-  Raises a :class:`ModuleError`.
+  Raises a :class:`ModuleError` exception.
   """
 
   raise ModuleError(' '.join(map(str, message)))
+
+
+def return_():
+  """
+  Raises a :class:`ModuleReturn` exception.
+  """
+
+  raise ModuleReturn
 
 
 def append_PATH(*paths):
