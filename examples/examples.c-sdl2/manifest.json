@@ -1,0 +1,11 @@
+{
+  "name": "examples.c-sdl2",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "craftr.lang.cxx": "*",
+    "craftr.lib.sdl2": "*"
+  },
+  "options": {}
+}
