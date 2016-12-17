@@ -18,6 +18,7 @@ from craftr.utils import argspec
 from os import sep, pathsep, curdir, pardir, getcwd
 from os.path import exists, isdir, isfile, isabs, abspath as abs
 from os.path import join, split, dirname, basename, expanduser
+from os.path import getmtime
 
 import ctypes
 import errno
@@ -408,3 +409,11 @@ class tempfile(object):
     if self.fp:
       self.fp.close()
       self.fp = None
+
+
+def getimtime(path):
+  """
+  Just like :func:`getmtime()`, but rounds down to an integer.
+  """
+
+  return int(getmtime(path))

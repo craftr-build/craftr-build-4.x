@@ -24,6 +24,7 @@ API Changes
 - `path.norm()` now makes sure that path is lowercased on Windows
 - renamed `load_module()` to `load()`, using the old name displays a warning
 - add `BaseLogger.flush()` method
+- add `craftr.utils.path.getmtime()` and `.getimtime()`
 
 Library Changes
 
