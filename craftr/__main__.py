@@ -87,42 +87,42 @@ def serialise_loaded_module_info():
   .. code:: json
 
     "modules": {
-			"craftr.lang.cxx.msvc": {
-				"1.0.0": {
-					"deps": [
-						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\manifest.json",
-						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\craftrfile"
-					],
-					"mtime": 2962706318
-				}
-			},
-			"craftr.lib.sdl2": {
-				"1.0.0": {
-					"deps": [
-						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\manifest.json",
-						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\craftrfile"
-					],
-					"mtime": 2963870114
-				}
-			},
-			"craftr.lang.cxx": {
-				"1.0.0": {
-					"deps": [
-						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\manifest.json",
-						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\craftrfile"
-					],
-					"mtime": 2963324399
-				}
-			},
-			"examples.c-sdl2": {
-				"1.0.0": {
-					"deps": [
-						"c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\manifest.json",
-						"c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\craftrfile"
-					],
-					"mtime": 2963870114
-				}
-			}
+      "craftr.lang.cxx.msvc": {
+        "1.0.0": {
+          "deps": [
+            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\manifest.json",
+            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\craftrfile"
+          ],
+          "mtime": 2962706318
+        }
+      },
+      "craftr.lib.sdl2": {
+        "1.0.0": {
+          "deps": [
+            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\manifest.json",
+            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\craftrfile"
+          ],
+          "mtime": 2963870114
+        }
+      },
+      "craftr.lang.cxx": {
+        "1.0.0": {
+          "deps": [
+            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\manifest.json",
+            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\craftrfile"
+          ],
+          "mtime": 2963324399
+        }
+      },
+      "examples.c-sdl2": {
+        "1.0.0": {
+          "deps": [
+            "c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\manifest.json",
+            "c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\craftrfile"
+          ],
+          "mtime": 2963870114
+        }
+      }
     }
   """
 
