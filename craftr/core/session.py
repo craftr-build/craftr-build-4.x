@@ -347,6 +347,14 @@ class Module(object):
     A :class:`~craftr.core.manifest.Namespace` that contains all the options
     for the module. This member is only initialized when the module is run
     or with :meth:`init_options`.
+
+  .. attribute:: dependent_files
+
+    A list of all files that influence the state of the module. This list
+    is generated when the module is executed with :func:`run`. By default,
+    it contains at least the filename of the :attr:`manifest` and the script
+    file that is executed for the Module. Additional files might be added
+    by some built-in functions like :func:`craftr.defaults.load_file`.
   """
 
   NotFound = ModuleNotFound
@@ -358,6 +366,7 @@ class Module(object):
     self.namespace = types.ModuleType(self.manifest.name)
     self.executed = False
     self.options = None
+    self.dependent_files = None
 
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
@@ -370,6 +379,10 @@ class Module(object):
   @property
   def project_dir(self):
     return path.norm(path.join(self.directory, self.manifest.project_dir))
+
+  @property
+  def scriptfile(self):
+    return path.norm(path.join(self.directory, self.manifest.main))
 
   def init_options(self, recursive=False, _break_recursion=None):
     """
@@ -415,11 +428,15 @@ class Module(object):
       raise RuntimeError('already run')
 
     self.executed = True
+    self.dependent_files = []
     self.init_options()
 
-    script_fn = path.norm(path.join(self.directory, self.manifest.main))
+    script_fn = self.scriptfile
     with open(script_fn) as fp:
       code = compile(fp.read(), script_fn, 'exec')
+
+    self.dependent_files.append(self.manifest.filename)
+    self.dependent_files.append(script_fn)
 
     from craftr.defaults import ModuleReturn
 

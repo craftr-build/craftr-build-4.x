@@ -72,6 +72,100 @@ def write_cache(cachefile):
     logger.debug('cache written:', cachefile)
 
 
+def serialise_loaded_module_info():
+  """
+  Converts all modules that have been loaded into the active session a JSON
+  serialisable object that can be saved into the Craftr cache. This cache
+  object contains the same nested structures as :attr:`Session.modules`.
+
+  This cache is loaded when the exported project is being built to register
+  when files have changed. Note that the modification time that is saved
+  is the sum of all dependent files.
+
+  Example:
+
+  .. code:: json
+
+    "modules": {
+			"craftr.lang.cxx.msvc": {
+				"1.0.0": {
+					"deps": [
+						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\manifest.json",
+						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\craftrfile"
+					],
+					"mtime": 2962706318
+				}
+			},
+			"craftr.lib.sdl2": {
+				"1.0.0": {
+					"deps": [
+						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\manifest.json",
+						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\craftrfile"
+					],
+					"mtime": 2963870114
+				}
+			},
+			"craftr.lang.cxx": {
+				"1.0.0": {
+					"deps": [
+						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\manifest.json",
+						"c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\craftrfile"
+					],
+					"mtime": 2963324399
+				}
+			},
+			"examples.c-sdl2": {
+				"1.0.0": {
+					"deps": [
+						"c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\manifest.json",
+						"c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\craftrfile"
+					],
+					"mtime": 2963870114
+				}
+			}
+    }
+  """
+
+  modules = {}
+  for name, versions in session.modules.items():
+    module_versions = {}
+    for version, module in versions.items():
+      if not module.executed: continue
+      module_versions[str(version)] = {
+        "deps": module.dependent_files,
+        "mtime": sum(map(path.getimtime, module.dependent_files))
+      }
+    if module_versions:
+      modules[name] = module_versions
+  return modules
+
+
+def unserialise_loaded_module_info(modules):
+  """
+  This function takes the data generated with :func:`serialise_loaded_module_info`
+  and converts it back to a format that is easier to use later in the build process.
+  Currently, this function only converts the version-number fields to actual
+  :class:`Version` objects and adds a ``"changed"`` key to a module based on
+  the ``"mtime"`` and the current modification times of the files.
+  """
+
+  result = {}
+  for name, versions in modules.items():
+    result[name] = {}
+    for version, module in versions.items():
+      version = Version(version)
+      result[name][version] = module
+      mtime = 0
+      for fn in module['deps']:
+        try:
+          mtime += path.getimtime(fn)
+        except OSError:
+          mtime = 0
+          break
+      module['changed'] = (mtime != module['mtime'])
+  return result
+
+
 def parse_module_spec(spec):
   """
   Parses a module spec as it can be specified on the command-line. The
@@ -255,7 +349,7 @@ class BuildCommand(BaseCommand):
 
       # Write the cache back.
       session.cache['build']['targets'] = list(session.graph.targets.keys())
-      session.cache['build']['modules'] = {k: list(map(str, v.keys())) for k, v in session.modules.items()}
+      session.cache['build']['modules'] = serialise_loaded_module_info()
       session.cache['build']['main'] = module.ident
       session.cache['build']['options'] = args.options
       if self.mode == 'export':
@@ -273,11 +367,25 @@ class BuildCommand(BaseCommand):
       parse_cmdline_options(session.cache['build']['options'])
       main = session.cache['build']['main']
       available_targets = frozenset(session.cache['build']['targets'])
-      available_modules = session.cache['build']['modules']
-      available_modules = {k: sorted(map(Version, v)) for k, v in available_modules.items()}
+      available_modules = unserialise_loaded_module_info(session.cache['build']['modules'])
 
       logger.debug('build main module:', main)
       session.expand_relative_options(get_volatile_module_version(main)[0])
+
+      # Check if any of the modules changed, so we can let the user know he
+      # might have to re-export the build files.
+      changed_modules = []
+      for name, versions in available_modules.items():
+        for version, info in versions.items():
+          if info['changed']:
+            changed_modules.append('{}-{}'.format(name, version))
+      if changed_modules:
+        if len(changed_modules) == 1:
+          logger.info('note: module "{}" has changed, maybe you should re-export'.format(changed_modules[0]))
+        else:
+          logger.info('note: some modules have changed, maybe you should re-export')
+          for name in changed_modules:
+            logger.info('  -', name)
 
       # Check the targets and if they exist.
       targets = []
@@ -293,7 +401,7 @@ class BuildCommand(BaseCommand):
         if module_name not in available_modules:
           error('no such module:', module_name)
         if not version:
-          version = available_modules[module_name][-1]
+          version = max(available_modules[module_name].keys())
 
         target_name = craftr.targetbuilder.get_full_name(
             target_name, module_name=module_name, version=version)

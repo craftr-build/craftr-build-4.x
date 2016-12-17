@@ -221,6 +221,7 @@ def load_file(filename, export_default_namespace=True):
     filename = path.join(module.directory, filename)
   filename = path.norm(filename)
 
+  module.dependent_files.append(filename)
   with open(filename, 'r') as fp:
     code = compile(fp.read(), filename, 'exec')
 
