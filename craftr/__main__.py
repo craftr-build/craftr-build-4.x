@@ -280,7 +280,7 @@ class BuildCommand(BaseCommand):
     """
 
     os.chdir(session.maindir)
-    if not os.listdir(session.builddir):
+    if os.path.isdir(session.builddir) and not os.listdir(session.builddir):
       logger.debug('note: cleanup empty build directory:', session.builddir)
       os.rmdir(session.builddir)
 
