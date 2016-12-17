@@ -28,6 +28,8 @@ Library Changes
 - add `craftr.lib.sdl2` (tested on Windows only)
 - add `craftr.lib.zlib` (tested on Windows only)
 - add `uic()` and `moc()` target generators to `craftr.lib.qt5` (tested on Windows only)
+- add support for `source_directory` argument in `cxx.c_compile()` and `cxx.cpp_compile()`
+  (actually implemented in `craftr.lang.cxx.common` and `craftr.lang.cxx.msvc`), see #154
 - change `craftr.lib.cURLpp` always requires RTTI enabled
 - change `craftr.lang.cxx.msvc` now adds the static input library generated for DLLs to the outputs
 
