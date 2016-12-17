@@ -14,11 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
+#include <stdio.h>
+
 extern void say_hello(char const* name, char const* weather);
 
 int main(int argc, char** argv) {
   if (argc != 3) {
-    printf("error: usage: %s name weather\n");
+    printf("error: usage: %s name weather\n", argv[0]);
     return 0;
   }
   say_hello(argv[1], argv[2]);
