@@ -169,8 +169,8 @@ def load(name, into=None, get_namespace=True, _stackframe=1):
 
   .. code:: python
 
-    cxx = load_module('craftr.lang.cxx')
-    load_module('craftr.lang.cxx.*')
+    cxx = load('craftr.lang.cxx')
+    load('craftr.lang.cxx.*')
     assert cxx.c_compile is c_compile
   """
 
@@ -383,4 +383,5 @@ from craftr.loaders import pkg_config, external_file, external_archive
 # Backwards compatibility < 2.0.0dev6
 def load_module(*args, **kwargs):
   logger.warn('load_module() is deprecated, use load() instead')
+  kwargs['_stackframe'] = kwargs.get('_stackframe', 1) + 1
   return load(*args, **kwargs)

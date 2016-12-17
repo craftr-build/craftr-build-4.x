@@ -25,6 +25,7 @@ from craftr.core.logging import logger
 from craftr.core.session import session
 from craftr.utils import argspec, pyutils
 from nr.py.bytecode import get_assigned_name
+from nr.types.version import Version
 
 import collections
 import sys
@@ -37,14 +38,19 @@ def get_full_name(target_name, module=None, module_name=None, version=None):
   omitted, the currently executed module is used.
   """
 
-  if module is None and not module_name and version:
+  if module is None and not (module_name and version):
     if not session:
       raise RuntimeError('no session context')
     module = session.module
     if not module:
       raise RuntimeError('no current module')
-    module_name, version = module.name, module.version
+  if module_name is None:
+    module_name = module.manifest.name
+  if version is None:
+    version = module.manifest.version
 
+  assert isinstance(module_name, str), module_name
+  assert isinstance(version, (str, Version)), version
   return '{}-{}.{}'.format(module_name, version, target_name)
 
 
