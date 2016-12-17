@@ -482,9 +482,11 @@ class MsvcToolkit(object):
       outputs.append(implib)
       meta['dll_link_target'] = implib
     if debug:
-      command += ['/DEBUG', '/PDB:$out.pdb']
+      pdbfile = path.setsuffix(output, '.pdb')
+      command += ['/DEBUG', '/PDB:' + pdbfile]
+      outputs.append(pdbfile)
     command += ['/LIBPATH:{0}'.format(x) for x in libpath]
-    command += ['/OUT:$out']
+    command += ['/OUT:' + output]
     command += [x + '.lib' for x in libs]
     command += external_libs
 
