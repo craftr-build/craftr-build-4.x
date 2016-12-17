@@ -299,22 +299,21 @@ class MsvcToolkit(object):
       with override_environ(self.install_info['env']):
         self.info = identify(self.programs.cl)
 
-    real_target = target
+    real_target = self.info['target']
     if self.name == 'clang-cl':
-      if self.info['target'] == 'x86_64-pc-windows-msvc':
+      if real_target == 'x86_64-pc-windows-msvc':
         real_target = 'x64'
       else:
+        # TODO: Understand more Clang CL targets.
         error('unsupported clang-cl target: {}'.format(self.info['target']))
+
+    # Warn if there might be some misconfiguration happening.
     if target and real_target != target:
-      logger.warn('{}: expected target "{}" does not match with real target "{}"'
+      logger.warn('{}: expected target "{}" does not match with actual compiler target "{}"'
           .format(self.name, target, real_target))
-    if real_target:
-      target = real_target
-    if not target:
-      target = real_arch
 
     self.toolkit = toolkit
-    self.target_arch = target
+    self.target_arch = real_target
     self.programs = self.Programs(cl, link, lib)
 
   def __str__(self):
