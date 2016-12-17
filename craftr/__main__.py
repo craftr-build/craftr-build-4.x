@@ -146,7 +146,7 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
 class BuildCommand(BaseCommand):
 
   def __init__(self, mode):
-    assert mode in ('clean', 'build', 'export')
+    assert mode in ('clean', 'build', 'export', 'run')
     self.mode = mode
 
   def build_parser(self, parser):
@@ -155,7 +155,7 @@ class BuildCommand(BaseCommand):
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-d', '--option', dest='options', action='append', default=[])
 
-    if self.mode == 'export':
+    if self.mode in ('export', 'run'):
       parser.add_argument('-m', '--module')
     else:
       parser.add_argument('targets', metavar='TARGET', nargs='*')
@@ -167,7 +167,7 @@ class BuildCommand(BaseCommand):
   def execute(self, parser, args):
     session.path.extend(map(path.norm, args.include_path))
 
-    if self.mode == 'export':
+    if self.mode in ('export', 'run'):
       # Determine the module to execute, either from the current working
       # directory or find it by name if one is specified.
       if not args.module:
@@ -206,7 +206,7 @@ class BuildCommand(BaseCommand):
       return 1
 
     # Prepare options, loaders and execute.
-    if self.mode == 'export':
+    if self.mode in ('export', 'run'):
       session.expand_relative_options(module.manifest.name)
       session.cache['build'] = {}
       try:
@@ -219,7 +219,7 @@ class BuildCommand(BaseCommand):
         logger.error('error:', exc)
         return 1
       finally:
-        if sys.exc_info():
+        if sys.exc_info() and self.mode == 'export':
           # We still want to write the cache, especially so that data already
           # loaded with loaders doesn't need to be re-loaded. They'll find out
           # when the cached information was not valid.
@@ -229,14 +229,16 @@ class BuildCommand(BaseCommand):
       session.cache['build']['targets'] = list(session.graph.targets.keys())
       session.cache['build']['main'] = module.ident
       session.cache['build']['options'] = args.options
-      write_cache(cachefile)
+      if self.mode == 'export':
+        write_cache(cachefile)
 
-      # Write the Ninja manifest.
-      with open("build.ninja", 'w') as fp:
-        platform = core.build.get_platform_helper()
-        context = core.build.ExportContext(ninja_version)
-        writer = core.build.NinjaWriter(fp)
-        session.graph.export(writer, context, platform)
+        # Write the Ninja manifest.
+        with open("build.ninja", 'w') as fp:
+          platform = core.build.get_platform_helper()
+          context = core.build.ExportContext(ninja_version)
+          writer = core.build.NinjaWriter(fp)
+          session.graph.export(writer, context, platform)
+          logger.info('exported "build.ninja"')
 
     else:
       parse_cmdline_options(session.cache['build']['options'])
@@ -351,6 +353,7 @@ def main():
     'clean': BuildCommand('clean'),
     'build': BuildCommand('build'),
     'export': BuildCommand('export'),
+    'run': BuildCommand('run'),
     'startpackage': StartpackageCommand(),
     'version': VersionCommand()
   }
