@@ -79,6 +79,10 @@ class BaseLogger(object, metaclass=abc.ABCMeta):
   def set_level(self, level):
     pass
 
+  @abc.abstractmethod
+  def flush(self):
+    pass
+
 
 class DefaultLogger(BaseLogger):
 
@@ -150,6 +154,9 @@ class DefaultLogger(BaseLogger):
 
   def set_level(self, level):
     self._level = level
+
+  def flush(self):
+    self._stream.flush()
 
 
 _logger = DefaultLogger()

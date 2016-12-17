@@ -128,6 +128,21 @@ def get_ninja_info():
   return ninja_bin, ninja_version
 
 
+def finally_(finally_func):
+  """
+  Decorator that calls *finally_func* after the decorated function.
+  """
+
+  def decorator(func):
+    def wrapper(*args, **kwargs):
+      try:
+        return func(*args, **kwargs)
+      finally:
+        finally_func(*args, **kwargs)
+    return wrapper
+  return decorator
+
+
 class BaseCommand(object, metaclass=abc.ABCMeta):
   """
   Base class for Craftr subcommands.
@@ -164,6 +179,18 @@ class BuildCommand(BaseCommand):
     parser.add_argument('-b', '--build-dir', default='build')
     parser.add_argument('-i', '--include-path', action='append', default=[])
 
+  def __cleanup(self, parser, args):
+    """
+    Switch back to the original directory and check if we can clean up
+    the build directory.
+    """
+
+    os.chdir(session.maindir)
+    if not os.listdir(session.builddir):
+      logger.debug('note: cleanup empty build directory:', session.builddir)
+      os.rmdir(session.builddir)
+
+  @finally_(__cleanup)
   def execute(self, parser, args):
     session.path.extend(map(path.norm, args.include_path))
 
@@ -201,8 +228,9 @@ class BuildCommand(BaseCommand):
     # Read the cache and parse command-line options.
     cachefile = path.join(session.builddir, '.craftrcache')
     if not read_cache(cachefile) and self.mode != 'export':
-      logger.error('Unable to load "{}", can not {}'.format(cachefile, self.mode))
-      logger.error("Make sure to generate a build tree with 'craftr export'")
+      logger.error('Unable to find file: .craftrcache')
+      logger.error('Does not seemt to be a build directory: {}'.format(session.builddir))
+      logger.error("Export build information using the 'craftr export' command.")
       return 1
 
     # Prepare options, loaders and execute.
@@ -272,6 +300,9 @@ class BuildCommand(BaseCommand):
         if target_name not in available_targets:
           parser.error('no such target: {}'.format(target_name))
         targets.append(target_name)
+
+      # Make sure we get all the output before running the subcommand.
+      logger.flush()
 
       # Execute the ninja build.
       cmd = [ninja_bin]

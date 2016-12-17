@@ -23,6 +23,7 @@ API Changes
 - update verbose logging behaviour when the same module was detected twice
 - `path.norm()` now makes sure that path is lowercased on Windows
 - renamed `load_module()` to `load()`, using the old name displays a warning
+- add `BaseLogger.flush()` method
 
 Library Changes
 
@@ -30,3 +31,10 @@ Library Changes
 - add `craftr.lib.zlib` (tested on Windows only)
 - add `uic()` and `moc()` target generators to `craftr.lib.qt5` (tested on Windows only)
 - `craftr.lib.cURLpp` always requires RTTI enabled
+
+Behaviour Changes
+
+- Build-directory is now removed again if nothing was exported (eg. when
+  using `craftr build` without formerly exporting the build files)
+- Output before Ninja is executed is now flushed to make sure all data is
+  flushed to the terminal before Ninja outputs to the pipe
