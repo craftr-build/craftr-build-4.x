@@ -40,7 +40,7 @@ if platform.name == 'win':
   if not options.nogui:
     dlib['libs'] += ['comctl32', 'gdi32', 'imm32']
 else:
-  dlib['libs'] += ['pthread']
+  dlib['libs'] += ['pthread', 'm']
   dlib['frameworks'] += [pkg_config('x11')]
   dlib['std'] = 'gnu++11'
 

@@ -44,8 +44,6 @@ main = cxx_binary(
 # Make a target that runs the application that we just compiled. If Qt5
 # is available, the directory with binaries (with shared libraries) will
 # be added to the PATH.
-run = gentarget(
-  commands = [[main, local('example.ini')]],
-  explicit=True,
+run = runtarget(main, local('example.ini'),
   environ = {'PATH': append_PATH(qt5.bin_dir if qt5 else None)}
 )
