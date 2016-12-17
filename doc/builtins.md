@@ -59,7 +59,7 @@ or retrieve the currently executed Craftr module from its `.module` member.
 
 ### `zip()`
 
-### `load_module()`
+### `load()`
 
 ### `load_file()`
 
