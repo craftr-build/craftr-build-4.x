@@ -135,7 +135,9 @@ def identify(program):
     # notices.
     for line in output.split('\n'):
       if 'stddef.h' in line:
-        if 'C1083' in line:  # C1083: can not open include file
+        if 'C1083' in line or 'C1034' in line:
+          # C1083: can not open include file
+          # C1034: no include path sep
           msg = 'MSVC can not compile a simple C program.\n  Program: {}\n  Output:\n\n{}'
           raise ToolDetectionError(msg.format(program, output))
         match = re.search('[\w\s]+:[\w\s]+:', line)
@@ -143,7 +145,8 @@ def identify(program):
           deps_prefix = match.group(0)
 
   if not deps_prefix:
-    warn('msvc_deps_prefix could not be determined, fallback on english string')
+    logger.warn('identify("{}"): msvc_deps_prefix could not be determined'.format(program))
+    logger.debug(output, indent = 1)
     deps_prefix = 'Note: including file:'
 
   return {
@@ -522,7 +525,11 @@ class MsvcToolkit(object):
       command += ['$in']
 
     command += ['/OUT:$out']
-    return builder.build([command], None, [output],
+
+    environ = None
+    if self.install_info:
+      environ = self.install_info['env']
+    return builder.build([command], None, [output], environ=environ,
       description='{} staticlib ($out)'.format(self.info['name']),
       metadata={'staticlib_output': output})
 
