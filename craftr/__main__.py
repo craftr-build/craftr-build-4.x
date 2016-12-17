@@ -227,6 +227,7 @@ class BuildCommand(BaseCommand):
 
       # Write the cache back.
       session.cache['build']['targets'] = list(session.graph.targets.keys())
+      session.cache['build']['modules'] = {k: list(map(str, v.keys())) for k, v in session.modules.items()}
       session.cache['build']['main'] = module.ident
       session.cache['build']['options'] = args.options
       if self.mode == 'export':
@@ -244,25 +245,33 @@ class BuildCommand(BaseCommand):
       parse_cmdline_options(session.cache['build']['options'])
       main = session.cache['build']['main']
       available_targets = frozenset(session.cache['build']['targets'])
+      available_modules = session.cache['build']['modules']
+      available_modules = {k: sorted(map(Version, v)) for k, v in available_modules.items()}
 
       logger.debug('build main module:', main)
       session.expand_relative_options(get_volatile_module_version(main)[0])
 
       # Check the targets and if they exist.
       targets = []
-      for target in args.targets:
-        if '.' not in target:
-          target = main + '.' + target
-        elif target.startswith('.'):
-          target = main + target
+      for target_name in args.targets:
+        if '.' not in target_name:
+          target_name = main + '.' + target_name
+        elif target_name.startswith('.'):
+          target_name = main + target_name
 
-        module_name, target = target.rpartition('.')[::2]
+        module_name, target_name = target_name.rpartition('.')[::2]
         module_name, version = get_volatile_module_version(module_name)
-        ref_module = session.find_module(module_name, version or '*')
-        target = craftr.targetbuilder.get_full_name(target, ref_module)
-        if target not in available_targets:
-          parser.error('no such target: {}'.format(target))
-        targets.append(target)
+
+        if module_name not in available_modules:
+          error('no such module:', module_name)
+        if not version:
+          version = available_modules[module_name][-1]
+
+        target_name = craftr.targetbuilder.get_full_name(
+            target_name, module_name=module_name, version=version)
+        if target_name not in available_targets:
+          parser.error('no such target: {}'.format(target_name))
+        targets.append(target_name)
 
       # Execute the ninja build.
       cmd = [ninja_bin]

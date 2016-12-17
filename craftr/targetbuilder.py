@@ -30,21 +30,22 @@ import collections
 import sys
 
 
-def get_full_name(target_name, module=None):
+def get_full_name(target_name, module=None, module_name=None, version=None):
   """
   Given a *target_name*, this function generates the fully qualified name of
   that target that includes the *module* name and version. If *module* is
   omitted, the currently executed module is used.
   """
 
-  if module is None:
+  if module is None and not module_name and version:
     if not session:
       raise RuntimeError('no session context')
     module = session.module
     if not module:
       raise RuntimeError('no current module')
+    module_name, version = module.name, module.version
 
-  return '{}.{}'.format(module.ident, target_name)
+  return '{}-{}.{}'.format(module_name, version, target_name)
 
 
 def gtn(target_name=None, name_hint=NotImplemented):
