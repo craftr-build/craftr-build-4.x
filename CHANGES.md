@@ -12,6 +12,7 @@ API Changes
 - add `craftr.utils.path.getmtime()` and `.getimtime()`
 - add `Module.scriptfile` property
 - add `Module.dependent_files` attribute
+- add `write_response_file(suffix='')` parameter
 - change `Target` objects can now be passed to the `frameworks = [...]` argument
   of target generators that use the `TargetBuilder` class. These input targets
   will automatically added to the implicit dependencies and their frameworks
@@ -32,6 +33,7 @@ Library Changes
   (actually implemented in `craftr.lang.cxx.common` and `craftr.lang.cxx.msvc`), see #154
 - change `craftr.lib.cURLpp` always requires RTTI enabled
 - change `craftr.lang.cxx.msvc` now adds the static input library generated for DLLs to the outputs
+- change MSVC `compile()` now supports response-files for long list of includes
 
 Behaviour Changes
 

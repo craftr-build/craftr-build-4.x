@@ -297,7 +297,7 @@ def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
   return gentarget([[target] + list(args)], inputs, outputs, name=name, **kwargs)
 
 
-def write_response_file(arguments, builder=None, name=None, force_file=False):
+def write_response_file(arguments, builder=None, name=None, force_file=False, suffix=''):
   """
   Creates a response-file with the specified *name* in the in the
   ``buildfiles/`` directory and writes the *arguments* list quoted into
@@ -317,7 +317,7 @@ def write_response_file(arguments, builder=None, name=None, force_file=False):
   if not name:
     if not builder:
       raise ValueError('builder must be specified if name is bot')
-    name = builder.name + '.response.txt'
+    name = builder.name + suffix + '.response.txt'
 
   if platform.name != 'win':
     return None, arguments

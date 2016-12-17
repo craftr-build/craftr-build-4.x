@@ -357,7 +357,12 @@ class MsvcToolkit(object):
     command = [self.programs.cl, '/nologo', '/c', '$in', '/Fo$out']
     command += ['/wd' + str(x) for x in builder.get_list('msvc_disable_warnings')]
     command += ['/we' + str(x) for x in builder.get_list('msvc_warnings_as_errors')]
-    command += ['/I' + x for x in builder.get_list('include')]
+
+    # Check if we need a response file for the includes.
+    include_args = ['/I' + x for x in builder.get_list('include')]
+    response_file, response_args = write_response_file(include_args, builder, suffix='.include')
+    command += response_args
+
     command += ['/D' + x for x in defines]
     command += ['/U' + x for x in undefines]
     command += ['/FI' + x for x in builder.get_list('forced_include')]
@@ -473,6 +478,7 @@ class MsvcToolkit(object):
 
     command = [self.programs.link, '/nologo']
 
+    # Check if we need a response file for the inputs.
     response_file, response_args = write_response_file(builder.inputs, builder)
     if response_file:
       command += response_args
