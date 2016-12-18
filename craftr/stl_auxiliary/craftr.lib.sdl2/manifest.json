@@ -7,12 +7,12 @@
     "craftr.lang.cxx": "*"
   },
   "options": {
-    "version": {"type": "string", "default": "2.0.5"},
-    "url": {"type": "string", "default": "https://www.libsdl.org/release/SDL2-${VERSION}.tar.gz"},
-    "directory": "path",
+    "version": {"type": "string", "default": "2.0.5", "help": "Version of the source code to obtain."},
+    "url": {"type": "string", "default": "https://www.libsdl.org/release/SDL2-${VERSION}.tar.gz", "help": "URL to obtain the source code from."},
+    "directory": {"type": "path", "help": "Directory pointing to the SDL2 source code. Takes preference over the \"url\" and \"version\" options."},
 
-    "static": {"type": "bool", "default": true},
-    "build_tests": "bool",
+    "static": {"type": "bool", "default": true, "help": "Build a static version of the library or obtain flags for static linking from pkg-config."},
+    "build_tests": {"type": "bool", "help": "Enable to build test programs. Can only be used when source code is available with the \"directory\" or \"url\" options."},
     "no_stdio_redirect": {"type": "bool", "default": true},
 
     "enable_audio": {"type": "bool", "default": true},
