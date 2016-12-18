@@ -18,7 +18,8 @@ from craftr import core
 from craftr.core.config import read_config_file, InvalidConfigError
 from craftr.core.logging import logger
 from craftr.core.session import session, Session, Module, MANIFEST_FILENAME
-from craftr.utils import path, shell
+from craftr.utils import path, shell, tty
+from operator import attrgetter
 from nr.types.version import Version, VersionCriteria
 
 import abc
@@ -35,6 +36,10 @@ import textwrap
 
 CONFIG_FILENAME = '.craftrconfig'
 
+
+def textfill(text, width=None, indent=0, fillchar=' '):
+  prefix = fillchar * indent
+  return prefix + ('\n' + prefix).join(textwrap.wrap(text))
 
 def parse_cmdline_options(options):
   for item in options:
@@ -255,23 +260,33 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
 class BuildCommand(BaseCommand):
 
   def __init__(self, mode):
-    assert mode in ('clean', 'build', 'export', 'run')
+    assert mode in ('clean', 'build', 'export', 'run', 'dump-options', 'dump-deptree')
     self.mode = mode
 
   def build_parser(self, parser):
+    add_arg = parser.add_argument
+
     # Inherit options from main parser so they can also be specified
     # after the sub-command.
-    parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('-d', '--option', dest='options', action='append', default=[])
+    add_arg('-v', '--verbose', action='store_true')
 
-    if self.mode in ('export', 'run'):
-      parser.add_argument('-m', '--module')
-    else:
-      parser.add_argument('targets', metavar='TARGET', nargs='*')
+    if self.mode not in ('dump-options', 'dump-deptree'):
+      add_arg('-d', '--option', dest='options', action='append', default=[])
+
+    if self.mode in ('export', 'run', 'dump-options', 'dump-deptree'):
+      add_arg('-m', '--module')
+      add_arg('-i', '--include-path', action='append', default=[])
+    elif self.mode in ('build', 'clean'):
+      add_arg('targets', metavar='TARGET', nargs='*')
+
+    if self.mode == 'dump-options':
+      add_arg('-r', '--recursive', action='store_true')
+      add_arg('-d', '--details', action='store_true')
+
     if self.mode == 'clean':
       parser.add_argument('-r', '--recursive', action='store_true')
+
     parser.add_argument('-b', '--build-dir', default='build')
-    parser.add_argument('-i', '--include-path', action='append', default=[])
 
   def __cleanup(self, parser, args):
     """
@@ -286,142 +301,228 @@ class BuildCommand(BaseCommand):
 
   @finally_(__cleanup)
   def execute(self, parser, args):
-    session.path.extend(map(path.norm, args.include_path))
+    if hasattr(args, 'include_path'):
+      session.path.extend(map(path.norm, args.include_path))
 
-    if self.mode in ('export', 'run'):
-      # Determine the module to execute, either from the current working
-      # directory or find it by name if one is specified.
-      if not args.module:
-        for fn in [MANIFEST_FILENAME, path.join('craftr', MANIFEST_FILENAME)]:
-          if path.isfile(fn):
-            module = session.parse_manifest(fn)
-            break
-        else:
-          parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
-      else:
-        # TODO: For some reason, prints to stdout are not visible here.
-        # TODO: Prints to stderr however work fine.
-        try:
-          module_name, version = parse_module_spec(args.module)
-        except ValueError as exc:
-          parser.error('{} (note: you have to escape > and < characters)'.format(exc))
-        try:
-          module = session.find_module(module_name, version)
-        except Module.NotFound as exc:
-          parser.error('module not found: ' + str(exc))
-    else:
-      module = None
-
-    ninja_bin, ninja_version = get_ninja_info()
+    module = self._find_module(parser, args)
+    self.ninja_bin, self.ninja_version = get_ninja_info()
 
     # Create and switch to the build directory.
     session.builddir = path.abs(args.build_dir)
     path.makedirs(session.builddir)
     os.chdir(session.builddir)
+    self.cachefile = path.join(session.builddir, '.craftrcache')
+
+    # Prepare options, loaders and execute.
+    if self.mode in ('export', 'run'):
+      return self._export_or_run(args, module)
+    elif self.mode == 'dump-options':
+      return self._dump_options(args, module)
+    elif self.mode == 'dump-deptree':
+      return self._dump_deptree(args, module)
+    elif self.mode in ('build', 'clean'):
+      return self._build_or_clean(args)
+    else:
+      raise RuntimeError("mode: {}".format(self.mode))
+
+  def _find_module(self, parser, args):
+    """
+    Find the main Craftr module that is to be executed. Returns None in
+    modes that do not require a main module.
+    """
+
+    if self.mode not in ('export', 'run', 'dump-options', 'dump-deptree'):
+      return None
+
+    # Determine the module to execute, either from the current working
+    # directory or find it by name if one is specified.
+    if not args.module:
+      for fn in [MANIFEST_FILENAME, path.join('craftr', MANIFEST_FILENAME)]:
+        if path.isfile(fn):
+          module = session.parse_manifest(fn)
+          break
+      else:
+        parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
+    else:
+      # TODO: For some reason, prints to stdout are not visible here.
+      # TODO: Prints to stderr however work fine.
+      try:
+        module_name, version = parse_module_spec(args.module)
+      except ValueError as exc:
+        parser.error('{} (note: you have to escape > and < characters)'.format(exc))
+      try:
+        module = session.find_module(module_name, version)
+      except Module.NotFound as exc:
+        parser.error('module not found: ' + str(exc))
+
+    return module
+
+  def _export_or_run(self, args, module):
+    """
+    Called when the mode is 'export' or 'run'. Will execute the specified
+    *module* and eventually export a Ninja manifest and Cache.
+    """
+
+    session.expand_relative_options(module.manifest.name)
+    session.cache['build'] = {}
+    try:
+      module.run()
+    except Module.InvalidOption as exc:
+      for error in exc.format_errors():
+        logger.error(error)
+      return 1
+    except craftr.defaults.ModuleError as exc:
+      logger.error('error:', exc)
+      return 1
+    finally:
+      if sys.exc_info() and self.mode == 'export':
+        # We still want to write the cache, especially so that data already
+        # loaded with loaders doesn't need to be re-loaded. They'll find out
+        # when the cached information was not valid.
+        write_cache(self.cachefile)
+
+    # Fill the cache.
+    session.cache['build']['targets'] = list(session.graph.targets.keys())
+    session.cache['build']['modules'] = serialise_loaded_module_info()
+    session.cache['build']['main'] = module.ident
+    session.cache['build']['options'] = args.options
+
+    if self.mode == 'export':
+      write_cache(self.cachefile)
+
+      # Write the Ninja manifest.
+      with open("build.ninja", 'w') as fp:
+        platform = core.build.get_platform_helper()
+        context = core.build.ExportContext(self.ninja_version)
+        writer = core.build.NinjaWriter(fp)
+        session.graph.export(writer, context, platform)
+        logger.info('exported "build.ninja"')
+    return 0
+
+  def _dump_options(self, args, module):
+    width = tty.terminal_size()[0]
+
+    print()
+    title = '{} (v{})'.format(module.manifest.name, module.manifest.version)
+    print(title)
+
+    if args.details:
+      print('-' * len(title))
+      print()
+      if module.manifest.description:
+        print('Description:\n')
+        print(textfill(module.manifest.description, indent = 2))
+        print()
+
+      print('Options:\n')
+
+    for option in sorted(module.manifest.options.values(), key = attrgetter('name')):
+      line = '  ' + option.name
+      info = option.alias
+      if option.inherit:
+        info += ', inheritable'
+      remain = width - len(line) - len(info)
+      default = repr(option.default)
+      default_inline = False
+      if len(default) < (remain - 4): # 3 spaces and 2 parenthesis
+        default_inline = True
+        info = '({}) '.format(default) + info
+        remain -= len(default) + 3
+
+      print(line + ' ' * remain + info)
+      if not default_inline:
+        print('    ({})'.format(default))
+      if args.details:
+        if option.help:
+          print()
+          print(textfill(option.help, indent = 4))
+        print()
+
+    if args.recursive:
+      for name, version in module.manifest.dependencies.items():
+        print()
+        self._dump_options(args, session.find_module(name, version))
+    return 0
+
+  def _dump_deptree(self, args, module, indent=0, index=0):
+    if indent == 0 and index == 0:
+      print()
+    print('  ' * indent + '{} (v{})'.format(module.manifest.name, module.manifest.version))
+    for index, (name, version) in enumerate(module.manifest.dependencies.items()):
+      self._dump_deptree(args, session.find_module(name, version), indent=indent+1, index=index)
+    return 0
+
+  def _build_or_clean(self, args):
+    """
+    Will be called for the 'build' and 'clean' modes. Loads the Craftr
+    cache and invokes Ninja.
+    """
 
     # Read the cache and parse command-line options.
-    cachefile = path.join(session.builddir, '.craftrcache')
-    if not read_cache(cachefile) and self.mode != 'export':
+    if not read_cache(self.cachefile):
       logger.error('Unable to find file: .craftrcache')
       logger.error('Does not seemt to be a build directory: {}'.format(session.builddir))
       logger.error("Export build information using the 'craftr export' command.")
       return 1
 
-    # Prepare options, loaders and execute.
-    if self.mode in ('export', 'run'):
-      session.expand_relative_options(module.manifest.name)
-      session.cache['build'] = {}
-      try:
-        module.run()
-      except Module.InvalidOption as exc:
-        for error in exc.format_errors():
-          logger.error(error)
-        return 1
-      except craftr.defaults.ModuleError as exc:
-        logger.error('error:', exc)
-        return 1
-      finally:
-        if sys.exc_info() and self.mode == 'export':
-          # We still want to write the cache, especially so that data already
-          # loaded with loaders doesn't need to be re-loaded. They'll find out
-          # when the cached information was not valid.
-          write_cache(cachefile)
+    parse_cmdline_options(session.cache['build']['options'])
+    main = session.cache['build']['main']
+    available_targets = frozenset(session.cache['build']['targets'])
+    available_modules = unserialise_loaded_module_info(session.cache['build']['modules'])
 
-      # Write the cache back.
-      session.cache['build']['targets'] = list(session.graph.targets.keys())
-      session.cache['build']['modules'] = serialise_loaded_module_info()
-      session.cache['build']['main'] = module.ident
-      session.cache['build']['options'] = args.options
-      if self.mode == 'export':
-        write_cache(cachefile)
+    logger.debug('build main module:', main)
+    session.expand_relative_options(get_volatile_module_version(main)[0])
 
-        # Write the Ninja manifest.
-        with open("build.ninja", 'w') as fp:
-          platform = core.build.get_platform_helper()
-          context = core.build.ExportContext(ninja_version)
-          writer = core.build.NinjaWriter(fp)
-          session.graph.export(writer, context, platform)
-          logger.info('exported "build.ninja"')
+    # Check if any of the modules changed, so we can let the user know he
+    # might have to re-export the build files.
+    changed_modules = []
+    for name, versions in available_modules.items():
+      for version, info in versions.items():
+        if info['changed']:
+          changed_modules.append('{}-{}'.format(name, version))
+    if changed_modules:
+      if len(changed_modules) == 1:
+        logger.info('note: module "{}" has changed, maybe you should re-export'.format(changed_modules[0]))
+      else:
+        logger.info('note: some modules have changed, maybe you should re-export')
+        for name in changed_modules:
+          logger.info('  -', name)
 
-    else:
-      parse_cmdline_options(session.cache['build']['options'])
-      main = session.cache['build']['main']
-      available_targets = frozenset(session.cache['build']['targets'])
-      available_modules = unserialise_loaded_module_info(session.cache['build']['modules'])
+    # Check the targets and if they exist.
+    targets = []
+    for target_name in args.targets:
+      if '.' not in target_name:
+        target_name = main + '.' + target_name
+      elif target_name.startswith('.'):
+        target_name = main + target_name
 
-      logger.debug('build main module:', main)
-      session.expand_relative_options(get_volatile_module_version(main)[0])
+      module_name, target_name = target_name.rpartition('.')[::2]
+      module_name, version = get_volatile_module_version(module_name)
 
-      # Check if any of the modules changed, so we can let the user know he
-      # might have to re-export the build files.
-      changed_modules = []
-      for name, versions in available_modules.items():
-        for version, info in versions.items():
-          if info['changed']:
-            changed_modules.append('{}-{}'.format(name, version))
-      if changed_modules:
-        if len(changed_modules) == 1:
-          logger.info('note: module "{}" has changed, maybe you should re-export'.format(changed_modules[0]))
-        else:
-          logger.info('note: some modules have changed, maybe you should re-export')
-          for name in changed_modules:
-            logger.info('  -', name)
+      if module_name not in available_modules:
+        error('no such module:', module_name)
+      if not version:
+        version = max(available_modules[module_name].keys())
 
-      # Check the targets and if they exist.
-      targets = []
-      for target_name in args.targets:
-        if '.' not in target_name:
-          target_name = main + '.' + target_name
-        elif target_name.startswith('.'):
-          target_name = main + target_name
+      target_name = craftr.targetbuilder.get_full_name(
+          target_name, module_name=module_name, version=version)
+      if target_name not in available_targets:
+        parser.error('no such target: {}'.format(target_name))
+      targets.append(target_name)
 
-        module_name, target_name = target_name.rpartition('.')[::2]
-        module_name, version = get_volatile_module_version(module_name)
+    # Make sure we get all the output before running the subcommand.
+    logger.flush()
 
-        if module_name not in available_modules:
-          error('no such module:', module_name)
-        if not version:
-          version = max(available_modules[module_name].keys())
-
-        target_name = craftr.targetbuilder.get_full_name(
-            target_name, module_name=module_name, version=version)
-        if target_name not in available_targets:
-          parser.error('no such target: {}'.format(target_name))
-        targets.append(target_name)
-
-      # Make sure we get all the output before running the subcommand.
-      logger.flush()
-
-      # Execute the ninja build.
-      cmd = [ninja_bin]
-      if args.verbose:
-        cmd += ['-v']
-      if self.mode == 'clean':
-        cmd += ['-t', 'clean']
-        if not args.recursive:
-          cmd += ['-r']
-      cmd += targets
-      return shell.run(cmd).returncode
+    # Execute the ninja build.
+    cmd = [self.ninja_bin]
+    if args.verbose:
+      cmd += ['-v']
+    if self.mode == 'clean':
+      cmd += ['-t', 'clean']
+      if not args.recursive:
+        cmd += ['-r']
+    cmd += targets
+    return shell.run(cmd).returncode
 
 
 class StartpackageCommand(BaseCommand):
@@ -502,6 +603,8 @@ def main():
     'build': BuildCommand('build'),
     'export': BuildCommand('export'),
     'run': BuildCommand('run'),
+    'options': BuildCommand('dump-options'),
+    'deptree': BuildCommand('dump-deptree'),
     'startpackage': StartpackageCommand(),
     'version': VersionCommand()
   }

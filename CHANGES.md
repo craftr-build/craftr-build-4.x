@@ -49,3 +49,8 @@ Behaviour Changes
   the build data (ie. manifests and Craftrfiles) have changed since the build
   files was generated and notifies the user in that case (see #162)
 
+Command-line Changes
+
+- add `craftr options [-m MODULE] [-r] [-d]` command (see #166)
+- add `craftr deptree [-m MODULE]` command (see #166)
+- fix `craftr run` command
