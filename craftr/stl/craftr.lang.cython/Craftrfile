@@ -213,5 +213,4 @@ def cython_compile(*args, name=None, **kwargs):
 def cython_project(*args, name=None, **kwargs):
   return cythonc.project(*args, name=gtn(name, None), **kwargs)
 
-
 __all__ = ['cython_compile', 'cython_project']

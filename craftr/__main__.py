@@ -260,7 +260,8 @@ class BaseCommand(object, metaclass=abc.ABCMeta):
 class BuildCommand(BaseCommand):
 
   def __init__(self, mode):
-    assert mode in ('clean', 'build', 'export', 'run', 'dump-options', 'dump-deptree')
+    assert mode in ('clean', 'build', 'export', 'run', 'help',
+                    'dump-options', 'dump-deptree')
     self.mode = mode
 
   def build_parser(self, parser):
@@ -273,7 +274,7 @@ class BuildCommand(BaseCommand):
     if self.mode not in ('dump-options', 'dump-deptree'):
       add_arg('-d', '--option', dest='options', action='append', default=[])
 
-    if self.mode in ('export', 'run', 'dump-options', 'dump-deptree'):
+    if self.mode in ('export', 'run', 'help', 'dump-options', 'dump-deptree'):
       add_arg('-m', '--module')
       add_arg('-i', '--include-path', action='append', default=[])
     elif self.mode in ('build', 'clean'):
@@ -284,9 +285,17 @@ class BuildCommand(BaseCommand):
       add_arg('-d', '--details', action='store_true')
 
     if self.mode == 'clean':
-      parser.add_argument('-r', '--recursive', action='store_true')
+      add_arg('-r', '--recursive', action='store_true')
 
-    parser.add_argument('-b', '--build-dir', default='build')
+    if self.mode == 'help':
+      add_arg('name', help='The name of the symbols to show help for. Must be '
+        'in the format <module>:<symbol> where <module> is the name of a '
+        'Craftr module. The <module>: bit is optiona. If only <symbol> is '
+        'specified and is built-in name, nothing will be executed. Otherwise, '
+        'the <module>: bit will default to the current main module.',
+        nargs='?')
+
+    add_arg('-b', '--build-dir', default='build')
 
   def __cleanup(self, parser, args):
     """
@@ -304,6 +313,22 @@ class BuildCommand(BaseCommand):
     if hasattr(args, 'include_path'):
       session.path.extend(map(path.norm, args.include_path))
 
+    # Help-command preprocessing. Check if we're to show the help on a builtin
+    # object, otherwise extract the module name if applicable.
+    if self.mode == 'help':
+      if not args.name:
+        help('craftr')
+        return 0
+      if args.name in vars(craftr.defaults):
+        help(getattr(craftr.defaults, args.name))
+        return 0
+      # Check if we have an absolute symbol reference.
+      if ':' in args.name:
+        if args.module:
+          parser.error('-m/--module option conflicting with name argument: "{}"'
+            .format(args.name))
+        args.module, args.name = args.name.split(':', 1)
+
     module = self._find_module(parser, args)
     self.ninja_bin, self.ninja_version = get_ninja_info()
 
@@ -314,8 +339,8 @@ class BuildCommand(BaseCommand):
     self.cachefile = path.join(session.builddir, '.craftrcache')
 
     # Prepare options, loaders and execute.
-    if self.mode in ('export', 'run'):
-      return self._export_or_run(args, module)
+    if self.mode in ('export', 'run', 'help'):
+      return self._export_run_or_help(args, module)
     elif self.mode == 'dump-options':
       return self._dump_options(args, module)
     elif self.mode == 'dump-deptree':
@@ -331,7 +356,7 @@ class BuildCommand(BaseCommand):
     modes that do not require a main module.
     """
 
-    if self.mode not in ('export', 'run', 'dump-options', 'dump-deptree'):
+    if self.mode not in ('export', 'run', 'help', 'dump-options', 'dump-deptree'):
       return None
 
     # Determine the module to execute, either from the current working
@@ -342,22 +367,25 @@ class BuildCommand(BaseCommand):
           module = session.parse_manifest(fn)
           break
       else:
-        parser.error('"{}" does not exist'.format(MANIFEST_FILENAME))
+        logger.error('"{}" does not exist'.format(MANIFEST_FILENAME))
+        sys.exit(1)
     else:
       # TODO: For some reason, prints to stdout are not visible here.
       # TODO: Prints to stderr however work fine.
       try:
         module_name, version = parse_module_spec(args.module)
       except ValueError as exc:
-        parser.error('{} (note: you have to escape > and < characters)'.format(exc))
+        logger.error('{} (note: you have to escape > and < characters)'.format(exc))
+        sys.exit(1)
       try:
         module = session.find_module(module_name, version)
       except Module.NotFound as exc:
-        parser.error('module not found: ' + str(exc))
+        logger.error('module not found: ' + str(exc))
+        sys.exit(1)
 
     return module
 
-  def _export_or_run(self, args, module):
+  def _export_run_or_help(self, args, module):
     """
     Called when the mode is 'export' or 'run'. Will execute the specified
     *module* and eventually export a Ninja manifest and Cache.
@@ -397,6 +425,14 @@ class BuildCommand(BaseCommand):
         writer = core.build.NinjaWriter(fp)
         session.graph.export(writer, context, platform)
         logger.info('exported "build.ninja"')
+
+    elif self.mode == 'help':
+      if args.name not in vars(module.namespace):
+        logger.error('symbol not found: "{}:{}"'.format(
+          module.manifest.name, args.name))
+        return 1
+      help(getattr(module.namespace, args.name))
+
     return 0
 
   def _dump_options(self, args, module):
@@ -603,6 +639,7 @@ def main():
     'build': BuildCommand('build'),
     'export': BuildCommand('export'),
     'run': BuildCommand('run'),
+    'help': BuildCommand('help'),
     'options': BuildCommand('dump-options'),
     'deptree': BuildCommand('dump-deptree'),
     'startpackage': StartpackageCommand(),
