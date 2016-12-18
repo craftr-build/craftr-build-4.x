@@ -53,4 +53,5 @@ Command-line Changes
 
 - add `craftr options [-m MODULE] [-r] [-d]` command (see #166)
 - add `craftr deptree [-m MODULE]` command (see #166)
+- add `craftr help [name]` command (see #167)
 - fix `craftr run` command
