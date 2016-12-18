@@ -310,7 +310,7 @@ class BaseOption(object, metaclass=abc.ABCMeta):
   def __init__(self, name, inherit=True, help=None, default=None):
     self.name = name
     self.inherit = inherit
-    self.help = None
+    self.help = help
     self.default = default
 
   @abc.abstractmethod
@@ -325,6 +325,8 @@ class BoolOption(BaseOption):
   Represents a boolean option. Supports the identifiers "yes", "true",
   "1", "no", "false" and "0".
   """
+
+  alias = 'bool'
 
   def __init__(self, name, default=False, **kwargs):
     super().__init__(name, default=default, **kwargs)
@@ -350,6 +352,8 @@ class TripletOption(BoolOption):
   "null" and "none" (which maps to :const:`None`).
   """
 
+  alias = 'triplet'
+
   def __call__(self, value):
     try:
       return super().__call__(value)
@@ -368,6 +372,8 @@ class StringOption(BaseOption):
   Plain-string option.
   """
 
+  alias = 'string'
+
   def __init__(self, name, default='', **kwargs):
     super().__init__(name, **kwargs)
     self.default = default
@@ -382,6 +388,8 @@ class PathOption(StringOption):
   paths. It is assumed that relative paths are specified relative to
   :attr:`Session.maindir`.
   """
+
+  alias = 'path'
 
   def __call__(self, value):
     from craftr.core.session import session
