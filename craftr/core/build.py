@@ -29,8 +29,11 @@ from craftr.utils.singleton import Default
 from ninja_syntax import Writer as NinjaWriter
 
 import abc
+import base64
+import lzma
 import ninja_syntax
 import os
+import pickle
 import re
 import stat
 import sys
@@ -61,6 +64,11 @@ class Graph(object):
   Note that all filenames in the Graph are absolute and normalized with
   the :func:`path.norm` function.
 
+  .. attribute:: tasks
+
+    Read-only. A dictionary of all :class:`Tasks<Task>` that have been
+    added to the Graph.
+
   .. attribute:: target
 
     Read-only. A dictionary of all the :class:`Targets<Target>` that have
@@ -82,6 +90,7 @@ class Graph(object):
   """
 
   def __init__(self):
+    self.tasks = {}
     self.targets = {}
     self.infiles = {}
     self.outfiles = {}
@@ -123,6 +132,27 @@ class Graph(object):
       other = self.outfiles.setdefault(outfile, target)
       if other is not target:
         raise DuplicateOutputError(outfile, target, other)
+
+  def add_task(self, task, **kwargs):
+    """
+    Add a :class:`Task` to the Graph. Creates a :class:`Target` for the task
+    and returns it.
+
+    :param task: The :class:`Task` to add to the Graph.
+    :param kwargs: Additional parameters for the :class:`Target` constructor.
+    """
+
+    argspec.validate('task', task, {'type': Task})
+    if task.name in self.tasks:
+      raise ValueError('a task with the name {!r} already exists'
+        .format(task.name))
+
+    target = Target(task.name, [task.get_command()], task = task, **kwargs)
+    assert target.task is task
+    self.add_target(target)
+    self.tasks[task.name] = task
+    return target
+
 
   def export(self, writer, context, platform):
     """
@@ -170,7 +200,7 @@ class Target(object):
                order_only_deps=(), pool=None, deps=None, depfile=None,
                msvc_deps_prefix=None, explicit=False, foreach=False,
                description=None, metadata=None, cwd=None, environ=None,
-               frameworks=()):
+               frameworks=(), task=None):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
@@ -190,6 +220,7 @@ class Target(object):
     argspec.validate('cwd', cwd, {'type': [None, str]})
     argspec.validate('environ', environ, {'type': [None, dict]})
     argspec.validate('frameworks', frameworks, {'type': [list, tuple], 'items': {'type': dict}})
+    argspec.validate('task', task, {'type': [None, Task]})
 
     def expand_mixed_list(mixed, implicit_deps, mode):
       result = []
@@ -240,6 +271,7 @@ class Target(object):
     self.cwd = cwd
     self.environ = environ or {}
     self.frameworks = frameworks
+    self.task = task
 
     if self.foreach and len(self.inputs) != len(self.outputs):
       raise ValueError('foreach target must have the same number of output '
@@ -393,6 +425,61 @@ class Tool(object):
           accept_additional_args=True)
       self.exported_command = shell.join(command)
     writer.variable(name, self.exported_command)
+
+
+class Task(object):
+  """
+  Represents a task that can be executed via ``craftr run <task> <args...>``.
+  A task is a Python function that accepts arguments from the command-line.
+  """
+
+  def __init__(self, name, func, args):
+    self.name = name
+    self.func = func
+    self.args = args
+
+  def __repr__(self):
+    return '<Task {!r}>'.format(self.name)
+
+  def get_command(self):
+    return ['$Craftr_run_command', self.name] + self.pickle_args(self.args)
+
+  def invoke(self, args):
+    args = self.unpickle_args(args)
+    return self.func(*args)
+
+  @staticmethod
+  def pickle_args(args):
+    """
+    Converts a list of arguments that may contain Python objects to a list of
+    plain strings containing only printable characters. Python objects are
+    pickled, compressed and then encoded in base64.
+    """
+
+    result = []
+    for item in args:
+      if isinstance(item, str):
+        result.append(item)
+      else:
+        dump = pickle.dumps(item)
+        result.append('pickle://' + base64.b64encode(lzma.compress(dump)).decode('ascii'))
+    return result
+
+  @staticmethod
+  def unpickle_args(args):
+    """
+    Reverts :meth:`pickle_args`.
+    """
+
+    result = []
+    for item in args:
+      assert isinstance(item, str)
+      if item.startswith('pickle://'):
+        dump = lzma.decompress(base64.b64decode(item[9:]))
+        result.append(pickle.loads(dump))
+      else:
+        result.append(item)
+    return result
 
 
 class ExportContext(object):

@@ -286,6 +286,32 @@ def genalias(*targets, name = None, **kwargs):
     implicit_deps = targets, **kwargs)
 
 
+def gentask(func, args, inputs = (), outputs = (), name = None, **kwargs):
+  """
+  Create a Task that can be embedded into the build chain. Tasks can have input
+  and output files that cause the task to be embedded into the build chain. By
+  default, tasks need to be explicitly built or required by other targets.
+
+  :param func: A function to call to execute the task. It must accept a
+    variable number of arguments, which are the arguments passed via the *args*
+    parameter. This function will be called from Ninja using the ``craftr run``
+    command.
+  :param args: A list of arguments to pass to *func*. Note that non-string
+    arguments will be pickled, compressed and and encoded in base64, prefixed
+    with the string `pickle://`. These will be unpickled when the task is run.
+    Note that ``$in`` and ``$out`` will be expanded in this argument list.
+  :param inputs: A list of input files.
+  :param inputs: A list of output files.
+  :param name: Alternative target name.
+  :param kwargs: Additional parameters for the :class:`Task` constructor.
+  :return: A :class:`Target` object.
+  """
+
+  builder = TargetBuilder(gtn(name), inputs = inputs)
+  task = _build.Task(builder.name, func, args)
+  return session.graph.add_task(task, inputs = builder.inputs, outputs = outputs)
+
+
 def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
   """
   Simplification of :func:`gentarget` to make it more obvious that a

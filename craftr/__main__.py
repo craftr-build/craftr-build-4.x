@@ -35,6 +35,7 @@ import sys
 import textwrap
 
 CONFIG_FILENAME = '.craftrconfig'
+INIT_DIR = path.getcwd()
 
 
 def textfill(text, width=None, indent=0, fillchar=' '):
@@ -280,6 +281,10 @@ class BuildCommand(BaseCommand):
     elif self.mode in ('build', 'clean'):
       add_arg('targets', metavar='TARGET', nargs='*')
 
+    if self.mode == 'run':
+      add_arg('task', nargs='?')
+      add_arg('task_args', nargs='*')
+
     if self.mode == 'dump-options':
       add_arg('-r', '--recursive', action='store_true')
       add_arg('-d', '--details', action='store_true')
@@ -333,7 +338,7 @@ class BuildCommand(BaseCommand):
     self.ninja_bin, self.ninja_version = get_ninja_info()
 
     # Create and switch to the build directory.
-    session.builddir = path.abs(args.build_dir)
+    session.builddir = path.abs(path.norm(args.build_dir, INIT_DIR))
     path.makedirs(session.builddir)
     os.chdir(session.builddir)
     self.cachefile = path.join(session.builddir, '.craftrcache')
@@ -418,6 +423,17 @@ class BuildCommand(BaseCommand):
     session.cache['build']['options'] = args.options
 
     if self.mode == 'export':
+      # Add the Craftr_run_command variable which is necessary for tasks
+      # to properly executed.
+      run_command = ['craftr', '-q', '-P', path.rel(session.maindir)]
+      if args.no_config: run_command += ['-C']
+      run_command += ['-c' + x for x in args.config]
+      run_command += ['run']
+      if args.module: run_command += ['-m', args.module]
+      run_command += ['-i' + x for x in args.include_path]
+      run_command += ['-b', path.rel(session.builddir)]
+      session.graph.vars['Craftr_run_command'] = shell.join(run_command)
+
       write_cache(self.cachefile)
 
       # Write the Ninja manifest.
@@ -427,6 +443,16 @@ class BuildCommand(BaseCommand):
         writer = core.build.NinjaWriter(fp)
         session.graph.export(writer, context, platform)
         logger.info('exported "build.ninja"')
+      return 0
+
+    elif self.mode == 'run':
+      if args.task:
+        if args.task not in session.graph.tasks:
+          logger.error('no such task exists: "{}"'.format(args.task))
+          return 1
+        task = session.graph.tasks[args.task]
+        return task.invoke(args.task_args)
+      return 0
 
     elif self.mode == 'help':
       if args.name not in vars(module.namespace):
@@ -434,8 +460,9 @@ class BuildCommand(BaseCommand):
           module.manifest.name, args.name))
         return 1
       help(getattr(module.namespace, args.name))
+      return 0
 
-    return 0
+    assert False, "unhandled mode: {}".format(self.mode)
 
   def _dump_options(self, args, module):
     width = tty.terminal_size()[0]
@@ -633,6 +660,7 @@ def main():
   parser.add_argument('-q', '--quiet', action='store_true')
   parser.add_argument('-c', '--config', action='append', default=[])
   parser.add_argument('-C', '--no-config', action='store_true')
+  parser.add_argument('-P', '--project-dir')
   parser.add_argument('-d', '--option', dest='options', action='append', default=[])
   subparsers = parser.add_subparsers(dest='command')
 
@@ -657,6 +685,8 @@ def main():
     parser.print_usage()
     return 0
 
+  if args.project_dir:
+    os.chdir(args.project_dir)
   if args.verbose:
     logger.set_level(logger.DEBUG)
   elif args.quiet:

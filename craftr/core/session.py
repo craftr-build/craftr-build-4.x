@@ -139,6 +139,7 @@ class Session(object):
     self.modules = {}
     self.options = {}
     self.cache = {}
+    self.tasks = {}
     self._tempdir = None
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
