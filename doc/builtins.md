@@ -39,6 +39,22 @@ and Craftr packages. Sometimes you will want to modify its `.options` member
 or retrieve the currently executed Craftr module from its `.module` member.
 
 
+## Data
+
+### `Default`
+
+A singleton that can be used in places where `None` can not be used as a
+placeholder because it infers another special meaning. This is often used
+for `suffix` parameters of target generators.
+
+```python
+if suffix is Default:
+  suffix = derive_suffix_from_context()
+if suffix is not None:
+  output = path.addsuffix(output, suffix)
+```
+
+
 ## Functions
 
 ### `gtn()`
