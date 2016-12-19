@@ -391,6 +391,8 @@ class BuildCommand(BaseCommand):
     *module* and eventually export a Ninja manifest and Cache.
     """
 
+    read_cache(self.cachefile)
+
     session.expand_relative_options(module.manifest.name)
     session.cache['build'] = {}
     try:
