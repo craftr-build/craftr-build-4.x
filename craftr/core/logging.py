@@ -100,16 +100,32 @@ class DefaultLogger(BaseLogger):
     self._indent = 0
     self._progress = None
     self._line_alive = False
+    self._last_module_name = None
 
   def log(self, level, *objects, sep=' ', end='\n', indent=0):
+    from craftr.core.session import session
+    module = session.module if session else None
     if level < self._level:
       return
+    width = tty.terminal_size()[0] - 1
     if self._progress:
       tty.clear_line()
+    lines = sep.join(map(str, objects)).split('\n')
     prefix = '' if self._line_alive else self._indent_seq * (self._indent + indent)
     prefix += tty.compile(self.level_colors[level])
-    content = sep.join(map(str, objects))
-    for line in content.split('\n'):
+
+    if module:
+      name = '(' + module.manifest.name + ':{})'.format(module.current_line)
+    if lines and module and name != self._last_module_name:
+      self._last_module_name = name
+      rem = width - len(name)
+      if len(lines[0]) < rem - 1:
+        print(prefix + lines[0] + ' ' * (rem - 1 - len(lines[0])), name + tty.reset)
+        lines.pop(0)
+      else:
+        print(' ' * rem + name)
+
+    for line in lines:
       print(prefix + line + tty.reset, end=end, file=self._stream)
     self._line_alive = ('\n' not in end)
     if self._progress and 'progress' in self._progress:

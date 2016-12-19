@@ -14,6 +14,7 @@ API Changes
 - add `Module.dependent_files` attribute
 - add `write_response_file(suffix='')` parameter
 - add `Default` singleton to built-in namespace
+- add `craftr.core.session.Module.current_line` property
 - change `Target` objects can now be passed to the `frameworks = [...]` argument
   of target generators that use the `TargetBuilder` class. These input targets
   will automatically added to the implicit dependencies and their frameworks
@@ -50,6 +51,8 @@ Behaviour Changes
 - When using `craftr build`, Craftr now checks if any of the files that generated
   the build data (ie. manifests and Craftrfiles) have changed since the build
   files was generated and notifies the user in that case (see #162)
+- `craftr.core.logging.DefaultLogger` now logs the module and line number from
+  which the log occurred, padded to the right side of the terminal
 
 Command-line Changes
 

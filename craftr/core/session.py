@@ -30,6 +30,7 @@ from nr.types.version import Version, VersionCriteria
 
 import json
 import os
+import sys
 import tempfile
 import types
 import werkzeug
@@ -468,6 +469,21 @@ class Module(object):
       'project_dir': self.project_dir
     })
     return result
+
+  @property
+  def current_line(self):
+    """
+    This property is only accessible when the module is currently begin
+    executed, and only from within the same thread. Returns the line at
+    which the module is currently being executed.
+    """
+
+    frame = sys._getframe()
+    while frame and frame.f_globals is not vars(self.namespace):
+      frame = frame.f_back
+    if not frame:
+      raise RuntimeError('module frame not found')
+    return frame.f_lineno
 
 
 #: Proxy object that points to the current :class:`Session` object.
