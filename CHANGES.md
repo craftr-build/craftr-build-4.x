@@ -32,6 +32,7 @@ Library Changes
 - add `uic()` and `moc()` target generators to `craftr.lib.qt5` (tested on Windows only)
 - add support for `source_directory` argument in `cxx.c_compile()` and `cxx.cpp_compile()`
   (actually implemented in `craftr.lang.cxx.common` and `craftr.lang.cxx.msvc`), see #154
+- add `craftr.lang.csharp:compile()` to be used for unstarred import, and add docstrings
 - change `craftr.lib.cURLpp` always requires RTTI enabled
 - change `craftr.lang.cxx.msvc` now adds the static input library generated for DLLs to the outputs
 - change MSVC `compile()` now supports response-files for long list of includes

@@ -35,28 +35,31 @@ class CsCompiler(object):
     self.program = program or options.csc or CSC
     self.runprefix = shell.split(runprefix or options.runprefix or RUNPREFIX)
 
-  def compile(self, output, srcs, target='exe', defines=(),
+  def compile(self, output, sources, target='exe', suffix=Default, defines=(),
       optimize=True, warn=None, warnaserror=False, appconfig=None, baseaddress=None,
       checked=False, debug=False, main=None, platform=None, unsafe=False,
       win32icon=None, win32manifest=None, win32res=None, additional_flags=(),
-      no_add_suffix=False, name=None):
+      name=None):
 
-    builder = TargetBuilder(gtn(name, 'csharp'), inputs=srcs)
+    builder = TargetBuilder(gtn(name, 'csharp'), inputs=sources)
     output = buildlocal(output)
+
     if target in ('appcontainerexe', 'exe', 'winexe'):
-      if not no_add_suffix:
-        output = path.addsuffix(output, '.exe')
+      targetsuffix = '.exe'
     elif target == 'library':
-      if not no_add_suffix:
-        output = path.addsuffix(output, '.dll')
+      targetsuffix = '.dll'
     elif target == 'winmdobj':
-      if not no_add_suffix:
-        output = path.addsuffix(output, '.winmdobj')
+      targetsuffix = '.winmdobj'
     elif target == 'module':
-      if not no_add_suffix:
-        output = path.addsuffix(output, '.netmodule')
+      targetsuffix = '.netmodule'
     else:
       raise ValueError('invalid target: {0!r}'.format(target))
+
+    if suffix is Default:
+      suffix = targetsuffix
+    if suffix is not None:
+      output = path.addsuffix(output, suffix)
+
     if warn not in (None, 0, 1, 2, 3, 4):
       raise ValueError('invalid warn: {0!r}'.format(warn))
     if platform not in (None, 'anycpu', 'anycpu32bitpreferred', 'ARM', 'x64', 'x86', 'Itanium'):
@@ -80,8 +83,8 @@ class CsCompiler(object):
     command += ['/win32icon:{0}'.format(win32icon)] if win32icon else []
     command += ['/win32manifest:{0}'.format(win32manifest)] if win32manifest else []
     command += ['/win32res:{0}'.format(win32res)] if win32res else []
+    command += additional_flags
     command += ['$in']
-
 
     return builder.build([command], None, [output])
 
@@ -89,7 +92,41 @@ class CsCompiler(object):
 csc = CsCompiler()
 
 
-def csharp_compile(*args, name=None, **kwargs):
+def compile(*args, name=None, **kwargs):
+  """
+  Compile one or more C# source files. Uses the :class:`CsCompiler` that is
+  created globally under them name ``csc``.
+
+  :param output: The name of the output file. The suffix will be determined
+    automatically based on the *target* parameter.
+  :param sources: A list of input files to compile.
+  :param target: The output target type. Defaults to 'exe'. Valid values for
+    this parameter are: 'appcontainer', 'exe', 'library', 'module', 'winexe'
+    and 'winmdobj'.
+  :param suffix: Defaults to ``Default``. If that value is specified, the
+    suffix will be automatically derived from the *target* parameter. Otherwise,
+    a suffix string or function can be passed.
+  :param defines:
+  :param optimize: Optimize generated code. Default is True.
+  :param warn: Warning level. Defaults to None. Valid values for this parmaeter
+    are None, 0, 1, 2, 3 and 4.
+  :param warnaserror: Treat warnings as errors. Defaults to False.
+  :param appconfig: Path to an assembly's application configuration file.
+  :param baseaddress:
+  :param checked:
+  :param debug:
+  :param main:
+  :param platform:
+  :param unsafe:
+  :param win32icon:
+  :param win32manifest:
+  :param win32res:
+  :param additional_flags: Additional flags to be appended to the command.
+  :param name: Alternative target name.
+  """
+
   return csc.compile(*args, name=gtn(name, None), **kwargs)
 
+
+csharp_compile = compile
 __all__ = ['csharp_compile']
