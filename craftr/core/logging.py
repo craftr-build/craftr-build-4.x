@@ -118,7 +118,7 @@ class DefaultLogger(BaseLogger):
       name = '(' + module.manifest.name + ':{})'.format(module.current_line)
     if lines and module and name != self._last_module_name:
       self._last_module_name = name
-      rem = width - len(name)
+      rem = width - len(name) - len(self._indent_seq) * (self._indent + indent)
       if len(lines[0]) < rem - 1:
         print(prefix + lines[0] + ' ' * (rem - 1 - len(lines[0])), name + tty.reset)
         lines.pop(0)

@@ -29,13 +29,13 @@ else:
   module = 'craftr.lang.cxx.common'
 
 session.options.setdefault('{}.toolkit'.format(module), options.toolkit)
-cxc = load(module).cxc
 
-logger.info('craftr.lang.cxx: loading "{0}" (with {0}.toolkit="{1}")'.format(module, options.toolkit))
-logger.info('craftr.lang.cxx:   cxc.name="{}"'.format(cxc.name))
-logger.info('craftr.lang.cxx:   cxc.target_arch="{}"'.format(cxc.target_arch))
-logger.info('craftr.lang.cxx:   cxc.version="{}"'.format(cxc.version))
-
+logger.info('Loading CXX Toolkit "{0}" (with {0}.toolkit="{1}")'.format(module, options.toolkit))
+with logger.indent():
+  cxc = load(module).cxc
+  logger.info('cxc.name="{}"'.format(cxc.name))
+  logger.info('cxc.target_arch="{}"'.format(cxc.target_arch))
+  logger.info('cxc.version="{}"'.format(cxc.version))
 
 def c_compile(*args, name=None, **kwargs):
   return cxc.compile(*args, name=gtn(name, None), language='c', **kwargs)
