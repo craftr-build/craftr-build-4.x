@@ -286,11 +286,13 @@ def genalias(*targets, name = None, **kwargs):
     implicit_deps = targets, **kwargs)
 
 
-def gentask(func, args, inputs = (), outputs = (), name = None, **kwargs):
+def gentask(func, args = None, inputs = (), outputs = (), name = None, **kwargs):
   """
   Create a Task that can be embedded into the build chain. Tasks can have input
   and output files that cause the task to be embedded into the build chain. By
   default, tasks need to be explicitly built or required by other targets.
+
+  If *args* is not specified, it will be replaced by ``[inputs, outputs]``.
 
   :param func: A function to call to execute the task. It must accept a
     variable number of arguments, which are the arguments passed via the *args*
@@ -307,9 +309,24 @@ def gentask(func, args, inputs = (), outputs = (), name = None, **kwargs):
   :return: A :class:`Target` object.
   """
 
+  if args is None:
+    args = [inputs, outputs]
   builder = TargetBuilder(gtn(name), inputs = inputs)
   task = _build.Task(builder.name, func, args)
   return session.graph.add_task(task, inputs = builder.inputs, outputs = outputs)
+
+
+def task(inputs = (), outputs = (), args = None, **kwargs):
+  """
+  Generate a one-off task. Optionally you can specified a list of *inputs*
+  and *outputs*. If *args* is not specified, the *inputs* and *outputs* will
+  be passed as arguments to the task function. Otherwise, *args* will be
+  passed.
+  """
+
+  def decorator(func):
+    return gentask(func, args, inputs, outputs, name = func.__name__, **kwargs)
+  return decorator
 
 
 def runtarget(target, *args, inputs=(), outputs=(), **kwargs):

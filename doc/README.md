@@ -7,6 +7,7 @@ Version: 2.0.0.dev5
 - [Built-ins documentation](builtins.md)
 - [Config documentation](config.md)
 - [Writing Target generators](generators.md)
+- [Tasks](tasks.md)
 - [Using external files/source archives](loaders.md)
 
 Other:

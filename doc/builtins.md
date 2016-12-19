@@ -83,6 +83,10 @@ if suffix is not None:
 
 ### `gentarget()`
 
+### `gentask()`
+
+### `task()`
+
 ### `genalias()`
 
 ### `runtarget()`
