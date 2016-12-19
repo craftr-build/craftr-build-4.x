@@ -11,7 +11,7 @@ API Changes
 - add `craftr.utils.path.getmtime()` and `.getimtime()`
 - add `write_response_file(suffix='')` parameter
 - add `Default` singleton to built-in namespace
-- add `gentarget()` built-in function (see #163)
+- add `gentask()` and `task()` built-in functions (see #163)
 - change `Target` objects can now be passed to the `frameworks = [...]` argument
   of target generators that use the `TargetBuilder` class. These input targets
   will automatically added to the implicit dependencies and their frameworks
