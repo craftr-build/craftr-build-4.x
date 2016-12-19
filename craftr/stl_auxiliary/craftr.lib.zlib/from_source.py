@@ -28,7 +28,7 @@ if platform.name == 'win':
 if not options.static:
   zlib['defines'].append('ZLIB_DLL')
 
-cxx = load_module('craftr.lang.cxx')
+cxx = load('craftr.lang.cxx')
 
 lib = cxx.library(
   link_style = 'static' if options.static else 'shared',

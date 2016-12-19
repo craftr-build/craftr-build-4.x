@@ -29,7 +29,7 @@ else:
   module = 'craftr.lang.cxx.common'
 
 session.options.setdefault('{}.toolkit'.format(module), options.toolkit)
-cxc = load_module(module).cxc
+cxc = load(module).cxc
 
 logger.info('craftr.lang.cxx: loading "{0}" (with {0}.toolkit="{1}")'.format(module, options.toolkit))
 logger.info('craftr.lang.cxx:   cxc.name="{}"'.format(cxc.name))

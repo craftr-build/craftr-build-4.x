@@ -16,8 +16,8 @@ Check out the `examples/examples.thrift` directory.
 ```python
 # examples.thrift
 
-load_module('craftr.lang.cxx.*')
-load_module('craftr.lang.thrift.*')
+load('craftr.lang.cxx.*')
+load('craftr.lang.thrift.*')
 
 thriftfiles = thrift_gen(
   inputs = [local('tutorial.thrift')],

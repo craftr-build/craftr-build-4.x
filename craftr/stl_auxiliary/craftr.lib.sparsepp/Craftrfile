@@ -27,7 +27,7 @@ sparsepp = Framework(
 )
 
 if options.build_tests:
-  load_module('craftr.lang.cxx.*')
+  load('craftr.lang.cxx.*')
 
   test = runtarget(
     cxx_binary(

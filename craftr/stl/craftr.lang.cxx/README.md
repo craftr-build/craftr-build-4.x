@@ -15,7 +15,7 @@ interface module.
 Example:
 
 ```python
-cxx = load_module('craftr.lang.cxx')
+cxx = load('craftr.lang.cxx')
 
 mylib = Framework(
   include = [local('include')],

@@ -19,8 +19,8 @@ source_directory = external_archive(
   "https://github.com/LuaDist/libjpeg/archive/master.zip"
 )
 
-load_module('craftr.lang.cxx.*')
-load_module('utils.cmake.*')
+load('craftr.lang.cxx.*')
+load('utils.cmake.*')
 
 # Create the jconfig.h file.
 jconfig = cmake_configure_file(

@@ -21,7 +21,7 @@ source_directory = external_archive(
 )
 
 __all__ = ['dlib']
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
 dlib = Framework('dlib',
   include = [source_directory],

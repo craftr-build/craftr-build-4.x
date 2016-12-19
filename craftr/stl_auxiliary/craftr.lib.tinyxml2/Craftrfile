@@ -19,7 +19,7 @@ source_directory = external_archive(
   "https://github.com/leethomason/tinyxml2/archive/{}.zip".format(options.version)
 )
 
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
 tinyxml2 = Framework('tinyxml2',
  include = [source_directory]

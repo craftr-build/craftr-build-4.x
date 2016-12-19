@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-cxx = load_module('craftr.lang.cxx')
-sdl2 = load_module('craftr.lib.sdl2')
+cxx = load('craftr.lang.cxx')
+sdl2 = load('craftr.lib.sdl2')
 
 main = cxx.binary(
   output = 'main',

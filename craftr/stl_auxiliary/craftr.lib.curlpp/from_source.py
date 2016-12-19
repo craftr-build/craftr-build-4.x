@@ -26,9 +26,9 @@ if options.static:
 else:
   session.options.setdefault('craftr.lib.curl.static', False)
 
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
-cURL = load_module('craftr.lib.curl').cURL
+cURL = load('craftr.lib.curl').cURL
 cURLpp = Framework('cURLpp',
   include = [path.join(source_directory, 'include')],
   defines = [],

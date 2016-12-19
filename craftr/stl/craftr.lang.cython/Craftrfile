@@ -26,8 +26,8 @@ import functools
 import os
 import re
 
-python = load_module('craftr.lang.python')
-cxx = load_module('craftr.lang.cxx')
+python = load('craftr.lang.python')
+cxx = load('craftr.lang.cxx')
 
 
 class CythonCompiler(object):

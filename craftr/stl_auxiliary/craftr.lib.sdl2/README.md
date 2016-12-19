@@ -9,8 +9,8 @@ This package is automatically compiled from source on Windows.
 __Example__:
 
 ```python
-cxx = load_module('craftr.lang.cxx')
-sdl2 = load_module('craftr.lib.sdl2')
+cxx = load('craftr.lang.cxx')
+sdl2 = load('craftr.lib.sdl2')
 
 main = cxx.binary(
   output = 'main',

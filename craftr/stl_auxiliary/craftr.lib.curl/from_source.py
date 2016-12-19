@@ -49,7 +49,7 @@ source_directory = external_archive(
 cURL['include'] += [path.join(source_directory, 'include')]
 
 # Compile the library.
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 libcURL = cxx_library(
   link_style = 'static' if options.static else 'shared',
   inputs = c_compile(

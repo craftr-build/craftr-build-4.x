@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
 if not options.path or not options.arch:
   error('missing required options "path" and "arch"')

@@ -18,7 +18,7 @@ if platform.name == 'win':
 else:
   googlebenchmark['libs'].append('pthread')
 
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
 defines = []
 if options.regex_backend == 'std':

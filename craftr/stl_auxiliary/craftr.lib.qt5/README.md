@@ -37,8 +37,8 @@ __Todolist__:
 __Example__:
 
 ```python
-cxx = load_module('craftr.lang.cxx')
-qt5 = load_module('craftr.lib.qt5')
+cxx = load('craftr.lang.cxx')
+qt5 = load('craftr.lib.qt5')
 
 mocfiles = qt5.moc(sources = glob(['src/*.h']))
 uifiles = qt5.uic(sources = glob(['ui/*.ui']))

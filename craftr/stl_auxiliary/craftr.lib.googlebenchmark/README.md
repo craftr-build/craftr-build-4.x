@@ -11,8 +11,8 @@ Known Limitations:
 ## Usage
 
 ```python
-load_module('craftr.lang.cxx.*')
-load_module('craftr.lib.googlebenchmark.*')
+load('craftr.lang.cxx.*')
+load('craftr.lib.googlebenchmark.*')
 
 test = runtarget(
   cxx_binary(

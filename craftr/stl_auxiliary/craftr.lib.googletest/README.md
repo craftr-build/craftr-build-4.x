@@ -9,8 +9,8 @@ To use googletest, simply load this Craftr package and compile a test binary.
 ## Usage
 
 ```python
-load_module('craftr.lang.cxx.*')
-load_module('craftr.lib.googletest.*')
+load('craftr.lang.cxx.*')
+load('craftr.lib.googletest.*')
 
 test = runtarget(
   cxx_binary(

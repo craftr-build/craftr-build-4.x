@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from os import environ
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
 program = cxx_binary(
   inputs = c_compile(sources = glob(['src/*.c'])),

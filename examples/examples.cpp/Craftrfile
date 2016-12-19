@@ -14,16 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-load_module('craftr.lang.cxx.*')
-load_module('craftr.lib.curlpp.*')
-load_module('craftr.lib.dlib.*')
-load_module('craftr.lib.tinyxml2.*')
+load('craftr.lang.cxx.*')
+load('craftr.lib.curlpp.*')
+load('craftr.lib.dlib.*')
+load('craftr.lib.tinyxml2.*')
 
 defines = []
 frameworks = [cURLpp, dlib, tinyxml2]
 
 try:
-  qt5 = load_module('craftr.lib.qt5')
+  qt5 = load('craftr.lib.qt5')
 except ModuleError as exc:
   logger.warn('note: Qt5 can not be found, disabling Qt5 example')
   logger.warn('note: message:', exc)

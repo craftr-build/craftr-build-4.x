@@ -28,7 +28,7 @@ tiny_dnn = Framework('tiny_dnn',
 )
 
 if options.build_examples:
-  load_module('craftr.lang.cxx.*')
+  load('craftr.lang.cxx.*')
 
   example_bin = cxx_binary(
     inputs = cpp_compile(

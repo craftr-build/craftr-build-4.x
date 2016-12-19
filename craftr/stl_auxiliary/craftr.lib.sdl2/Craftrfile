@@ -35,7 +35,7 @@ if not options.directory:
 project_dir = options.directory
 
 # Import packages
-cxx = load_module('craftr.lang.cxx')
+cxx = load('craftr.lang.cxx')
 
 
 SDL2 = Framework(

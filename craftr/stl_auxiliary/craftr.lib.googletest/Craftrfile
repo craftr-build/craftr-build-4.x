@@ -35,7 +35,7 @@ if platform.name != 'win':
   googletest['libs'].append('pthread')
 
 
-load_module('craftr.lang.cxx.*')
+load('craftr.lang.cxx.*')
 
 library = cxx_library(
   link_style = 'static',
