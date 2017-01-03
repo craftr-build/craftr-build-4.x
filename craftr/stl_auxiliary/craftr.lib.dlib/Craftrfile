@@ -27,22 +27,27 @@ dlib = Framework('dlib',
   include = [source_directory],
   defines = [],
   frameworks = [],
-  libs = []
+  libs = [],
+  std = 'c++11'
 )
-
-if options.nogui:
-  dlib['defines'].append('DLIB_NO_GUI_SUPPORT')
-if options.isocpp:
-  dlib['defines'].append('DLIB_ISO_CPP_ONLY')
 
 if platform.name == 'win':
   dlib['libs'] += ['ws2_32', 'winmm']
   if not options.nogui:
     dlib['libs'] += ['comctl32', 'gdi32', 'imm32']
-else:
+elif platform.name == 'linux':
   dlib['libs'] += ['pthread', 'm']
-  dlib['frameworks'] += [pkg_config('x11')]
+  if not options.nogui:
+    dlib['frameworks'] += [pkg_config('x11')]
   dlib['std'] = 'gnu++11'
+else:
+  logger.info('disable GUI support on Mac OS')
+  options.nogui = True
+
+if options.nogui:
+  dlib['defines'].append('DLIB_NO_GUI_SUPPORT')
+if options.isocpp:
+  dlib['defines'].append('DLIB_ISO_CPP_ONLY')
 
 dlib_library = cxx_library(
   inputs = cpp_compile(
