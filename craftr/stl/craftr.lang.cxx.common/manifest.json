@@ -23,6 +23,7 @@
     "c": "string",
     "cpp": "string",
     "ar": "string",
-    "cpp_stdlib": "string"
+    "cpp_stdlib": "string",
+    "exflags": "bool"
   }
 }

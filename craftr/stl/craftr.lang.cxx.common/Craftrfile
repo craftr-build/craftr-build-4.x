@@ -289,12 +289,13 @@ class ToolChain(object):
 
 class CompilerLinker(object):
 
-  def __init__(self, language, program):
+  def __init__(self, language, program, exflags=None):
     if language not in ('asm', 'c', 'c++'):
       raise ValueError("unsupported language: {!r}".format(language))
     self.language = language
     self.program = program
     self.info = identify_compiler(program)
+    self.exflags = options.exflags if exflags is None else exflags
 
   @property
   def name(self):
@@ -402,16 +403,13 @@ class CompilerLinker(object):
       params['deps'] = 'gcc'
       command += ['-MD', '-MP', '-MF', '$depfile']
 
-    # TODO
-    """
-    if session.buildtype == 'external':
-      if language == 'c':
-        command += shell.split(options.get('CFLAGS', ''))
-      elif language == 'c++':
-        command += shell.split(options.get('CPPFLAGS', ''))
-      elif language == 'asm':
-        command += shell.split(options.get('ASMFLAGS', ''))
-    """
+    if self.exflags:
+      if self.language == 'c':
+        command += shell.split(os.getenv('CFLAGS', ''))
+      elif self.language == 'c++':
+        command += shell.split(os.getenv('CPPFLAGS', ''))
+      elif self.language == 'asm':
+        command += shell.split(os.getenv('ASMFLAGS', ''))
 
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
@@ -476,11 +474,9 @@ class CompilerLinker(object):
     if linker_args:
       command += ['-Wl,' + ','.join(linker_args)]
 
-    # TODO
-    """
-    if session.buildtype == 'external':
+    if self.exflags:
       command = []
-      flags = shell.split(options.get('LDFLAGS', '').strip())
+      flags = shell.split(os.getenv('LDFLAGS', '').strip())
       wlflags = sum(1 for s in flags if s.startswith('-Wl,'))
       if wlflags > 0 and wlflags != len(flags):
         error('LDFLAGS must be either in -Wl, or raw arguments format. Got:\n::  LDFLAGS=' + options.get('LDFLAGS', ''))
@@ -490,8 +486,7 @@ class CompilerLinker(object):
         flags = ['-Wl,' + ','.join(flags)]
 
       command += flags
-      command += shell.split(options.get('LDLIBS', ''))
-    """
+      command += shell.split(os.getenv('LDLIBS', ''))
 
     pyutils.strip_flags(command, builder.get_list('remove_flags'))
     command += builder.get_list('additional_flags')
