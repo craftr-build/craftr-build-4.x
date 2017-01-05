@@ -30,6 +30,7 @@ Library Changes
 - add support for `source_directory` argument in `cxx.c_compile()` and `cxx.cpp_compile()`
   (actually implemented in `craftr.lang.cxx.common` and `craftr.lang.cxx.msvc`), see #154
 - add `craftr.lang.csharp:compile()` to be used for unstarred import, and add docstrings
+- add `exflags` option to `craftr.lang.cxx.common` module (see #152)
 - change `craftr.lib.cURLpp` always requires RTTI enabled
 - change `craftr.lang.cxx.msvc` now adds the static input library generated for DLLs to the outputs
 - change MSVC `compile()` now supports response-files for long list of includes
@@ -50,6 +51,7 @@ Behaviour Changes
 - `craftr.core.logging.DefaultLogger` now logs the module and line number from
   which the log occurred, padded to the right side of the terminal
 - Craftr now exports a variable `Craftr_run_command` into the Ninja manifest
+- Fix invalid Ninja manifests generated with foreach Targets with no inputs (see #151)
 
 Internal API Changes
 
