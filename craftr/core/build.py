@@ -182,7 +182,7 @@ class Graph(object):
 
     defaults = []
     for target in self.targets.values():
-      if not target.explicit:
+      if not target.explicit and target.generates_build_instruction:
         defaults.append(target.name)
       target.export(writer, context, platform)
 
@@ -353,6 +353,16 @@ class Target(object):
 
     if self.outputs and self.name not in self.outputs and not self.explicit:
       writer.build(self.name, 'phony', self.outputs)
+
+  @property
+  def generates_build_instruction(self):
+    """
+    Reading this property tells you whether the target produces at least one
+    build in the Ninja manifest. This is used to determine whether a target is
+    included in the list of default targets or not.
+    """
+
+    return not (self.foreach and not self.inputs)
 
 
 class Tool(object):
