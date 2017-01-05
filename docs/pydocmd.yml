@@ -1,0 +1,14 @@
+site_name: Welcome to the Craftr Documentation!
+generate:
+pages:
+- Home: index.md << ../README.md
+- Changelog: changes.md << ../CHANGES.md
+- Reference:
+  - Getting Started: getting-started.md
+  - Build Configuration: config.md
+  - Built-ins: builtins.md
+  - Loaders: loaders.md
+  - Tasks: tasks.md
+  - Generators: generators.md
+  - Transition from Craftr 1: transition.md
+  - FAQ: faq.md

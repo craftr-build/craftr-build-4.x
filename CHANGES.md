@@ -1,6 +1,4 @@
-# Craftr Changelog
-
-__v2.0.0.dev6__:
+# v2.0.0.dev6
 
 API Changes
 
