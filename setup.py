@@ -33,22 +33,23 @@ if pip.__version__ >= '6.0':
   parse_requirements = functools.partial(
       parse_requirements, session=pip.download.PipSession())
 
-# Convert README.md to reST.
-if os.path.isfile('README.md') and any('dist' in x for x in sys.argv[1:]):
-  if os.system('pandoc -s README.md -o README.rst') != 0:
-    print('-----------------------------------------------------------------')
-    print('WARNING: README.rst could not be generated, pandoc command failed')
-    print('-----------------------------------------------------------------')
-    if sys.stdout.isatty():
-      input("Enter to continue... ")
-  else:
-    print("Generated README.rst with Pandoc")
 
-if os.path.isfile('README.rst'):
-  with open('README.rst', encoding='utf8') as fp:
-    long_description = fp.read()
-else:
-  long_description = None
+def readme():
+  if os.path.isfile('README.md') and any('dist' in x for x in sys.argv[1:]):
+    if os.system('pandoc -s README.md -o README.rst') != 0:
+      print('-----------------------------------------------------------------')
+      print('WARNING: README.rst could not be generated, pandoc command failed')
+      print('-----------------------------------------------------------------')
+      if sys.stdout.isatty():
+        input("Enter to continue... ")
+    else:
+      print("Generated README.rst with Pandoc")
+
+  if os.path.isfile('README.rst'):
+    with open('README.rst') as fp:
+      return fp.read()
+  return ''
+
 
 def find_files(directory, strip):
   """
@@ -75,7 +76,7 @@ setup(
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   description = 'Meta build system based on Ninja and Python',
-  long_description = long_description,
+  long_description = readme(),
   url = 'https://gitlab.niklasrosenstein.com/niklas/craftr',
   install_requires = [str(x.req) for x in parse_requirements('requirements.txt')],
   entry_points = dict(
