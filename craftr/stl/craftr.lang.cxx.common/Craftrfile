@@ -27,15 +27,33 @@ import re
 
 
 def get_toolkit():
+  """
+  If the `.toolkit` option is not specified, returns the name of a
+  Unix-compiler toolkit based on the current platform (LLVM on Mac OS, GCC on
+  other platforms).
+
+  For using Clang/LLVM, supports both values `'llvm'` and `'clang'` for the
+  `.toolkit` option but reduces it to `'llvm'`.
+
+  # Returns
+  str: One of the following values
+
+  - `'llvm'`
+  - `'gcc'`
+  """
+
+  if options.toolkit == 'clang':
+    options.toolkit = 'llvm'
   if not options.toolkit:
     if platform.name == 'mac':
       return 'llvm'
     elif platform.name in ('linux', 'cygwin', 'msys', 'win'):
       return 'gcc'
     else:
-      raise EnvironmentError("can not determine TOOL default value for platform {!r}".format(platform.name))
-  if options.toolkit not in ('clang', 'llvm', 'gcc'):
-    raise ValueError("invalid value for option TOOL: {!r}".format(options.toolkit))
+      raise EnvironmentError("can not determine toolkit on {!r}, please "
+        "specify .toolkit option".format(platform.name))
+  if options.toolkit not in ('llvm', 'gcc'):
+    raise ValueError("invalid value for .toolkit: {!r}".format(options.toolkit))
   return options.toolkit
 
 
@@ -197,21 +215,21 @@ def parse_cross_config(filename, format='ini'):
   return data
 
 
-def get_default_toolset(tool):
-  if tool in ('clang', 'llvm'):
+def get_default_toolset(tool, ccprefix=''):
+  if tool == 'llvm':
     ar = 'llvm-ar' if platform.name == 'win' else 'ar'
     return {
-      'as': '$c -x assembler',
-      'c': 'clang',
-      'cpp': '$c++',
-      'ar': ar
+      'as': ccprefix + 'clang -x assembler',
+      'c': ccprefix + 'clang',
+      'cpp': ccprefix + 'clang++',
+      'ar': ccprefix + 'ar'
     }
   elif tool == 'gcc':
     return {
-      'as': '$c -x assembler',
-      'c': 'gcc',
-      'cpp': 'g++',
-      'ar': 'ar'
+      'as': ccprefix + 'gcc -x assembler',
+      'c': ccprefix + 'gcc',
+      'cpp': ccprefix + 'g++',
+      'ar': ccprefix + 'ar'
     }
   else:
     raise ValueError("invalid tool: {!r}".format(tool))
@@ -219,13 +237,13 @@ def get_default_toolset(tool):
 
 class ToolChain(object):
 
-  def __init__(self, toolkit=None, cross_config=None):
+  def __init__(self, toolkit=None, cross_config=None, ccprefix=None):
     cross_config = cross_config or options.crossfile
     if isinstance(cross_config, str):
       cross_config = parse_cross_config(cross_config, 'ini')
     if not cross_config:
       cross_config = {'binaries': {}}
-    defaults = get_default_toolset(toolkit or get_toolkit())
+    defaults = get_default_toolset(toolkit or get_toolkit(), ccprefix or options.ccprefix)
 
     binaries = cross_config['binaries']
     def resolve(n, var):
@@ -236,8 +254,8 @@ class ToolChain(object):
       return os.environ.get(var, defaults[n])
 
     c = resolve('c', 'CC')
-    as_ = resolve('as', 'AS').replace('$c', c)
-    cpp = resolve('cpp', 'CXX').replace('$c', c)
+    as_ = resolve('as', 'AS')
+    cpp = resolve('cpp', 'CXX')
     ar = resolve('ar', 'AR')
 
     try:

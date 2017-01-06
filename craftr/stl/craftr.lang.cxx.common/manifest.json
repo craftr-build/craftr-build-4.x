@@ -24,6 +24,10 @@
     "cpp": "string",
     "ar": "string",
     "cpp_stdlib": "string",
-    "exflags": "bool"
+    "exflags": "bool",
+    "ccprefix": {
+      "type": "string",
+      "help": "Prefix for all tools, useful for cross-compiling. Not added for explicitly defined tool names."
+    }
   }
 }
