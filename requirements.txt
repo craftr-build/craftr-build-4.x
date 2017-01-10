@@ -1,4 +1,5 @@
 colorama==0.3.7
+cson==0.7
 glob2==0.5
 jsonschema==2.5.1
 ninja-syntax==1.6.0
