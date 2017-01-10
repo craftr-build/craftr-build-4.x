@@ -223,6 +223,17 @@ def rmvsuffix(subject):
     subject = subject[:index]
   return subject
 
+def getsuffix(subject):
+  """
+  Returns the suffix of a filename. If the file has no suffix, returns None.
+  Can return an empty string if the filenam ends with a period.
+  """
+
+  index = subject.rfind('.')
+  if index > subject.replace('\\', '/').rfind('/'):
+    return subject[index+1:]
+  return None
+
 def makedirs(path):
   """
   Like :func:`os.makedirs`, but this function does not raise an exception

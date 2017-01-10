@@ -35,7 +35,8 @@ import tempfile
 import types
 import werkzeug
 
-MANIFEST_FILENAME = 'manifest.json'
+MANIFEST_FILENAME = 'manifest.yml'
+MANIFEST_FILENAMES = [MANIFEST_FILENAME, 'manifest.json']
 
 
 class ModuleNotFound(Exception):
@@ -249,10 +250,10 @@ class Session(object):
 
     for directory in self.path:
       choices = []
-      choices.append(path.join(directory, MANIFEST_FILENAME))
+      choices.extend([path.join(directory, x) for x in MANIFEST_FILENAMES])
       for item in path.easy_listdir(directory):
-        choices.append(path.join(directory, item, MANIFEST_FILENAME))
-        choices.append(path.join(directory, item, 'craftr', MANIFEST_FILENAME))
+        choices.extend([path.join(directory, item, x) for x in MANIFEST_FILENAMES])
+        choices.extend([path.join(directory, item, 'craftr', x) for x in MANIFEST_FILENAMES])
 
       for filename in map(path.norm, choices):
         if filename in self._manifest_cache:

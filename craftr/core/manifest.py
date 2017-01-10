@@ -57,6 +57,7 @@ import nr.misc.archive
 import re
 import string
 import urllib.request
+import yaml
 
 
 def validate_package_name(name):
@@ -229,30 +230,51 @@ class Manifest(recordclass):
     return ns
 
   @staticmethod
-  def parse_string(string):
-    """
-    Shortcut for wrapping *string* in a file-like object and padding it to
-    :func:`parse`.
-    """
-
-    return Manifest.parse(io.StringIO(string))
+  def _preprocess(data):
+    # The YAML can easily yield None values for some keys when left empty.
+    if data.get('dependencies') is None:
+      data['dependencies'] = {}
+    if data.get('options') is None:
+      data['options'] = {}
+    return data
 
   @staticmethod
-  def parse(filename):
+  def parse(filename, format=None):
     """
-    Parses a manifest file and returns a new :class:`Manifest` object.
+    Parses a manifest file and returns a new :class:`Manifest` object. If no
+    *format* is specified, the format is determined from the file suffix.
 
-    :param file: A filename or file-like object in JSON format.
-    :raise InvalidManifest: If the file is not a valid JSON file or the
-      manifest data is invalid or inconsistent.
-    :return: A :class:`Manifest` object.
+    # Arguments
+    filename (str): The filename of a JSON or YAML file.
+    format (str): The format to assume when parsing the file. By default, the
+      format is determined from the file suffix. Valid values are `'json'`,
+      `'yml'` and `'yaml'`.
+
+    # Raises
+    InvalidManifest: If the file is not a valid JSON file or the manifest data
+      is invalid or inconsistent.
+    ValueError: If the *format* can not be determined from the *filename*.
+
+    # Returns
+    Manifest: The resulting manifest data.
     """
+
+    if format is None:
+      format = path.getsuffix(filename).lower()
+    if format not in ('json', 'yml', 'yaml'):
+      raise ValueError('invalid format: {!r}'.format(format))
 
     try:
       with open(filename) as fp:
-        data = json.load(fp)
+        if format == 'json':
+          data = json.load(fp)
+        elif format in ('yml', 'yaml'):
+          data = yaml.load(fp)
+        else:
+          raise RuntimeError
+      data = Manifest._preprocess(data)
       jsonschema.validate(data, Manifest.Schema)
-    except (json.JSONDecodeError, jsonschema.ValidationError) as exc:
+    except (json.JSONDecodeError, yaml.scanner.ScannerError, jsonschema.ValidationError) as exc:
       raise Manifest.Invalid(exc)
 
     try:
