@@ -35,8 +35,7 @@ import tempfile
 import types
 import werkzeug
 
-MANIFEST_FILENAME = 'manifest.yml'
-MANIFEST_FILENAMES = [MANIFEST_FILENAME, 'manifest.json']
+MANIFEST_FILENAMES = ['manifest.cson', 'manifest.json']
 
 
 class ModuleNotFound(Exception):

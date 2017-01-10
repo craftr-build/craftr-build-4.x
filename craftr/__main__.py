@@ -597,7 +597,7 @@ class StartpackageCommand(BaseCommand):
     parser.add_argument('directory', nargs='?', default=None)
     parser.add_argument('-n', '--nested', action='store_true')
     parser.add_argument('--version', type=Version, default='1.0.0')
-    parser.add_argument('-f', '--format', choices=['yml', 'json'], default='yml')
+    parser.add_argument('-f', '--format', choices=['cson', 'json'], default='cson')
 
   def execute(self, parser, args):
     directory = args.directory or args.name
@@ -625,7 +625,7 @@ class StartpackageCommand(BaseCommand):
 
     logger.debug('creating file "{}"'.format(mfile))
     with open(mfile, 'w') as fp:
-      if args.format == 'yml':
+      if args.format == 'cson':
         lines = textwrap.dedent('''
           name: "%s"
           version: "%s"

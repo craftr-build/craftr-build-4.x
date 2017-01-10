@@ -2,7 +2,7 @@
 
 General Changes
 
-- Default manifest configuration format is now YAML (`manifest.yml`),
+- Default manifest configuration format is now CSON (`manifest.cson`),
   JSON being kept for backwards compatibility (see #168)
 
 API Changes

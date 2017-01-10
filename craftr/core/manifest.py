@@ -49,6 +49,7 @@ from nr.types.recordclass import recordclass
 from nr.types.version import Version, VersionCriteria
 
 import abc
+import cson
 import fnmatch
 import io
 import json
@@ -57,7 +58,6 @@ import nr.misc.archive
 import re
 import string
 import urllib.request
-import yaml
 
 
 def validate_package_name(name):
@@ -231,7 +231,7 @@ class Manifest(recordclass):
 
   @staticmethod
   def _preprocess(data):
-    # The YAML can easily yield None values for some keys when left empty.
+    # The CSON config can easily yield None values for some keys when left empty.
     if data.get('dependencies') is None:
       data['dependencies'] = {}
     if data.get('options') is None:
@@ -245,10 +245,10 @@ class Manifest(recordclass):
     *format* is specified, the format is determined from the file suffix.
 
     # Arguments
-    filename (str): The filename of a JSON or YAML file.
+    filename (str): The filename of a JSON or CSON file.
     format (str): The format to assume when parsing the file. By default, the
-      format is determined from the file suffix. Valid values are `'json'`,
-      `'yml'` and `'yaml'`.
+      format is determined from the file suffix. Valid values are `'json'`
+      or `'cson'`.
 
     # Raises
     InvalidManifest: If the file is not a valid JSON file or the manifest data
@@ -261,21 +261,20 @@ class Manifest(recordclass):
 
     if format is None:
       format = path.getsuffix(filename).lower()
-    if format not in ('json', 'yml', 'yaml'):
+    if format not in ('json', 'cson'):
       raise ValueError('invalid format: {!r}'.format(format))
 
     try:
       with open(filename) as fp:
         if format == 'json':
           data = json.load(fp)
-        elif format in ('yml', 'yaml'):
-          data = yaml.load(fp)
+        elif format == 'cson':
+          data = cson.load(fp)
         else:
           raise RuntimeError
       data = Manifest._preprocess(data)
       jsonschema.validate(data, Manifest.Schema)
-    except (json.JSONDecodeError, yaml.scanner.ScannerError,
-            yaml.parser.ParserError, jsonschema.ValidationError) as exc:
+    except (json.JSONDecodeError, cson.ParseError, jsonschema.ValidationError) as exc:
       raise Manifest.Invalid(exc)
 
     try:
