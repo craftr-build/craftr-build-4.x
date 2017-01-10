@@ -1,0 +1,17 @@
+name: "craftr.lang.cxx.msvc"
+version: "1.0.0"
+options:
+  toolkit:
+    type: "string"
+    help: "The name of the toolkit to use. Value values are 'clang-cl' or 'vcXXX' where XXX is a MSVC toolkit version number."
+  target:
+    type: "string"
+    help: "The name of the target platform. Valid values are 'x86', 'amd64' and 'ia64'"
+  debug: "bool"
+  rtti:
+    type: "bool"
+    default: true
+  embedd_debug_symbols:
+    type: "bool"
+    default: true
+    help: "Embed debug symbols into the .obj and .lib file (on by default), otherwise generate .pdb files."
