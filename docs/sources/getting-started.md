@@ -3,48 +3,21 @@
 
 Every project that is compiled with Craftr needs at least a manifest and a
 build script. Craftr provides a convenient way to generate a template for you.
-Choose your project directory and run the following command:
+Choose your project directory and run the following command
 
     $ craftr startpackage examples.c .
-    $ ls
-    Craftrfile  manifest.json
-    $ cat Craftrfile
-    # examples.c
-    $ cat manifest.json
-    {
-      "name": "examples.c",
-      "version": "1.0.0",
-      "author": "",
-      "url": "",
-      "dependencies": {},
-      "options": {}
-    }
 
-We're going to compile some C source files into an executable program. For
-that we need the `craftr.lang.cxx` package that provides us with a
-cross-platform interface to compile C and C++ source code. Open the
-`manifest.json` and add `craftr.lang.cxx` to the dependencies.
+Then open the `manifest.cson` file that was created and add the generic C/C++
+module as a dependency. With `"*"` we specify that the newest version of the
+module that is available should be used.
 
-```json
-$ cat manifest.json
-{
-  "name": "examples.c",
-  "version": "1.0.0",
-  "author": "",
-  "url": "",
-  "dependencies": {
-    "craftr.lang.cxx": "1.x"
-  },
-  "options": {}
-}
+```cson
+name: "examples.c"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*"
+options:
 ```
-
-> The `"1.x"` part is a version selector that specifies the version of the
-> package that we depend on. We use `1.x` to denote that we accept any version
-> which a major version number of `1`. For more information on version
-> selectors, check out the [`VersionSelector` documentation][VersionSelector].
-
-  [VersionSelector]: https://github.com/NiklasRosenstein/py-nr/blob/b26ceffbd8722e535c49fc6f74715d5a0641a35e/nr/types/version.py#L268-L283
 
 Now let's assume we have the following two C source files in our project
 directory as well.
@@ -80,14 +53,14 @@ allow us to make a test run of the program.
 $ cat Craftrfile
 # examples.c
 
-from os import environ
-load_module('craftr.lang.cxx.*')
+cxx = load('craftr.lang.cxx')
 
-program = cxx_binary(
-  inputs = c_compile(sources = glob(['src/*.c'])),
+program = cxx.binary(
+  inputs = cxx.c_compile(sources = glob(['src/*.c'])),
   output = 'main'
 )
 
+from os import environ
 run = runtarget(program, environ.get('USERNAME', 'John'), "sunny")
 ```
 

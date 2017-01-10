@@ -7,7 +7,7 @@ built-in functions and classes are defined in the `craftr.defaults` module.
 ### `project_dir`
 
 The project directory. This is usually the same as the directory of the
-Craftr package manifest (`manifest.json`), but can be altered with the
+Craftr package manifest (`manifest.cson`), but can be altered with the
 `project_dir` field in the manifest.
 
 This variable has direct influence on the behaviour of the `local()` function.

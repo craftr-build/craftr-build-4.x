@@ -4,7 +4,7 @@ project root directory or in a sub-directory with the name `craftr/`. The nested
 structure is usually used for larger projects that have a complex file tree to
 keep the root directory cleaner.
 
-Also, there can be a `.craftrconfig` depending on where the `manifest.json`
+Also, there can be a `.craftrconfig` depending on where the `manifest.cson`
 is located which will be loaded before anything else. For more information on
 configuration, see the [Config documentation](config.md).
 
@@ -12,8 +12,8 @@ configuration, see the [Config documentation](config.md).
 
     |  project/               |  project/
     |    .craftrconfig        |    craftr/
-    |    manifest.json        |      .craftrconfig
-    |    Craftrfile           |      manifest.json
+    |    manifest.cson        |      .craftrconfig
+    |    Craftrfile           |      manifest.cson
     |    source/              |      Craftrfile
     |                         |    source/
 
@@ -22,36 +22,29 @@ Note that in the nested format, you want to make sure to set the
 
 ## Package manifest
 
-Below you can find a list of all the available fields in a `manifest.json` file.
+Below you can find a list of all the available fields in a `manifest.cson` file.
 Note that you can use the `craftr startpackage` command to quickly generate a
 manifest for your project.
 
 Example manifest:
 
-```json
-{
-  "name": "craftr.lib.curlpp",
-  "version": "1.0.0",
-  "dependencies": {
-    "craftr.lang.cxx": "*",
-    "craftr.lib.curl": "*"
-  },
-  "options": {
-    "version": {
-      "type": "string",
-      "default": "v0.7.3"
-    },
-    "static": {
-      "type": "bool",
-      "help": "Whether to build a static or dynamic library. Must match the linkage of cURL.",
-      "default": true
-    },
-    "rtti": {
-      "type": "bool",
-      "default": true
-    }
-  }
-}
+```cson
+name: "craftr.lib.curlpp"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*"
+  "craftr.lib.curl": "*"
+options:
+  version:
+    type: "string"
+    default: "v0.7.3"
+  static:
+    type: "bool"
+    help: "Whether to build a static or dynamic library. Must match the linkage of cURL."
+    default: true
+  rtti:
+    type: "bool"
+    default: true
 ```
 
 ### name
@@ -89,14 +82,12 @@ address. If given, the email address should be enclosed in angle brackets, like
 fields for this object are the option names. These fields again map to objects
 that describe the option parameter *or* simply the option type name. Example:
 
-```json
-  "options": {
-    "directory": "path",
-    "build_examples": {
-      "type": "bool",
-      "help": "Whether to build example files"
-    }
-  }
+```cson
+options":
+  directory: "path"
+  build_examples:
+    "type": "bool"
+    "help": "Whether to build example files"
 ```
 
 Available fields:
