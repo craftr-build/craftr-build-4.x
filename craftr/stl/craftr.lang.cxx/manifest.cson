@@ -1,0 +1,9 @@
+name: "craftr.lang.cxx"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx.msvc": "*"
+  "craftr.lang.cxx.common": "*"
+options:
+  toolkit:
+    type: "string"
+    help: "The name of the toolkit to use. If unspecified, a toolkit based on the current platform will be selected, otherwise supported values are 'clang', 'gcc', 'msvc*' or 'clang-cl'."

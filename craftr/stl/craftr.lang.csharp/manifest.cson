@@ -1,0 +1,5 @@
+name: "craftr.lang.csharp"
+version: "1.0.0"
+options:
+  csc: "string"
+  runprefix: "string"

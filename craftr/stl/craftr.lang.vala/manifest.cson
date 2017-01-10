@@ -1,0 +1,4 @@
+name: "craftr.lang.vala"
+version: "1.0.0"
+options:
+  bin: "string"

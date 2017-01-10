@@ -1,0 +1,9 @@
+name: "craftr.lang.java"
+version: "1.0.0"
+options:
+  javac:
+    type: "string"
+    default: "javac"
+  jar:
+    type: "string"
+    default: "jar"

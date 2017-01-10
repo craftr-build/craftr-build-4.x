@@ -1,0 +1,23 @@
+name: "craftr.lang.cxx.common"
+version: "1.0.0"
+description: "Abstract of the common interface for Clang/LLVM and GCC to compile ASM, C and C++"
+options:
+  toolkit:
+    type: "string"
+    help: "Name of the compiler suite, can be 'llvm' or 'gcc'"
+  crossfile:
+    type: "string"
+    help: "Path to a cross-compilation definitions file"
+  debug: "bool"
+  rtti:
+    type: "bool"
+    default: true
+  as: "string"
+  c: "string"
+  cpp: "string"
+  ar: "string"
+  cpp_stdlib: "string"
+  exflags: "bool"
+  ccprefix:
+    type: "string"
+    help: "Prefix for all tools, useful for cross-compiling. Not added for explicitly defined tool names."

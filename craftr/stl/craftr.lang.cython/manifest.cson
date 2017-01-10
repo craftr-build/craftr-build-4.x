@@ -1,0 +1,7 @@
+name: "craftr.lang.cython"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*"
+  "craftr.lang.python": "*"
+options:
+  bin: "string"
