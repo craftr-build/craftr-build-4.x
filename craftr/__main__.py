@@ -17,7 +17,7 @@
 from craftr import core
 from craftr.core.config import read_config_file, InvalidConfigError
 from craftr.core.logging import logger
-from craftr.core.session import session, Session, Module, MANIFEST_FILENAME
+from craftr.core.session import session, Session, Module, MANIFEST_FILENAMES
 from craftr.utils import path, shell, tty
 from operator import attrgetter
 from nr.types.version import Version, VersionCriteria
@@ -367,12 +367,12 @@ class BuildCommand(BaseCommand):
     # Determine the module to execute, either from the current working
     # directory or find it by name if one is specified.
     if not args.module:
-      for fn in [MANIFEST_FILENAME, path.join('craftr', MANIFEST_FILENAME)]:
+      for fn in MANIFEST_FILENAMES + [path.join('craftr', x) for x in MANIFEST_FILENAMES]:
         if path.isfile(fn):
           module = session.parse_manifest(fn)
           break
       else:
-        logger.error('"{}" does not exist'.format(MANIFEST_FILENAME))
+        logger.error('"{}" does not exist'.format(MANIFEST_FILENAMES[0]))
         sys.exit(1)
     else:
       # TODO: For some reason, prints to stdout are not visible here.
@@ -615,7 +615,7 @@ class StartpackageCommand(BaseCommand):
       directory = path.join(directory, 'craftr')
       path.makedirs(directory)
 
-    mfile = path.join(directory, MANIFEST_FILENAME)
+    mfile = path.join(directory, 'manifest.' + args.format)
     sfile = path.join(directory, 'Craftrfile')
     for fn in [mfile, sfile]:
       if path.isfile(fn):

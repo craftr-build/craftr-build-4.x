@@ -274,7 +274,8 @@ class Manifest(recordclass):
           raise RuntimeError
       data = Manifest._preprocess(data)
       jsonschema.validate(data, Manifest.Schema)
-    except (json.JSONDecodeError, yaml.scanner.ScannerError, jsonschema.ValidationError) as exc:
+    except (json.JSONDecodeError, yaml.scanner.ScannerError,
+            yaml.parser.ParserError, jsonschema.ValidationError) as exc:
       raise Manifest.Invalid(exc)
 
     try:
