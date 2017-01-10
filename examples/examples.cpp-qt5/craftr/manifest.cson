@@ -1,0 +1,6 @@
+name: "examples.cpp-qt5"
+version: "1.0.0"
+project_dir: ".."
+dependencies:
+  "craftr.lang.cxx": "*"
+  "craftr.lib.qt5": "*"

@@ -1,0 +1,4 @@
+name: "examples.csharp"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.csharp": "*"

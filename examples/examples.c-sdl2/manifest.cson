@@ -1,0 +1,5 @@
+name: "examples.c-sdl2"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*"
+  "craftr.lib.sdl2": "*"

@@ -1,0 +1,8 @@
+name: "examples.cpp"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*",
+  "craftr.lib.curlpp": "*",
+  "craftr.lib.dlib": "*",
+  "craftr.lib.qt5": "*",
+  "craftr.lib.tinyxml2": "*"

@@ -1,0 +1,4 @@
+name: "examples.java"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.java": "*"

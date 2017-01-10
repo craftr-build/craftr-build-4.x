@@ -1,0 +1,5 @@
+name: "examples.thrift"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*"
+  "craftr.lang.thrift": "*"
