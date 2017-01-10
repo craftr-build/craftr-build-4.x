@@ -1,5 +1,10 @@
 # v2.0.0.dev6
 
+General Changes
+
+- Default manifest configuration format is now YAML (`manifest.yml`),
+  JSON being kept for backwards compatibility (see #168)
+
 API Changes
 
 - add `pkg_config(static = False)` parameter
@@ -10,12 +15,14 @@ API Changes
 - add `write_response_file(suffix='')` parameter
 - add `Default` singleton to built-in namespace
 - add `gentask()` and `task()` built-in functions (see #163)
+- add `Target.runprefix` parameter and attribute
 - change `Target` objects can now be passed to the `frameworks = [...]` argument
   of target generators that use the `TargetBuilder` class. These input targets
   will automatically added to the implicit dependencies and their frameworks
   be added
 - change `Tool` objects can now be passed into the `commands = [[...]]` argument
   of targets generators
+- change `runtarget()` to take `Target.runprefix` into account
 - change `path.norm()` now makes sure that path is lowercased on Windows
 - change `load_file()` now adds the loaded file to `Module.dependent_files`
 - rename `load_module()` to `load()`, using the old name displays a warning

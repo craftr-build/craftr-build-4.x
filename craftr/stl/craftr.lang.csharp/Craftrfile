@@ -86,7 +86,7 @@ class CsCompiler(object):
     command += additional_flags
     command += ['$in']
 
-    return builder.build([command], None, [output])
+    return builder.build([command], None, [output], runprefix=self.runprefix)
 
 
 csc = CsCompiler()

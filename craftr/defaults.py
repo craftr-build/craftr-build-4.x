@@ -338,7 +338,7 @@ def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
   name = gtn(kwargs.pop('name', None))
   kwargs.setdefault('explicit', True)
   kwargs.setdefault('pool', 'console')
-  return gentarget([[target] + list(args)], inputs, outputs, name=name, **kwargs)
+  return gentarget([target.runprefix + [target] + list(args)], inputs, outputs, name=name, **kwargs)
 
 
 def write_response_file(arguments, builder=None, name=None, force_file=False, suffix=''):

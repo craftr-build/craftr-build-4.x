@@ -200,7 +200,7 @@ class Target(object):
                order_only_deps=(), pool=None, deps=None, depfile=None,
                msvc_deps_prefix=None, explicit=False, foreach=False,
                description=None, metadata=None, cwd=None, environ=None,
-               frameworks=(), task=None):
+               frameworks=(), task=None, runprefix=None):
     argspec.validate('name', name, {'type': str})
     argspec.validate('commands', commands,
       {'type': list, 'allowEmpty': False, 'items':
@@ -221,6 +221,12 @@ class Target(object):
     argspec.validate('environ', environ, {'type': [None, dict]})
     argspec.validate('frameworks', frameworks, {'type': [list, tuple], 'items': {'type': dict}})
     argspec.validate('task', task, {'type': [None, Task]})
+    argspec.validate('runprefix', runprefix, {'type': [None, list, str], 'items': {'type': str}})
+
+    if isinstance(runprefix, str):
+      runprefix = shell.split(runprefix)
+    elif runprefix is None:
+      runprefix = []
 
     def expand_mixed_list(mixed, implicit_deps, mode):
       result = []
@@ -272,6 +278,7 @@ class Target(object):
     self.environ = environ or {}
     self.frameworks = frameworks
     self.task = task
+    self.runprefix = runprefix
 
     if self.foreach and len(self.inputs) != len(self.outputs):
       raise ValueError('foreach target must have the same number of output '
