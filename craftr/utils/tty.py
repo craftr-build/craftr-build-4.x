@@ -22,6 +22,7 @@ In order to colorize output, the :mod:`termcolor` module is required. On
 Windows, the `colorama` module is also necessary.
 """
 
+import errno
 import os
 import sys
 
