@@ -3,6 +3,12 @@ python:
   - "3.4"
   - "3.5"
 install:
-  - pip install nr
+  - pip install nose wget
   - pip install -e .
-script: echo "nothing to do yet"
+  # Download and extract Ninja
+  - mkdir .tmp
+  - curl -L https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-linux.zip -o .tmp/ninja-linux.zip
+  - unzip .tmp/ninja-linux.zip -d .tmp
+  - export PATH=$PWD/.tmp:$PATH
+script:
+  - nosetests tests
