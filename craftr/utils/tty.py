@@ -70,9 +70,8 @@ def terminal_size():
   else:
     # http://stackoverflow.com/a/3010495/791713
     import fcntl, termios, struct
-    h, w, hp, wp = struct.unpack('HHHH',
-        fcntl.ioctl(0, termios.TIOCGWINSZ,
-        struct.pack('HHHH', 0, 0, 0, 0)))
+    data = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0))
+    h, w, hp, wp = struct.unpack('HHHH', data)
     return w, h
 
 
