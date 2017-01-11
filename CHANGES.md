@@ -4,6 +4,7 @@ General Changes
 
 - Default manifest configuration format is now CSON (`manifest.cson`),
   JSON being kept for backwards compatibility (see #168)
+- Fix crash on Travis CI with `tty.terminal_size()` (see #169)
 
 API Changes
 
@@ -67,6 +68,7 @@ Internal API Changes
 - add `Manifest.filename` attribute
 - add `craftr.core.build.Graph.add_task()` and `.tasks` members
 - add `craftr.core.build.Task` class
+- add `tty.terminal_size(default)` parameter
 - change `Manifest.parse()` no longer accepts a file-like object
 
 Command-line Changes

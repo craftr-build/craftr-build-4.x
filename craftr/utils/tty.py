@@ -48,9 +48,10 @@ if isatty and colorama:
   colorama.init()
 
 
-def terminal_size():
+def terminal_size(default=(80, 30)):
   """
-  Determines the size of the terminal.
+  Determines the size of the terminal. If the size can not be obtained, returns
+  the specified *default* size.
   """
 
   if os.name == 'nt':
@@ -64,13 +65,20 @@ def terminal_size():
        bottom, maxx, maxy) = struct.unpack('hhhhHhhhhhh', csbi.raw)
       sizex = right - left + 1
       sizey = bottom - top + 1
+      return (sizex, sizey)
     else:
-      sizex, sizey = 80, 25
-    return (sizex, sizey)
+      return default
   else:
     # http://stackoverflow.com/a/3010495/791713
     import fcntl, termios, struct
-    data = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0))
+    try:
+      data = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0))
+    except OSError as exc:
+      # craftr-build/craftr#169 -- On OSX on Travis CI the call fails, probably
+      # because the process is not attached to a TTY.
+      if exc.errno == errno.ENODEV:
+        return default
+      raise
     h, w, hp, wp = struct.unpack('HHHH', data)
     return w, h
 
