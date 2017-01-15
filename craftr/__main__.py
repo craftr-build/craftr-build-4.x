@@ -632,9 +632,11 @@ class StartpackageCommand(BaseCommand):
           project_dir: ".."
           author: ""
           url: ""
-          dependencies:
-          options:
+          dependencies: {}
+          options: {}
         ''' % (args.name, args.version)).lstrip().split('\n')
+        if not args.nested:
+          del lines[2]
       elif args.format == 'json':
         lines = textwrap.dedent('''
           {
