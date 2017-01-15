@@ -34,11 +34,10 @@ lib = cxx.library(
   output = 'tinyxml2',
 )
 
-tinyxml2['external_libs'] = [lib.metadata['link_target']]
-tinyxml2['implicit_deps'] = [lib]
+cxx.extend_framework(tinyxml2, lib)
 
 if options.build_main:
-  main_bin = cxx.binary(
+  main_bin = cxx.executable(
     inputs = [cxx.compile_cpp(
       sources = [local('main.cpp')],
       frameworks = [tinyxml2]

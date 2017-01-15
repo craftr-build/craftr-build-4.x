@@ -28,14 +28,14 @@ tiny_dnn = Framework('tiny_dnn',
 )
 
 if options.build_examples:
-  load('craftr.lang.cxx.*')
+  cxx = load('craftr.lang.cxx')
 
-  example_bin = cxx_binary(
-    inputs = cpp_compile(
+  example_bin = cxx.executable(
+    output = 'example',
+    inputs = cxx.compile_cpp(
       sources = [path.join(options.directory, 'examples', 'main.cpp')],
       frameworks = [tiny_dnn]
-    ),
-    output = 'example'
+    )
   )
 
   example = runtarget(example_bin, cwd = path.join(options.directory, 'examples'))

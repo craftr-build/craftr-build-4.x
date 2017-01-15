@@ -9,15 +9,14 @@ To use googletest, simply load this Craftr package and compile a test binary.
 ## Usage
 
 ```python
-load('craftr.lang.cxx.*')
-load('craftr.lib.googletest.*')
+cxx = load('craftr.lang.cxx')
+googletest = load('craftr.lib.googletest').googletest
 
-test = runtarget(
-  cxx_binary(
-    inputs = compile(sources = glob(['tests/*.cpp'], frameworks = [googletest])),
-    output = 'test'
-  )
+main = cxx.executable(
+  inputs = compile(sources = glob(['tests/*.cpp'], frameworks = [googletest])),
+  output = 'test'
 )
+test = runtarget(main)
 ```
 
 ## Example

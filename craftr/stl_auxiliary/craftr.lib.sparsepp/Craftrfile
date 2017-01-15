@@ -27,14 +27,14 @@ sparsepp = Framework(
 )
 
 if options.build_tests:
-  load('craftr.lang.cxx.*')
+  cxx = load('craftr.lang.cxx')
 
   test = runtarget(
-    cxx_binary(
-      inputs = cpp_compile(
+    cxx.executable(
+      output = 'test',
+      inputs = cxx.compile_cpp(
         sources = [path.join(source_directory, 'spp_test.cc')],
         frameworks = [sparsepp]
-      ),
-      output = 'test'
+      )
     )
   )

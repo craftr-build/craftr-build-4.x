@@ -11,15 +11,14 @@ Known Limitations:
 ## Usage
 
 ```python
-load('craftr.lang.cxx.*')
-load('craftr.lib.googlebenchmark.*')
+cxx = load('craftr.lang.cxx')
+googlebenchmark = load('craftr.lib.googlebenchmark').googlebenchmark
 
-test = runtarget(
-  cxx_binary(
-    inputs = compile(sources = glob(['benchmark/*.cpp'], frameworks = [googlebenchmark])),
-    output = 'test'
-  )
+main = cxx.executable(
+  inputs = cxx.compile_cpp(sources = glob(['benchmark/*.cpp'], frameworks = [googlebenchmark])),
+  output = 'test'
 )
+test = runtarget(main)
 ```
 
 ## Example

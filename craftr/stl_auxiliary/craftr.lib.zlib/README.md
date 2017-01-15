@@ -6,9 +6,9 @@
 cxx = load('craftr.lang.cxx')
 zlib = load('craftr.lib.zlib')
 
-binary = cxx.binary(
+binary = cxx.executable(
   output = 'main',
-  inputs = cxx.cpp_compile(
+  inputs = cxx.compile_cpp(
     sources = glob(['src/*.cpp']),
     frameworks = [zlib.zlib]
   )
