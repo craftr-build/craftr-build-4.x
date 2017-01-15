@@ -14,23 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from craftr.loaders import external_archive
 source_directory = external_archive(
   "https://github.com/leethomason/tinyxml2/archive/{}.zip".format(options.version)
 )
 
-load('craftr.lang.cxx.*')
+cxx = load('craftr.lang.cxx')
 
 tinyxml2 = Framework('tinyxml2',
  include = [source_directory]
 )
 
-obj = cpp_compile(
+obj = cxx.compile_cpp(
   sources = [path.join(source_directory, 'tinyxml2.cpp')],
   frameworks = [tinyxml2]
 )
 
-lib = cxx_library(
+lib = cxx.library(
   inputs = [obj],
   output = 'tinyxml2',
 )
@@ -39,8 +38,8 @@ tinyxml2['external_libs'] = [lib.metadata['link_target']]
 tinyxml2['implicit_deps'] = [lib]
 
 if options.build_main:
-  main_bin = cxx_binary(
-    inputs = [cpp_compile(
+  main_bin = cxx.binary(
+    inputs = [cxx.compile_cpp(
       sources = [local('main.cpp')],
       frameworks = [tinyxml2]
     )],

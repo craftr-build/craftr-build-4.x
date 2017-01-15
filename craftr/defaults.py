@@ -165,14 +165,6 @@ def load(name, into=None, get_namespace=True, _stackframe=1):
   :raise ModuleNotFound: If the module could not be found.
   :raise RuntimeError: If the module that is attempted to be loaded is not
     declared in the current module's manifest.
-
-  Examples:
-
-  .. code:: python
-
-    cxx = load('craftr.lang.cxx')
-    load('craftr.lang.cxx.*')
-    assert cxx.c_compile is c_compile
   """
 
   if name.endswith('.*') and into is None:

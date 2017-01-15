@@ -19,11 +19,11 @@ source_directory = external_archive(
   "https://github.com/LuaDist/libjpeg/archive/master.zip"
 )
 
-load('craftr.lang.cxx.*')
-load('utils.cmake.*')
+cxx = load('craftr.lang.cxx')
+cmake = load('craftr.utils.cmake')
 
 # Create the jconfig.h file.
-jconfig = cmake_configure_file(
+jconfig = cmake.configure_file(
   input = path.join(source_directory, 'jconfig.h.cmake'),
   environ = dict(
     HAVE_STDDEF_H = options.have_stddef_h,
@@ -69,24 +69,24 @@ lib_sources = glob(
 )
 
 # Compile the jpeg library.
-lib = cxx_library(
+lib = cxx.static_library(
   output = 'jpeg',
-  inputs = c_compile(
+  inputs = cxx.compile_c(
     sources = lib_sources,
     defines = building_defines,
     frameworks = [libjpeg]
   )
 )
 
-cxx_extend_framework(libjpeg, lib)
+cxx.extend_framework(libjpeg, lib)
 
 if options.build_binaries:
   for fn in bin_sources:
     name = path.rmvsuffix(fn)
-    target = cxx_binary(
+    target = cxx.executable(
       name = name + '_bin',
       output = path.rmvsuffix(fn),
-      inputs = c_compile(
+      inputs = cxx.compile_c(
         sources = [path.join(source_directory, fn)],
         frameworks = [libjpeg]
       )

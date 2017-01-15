@@ -9,12 +9,12 @@
   "options": {
     "version": {
       "type": "string",
-      "default": "1.2.8",
+      "default": "1.2.10",
       "help": "If compiled from source, the version to obtain."
     },
     "url": {
       "type": "string",
-      "default": "http://zlib.net/zlib-${VERSION}.tar.gz",
+      "default": "http://zlib.net/fossils/zlib-${VERSION}.tar.gz",
       "help": "If compiled from source, the URL to obtain the source from. Takes precedence over the 'version' option."
     },
     "directory": {

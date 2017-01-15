@@ -22,8 +22,8 @@ mylib = Framework(
   defines = ['HAVE_MYLIB']
 )
 
-_lib = cxx.library(
-  inputs = cxx.c_compile(
+_lib = cxx.static_library(
+  inputs = cxx.compile_c(
     sources = glob(['src/**/*.c'], exclude = ['src/main.c']),
     frameworks = [mylib],
     std = 'c11'
@@ -33,8 +33,8 @@ _lib = cxx.library(
 
 cxx.extend_framework(mylib, _lib)
 
-app = cxx.binary(
-  inputs = cxx.c_compile(
+app = cxx.executable(
+  inputs = cxx.compile_c(
     sources = [local('src/main.c')],
     frameworks = [mylib],
     std = 'c11'

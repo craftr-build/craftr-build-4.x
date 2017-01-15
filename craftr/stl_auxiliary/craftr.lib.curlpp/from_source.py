@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 options = session.module.options
-from craftr.loaders import external_archive
 
 source_directory = external_archive(
   "https://github.com/jpbarrette/curlpp/archive/{}.zip".format(options.version)
@@ -26,21 +25,21 @@ if options.static:
 else:
   session.options.setdefault('craftr.lib.curl.static', False)
 
-load('craftr.lang.cxx.*')
+cxx = load('craftr.lang.cxx')
+curl = load('craftr.lib.curl')
 
-cURL = load('craftr.lib.curl').cURL
 cURLpp = Framework('cURLpp',
   include = [path.join(source_directory, 'include')],
   defines = [],
-  frameworks = [cURL]
+  frameworks = [curl.cURL]
 )
 
 if options.static:
   cURLpp['defines'] += ['CURLPP_STATICLIB']
 
-cURLpp_library = cxx_library(
+cURLpp_library = cxx.library(
   link_style = 'static' if options.static else 'shared',
-  inputs = cpp_compile(
+  inputs = cxx.compile_cpp(
     sources = glob(['src/**/*.cpp'], parent = source_directory),
     frameworks = [cURLpp],
     defines = ['BUILDING_CURLPP'],
@@ -49,5 +48,5 @@ cURLpp_library = cxx_library(
   output = 'cURLpp'
 )
 
-cxx_extend_framework(cURLpp, cURLpp_library)
+cxx.extend_framework(cURLpp, cURLpp_library)
 

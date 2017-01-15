@@ -20,8 +20,8 @@ qt5 = load('craftr.lib.qt5')
 mocfiles = qt5.moc(sources = glob(['src/*.h']))
 uifiles = qt5.uic(sources = glob(['ui/*.ui']))
 
-app = cxx.binary(
-  inputs = cxx.cpp_compile(
+app = cxx.executable(
+  inputs = cxx.compile_cpp(
     sources = [mocfiles] + glob(['src/*.cpp']),
     frameworks = [uifiles, qt5.framework('Qt5Widgets', 'Qt5Gui')]
   ),

@@ -32,7 +32,7 @@ cxx = load('craftr.lang.cxx')
 
 lib = cxx.library(
   link_style = 'static' if options.static else 'shared',
-  inputs = cxx.c_compile(
+  inputs = cxx.compile_c(
     sources = glob(['*.c'], parent = options.directory),
     source_directory = options.directory,
     frameworks = [zlib],
@@ -52,9 +52,9 @@ if options.build_examples:
     examples.append('infcover')
 
   for name in examples:
-    target = cxx.binary(
+    target = cxx.executable(
       output = name,
-      inputs = cxx.c_compile(
+      inputs = cxx.compile_c(
         sources = [path.join(options.directory, 'test', name + '.c')],
         source_directory = options.directory,
         frameworks = [zlib],

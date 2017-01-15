@@ -14,15 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-getopt = Framework('getopt',
-  include = [project_dir]
-)
+cxx = load('craftr.lang.cxx')
 
-load('craftr.lang.cxx.*')
-lib = cxx_library(
-  inputs = c_compile(sources = [local('getopt.c')]),
+getopt = Framework('getopt', include = [project_dir])
+lib = cxx.static_library(
+  inputs = cxx.compile_c(sources = [local('getopt.c')]),
   output = 'getopt'
 )
-
-getopt['external_libs'] = [lib.metadata['link_target']]
-getopt['implicit_deps'] = [lib]
+cxx.extend_framework(getopt, lib)

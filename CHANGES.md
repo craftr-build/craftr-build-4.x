@@ -38,9 +38,14 @@ Library Changes
 - add `craftr.lang.csharp:compile()` to be used for unstarred import, and add docstrings
 - add `exflags` option to `craftr.lang.cxx.common` module (see #152)
 - add `ccprefix` option to `craftr.lang.cxx.common` module (related to #149)
+- add to `craftr.lang.cxx` functions `static_library()` and `shared_library()`
+- change `craftr.lang.cxx` member names, old names are still available with a
+  deprecation notice. `binary() -> executable()`, `c_compile() -> compile_c()`,
+  `cpp_compile() -> compile_cpp()`
 - change `craftr.lib.cURLpp` always requires RTTI enabled
 - change `craftr.lang.cxx.msvc` now adds the static input library generated for DLLs to the outputs
 - change MSVC `compile()` now supports response-files for long list of includes
+- update default download version of `craftr.lib.zlib` to `1.2.10`
 
 Behaviour Changes
 

@@ -37,10 +37,11 @@ with logger.indent():
   logger.info('cxc.target_arch="{}"'.format(cxc.target_arch))
   logger.info('cxc.version="{}"'.format(cxc.version))
 
-def c_compile(*args, name=None, **kwargs):
+# High-level interface.
+def compile_c(*args, name=None, **kwargs):
   return cxc.compile(*args, name=gtn(name, None), language='c', **kwargs)
 
-def cpp_compile(*args, name=None, **kwargs):
+def compile_cpp(*args, name=None, **kwargs):
   return cxc.compile(*args, name=gtn(name, None), language='c++', **kwargs)
 
 def library(*args, name=None, link_style='static', **kwargs):
@@ -52,7 +53,13 @@ def library(*args, name=None, link_style='static', **kwargs):
     target.metadata['link_target'] = target.metadata['dll_link_target']
   return target
 
-def binary(*args, name=None, **kwargs):
+def static_library(*args, name=None, **kwargs):
+  return library(*args, name=gtn(name, None), link_style='static', **kwargs)
+
+def shared_library(*args, name=None, **kwargs):
+  return library(*args, name=gtn(name, None), link_style='shared', **kwargs)
+
+def executable(*args, name=None, **kwargs):
   return cxc.link(*args, name=gtn(name, None), output_type='bin', **kwargs)
 
 def extend_framework(framework, *targets):
@@ -70,8 +77,28 @@ def extend_framework(framework, *targets):
       framework['external_libs'].append(link_target)
     framework['implicit_deps'].append(target)
 
+# Backwards compatibility.
+def binary(*args, name=None, **kwargs):
+  logger.warn('clang.lang.cxx:binary() is deprecated, use cxx.executable() instead')
+  return executable(*args, name=gtn(name, None), **kwargs)
 
-cxx_binary = binary
-cxx_library = library
-cxx_extend_framework = extend_framework
+def c_compile(*args, name=None, **kwargs):
+  logger.warn('craftr.lang.cxx:c_compile() is deprecated, use cxx.compile_c() instead')
+  return compile_c(*args, name=gtn(name, None), **kwargs)
+
+def cpp_compile(*args, name=None, **kwargs):
+  logger.warn('craftr.lang.cxx:cpp_compile() is deprecated, use cxx.compile_cpp() instead')
+  return compile_cpp(*args, name=gtn(name, None), **kwargs)
+
+def cxx_binary(*args, name=None, **kwargs):
+  logger.warn('craftr.lang.cxx:cxx_binary() is deprecated, use cxx.executable() instead')
+  return executable(*args, name=gtn(name, None), **kwargs)
+
+def cxx_library(*args, name=None, **kwargs):
+  logger.warn('craftr.lang.cxx:cxx_library() is deprecated, use cxx.library() instead')
+  return library(*args, name=gtn(name, None), **kwargs)
+
+def cxx_extend_framework(*args, **kwargs):
+  logger.warn('craftr.lang.cxx:cxx_extend_framework() is deprecated, use cxx.extend_library() instead')
+
 __all__ = ['cxc', 'c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary', 'cxx_extend_framework']

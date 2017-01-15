@@ -12,9 +12,9 @@ __Example__:
 cxx = load('craftr.lang.cxx')
 sdl2 = load('craftr.lib.sdl2')
 
-main = cxx.binary(
+main = cxx.executable(
   output = 'main',
-  inputs = cxx.c_compile(
+  inputs = cxx.compile_c(
     sources = glob(['*.c']),
     frameworks = [sdl2.SDL2main]
   )

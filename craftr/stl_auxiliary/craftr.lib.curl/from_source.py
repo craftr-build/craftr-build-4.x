@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 options = session.module.options
-from craftr.loaders import external_archive
 
 # Framework that is used by other libraries/applications.
 cURL = Framework(
@@ -49,10 +48,10 @@ source_directory = external_archive(
 cURL['include'] += [path.join(source_directory, 'include')]
 
 # Compile the library.
-load('craftr.lang.cxx.*')
-libcURL = cxx_library(
+cxx = load('craftr.lang.cxx')
+libcURL = cxx.library(
   link_style = 'static' if options.static else 'shared',
-  inputs = c_compile(
+  inputs = cxx.compile_c(
     sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = source_directory),
     include = [path.join(source_directory, 'lib')],
     frameworks = [cURL, cURL_building]
@@ -60,4 +59,4 @@ libcURL = cxx_library(
   output = 'cURL'
 )
 
-cxx_extend_framework(cURL, libcURL)
+cxx.extend_framework(cURL, libcURL)

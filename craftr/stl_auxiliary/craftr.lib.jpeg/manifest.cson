@@ -1,0 +1,21 @@
+name: "craftr.lib.jpeg"
+version: "1.0.0"
+dependencies:
+  "craftr.lang.cxx": "*"
+  "craftr.utils.cmake": "*"
+options:
+  have_stddef_h:
+    type: "bool"
+    default: true
+  have_stdlib_h:
+    type: "bool"
+    default: true
+  two_file_commandline:
+    type: "bool"
+    default: false
+  jmem:
+    type: "string"
+    help: "The memory manager to use for libjpeg. By default, it's determined from the current platform."
+  build_binaries:
+    type: "bool"
+    default: false

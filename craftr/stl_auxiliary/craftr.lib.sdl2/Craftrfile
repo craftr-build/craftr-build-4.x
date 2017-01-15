@@ -206,7 +206,7 @@ else:
 lib = cxx.library(
   link_style = 'static' if options.static else 'shared',
   output = 'SDL2',
-  inputs = cxx.c_compile(
+  inputs = cxx.compile_c(
     sources = sources,
     frameworks = [SDL2],
     pic = not options.static
@@ -215,10 +215,9 @@ lib = cxx.library(
 )
 cxx.extend_framework(SDL2, lib)
 
-lib_main = cxx.library(
-  link_style = 'static',
+lib_main = cxx.static_library(
   output = 'SDL2main',
-  inputs = cxx.c_compile(sources = [main_source], frameworks = [SDL2main]),
+  inputs = cxx.compile_c(sources = [main_source], frameworks = [SDL2main]),
   name = 'SDL2main'
 )
 cxx.extend_framework(SDL2main, lib_main)
@@ -228,26 +227,26 @@ if options.build_tests:
     'test/testnative*.c', 'test/testautomation*.c'
   ]):
     name = path.rmvsuffix(path.basename(fn))
-    target = cxx.binary(
+    target = cxx.executable(
       output = 'test/' + name,
-      inputs = cxx.c_compile(sources = [fn], frameworks = [SDL2main]),
+      inputs = cxx.compile_c(sources = [fn], frameworks = [SDL2main]),
       name = name + '_bin'
     )
     runtarget(target, cwd = local('test'), name = name)
 
   testnative = runtarget(
-    cxx.binary(
+    cxx.executable(
       output = 'test/testnative',
-      inputs = cxx.c_compile(sources = glob(['test/testnative*.c']), frameworks = [SDL2main]),
+      inputs = cxx.compile_c(sources = glob(['test/testnative*.c']), frameworks = [SDL2main]),
       name = 'testnative_bin'
     ),
     cwd = local('test')
   )
 
   testautomation = runtarget(
-    cxx.binary(
+    cxx.executable(
       output = 'test/testautomation',
-      inputs = cxx.c_compile(sources = glob(['test/testautomation*.c']), frameworks = [SDL2main]),
+      inputs = cxx.compile_c(sources = glob(['test/testautomation*.c']), frameworks = [SDL2main]),
       name = 'testautomation_bin'
     ),
     cwd = local('test')

@@ -14,14 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from craftr.loaders import external_archive, pkg_config
-
 source_directory = external_archive(
   "http://dlib.net/files/dlib-{}.zip".format(options.version)
 )
 
 __all__ = ['dlib']
-load('craftr.lang.cxx.*')
+cxx = load('craftr.lang.cxx')
 
 dlib = Framework('dlib',
   include = [source_directory],
@@ -49,12 +47,12 @@ if options.nogui:
 if options.isocpp:
   dlib['defines'].append('DLIB_ISO_CPP_ONLY')
 
-dlib_library = cxx_library(
-  inputs = cpp_compile(
+dlib_library = cxx.library(
+  inputs = cxx.compile_cpp(
     sources = [path.join(source_directory, 'dlib/all/source.cpp')],
     frameworks = [dlib]
   ),
   output = 'dlib'
 )
 
-cxx_extend_framework(dlib, dlib_library)
+cxx.extend_framework(dlib, dlib_library)

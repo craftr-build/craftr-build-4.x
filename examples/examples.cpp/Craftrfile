@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-load('craftr.lang.cxx.*')
-load('craftr.lib.curlpp.*')
-load('craftr.lib.dlib.*')
-load('craftr.lib.tinyxml2.*')
+cxx = load('craftr.lang.cxx')
+curlpp = load('craftr.lib.curlpp')
+dlib = load('craftr.lib.dlib')
+tinyxml2 = load('craftr.lib.tinyxml2')
 
 defines = []
-frameworks = [cURLpp, dlib, tinyxml2]
+frameworks = [curlpp.cURLpp, dlib.dlib, tinyxml2.tinyxml2]
 
 try:
   qt5 = load('craftr.lib.qt5')
@@ -32,8 +32,8 @@ else:
   defines.append('HAVE_QT5')
   frameworks.append(qt5.framework('Qt5Widgets'))
 
-main = cxx_binary(
-  inputs = cpp_compile(
+main = cxx.executable(
+  inputs = cxx.compile_cpp(
     sources = [local('main.cpp')],
     frameworks = frameworks,
     defines = defines
