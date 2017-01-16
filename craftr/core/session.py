@@ -364,6 +364,12 @@ class Module(object):
     it contains at least the filename of the :attr:`manifest` and the script
     file that is executed for the Module. Additional files might be added
     by some built-in functions like :func:`craftr.defaults.load_file`.
+
+  .. attribute:: dependencies
+
+    A dictionary that maps a dependency name to an actual version. This
+    dictionary may contain only a subset of the dependencies listed in the
+    modules manifest as the module may only load some of the dependencies.
   """
 
   NotFound = ModuleNotFound
@@ -376,6 +382,7 @@ class Module(object):
     self.executed = False
     self.options = None
     self.dependent_files = None
+    self.dependencies = None
 
   def __repr__(self):
     return '<craftr.core.session.Module "{}-{}">'.format(self.manifest.name,
@@ -438,6 +445,7 @@ class Module(object):
 
     self.executed = True
     self.dependent_files = []
+    self.dependencies = {}
     self.init_options()
 
     script_fn = self.scriptfile

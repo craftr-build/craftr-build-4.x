@@ -18,6 +18,7 @@ API Changes
 - add `gentask()` and `task()` built-in functions (see #163)
 - add `Target.runprefix` parameter and attribute
 - add `Session.main_module` member
+- add `Module.dependencies` member
 - change `Target` objects can now be passed to the `frameworks = [...]` argument
   of target generators that use the `TargetBuilder` class. These input targets
   will automatically added to the implicit dependencies and their frameworks

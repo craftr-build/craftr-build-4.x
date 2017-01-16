@@ -184,6 +184,7 @@ def load(name, into=None, get_namespace=True, _stackframe=1):
   loaded_module = session.find_module(name, module.manifest.dependencies[name])
   if not loaded_module.executed:
     loaded_module.run()
+  module.dependencies[name] = loaded_module.manifest.version
 
   if into is not None:
     module_builtins = frozenset('loader project_dir options'.split())
