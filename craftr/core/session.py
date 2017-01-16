@@ -106,6 +106,10 @@ class Session(object):
 
     The absolute path to the build directory.
 
+  .. attribute:: main_module
+
+    The main :class:`Module`.
+
   .. attribute:: options
 
     A dictionary of options that are passed down to Craftr modules.
@@ -137,6 +141,7 @@ class Session(object):
         path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
     self.modules = {}
+    self.main_module = None
     self.options = {}
     self.cache = {}
     self.tasks = {}
@@ -179,18 +184,20 @@ class Session(object):
   def write_cache(self, fp):
     json.dump(self.cache, fp, indent='\t')
 
-  def expand_relative_options(self, main_module):
+  def expand_relative_options(self):
     """
     After the main module has been detected, relative option names (starting
     with ``.``) should be converted to absolute option names. This is what
     the method does.
-
-    :param main_module: The name of the main module.
     """
 
+    if not self.main_module:
+      raise RuntimeError('main_module not set')
+
+    name = self.main_module.manifest.name
     for key in tuple(self.options.keys()):
       if key.startswith('.'):
-        self.options[main_module + key] = self.options.pop(key)
+        self.options[name + key] = self.options.pop(key)
 
   def get_temporary_directory(self):
     """

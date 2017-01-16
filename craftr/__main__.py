@@ -335,6 +335,7 @@ class BuildCommand(BaseCommand):
         args.module, args.name = args.name.split(':', 1)
 
     module = self._find_module(parser, args)
+    session.main_module = module
     self.ninja_bin, self.ninja_version = get_ninja_info()
 
     # Create and switch to the build directory.
@@ -398,7 +399,7 @@ class BuildCommand(BaseCommand):
 
     read_cache(self.cachefile)
 
-    session.expand_relative_options(module.manifest.name)
+    session.expand_relative_options()
     session.cache['build'] = {}
     try:
       module.run()
