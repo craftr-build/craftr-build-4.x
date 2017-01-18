@@ -386,6 +386,14 @@ class BuildCommand(BaseCommand):
 
     session.expand_relative_options()
     session.cache['build'] = {}
+
+    # Load the dependency lock information if it exists.
+    deplock_fn = path.join(path.dirname(module.manifest.filename), '.dependency-lock')
+    if os.path.isfile(deplock_fn):
+      with open(deplock_fn) as fp:
+        session.preferred_versions = cson.load(fp)
+        logger.debug('note: dependency lock file "{}" loaded'.format(deplock_fn))
+
     try:
       module.run()
     except Module.InvalidOption as exc:
@@ -407,8 +415,7 @@ class BuildCommand(BaseCommand):
     session.cache['build']['modules'] = serialise_loaded_module_info()
     session.cache['build']['main'] = module.ident
     session.cache['build']['options'] = args.options
-    session.cache['build']['dependency_lock_filename'] = path.join(
-        path.dirname(module.manifest.filename), '.dependency-lock')
+    session.cache['build']['dependency_lock_filename'] = deplock_fn
 
     if self.mode == 'export':
       # Add the Craftr_run_command variable which is necessary for tasks

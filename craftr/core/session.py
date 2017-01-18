@@ -96,6 +96,14 @@ class Session(object):
     have already been loaded into the session or that have been found and
     cached but not yet been executed.
 
+  .. attribute:: preferred_versions
+
+    A nested dictionary with the same structure as :attr:`modules`. This
+    dictionary might have been loaded from a dependency lock file and specifies
+    the preferred version to load for a specific module, assuming that the
+    criteria specified in the loading module's manifest is less strict. Note
+    that Craftr will error if a preferred version can not be found.
+
   .. attribute:: maindir
 
     The main directory from which Craftr was run. Craftr will switch to the
@@ -141,6 +149,7 @@ class Session(object):
         path.join(self.maindir, 'craftr/modules')]
     self.modulestack = []
     self.modules = {}
+    self.preferred_versions = {}
     self.main_module = None
     self.options = {}
     self.cache = {}
@@ -273,7 +282,7 @@ class Session(object):
           logger.warn('invalid manifest found:', filename)
           logger.warn(exc, indent=1)
 
-  def find_module(self, name, version):
+  def find_module(self, name, version, resolve_preferred_version=True):
     """
     Finds a module in the :attr:`path` matching the specified *name* and
     *version*.
@@ -281,6 +290,9 @@ class Session(object):
     :param name: The name of the module.
     :param version: A :class:`VersionCriteria`, :class:`Version` or string
       in a VersionCritiera format.
+    :param resolve_preferred_version: If this parameter is True (default)
+      and a preferred version is specified in :attr:`preferred_versions`,
+      that preferred version is loaded or :class:`ModuleNotFound` is raised.
     :raise ModuleNotFound: If the module can not be found.
     :return: :class:`Module`
     """
@@ -298,6 +310,17 @@ class Session(object):
         version = Version(version)
       except ValueError as exc:
         version = VersionCriteria(version)
+
+    if session.module and resolve_preferred_version:
+      data = self.preferred_versions.get(session.module.manifest.name)
+      if data is not None:
+        versions = data.get(str(session.module.manifest.version))
+        if versions is not None:
+          preferred_version = versions.get(name)
+          if preferred_version is not None:
+            version = Version(preferred_version)
+            logger.debug('note: loading preferred version {} of module "{}" '
+              'requested by module "{}"'.format(version, name, session.module.ident))
 
     self.update_manifest_cache()
     if name in self.modules:
