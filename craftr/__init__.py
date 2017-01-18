@@ -18,4 +18,4 @@ Craftr is a meta build system based on Ninja and Python 3.
 """
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '2.0.0.dev5'
+__version__ = '2.0.0.dev6'

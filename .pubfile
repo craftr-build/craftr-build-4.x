@@ -1,5 +1,4 @@
 versionPatterns:
   "setup.py": "  version = '$VERSION'"
   "craftr/__init__.py": "__version__ = '$VERSION'"
-  "doc/README.md": "Version: $VERSION"
   "README.md": "    \\$ pip install craftr-build==$VERSION"
