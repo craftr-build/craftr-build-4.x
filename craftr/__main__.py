@@ -18,7 +18,7 @@ from craftr import core
 from craftr.core.config import read_config_file, InvalidConfigError
 from craftr.core.logging import logger
 from craftr.core.session import session, Session, Module, MANIFEST_FILENAMES
-from craftr.utils import path, shell, tty
+from craftr.utils import path, shell, tty, cson
 from operator import attrgetter
 from nr.types.version import Version, VersionCriteria
 
@@ -53,14 +53,22 @@ def parse_cmdline_options(options):
       session.options[key] = value
 
 
-def read_cache(cachefile):
+def read_cache(show_errors_and_exit=True):
+  cachefile = os.path.join(session.builddir, '.craftrcache')
   try:
     with open(cachefile) as fp:
       try:
         session.read_cache(fp)
       except ValueError as exc:
+        logger.warn('Invalid cache: "{}"'.format(cachefile))
+        logger.warn('Load error is: {}'.format(exc))
         return False
   except IOError as exc:
+    if show_errors_and_exit:
+      logger.error('Unable to find file: "{}"'.format(cachefile))
+      logger.error('Does not seem to be a build directory: "{}"'.format(session.builddir))
+      logger.error("Export build information using the 'craftr export' command.")
+      sys.exit(1)
     return False
   return True
 
@@ -85,51 +93,20 @@ def serialise_loaded_module_info():
   object contains the same nested structures as :attr:`Session.modules`.
 
   This cache is loaded when the exported project is being built to register
-  when files have changed. Note that the modification time that is saved
-  is the sum of all dependent files.
+  when files have changed in order to tell the user when a project might need
+  to be re-exported. Note that the modification time that is saved is the sum
+  of all dependent files.
 
-  Example:
+  The format is a dictionary that maps module names to the following keys:
 
-  .. code:: json
-
-    "modules": {
-      "craftr.lang.cxx.msvc": {
-        "1.0.0": {
-          "deps": [
-            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\manifest.json",
-            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx.msvc\\craftrfile"
-          ],
-          "mtime": 2962706318
-        }
-      },
-      "craftr.lib.sdl2": {
-        "1.0.0": {
-          "deps": [
-            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\manifest.json",
-            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl_auxiliary\\craftr.lib.sdl2\\craftrfile"
-          ],
-          "mtime": 2963870114
-        }
-      },
-      "craftr.lang.cxx": {
-        "1.0.0": {
-          "deps": [
-            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\manifest.json",
-            "c:\\users\\niklas\\repos\\craftr\\craftr\\stl\\craftr.lang.cxx\\craftrfile"
-          ],
-          "mtime": 2963324399
-        }
-      },
-      "examples.c-sdl2": {
-        "1.0.0": {
-          "deps": [
-            "c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\manifest.json",
-            "c:\\users\\niklas\\repos\\craftr\\examples\\examples.c-sdl2\\craftrfile"
-          ],
-          "mtime": 2963870114
-        }
-      }
-    }
+  - dependent_files: A list of absolute filenames that the exported project
+    depends on. This will always contain at least the manifest and the build
+    script.
+  - mtime: The sum of the modification times of all files listed in
+    *dependent_files*.
+  - dependencies: A dictionary that maps the name of dependent modules to the
+    version number string that was loaded when the project was exported. This
+    can be rendered into a dependency lock file with the ``craftr lock`` command.
   """
 
   modules = {}
@@ -138,7 +115,8 @@ def serialise_loaded_module_info():
     for version, module in versions.items():
       if not module.executed: continue
       module_versions[str(version)] = {
-        "deps": module.dependent_files,
+        "dependent_files": module.dependent_files,
+        "dependencies": {k: str(v) for k, v in module.dependencies.items()},
         "mtime": sum(map(path.getimtime, module.dependent_files))
       }
     if module_versions:
@@ -148,11 +126,16 @@ def serialise_loaded_module_info():
 
 def unserialise_loaded_module_info(modules):
   """
-  This function takes the data generated with :func:`serialise_loaded_module_info`
+  This function takes the data generated with #serialise_loaded_module_info
   and converts it back to a format that is easier to use later in the build process.
   Currently, this function only converts the version-number fields to actual
   :class:`Version` objects and adds a ``"changed"`` key to a module based on
   the ``"mtime"`` and the current modification times of the files.
+
+  So additionally to the fields described in #serialise_loaded_module_info(),
+  the following fields are available per module description:
+
+  - changed: True if any of the *dependent_files* changed.
   """
 
   result = {}
@@ -162,7 +145,7 @@ def unserialise_loaded_module_info(modules):
       version = Version(version)
       result[name][version] = module
       mtime = 0
-      for fn in module['deps']:
+      for fn in module['dependent_files']:
         try:
           mtime += path.getimtime(fn)
         except OSError:
@@ -262,7 +245,7 @@ class BuildCommand(BaseCommand):
 
   def __init__(self, mode):
     assert mode in ('clean', 'build', 'export', 'run', 'help',
-                    'dump-options', 'dump-deptree')
+                    'dump-options', 'dump-deptree', 'lock')
     self.mode = mode
 
   def build_parser(self, parser):
@@ -353,6 +336,8 @@ class BuildCommand(BaseCommand):
       return self._dump_deptree(args, module)
     elif self.mode in ('build', 'clean'):
       return self._build_or_clean(args)
+    elif self.mode == 'lock':
+      self._create_lockfile()
     else:
       raise RuntimeError("mode: {}".format(self.mode))
 
@@ -397,7 +382,7 @@ class BuildCommand(BaseCommand):
     *module* and eventually export a Ninja manifest and Cache.
     """
 
-    read_cache(self.cachefile)
+    read_cache(False)
 
     session.expand_relative_options()
     session.cache['build'] = {}
@@ -422,6 +407,8 @@ class BuildCommand(BaseCommand):
     session.cache['build']['modules'] = serialise_loaded_module_info()
     session.cache['build']['main'] = module.ident
     session.cache['build']['options'] = args.options
+    session.cache['build']['dependency_lock_filename'] = path.join(
+        path.dirname(module.manifest.filename), '.dependency-lock')
 
     if self.mode == 'export':
       # Add the Craftr_run_command variable which is necessary for tasks
@@ -444,6 +431,7 @@ class BuildCommand(BaseCommand):
         writer = core.build.NinjaWriter(fp)
         session.graph.export(writer, context, platform)
         logger.info('exported "build.ninja"')
+
       return 0
 
     elif self.mode == 'run':
@@ -525,11 +513,8 @@ class BuildCommand(BaseCommand):
     """
 
     # Read the cache and parse command-line options.
-    if not read_cache(self.cachefile):
-      logger.error('Unable to find file: .craftrcache')
-      logger.error('Does not seem to be a build directory: {}'.format(session.builddir))
-      logger.error("Export build information using the 'craftr export' command.")
-      return 1
+    if not read_cache(True):
+      sys.exit(1)
 
     parse_cmdline_options(session.cache['build']['options'])
     main = session.cache['build']['main']
@@ -589,6 +574,23 @@ class BuildCommand(BaseCommand):
         cmd += ['-r']
     cmd += targets
     return shell.run(cmd).returncode
+
+  def _create_lockfile(self):
+    if not read_cache(True):
+      sys.exit(1)
+    modules = unserialise_loaded_module_info(session.cache['build']['modules'])
+    filename = session.cache['build']['dependency_lock_filename']
+    deps = {}
+    for module, version_info in modules.items():
+      entries = {}
+      for version, module_data in version_info.items():
+        if module_data['dependencies']:
+          entries[str(version)] = module_data['dependencies']
+      if entries:
+        deps[module] = entries
+    with open(filename, 'w') as fp:
+      cson.dump(deps, fp, indent=2, sort_keys=True)
+    logger.info('Dependency lockfile created at "{}"'.format(filename))
 
 
 class StartpackageCommand(BaseCommand):
@@ -679,6 +681,7 @@ def main():
   subparsers = parser.add_subparsers(dest='command')
 
   commands = {
+    'lock': BuildCommand('lock'),
     'clean': BuildCommand('clean'),
     'build': BuildCommand('build'),
     'export': BuildCommand('export'),

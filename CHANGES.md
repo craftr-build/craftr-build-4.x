@@ -5,6 +5,8 @@ General Changes
 - Default manifest configuration format is now CSON (`manifest.cson`),
   JSON being kept for backwards compatibility (see #168)
 - Fix crash on Travis CI with `tty.terminal_size()` (see #169)
+- Add `craftr lock` command which generates `.dependency-lock` file in the
+  same directory as the project's Manifest (see #155)
 
 API Changes
 
