@@ -30,6 +30,7 @@ API Changes
 - change `runtarget()` to take `Target.runprefix` into account
 - change `path.norm()` now makes sure that path is lowercased on Windows
 - change `load_file()` now adds the loaded file to `Module.dependent_files`
+- change `glob(patterns)` now accepts a string additionally to a list of strings
 - rename `load_module()` to `load()`, using the old name displays a warning
 
 Library Changes

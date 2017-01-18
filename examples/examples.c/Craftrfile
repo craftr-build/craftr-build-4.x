@@ -18,7 +18,7 @@ from os import environ
 cxx = load('craftr.lang.cxx')
 
 program = cxx.executable(
-  inputs = cxx.compile_c(sources = glob(['src/*.c'])),
+  inputs = cxx.compile_c(sources = glob('src/*.c')),
   output = 'main'
 )
 

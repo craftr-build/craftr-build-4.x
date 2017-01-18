@@ -101,9 +101,12 @@ def glob(patterns, parent=None, excludes=(), include_dotfiles=False, ignore_fals
   :return: A list of filenames.
   """
 
-  argspec.validate('patterns', patterns, {'type': [list, tuple]})
+  argspec.validate('patterns', patterns, {'type': [list, tuple, str]})
   argspec.validate('excludes', excludes, {'type': [list, tuple]})
   argspec.validate('parent', parent, {'type': [None, str]})
+
+  if isinstance(patterns, str):
+    patterns = [patterns]
 
   if not parent:
     parent = getcwd()

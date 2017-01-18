@@ -25,7 +25,7 @@ __C++ Example__
 ```python
 cxx = load('craftr.lang.cxx')
 program = cxx.executable(
-  inputs = cxx.compile_cpp(sources = glob(['src/**/*.cpp'])),
+  inputs = cxx.compile_cpp(sources = glob('src/**/*.cpp')),
   output = 'main'
 )
 ```
@@ -46,7 +46,7 @@ __C# Example__
 ```python
 cs = load('craftr.lang.csharp')
 app = cs.compile(
-  sources = glob(['src/**/*.cs']),
+  sources = glob('src/**/*.cs'),
   output = 'Main',
   target = 'exe'
 )
