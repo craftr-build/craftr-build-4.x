@@ -73,7 +73,7 @@ class JavaCompiler(object):
 
     output_dir = buildlocal('java')
     if not srcs:
-      srcs = path.glob(path.join(src_dir, '**/*.java'))
+      srcs = path.glob([path.join(src_dir, '**/*.java')])
     builder = TargetBuilder(gtn(name, "java"), kwargs, frameworks, srcs)
     outputs = get_class_files(builder.inputs, src_dir, output_dir)
 
@@ -114,11 +114,18 @@ class JavaCompiler(object):
 
 javac = JavaCompiler()
 
-
-def java_compile(*args, name=None, **kwargs):
+def compile(*args, name=None, **kwargs):
   return javac.compile(*args, name=gtn(name, None), **kwargs)
 
-def java_jar(*args, name=None, **kwargs):
+def jar(*args, name=None, **kwargs):
   return javac.make_jar(*args, name=gtn(name, None), **kwargs)
+
+def java_compile(*args, name=None, **kwargs):
+  logger.warn('java_compile() is deprecated, use java.compile() instead')
+  return compile(*args, name=gtn(name), **kwargs)
+
+def java_jar(*args, name=None, **kwargs):
+  logger.warn('java_jar() is deprecated, use java.jar() instead')
+  return jar(*args, name=gtn(name), **kwargs)
 
 __all__ = ['java_compile', 'java_jar']

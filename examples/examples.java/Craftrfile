@@ -14,17 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-load('craftr.lang.java.*')
+java = load('craftr.lang.java')
 
-classes = java_compile(
-  srcs = [local('Main.java')],
-  src_dir = project_dir
-)
-
-jar = java_jar(
-  inputs = classes,
-  entry_point = 'Main',
-  output = 'java-example'
+jar = java.jar(
+  inputs = java.compile(src_dir = project_dir),
+  output = 'myapp',
+  entry_point = 'Main'
 )
 
 run = gentarget([['java', '-jar', jar]], explicit=True)

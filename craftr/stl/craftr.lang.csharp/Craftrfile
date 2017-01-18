@@ -128,5 +128,9 @@ def compile(*args, name=None, **kwargs):
   return csc.compile(*args, name=gtn(name, None), **kwargs)
 
 
-csharp_compile = compile
+def csharp_compile(*args, name=None, **kwargs):
+  logger.warn('csharp_compile() is deprecated, use csharp.compile() instead')
+  return compile(*args, name=gtn(name), **kwargs)
+
+
 __all__ = ['csharp_compile']
