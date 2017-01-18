@@ -184,20 +184,21 @@ class Session(object):
   def write_cache(self, fp):
     json.dump(self.cache, fp, indent='\t')
 
-  def expand_relative_options(self):
+  def expand_relative_options(self, module_name=None):
     """
     After the main module has been detected, relative option names (starting
     with ``.``) should be converted to absolute option names. This is what
     the method does.
     """
 
-    if not self.main_module:
+    if not module_name and not self.main_module:
       raise RuntimeError('main_module not set')
+    if not module_name:
+      module_name = self.main_module.manifest.name
 
-    name = self.main_module.manifest.name
     for key in tuple(self.options.keys()):
       if key.startswith('.'):
-        self.options[name + key] = self.options.pop(key)
+        self.options[module_name + key] = self.options.pop(key)
 
   def get_temporary_directory(self):
     """

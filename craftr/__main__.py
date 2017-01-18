@@ -527,7 +527,7 @@ class BuildCommand(BaseCommand):
     # Read the cache and parse command-line options.
     if not read_cache(self.cachefile):
       logger.error('Unable to find file: .craftrcache')
-      logger.error('Does not seemt to be a build directory: {}'.format(session.builddir))
+      logger.error('Does not seem to be a build directory: {}'.format(session.builddir))
       logger.error("Export build information using the 'craftr export' command.")
       return 1
 
@@ -622,7 +622,6 @@ class StartpackageCommand(BaseCommand):
       if path.isfile(fn):
         logger.error('"{}" already exists'.format(fn))
         return 1
-
 
     logger.debug('creating file "{}"'.format(mfile))
     with open(mfile, 'w') as fp:
