@@ -205,12 +205,18 @@ class CythonCompiler(object):
 
 cythonc = CythonCompiler()
 
-
-def cython_compile(*args, name=None, **kwargs):
+def compile(*args, name=None, **kwargs):
   return cythonc.compile(*args, name=gtn(name, None), **kwargs)
 
+def project(*args, name=None, **kwargs):
+  return cythonc.project(*args, name=gtn(name, None), **kwargs)
+
+def cython_compile(*args, name=None, **kwargs):
+  logger.warn('cython_compile() is deprecated, use cython.compile() instead')
+  return cythonc.compile(*args, name=gtn(name, None), **kwargs)
 
 def cython_project(*args, name=None, **kwargs):
+  logger.warn('cython_project() is deprecated, use cython.project() instead')
   return cythonc.project(*args, name=gtn(name, None), **kwargs)
 
 __all__ = ['cython_compile', 'cython_project']
