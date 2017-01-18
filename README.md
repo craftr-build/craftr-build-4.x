@@ -20,6 +20,15 @@ __Features__
 - [x] Dependency-lock files for fully reproducible builds
 - [ ] Package manager (hosted on [Craftr.net])
 
+__Basic Usage__
+
+    $ craftr version                            # Print Craftr version and exit
+    $ craftr export                             # Generate Ninja manifest
+    $ craftr build [target [target [...]]]      # Build all or the specified target(s)
+    $ craftr clean [-r] [target [target [...]]] # Clean all or the specified target(s)
+    $ craftr startpackage <name> [directory]    # Start a new Craftr project (manifest, Craftrfile)
+    $ craftr lock                               # Generate a .dependency-lock file (after craftr export)
+
 __C++ Example__
 
 ```python
