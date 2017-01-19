@@ -565,7 +565,8 @@ class BuildCommand(BaseCommand):
       target_name = craftr.targetbuilder.get_full_name(
           target_name, module_name=module_name, version=version)
       if target_name not in available_targets:
-        parser.error('no such target: {}'.format(target_name))
+        logger.error('no such target: {}'.format(target_name))
+        return 1
       targets.append(target_name)
 
     # Make sure we get all the output before running the subcommand.
