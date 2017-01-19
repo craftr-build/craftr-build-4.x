@@ -77,7 +77,7 @@ def terminal_size(default=(80, 30)):
     except OSError as exc:
       # craftr-build/craftr#169 -- On OSX on Travis CI the call fails, probably
       # because the process is not attached to a TTY.
-      if exc.errno == errno.ENODEV:
+      if exc.errno in (errno.ENODEV, errno.ENOTTY):
         return default
       raise
     h, w, hp, wp = struct.unpack('HHHH', data)
