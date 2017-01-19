@@ -49,7 +49,7 @@ if isatty and colorama:
   colorama.init()
 
 
-def terminal_size(default=(80, 30)):
+def terminal_size(default=(120, 30)):
   """
   Determines the size of the terminal. If the size can not be obtained, returns
   the specified *default* size.
