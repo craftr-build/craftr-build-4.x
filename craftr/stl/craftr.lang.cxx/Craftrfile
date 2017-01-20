@@ -100,5 +100,6 @@ def cxx_library(*args, name=None, **kwargs):
 
 def cxx_extend_framework(*args, **kwargs):
   logger.warn('craftr.lang.cxx:cxx_extend_framework() is deprecated, use cxx.extend_library() instead')
+  return extend_framework(*args, **kwargs)
 
 __all__ = ['cxc', 'c_compile', 'cpp_compile', 'cxx_library', 'cxx_binary', 'cxx_extend_framework']

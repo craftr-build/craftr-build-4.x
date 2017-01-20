@@ -1,3 +1,10 @@
+# v2.0.0.dev7
+
+Bugfixes
+
+- Fix function `cxx_extend_framework()` that is kept for backwards compatibility,
+  which was missing to call the new `cxx.extend_framework()`.
+
 # v2.0.0.dev6
 
 General Changes
