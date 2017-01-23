@@ -4,6 +4,13 @@ Bugfixes
 
 - Fix function `cxx_extend_framework()` that is kept for backwards compatibility,
   which was missing to call the new `cxx.extend_framework()`.
+- Fix `NameError` in `'craftr build'` command
+- fix `errno.ENOTTY` raised on Linux CI runners (eg. GitLab)
+
+Changes
+
+- If terminal size can not be determined, assume 120 characters wide
+  instead of 80
 
 # v2.0.0.dev6
 
