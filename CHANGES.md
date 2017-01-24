@@ -1,3 +1,12 @@
+# development
+
+Bugfixes
+
+- An empty value for an option of type `path` will no longer end up have the
+  value of the project directory but instead be an empty string
+- Fix `msvc_runtime_library` parameter in compile procedure of the
+  `craftr.lang.cxx.msvc` module (invert behaviour of `'static'` and `'dynamic'`)
+
 # v2.0.0.dev7
 
 Bugfixes

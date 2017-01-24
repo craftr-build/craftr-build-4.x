@@ -419,9 +419,9 @@ class MsvcToolkit(object):
 
     msvc_runtime_library = builder.get('msvc_runtime_library', 'dynamic')
     if msvc_runtime_library == 'dynamic':
-      command += ['/MTd' if debug else '/MT']
-    elif msvc_runtime_library == 'static':
       command += ['/MDd' if debug else '/MD']
+    elif msvc_runtime_library == 'static':
+      command += ['/MTd' if debug else '/MT']
     elif msvc_runtime_library is not None:
       raise ValueError('invalid msvc_runtime_library: {!r}'.format(msvc_runtime_library))
 

@@ -415,9 +415,12 @@ class PathOption(StringOption):
 
   def __call__(self, value):
     from craftr.core.session import session
-    if not path.isabs(value):
-      value = path.join(session.maindir, value)
-    return path.norm(value)
+    value = value.strip()
+    if value:
+      if not path.isabs(value):
+        value = path.join(session.maindir, value)
+      return path.norm(value)
+    return value
 
 
 class _aliases:
