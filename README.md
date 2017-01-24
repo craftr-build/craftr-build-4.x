@@ -1,4 +1,4 @@
-# Craftr 2
+# The Craftr build system
 
 [![PyPI Version](https://img.shields.io/pypi/v/craftr-build.svg)](https://pypi.python.org/pypi/craftr-build)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/530/badge)](https://bestpractices.coreinfrastructure.org/projects/530)
@@ -74,8 +74,8 @@ run = runtarget(primes.main)
 
 [Ninja]: https://github.com/ninja-build/ninja
 [Python 3]: https://www.python.org/
-[Documentation]: https://github.com/craftr-build/craftr/tree/master/doc
-[Getting Started]: https://github.com/craftr-build/craftr/tree/master/doc/getting-started.md
+[Documentation]: https://craftr-build.github.io/craftr/
+[Getting Started]: https://craftr-build.github.io/craftr/getting-started
 [Wiki]: https://github.com/craftr-build/craftr/wiki
 [Craftr.net]: https://craftr.net
 

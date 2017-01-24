@@ -2,3 +2,4 @@ versionPatterns:
   "setup.py": "  version = '$VERSION'"
   "craftr/__init__.py": "__version__ = '$VERSION'"
   "README.md": "    \\$ pip install craftr-build==$VERSION"
+  "docs/pydocmd.yml": "site_name: Craftr v$VERSION Documentation"

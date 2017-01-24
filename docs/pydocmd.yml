@@ -1,4 +1,5 @@
-site_name: Welcome to the Craftr Documentation!
+site_name: Craftr v2.0.0.dev7 Documentation
+theme: cinder
 generate:
 pages:
 - Home: index.md << ../README.md
