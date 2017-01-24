@@ -8,7 +8,7 @@ You can set the `craftr.ninja` option or use the `NINJA` environment variable.
 
 ### Is there a way to create a Python function that is called from Ninja?
 
-See the Documentation about [Tasks](tasks).
+See the Documentation about [Tasks](ref/tasks).
 
 ### How can I include a configuration file from another configuration file?
 
