@@ -10,7 +10,7 @@ You can build functions that create tasks, so you can create multiple instances
 of the same task with different inputs, or you just create a task once from a
 single function.
 
-__A simple example__
+## A simple example
 
 ```python
 git = load('craftr.utils.git').Git(project_dir)  # Git repository helper for this project
@@ -38,7 +38,7 @@ app = cxx.binary(
 )
 ```
 
-__Task generators__
+## Task generators
 
 We can generalise the `gitversion` task so it can be used multiple times.
 

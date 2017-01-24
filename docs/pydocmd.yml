@@ -1,15 +1,18 @@
 site_name: Craftr v2.0.0.dev7 Documentation
-theme: cinder
+theme: material
+markdown_extensions:
+  - admonition
+  - codehilite
 generate:
 pages:
 - Home: index.md << ../README.md
-- Changelog: changes.md << ../CHANGES.md
+- Getting Started: getting-started.md
 - Reference:
-  - Getting Started: getting-started.md
-  - Build Configuration: config.md
-  - Built-ins: builtins.md
-  - Loaders: loaders.md
-  - Tasks: tasks.md
-  - Generators: generators.md
-  - Transition from Craftr 1: transition.md
-  - FAQ: faq.md
+  - Package Description: ref/package.md
+  - Targets: ref/targets.md
+  - Tasks: ref/tasks.md
+  - Loaders: ref/loaders.md
+  - Built-ins: ref/builtins.md
+  - Build Configuration: ref/config.md
+- Changelog: changes.md << ../CHANGES.md
+- FAQ: faq.md
