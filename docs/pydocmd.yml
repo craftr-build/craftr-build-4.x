@@ -16,3 +16,4 @@ pages:
   - Build Configuration: ref/config.md
 - Changelog: changes.md << ../CHANGES.md
 - FAQ: faq.md
+- Projects using Craftr: projects.md
