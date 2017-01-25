@@ -7,6 +7,11 @@ Bugfixes
 - Fix `msvc_runtime_library` parameter in compile procedure of the
   `craftr.lang.cxx.msvc` module (invert behaviour of `'static'` and `'dynamic'`)
 
+API Changes
+
+- change `load()` now accepts a `mode` parameter instead of `get_namespace`,
+  can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`.
+
 # v2.0.0.dev7
 
 Bugfixes

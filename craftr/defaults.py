@@ -143,7 +143,7 @@ def zip(*iterables, fill=NotImplemented):
     return list(_itertools.zip_longest(*iterables, fillvalue=fill))
 
 
-def load(name, into=None, get_namespace=True, _stackframe=1):
+def load(name, into=None, mode='exports', _stackframe=1):
   """
   Load a Craftr module by name and return it. If *into* is specified, it must
   be a dictionary that will be filled with all the members of the module. Note
@@ -158,7 +158,11 @@ def load(name, into=None, get_namespace=True, _stackframe=1):
     the contents of the module will be exported into the globals of the
     calling frame.
   :param into: If specified, must be a dictionary.
-  :param get_namespace:
+  :param mode: One of `'module'`, `'namespace'` and `'exports'`. In module
+    mode, the :class:`craftr.core.session.Module` will be returned. In namespace
+    mode, the namespace of that module will be returned. In exports mode, if
+    the namespace has a member named `'exports'`, that member will be returned,
+    otherwise it behaves the same as namespace mode. Defaults to `'exports'`.
   :return: The module namespace object (of type :class:`types.ModuleType`)
     or the actual :class:`craftr.core.session.Module` if *get_namespace*
     is False.
@@ -166,6 +170,9 @@ def load(name, into=None, get_namespace=True, _stackframe=1):
   :raise RuntimeError: If the module that is attempted to be loaded is not
     declared in the current module's manifest.
   """
+
+  if mode not in ('exports', 'namespace', 'module'):
+    raise ValueError('invalid mode: {!r}'.format(mode))
 
   if name.endswith('.*') and into is None:
     name = name[:-2]
@@ -197,9 +204,16 @@ def load(name, into=None, get_namespace=True, _stackframe=1):
         if not key.startswith('_') and key not in module_builtins and key not in globals():
           into[key] = value
 
-  if get_namespace:
+  if mode == 'exports':
+    if hasattr(loaded_module.namespace, 'exports'):
+      return loaded_module.namespace.exports
     return loaded_module.namespace
-  return loaded_module
+  elif mode == 'namespace':
+    return loaded_module.namespace
+  elif mode == 'module':
+    return loaded_module
+  else:
+    assert False
 
 
 def load_file(filename, export_default_namespace=True):
@@ -305,7 +319,7 @@ def gentask(func, args = None, inputs = (), outputs = (), name = None, **kwargs)
   if args is None:
     args = [inputs, outputs]
   builder = TargetBuilder(gtn(name), inputs = inputs)
-  task = _build.Task(builder.name, func, args)
+  task = _build.Task(builder.name, func, args, **kwargs)
   return session.graph.add_task(task, inputs = builder.inputs, outputs = outputs)
 
 
