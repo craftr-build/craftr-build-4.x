@@ -358,7 +358,7 @@ class Target(object):
         implicit=self.implicit_deps,
         order_only=self.order_only_deps)
 
-    if self.outputs and self.name not in self.outputs and not self.explicit:
+    if self.outputs and self.name not in self.outputs:
       writer.build(self.name, 'phony', self.outputs)
 
   @property
