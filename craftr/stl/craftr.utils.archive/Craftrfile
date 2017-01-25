@@ -30,22 +30,25 @@ class Archive(object):
 
   File = recordclass.new('File', 'name arc_name')
 
-  def __init__(self, name=None, base_dir=None, prefix=None, format='zip'):
+  def __init__(self, filename=None, base_dir=None, prefix=None, format='zip', files=None):
     assert format == 'zip', "format must be 'zip' for now"
-    if not name:
+    if not filename:
       if not prefix:
         raise TypeError('neither name nor prefix argument specified')
-      name = prefix + '.' + format
+      filename = prefix + '.' + format
     if prefix and not prefix.endswith('/'):
       prefix += '/'
     self._files = []
     self._base_dir = base_dir or session.module.project_dir
     self._prefix = prefix
-    self.name = name
+    self.filename = filename
     try:
       self._assigned_name = gtn()
     except ValueErorr as exc:
       self._assigned_name = None
+    if files:
+      for fn in files:
+        self.add(fn)
 
   def add(self, name, rel_dir=None, arc_name=None, parts=None):
     ''' Add a file, directory or `Target` to the archive file list.
@@ -139,23 +142,24 @@ class Archive(object):
   def save(self):
     ''' Save the archive. '''
 
-    zf = zipfile.ZipFile(self.name, 'w')
+    zf = zipfile.ZipFile(self.filename, 'w')
     try:
       for file in self._files:
         zf.write(file.name, file.arc_name)
     except:
       zf.close()
-      path.remove(self.name, silent=True)
+      path.remove(self.filename, silent=True)
       raise
     else:
       zf.close()
 
-  def astarget(self, name=None, explicit=True):
-    if name is None:
-      name = self._assigned_name
-    if name is None:
-      name = gtn(name, 'archive')
-    return gentask(self.save, [], inputs=[f.name for f in self._files],
-      outputs=[self.name], name=name)
+  @staticmethod
+  def make_target(filename=None, base_dir=None, prefix=None, format='zip',
+                  files=None, explicit=True, name=None):
+    # Just to get the actual filename.
+    archive = Archive(filename, base_dir, prefix, format, files)
+    return gentask(archive.save, [], inputs=[f.name for f in archive._files],
+      outputs=[archive.filename], explicit=explicit, name=gtn(name, 'archive'))
+
 
 exports = Archive

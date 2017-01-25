@@ -293,7 +293,7 @@ def genalias(*targets, name = None, **kwargs):
     implicit_deps = targets, **kwargs)
 
 
-def gentask(func, args = None, inputs = (), outputs = (), name = None, **kwargs):
+def gentask(func, args = None, inputs = (), outputs = (), name = None, explicit = True, **kwargs):
   """
   Create a Task that can be embedded into the build chain. Tasks can have input
   and output files that cause the task to be embedded into the build chain. By
@@ -320,7 +320,7 @@ def gentask(func, args = None, inputs = (), outputs = (), name = None, **kwargs)
     args = [inputs, outputs]
   builder = TargetBuilder(gtn(name), inputs = inputs)
   task = _build.Task(builder.name, func, args, **kwargs)
-  return session.graph.add_task(task, inputs = builder.inputs, outputs = outputs)
+  return session.graph.add_task(task, inputs = builder.inputs, outputs = outputs, explicit = explicit)
 
 
 def task(inputs = (), outputs = (), args = None, **kwargs):

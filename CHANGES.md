@@ -14,7 +14,8 @@ Behaviour Changes
 API Changes
 
 - change `load()` now accepts a `mode` parameter instead of `get_namespace`,
-  can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`.
+  can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`
+- add `gentask(explicit)` parameter
 
 Standard Library
 
