@@ -12,6 +12,10 @@ API Changes
 - change `load()` now accepts a `mode` parameter instead of `get_namespace`,
   can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`.
 
+Standard Library
+
+- add `craftr.utils.archive` module
+
 # v2.0.0.dev7
 
 Bugfixes
