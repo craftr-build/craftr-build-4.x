@@ -127,12 +127,15 @@ def __llvm_check(program, output):
   }
 
   # Check for a C++ compiler.
+  stdlib = None
   if '++' in program:
     stdlib = detect_cpp_stdlib(program)
     if stdlib:
       result['cpp_stdlib'] = stdlib
 
   logger.debug('matched llvm: "{}":'.format(program), result)
+  if stdlib:
+    logger.debug('  detected stdlib:', stdlib)
   return result
 
 
