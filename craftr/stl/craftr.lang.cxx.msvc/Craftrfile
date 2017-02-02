@@ -76,6 +76,7 @@ def identify(program):
       "target": "...",
       "thread_model": "...",
       "msvc_deps_prefix": "...",
+      "ml_program": "...",
       "link_program": "...",
       "lib_program": "...",
     }
@@ -149,6 +150,7 @@ def identify(program):
     logger.debug(output, indent = 1)
     deps_prefix = 'Note: including file:'
 
+
   return {
     'name': name,
     'version': version,
@@ -156,6 +158,7 @@ def identify(program):
     'target': arch,
     'thread_model': thread_model,
     'msvc_deps_prefix': deps_prefix,
+    'ml_program': ('ml64' if arch == 'x64' else 'ml') if name == 'msvc' else program,  # TODO: Assembler for Clang CL?
     'link_program': 'link' if name == 'msvc' else 'lld-link',
     'lib_program': 'lib' if name == 'msvc' else 'llvm-lib'
   }
@@ -266,7 +269,7 @@ def _get_vs_environment(install_dir, vsversion, arch=None, _forcecc=None):
 
 class MsvcToolkit(object):
 
-  Programs = recordclass.new('Programs', 'cl link lib')
+  Programs = recordclass.new('Programs', 'cl ml link lib')
 
   def __init__(self, toolkit=None, target=None):
     toolkit = toolkit or options.toolkit or 'msvc'
@@ -290,15 +293,17 @@ class MsvcToolkit(object):
       except ToolDetectionError as exc:
         pass
       else:
+        ml = self.info['ml_program']
         link = self.info['link_program']
         lib =  self.info['lib_program']
 
     if not self.info:
       self.install_info = find_installation(version, target or real_arch)
       cl = path.join(self.install_info['toolsdir'], 'cl.exe')
+      ml = path.join(self.install_info['toolsdir'], ('ml64.exe' if '64' in self.install_info['arch'] else 'ml.exe'))
       link = path.join(self.install_info['toolsdir'], 'link.exe')
       lib = path.join(self.install_info['toolsdir'], 'lib.exe')
-      self.programs = self.Programs(cl, link, lib)
+      self.programs = self.Programs(cl, ml, link, lib)
       with override_environ(self.install_info['env']):
         self.info = identify(self.programs.cl)
 
@@ -317,7 +322,7 @@ class MsvcToolkit(object):
 
     self.toolkit = toolkit
     self.target_arch = real_target
-    self.programs = self.Programs(cl, link, lib)
+    self.programs = self.Programs(cl, ml, link, lib)
 
   def __str__(self):
     return self.info['version_str']
@@ -354,7 +359,11 @@ class MsvcToolkit(object):
       pyutils.unique_extend(defines, ['NDEBUG'])
     undefines = builder.get_list('undefines')
 
-    command = [self.programs.cl, '/nologo', '/c', '$in', '/Fo$out']
+    if language == 'asm':
+      command = [self.programs.ml]
+    else:
+      command = [self.programs.cl]
+    command += ['/nologo', '/Fo$out', '/c', '$in']
     command += ['/wd' + str(x) for x in builder.get_list('msvc_disable_warnings')]
     command += ['/we' + str(x) for x in builder.get_list('msvc_warnings_as_errors')]
 
@@ -418,16 +427,17 @@ class MsvcToolkit(object):
       logger.warn("invalid value for optimize: {!r}".format(optimize))
 
     msvc_runtime_library = builder.get('msvc_runtime_library', 'dynamic')
-    if msvc_runtime_library == 'dynamic':
-      command += ['/MDd' if debug else '/MD']
-    elif msvc_runtime_library == 'static':
-      command += ['/MTd' if debug else '/MT']
-    elif msvc_runtime_library is not None:
-      raise ValueError('invalid msvc_runtime_library: {!r}'.format(msvc_runtime_library))
+    if language != 'asm':
+      if msvc_runtime_library == 'dynamic':
+        command += ['/MDd' if debug else '/MD']
+      elif msvc_runtime_library == 'static':
+        command += ['/MTd' if debug else '/MT']
+      elif msvc_runtime_library is not None:
+        raise ValueError('invalid msvc_runtime_library: {!r}'.format(msvc_runtime_library))
 
     autodeps = builder.get('autodeps', True)
     params = {}
-    if autodeps:
+    if autodeps and language != 'asm':
       params['deps'] = 'msvc'
       params['msvc_deps_prefix'] = self.info['msvc_deps_prefix']
       command += ['/showIncludes']

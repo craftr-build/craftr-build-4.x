@@ -20,6 +20,8 @@ API Changes
 Standard Library
 
 - add `craftr.utils.archive` module
+- `craftr.lang.cxx.msvc` can now compile ASM code to some extend
+- add `compile_asm()` to `craftr.lang.cxx`
 
 # v2.0.0.dev7
 

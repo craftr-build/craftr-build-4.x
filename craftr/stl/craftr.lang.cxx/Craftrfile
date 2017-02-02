@@ -44,6 +44,9 @@ def compile_c(*args, name=None, **kwargs):
 def compile_cpp(*args, name=None, **kwargs):
   return cxc.compile(*args, name=gtn(name, None), language='c++', **kwargs)
 
+def compile_asm(*args, name=None, **kwargs):
+  return cxc.compile(*args, name=gtn(name, None), language='asm', **kwargs)
+
 def library(*args, name=None, link_style='static', **kwargs):
   if link_style == 'static':
     target = cxc.staticlib(*args, name=gtn(name, None), **kwargs)
