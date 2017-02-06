@@ -249,7 +249,7 @@ class CompletedProcess(object):
 
 
 def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
-    timeout=None, check=False, cwd=None, encoding=sys.getdefaultencoding()):
+    timeout=None, check=False, cwd=None, env=None, encoding=sys.getdefaultencoding()):
   """
   Run the process with the specified *cmd*. If *cmd* is a list of
   commands and *shell* is True, the list will be automatically converted
@@ -274,6 +274,12 @@ def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
   elif not shell and isinstance(cmd, str):
     cmd = split(cmd)
 
+  if env is not None:
+    temp = os.environ.copy()
+    temp.update(env)
+    env = temp
+    del temp
+
   if shell:
     # Wrapping the call in a shell invokation will not raise an
     # exception when the file could not actually be executed, thus
@@ -286,7 +292,8 @@ def run(cmd, *, stdin=None, input=None, stdout=None, stderr=None, shell=False,
 
   try:
     popen = subprocess.Popen(
-      cmd, stdin=stdin, stdout=stdout, stderr=stderr, shell=shell, cwd=cwd)
+      cmd, stdin=stdin, stdout=stdout, stderr=stderr, shell=shell,
+      cwd=cwd, env=env)
     stdout, stderr = popen.communicate(input, timeout)
   except subprocess.TimeoutExpired as exc:
     # TimeoutExpired.stderr available only since Python3.5

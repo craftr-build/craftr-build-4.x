@@ -16,6 +16,7 @@ API Changes
 - change `load()` now accepts a `mode` parameter instead of `get_namespace`,
   can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`
 - add `gentask(explicit)` parameter
+- add `env` parameter to `shell.run()` and `shell.pipe()`
 
 Standard Library
 
