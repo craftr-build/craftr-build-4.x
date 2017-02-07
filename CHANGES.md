@@ -17,6 +17,7 @@ API Changes
   can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`
 - add `gentask(explicit)` parameter
 - add `env` parameter to `shell.run()` and `shell.pipe()`
+- add `craftr.foreignbuild` module
 
 Standard Library
 
