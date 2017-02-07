@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 options = session.module.options
+from craftr.foreignbuild import configure, make
 
 # Framework that is used by other libraries/applications.
 cURL = Framework(
@@ -37,8 +38,9 @@ if platform.name == 'win':
   # Note: Yes, a bit hacky. Workaround until we can either maybe evaluate
   # CMake files or have CMake like feature checks (see craftr-build/craftr#134).
   cURL_building['include'] += [local('windows')]
+elif platform.name == 'mac':
+  pass
 else:
-  # TODO
   error('platform currently not supported: {}'.format(platform.name))
 
 # Grab the cURL source and update the include directory in the public framework.
@@ -47,16 +49,22 @@ source_directory = external_archive(
 )
 cURL['include'] += [path.join(source_directory, 'include')]
 
-# Compile the library.
-cxx = load('craftr.lang.cxx')
-libcURL = cxx.library(
-  link_style = 'static' if options.static else 'shared',
-  inputs = cxx.compile_c(
-    sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = source_directory),
-    include = [path.join(source_directory, 'lib')],
-    frameworks = [cURL, cURL_building]
-  ),
-  output = 'cURL'
-)
+if platform.name == 'mac':
+  outfile = path.join(source_directory, 'lib/.libs/libcurl.a')
+  configure(args=['--with-darwinssl'], cwd=source_directory)
+  make(cwd=source_directory, outputs=[outfile])
+  cURL['external_libs'] = [outfile]
 
-cxx.extend_framework(cURL, libcURL)
+else:
+  # Compile the library.
+  cxx = load('craftr.lang.cxx')
+  libcURL = cxx.library(
+    link_style = 'static' if options.static else 'shared',
+    inputs = cxx.compile_c(
+      sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = source_directory),
+      include = [path.join(source_directory, 'lib')],
+      frameworks = [cURL, cURL_building]
+    ),
+    output = 'cURL'
+  )
+  cxx.extend_framework(cURL, libcURL)
