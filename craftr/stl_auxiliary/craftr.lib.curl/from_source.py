@@ -63,7 +63,8 @@ else:
     inputs = cxx.compile_c(
       sources = glob(['src/**/*.c', 'lib/**/*.c'], parent = source_directory),
       include = [path.join(source_directory, 'lib')],
-      frameworks = [cURL, cURL_building]
+      frameworks = [cURL, cURL_building],
+      source_directory = source_directory
     ),
     output = 'cURL'
   )

@@ -6,6 +6,10 @@ Bugfixes
   value of the project directory but instead be an empty string
 - Fix `msvc_runtime_library` parameter in compile procedure of the
   `craftr.lang.cxx.msvc` module (invert behaviour of `'static'` and `'dynamic'`)
+- Fix issue with curl and curlpp modules where the object files are not built
+  in the build directory but instead in the source directory, or raise an
+  exception on Windows if the module directory and the build directory are on
+  different drives
 
 Behaviour Changes
 
