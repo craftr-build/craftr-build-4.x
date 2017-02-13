@@ -25,6 +25,11 @@ Standard Library
 - `craftr.lang.cxx.msvc` can now compile ASM code to some extend
 - add `compile_asm()` to `craftr.lang.cxx`
 
+Command-line Changes
+
+- add `--pm` option to enable the post-mortem debugger when an exception
+  occurs and is uncaught by the Craftr runtime
+
 # v2.0.0.dev7
 
 Bugfixes

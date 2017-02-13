@@ -31,6 +31,7 @@ import craftr.targetbuilder
 import functools
 import json
 import os
+import pdb
 import sys
 import textwrap
 
@@ -686,6 +687,7 @@ def main():
   parser.add_argument('-C', '--no-config', action='store_true')
   parser.add_argument('-P', '--project-dir')
   parser.add_argument('-d', '--option', dest='options', action='append', default=[])
+  parser.add_argument('--pm', action='store_true', help='Post-mortem debugger')
   subparsers = parser.add_subparsers(dest='command')
 
   commands = {
@@ -709,6 +711,14 @@ def main():
   if not args.command:
     parser.print_usage()
     return 0
+
+  if args.pm:
+    old_excepthook = sys.excepthook
+    def excepthook(type, value, traceback):
+      logger.error('Exception ({}), entering post-mortem debugger'.format(type.__name__))
+      pdb.post_mortem(traceback)
+      old_excepthook(type, value, traceback)
+    sys.excepthook = excepthook
 
   if args.project_dir:
     os.chdir(args.project_dir)
