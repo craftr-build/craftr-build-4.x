@@ -88,7 +88,7 @@ setup(
   package_data = {
     'craftr': find_files('craftr/stl', strip='craftr') + find_files('craftr/stl_auxiliary', strip='craftr')
   },
-  license = 'MIT',
+  license = 'GNU GPL v3',
   classifiers = [
     "Topic :: Software Development",
     "Topic :: Software Development :: Build Tools",

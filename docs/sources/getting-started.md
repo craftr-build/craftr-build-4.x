@@ -55,8 +55,8 @@ $ cat Craftrfile
 
 cxx = load('craftr.lang.cxx')
 
-program = cxx.binary(
-  inputs = cxx.c_compile(sources = glob(['src/*.c'])),
+program = cxx.executable(
+  inputs = cxx.compile_c(sources = glob(['src/*.c'])),
   output = 'main'
 )
 
