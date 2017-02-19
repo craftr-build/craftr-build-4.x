@@ -16,7 +16,7 @@ name: "examples.c"
 version: "1.0.0"
 dependencies:
   "craftr.lang.cxx": "*"
-options:
+options: {}
 ```
 
 Now let's assume we have the following two C source files in our project
