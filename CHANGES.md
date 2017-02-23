@@ -19,9 +19,13 @@ API Changes
 
 - change `load()` now accepts a `mode` parameter instead of `get_namespace`,
   can be one of `'exports'` (defualt), `'namespace'` and `'mmodule'`
+- change `gentarget()` to automatically append an argument that references an
+  environment variable with the name of the target so that the new
+  **pass-down-arguments** can be used (also effects `runtarget()`)
 - add `gentask(explicit)` parameter
 - add `env` parameter to `shell.run()` and `shell.pipe()`
 - add `craftr.foreignbuild` module
+- add `craftr.core.build.PlatformHelper.format_env_ref()` function
 
 Standard Library
 
@@ -33,6 +37,8 @@ Command-line Changes
 
 - add `--pm` option to enable the post-mortem debugger when an exception
   occurs and is uncaught by the Craftr runtime
+- add support for per-target **pass-down-arguments** with the syntax
+  `craftr build target[args ...]`
 
 # v2.0.0.dev7
 

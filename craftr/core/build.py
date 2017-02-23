@@ -561,6 +561,14 @@ class PlatformHelper(object, metaclass=abc.ABCMeta):
     will be ``['$in', '$out']``. 2) The actual filename that has been created.
     """
 
+  @abc.abstractmethod
+  def format_env_ref(self, envvar):
+    """
+    Given the name of an environment variable, return a new string that
+    references that environment variable in the syntax of this platform's
+    shell.
+    """
+
   @staticmethod
   def replace_argument_inout_vars(arg, inputs, outputs):
     """
@@ -655,6 +663,9 @@ class WindowsPlatformHelper(PlatformHelper):
 
     return result, filename
 
+  def format_env_ref(self, envvar):
+    return '%' + envvar + '%'
+
 
 class UnixPlatformHelper(PlatformHelper):
 
@@ -702,6 +713,9 @@ class UnixPlatformHelper(PlatformHelper):
       stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)  # rwxrw-r--
 
     return result, filename
+
+  def format_env_ref(self, envvar):
+    return '$' + envvar
 
 
 def get_platform_helper():

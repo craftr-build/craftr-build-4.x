@@ -277,8 +277,10 @@ def gentarget(commands, inputs=(), outputs=(), *args, **kwargs):
   derived from the variable name it is assigned to unless *name* is specified.
   """
 
-  target = _build.Target(gtn(kwargs.pop('name', None)), commands, inputs,
-      outputs, *args, **kwargs)
+  name = gtn(kwargs.pop('name', None))
+  target = _build.Target(name, commands, inputs, outputs, *args, **kwargs)
+  target.commands[0].append(session.platform_helper.format_env_ref(
+      name.replace('.', '_').replace('-', '_')))
   session.graph.add_target(target)
   return target
 
@@ -345,7 +347,8 @@ def runtarget(target, *args, inputs=(), outputs=(), **kwargs):
   name = gtn(kwargs.pop('name', None))
   kwargs.setdefault('explicit', True)
   kwargs.setdefault('pool', 'console')
-  return gentarget([target.runprefix + [target] + list(args)], inputs, outputs, name=name, **kwargs)
+  command = [target.runprefix + [target] + list(args)]
+  return gentarget(command, inputs, outputs, name=name, **kwargs)
 
 
 def write_response_file(arguments, builder=None, name=None, force_file=False, suffix=''):

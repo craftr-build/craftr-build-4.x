@@ -25,6 +25,7 @@ from nr.types.version import Version, VersionCriteria
 import abc
 import argparse
 import atexit
+import collections
 import configparser
 import craftr.defaults
 import craftr.targetbuilder
@@ -434,10 +435,9 @@ class BuildCommand(BaseCommand):
 
       # Write the Ninja manifest.
       with open("build.ninja", 'w') as fp:
-        platform = core.build.get_platform_helper()
         context = core.build.ExportContext(self.ninja_version)
         writer = core.build.NinjaWriter(fp)
-        session.graph.export(writer, context, platform)
+        session.graph.export(writer, context, session.platform_helper)
         logger.info('exported "build.ninja"')
 
       return 0
@@ -547,9 +547,44 @@ class BuildCommand(BaseCommand):
         for name in changed_modules:
           logger.info('  -', name)
 
-    # Check the targets and if they exist.
+    # Check whether the specified targets exist and generate the additional
+    # command environment variable that might be used by the target (eg.
+    # for targets created with runtarget()). The syntax is target[args...].
     targets = []
-    for target_name in args.targets:
+    targets_args_vars = {}
+    parse_targets = collections.deque(args.targets)
+    while parse_targets:
+      target_name = origin_arg = parse_targets.popleft()
+      target_args = []
+
+      # Split the arguments part from the target name.
+      parts = target_name.split('[', 1)
+      if len(parts) == 2:
+        target_name, arg = parts
+        # Consume parameters until we find the closing brace.
+        if arg:
+          parse_targets.appendleft(arg)
+        while parse_targets:
+          arg = parse_targets.popleft()
+          if arg.endswith(']'):
+            if len(arg) > 1: target_args.append(arg[:-1])
+            break
+          else:
+            target_args.append(arg)
+            if not parse_targets:
+              logger.error('pass-down-arguments not closed')
+              return 1
+
+      if not target_name:
+        if not target_args:
+          logger.error('invalid argument: {!r}'.format(origin_arg))
+          return 1
+        if not targets:
+          logger.error('pass-down-arguments not followed by target name')
+          return 1
+        targets_args_vars[targets[-1]] = target_args
+        continue
+
       if '.' not in target_name:
         target_name = main + '.' + target_name
       elif target_name.startswith('.'):
@@ -569,9 +604,17 @@ class BuildCommand(BaseCommand):
         logger.error('no such target: {}'.format(target_name))
         return 1
       targets.append(target_name)
+      if target_args:
+        targets_args_vars[target_name] = target_args
 
     # Make sure we get all the output before running the subcommand.
     logger.flush()
+
+    # Transform the additional target arguments so they are valid environment
+    # variable identifiers and join the arguments into a string.
+    targets_args_vars = {
+      k.replace('.', '_').replace('-', '_'): shell.join(v)
+      for k, v in targets_args_vars.items()}
 
     # Execute the ninja build.
     cmd = [self.ninja_bin]
@@ -582,7 +625,7 @@ class BuildCommand(BaseCommand):
       if not args.recursive:
         cmd += ['-r']
     cmd += targets
-    return shell.run(cmd).returncode
+    return shell.run(cmd, env=targets_args_vars).returncode
 
   def _create_lockfile(self):
     if not read_cache(True):

@@ -147,6 +147,7 @@ class Session(object):
     self.graph = build.Graph()
     self.path = [self.stl_dir, self.stl_auxiliary_dir, self.maindir,
         path.join(self.maindir, 'craftr/modules')]
+    self.platform_helper = build.get_platform_helper()
     self.modulestack = []
     self.modules = {}
     self.preferred_versions = {}
