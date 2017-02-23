@@ -279,8 +279,11 @@ def gentarget(commands, inputs=(), outputs=(), *args, **kwargs):
 
   name = gtn(kwargs.pop('name', None))
   target = _build.Target(name, commands, inputs, outputs, *args, **kwargs)
-  target.commands[0].append(shell.safe(
-      session.platform_helper.format_env_ref(name.replace('.', '_').replace('-', '_'))))
+
+  # Add an environment variable to the end of the first command to support
+  # pass-down-arguments in 'craftr build'.
+  envvar = 'craftr_passdown_' + name.replace('.', '_').replace('-', '_')
+  target.commands[0].append(shell.safe(session.platform_helper.format_env_ref(envvar)))
   session.graph.add_target(target)
   return target
 
