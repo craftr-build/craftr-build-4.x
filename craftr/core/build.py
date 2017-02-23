@@ -314,7 +314,7 @@ class Target(object):
 
     writer.comment("target: {}".format(self.name))
     writer.comment("--------" + "-" * len(self.name))
-    commands = platform.prepare_commands([list(map(str, c)) for c in self.commands])
+    commands = platform.prepare_commands(self.commands)
 
     # Check if we need to export a command file or can export the command
     # directly.
@@ -715,7 +715,9 @@ class UnixPlatformHelper(PlatformHelper):
     return result, filename
 
   def format_env_ref(self, envvar):
-    return '$' + envvar
+    # We need to use double quotes since otherwise the variable would be
+    # expanded by Ninja instead of bash.
+    return '$$' + envvar
 
 
 def get_platform_helper():

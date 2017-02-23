@@ -279,8 +279,8 @@ def gentarget(commands, inputs=(), outputs=(), *args, **kwargs):
 
   name = gtn(kwargs.pop('name', None))
   target = _build.Target(name, commands, inputs, outputs, *args, **kwargs)
-  target.commands[0].append(session.platform_helper.format_env_ref(
-      name.replace('.', '_').replace('-', '_')))
+  target.commands[0].append(shell.safe(
+      session.platform_helper.format_env_ref(name.replace('.', '_').replace('-', '_'))))
   session.graph.add_target(target)
   return target
 
