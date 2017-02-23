@@ -4,6 +4,45 @@ markdown_extensions:
   - admonition
   - codehilite
 generate:
+- api/core/build.md:
+  - craftr.core.build++
+- api/core/config.md:
+  - craftr.core.config++
+- api/core/logging.md:
+  - craftr.core.logging++
+- api/core/manifest.md:
+  - craftr.core.manifest++
+- api/core/renames.md:
+  - craftr.core.renames++
+- api/core/session.md:
+  - craftr.core.session++
+- api/platform.md:
+  - craftr.platform++
+- api/utils/argspec.md:
+  - craftr.utils.argspec++
+- api/utils/cson.md:
+  - craftr.utils.cson++
+- api/utils/httputils.md:
+  - craftr.utils.httputils++
+- api/utils/path.md:
+  - craftr.utils.path++
+- api/utils/pyutils.md:
+  - craftr.utils.pyutils++
+- api/utils/shell.md:
+  - craftr.utils.shell++
+- api/utils/singleton.md:
+  - craftr.utils.singleton++
+- api/utils/tty.md:
+  - craftr.utils.tty++
+- api/defaults.md:
+  - craftr.defaults++
+- api/foreignbuild.md:
+  - craftr.foreignbuild++
+- api/loaders.md:
+  - craftr.loaders++
+- api/targetbuilder.md:
+  - craftr.targetbuilder++
+
 pages:
 - Home: index.md << ../README.md
 - Getting Started: getting-started.md
@@ -14,6 +53,28 @@ pages:
   - Loaders: ref/loaders.md
   - Built-ins: ref/builtins.md
   - Build Configuration: ref/config.md
+- Developer Reference:
+  - core:
+    - build: api/core/build.md
+    - config: api/core/config.md
+    - logging: api/core/logging.md
+    - manifest: api/core/manifest.md
+    - renames: api/core/renames.md
+    - session: api/core/session.md
+  - platform: api/platform.md
+  - utils:
+    - argspec: api/utils/argspec.md
+    - cson: api/utils/cson.md
+    - httputils: api/utils/httputils.md
+    - path: api/utils/path.md
+    - pyutils: api/utils/pyutils.md
+    - shell: api/utils/shell.md
+    - singleton: api/utils/singleton.md
+    - tty: api/utils/tty.md
+  - defaults: api/defaults.md
+  - foreignbuild: api/foreignbuild.md
+  - loaders: api/loaders.md
+  - targetbuilder: api/targetbuilder.md
 - Changelog: changes.md << ../CHANGES.md
 - FAQ: faq.md
 - Projects using Craftr: projects.md
