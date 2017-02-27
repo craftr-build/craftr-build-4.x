@@ -615,6 +615,10 @@ class BuildCommand(BaseCommand):
     targets_args_vars = {
       'craftr_passdown_' + k.replace('.', '_').replace('-', '_'): shell.join(v)
       for k, v in targets_args_vars.items()}
+    if targets_args_vars:
+      logger.debug('Passdown Arguments:')
+      for key, value in targets_args_vars.items():
+        logger.debug('  {}={}'.format(key, value))
 
     # Execute the ninja build.
     cmd = [self.ninja_bin]
