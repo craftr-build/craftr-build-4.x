@@ -39,6 +39,8 @@ Command-line Changes
   occurs and is uncaught by the Craftr runtime
 - add support for per-target **pass-down-arguments** with the syntax
   `craftr build target[args ...]`
+- `craftr build <targets>` is now parsed as remainder, thus, flags can only
+  be specified before the first target
 
 # v2.0.0.dev7
 

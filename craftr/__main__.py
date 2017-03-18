@@ -264,7 +264,7 @@ class BuildCommand(BaseCommand):
       add_arg('-m', '--module')
       add_arg('-i', '--include-path', action='append', default=[])
     elif self.mode in ('build', 'clean'):
-      add_arg('targets', metavar='TARGET', nargs='*')
+      add_arg('targets', metavar='TARGET', nargs='...')
 
     if self.mode == 'run':
       add_arg('task', nargs='?')
