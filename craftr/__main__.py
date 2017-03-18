@@ -613,7 +613,7 @@ class BuildCommand(BaseCommand):
     # Transform the additional target arguments so they are valid environment
     # variable identifiers and join the arguments into a string.
     targets_args_vars = {
-      'craftr_passdown_' + k.replace('.', '_').replace('-', '_'): shell.join(v)
+      'craftr_passdown_' + k.replace('.', '_').replace('-', '_'): ' '.join(v)
       for k, v in targets_args_vars.items()}
     if targets_args_vars:
       logger.debug('Passdown Arguments:')
