@@ -1,4 +1,4 @@
-site_name: Craftr v2.0.0.dev7 Documentation
+site_name: Craftr v2.0.0 Documentation
 theme: material
 markdown_extensions:
   - admonition

@@ -91,7 +91,7 @@ no untagged version of Craftr 2.x available on PyPI yet and otherwise Pip will
 install Craftr 1.x (which is quite different). To get the newest stable version
 of Craftr 2, use
 
-    $ pip install craftr-build==2.0.0.dev7
+    $ pip install craftr-build==2.0.0
 
 To get the cutting edge development version, I suggest installing Craftr
 from the Git repository into a virtualenv.
