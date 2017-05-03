@@ -3,6 +3,8 @@
 Bugfixes
 
 - Fix #177: German MSVC Tools can not be detected
+- Fix `shell.find_program()` when program already has the `.exe` suffix
+  on Windows
 
 # v2.0.0
 

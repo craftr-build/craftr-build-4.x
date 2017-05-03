@@ -119,11 +119,12 @@ def find_program(name):
     name = path.abs(name)
 
   if iswin:
-    pathext = os.environ['PATHEXT'].split(path.pathsep)
+    pathext = os.environ['PATHEXT'].lower().split(path.pathsep)
   elif iscygwin:
-    pathext = [None, '.exe']
+    pathext = ['.exe']
   else:
-    pathext = [None]
+    pathext = []
+  pathext.insert(0, None)
 
   first_candidate = None
   for dirname in os.environ['PATH'].split(path.pathsep):
