@@ -18,6 +18,7 @@ from craftr.platform import win32 as platform
 from craftr.utils import pyutils
 from craftr.utils.singleton import Default
 from nr.types.recordclass import recordclass
+from operator import itemgetter
 
 import contextlib
 import craftr.platform.win32
@@ -174,6 +175,67 @@ def identify(program):
   }
 
 
+def find_installations(versions=()):
+  """
+  Finds available MSVC installations and returns a list of (path, version).
+  """
+
+  _valid_versions = [90, 100, 110, 120, 130, 140, 150]
+  versions = [int(x) for x in versions]
+  for v in versions:
+    if v in _valid_versions:
+      raise ValueError('{} is an invalid or unsupported MSVC version'.format(v))
+
+  # A list of (path, version) to the VS installation directory that we were
+  # able to make out on this system for the specified versions.
+  dirs = []
+  found_versions = set()
+  if versions:
+    for ver in versions:
+      # The VSXXXCOMNTOOLS variables always points to the
+      # $(VSINSTALLDIR)/Common7/Tools directory.
+      key = 'VS{}COMNTOOLS'.format(ver)
+      vspath = os.getenv(key, '')
+      dirs.append((vspath, ver))
+  else:
+    for key, value in os.environ.items():
+      if key.startswith('VS') and key.endswith('COMNTOOLS'):
+        try:
+          ver = int(key[2:-9])
+          if ver not in _valid_versions:
+            raise ValueError
+        except ValueError:
+          continue
+        vspath = os.getenv(key, '')
+        dirs.append((vspath, ver))
+        found_versions.add(ver)
+
+  result = []
+
+  # Clean up the directories.
+  for vspath, ver in dirs:
+    vspath = vspath.rstrip('\\')
+    if vspath:
+      vspath = path.dirname(path.dirname(vspath))
+      if os.path.isdir(vspath):
+        result.append((vspath, ver))
+
+  # Handle MSVC 2017 special, since the directory structure changed and
+  # the VS150COMNTOOLS is usually not available.
+  # TODO: Can MSVC 2017 be installed in an alternative location?
+  if 150 not in found_versions and (not versions or 150 in versions):
+    programfiles = os.getenv('ProgramFiles(x86)', '') or os.getenv('ProgramFiles', '')
+    if programfiles:
+      vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Community')
+      if not os.path.isdir(vspath):
+        vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Professional')
+      if not os.path.isdir(vspath):
+        vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
+      if os.path.isdir(vspath):
+        result.append((vspath, 150))
+
+  return result
+
 @functools.lru_cache()
 def find_installation(versions=(), arch=None):
   """
@@ -182,100 +244,68 @@ def find_installation(versions=(), arch=None):
 
   @param versions: A list of versions that should be looked for.
     If specified, no version other than the ones specified will
-    be checked. Otherwise, any version is checked.
+    be checked. Otherwise, any version is checked. Valid versions
+    are 90, 100, 110, 120, 130, 140, 150
   @param arch: Override the target architecture of the platform toolkit.
     Defaults to the `craftr.tools.msvc.ARCH` option. Must be one of
     `x86`, `amd64` and `ia64`.
   @raise ToolDetectionError: If no Visual Studio insallation could be found.
   """
 
-  for v in versions:
-    if len(v) not in (2, 3) or not all(c.isdigit() for c in v) or v[-1] != '0':
-      raise ValueError('not a valid VS version: {!r}'.format(v))
+  installations = find_installations(versions)
+  if not installations:
+    raise ToolDetectionError('Visual Studio could not be detected on the system.')
+  installations.sort(key=itemgetter(1), reverse=True)  # newest first
 
-  choices = []
-  if versions:
-    for ver in versions:
-      if len(ver) not in (2, 3) or not all(c.isdigit() for c in ver):
-        raise ValueError('invalid MSVC version: {}'.format(ver))
-      key = 'VS{}COMNTOOLS'.format(ver)
-      choices.append((key, ver))
-  else:
-    for key, value in os.environ.items():
-      if key.startswith('VS') and key.endswith('COMNTOOLS'):
-        ver = key[2:-9]
-        choices.append((key, ver))
-    choices.sort(reverse=True)
-  if not choices:
-    raise ToolDetectionError('Visual Studio installation path could not be detected.')
+  logger.debug('Detected Visual Studio Installations:')
+  for vspath, ver in installations:
+    logger.debug('  {} ({})'.format(vspath, ver))
 
-  logger.info('detected available MSVC versions:', choices)
-
-  paths = []
+  # Choose the first where we can successfully determine the
+  # environment information.
   last_error = None
-  for vsvar, vsversion in choices:
-    vspath = os.environ.get(vsvar, '').rstrip('\\')
-    if vspath:
-      vspath = path.join(path.dirname(path.dirname(vspath)), 'VC')
-      if not os.path.isdir(vspath):
-        continue
-      try:
-        return _get_vs_environment(vspath, vsversion, arch)
-      except ToolDetectionError as exc:
-        last_error = exc
+  for vspath, ver in installations:
+    try:
+      return _get_vs_environment(vspath, ver, arch)
+    except ToolDetectionError as exc:
+      last_error = exc
 
   if last_error:
     raise last_error
-  raise ToolDetectionError('Visual Studio installation path could not be detected.')
-
+  assert False
 
 def _get_vs_environment(install_dir, vsversion, arch=None, _forcecc=None):
   """
   Internal method that retrieves the environment information for a
-  Visual Studio installation.
+  Visual Studio installation. *install_dir* must point to the root
+  installation directory.
   """
 
   arch = arch or options.target
   if arch not in valid_archs:
     raise ValueError("invalid architecture: {!r}".format(arch))
 
-  # Select the correct cross-compiler (if necessary).
-  if _forcecc:
-    arch = _forcecc
-  elif real_arch != arch:
-    arch = real_arch + '_' + arch
-
-  if arch == 'x86':
-    toolsdir = basedir = path.join(install_dir, 'bin')
-    batch = path.join(toolsdir, 'vcvars32.bat')
+  if vsversion >= 150:
+    vcvarsall = path.join(install_dir, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
   else:
-    toolsdir = path.join(install_dir, 'bin', arch)
-    basedir = path.join(install_dir, 'bin', real_arch)
-    if arch == 'amd64':
-      batch = path.join(toolsdir, 'vcvars64.bat')
-    else:
-      batch = path.join(toolsdir, 'vcvars' + arch + '.bat')
+    vcvarsall = path.join(install_dir, 'VC', 'vcvarsall.bat')
 
   # Run the batch file and print the environment.
-  cmd = [batch, shell.safe('&&'), sys.executable, '-c', 'import os, json; print(json.dumps(dict(os.environ)))']
+  cmd = [vcvarsall, arch, shell.safe('&&'), sys.executable, '-c', 'import os, json; print("JSONOUTPUTBEGIN:" + json.dumps(dict(os.environ)))']
   try:
     output = shell.pipe(cmd, shell=True).output
   except OSError as exc:
-    # Try alternatives that would also run on this platform (that is, x86
-    # to amd64/ia64 would always run).
-    if real_arch == arch and arch == 'amd64':
-      return _get_vs_environment(install_dir, vsversion, 'x86', _forcecc='x86_amd64')
-    elif real_arch == arch and arch == 'ia64':
-      return _get_vs_environment(install_dir, vsversion, 'x86', _forcecc='x86_ia64')
-    raise ToolDetectionError('Visual Studio Environment could not be detected: {}'.format(exc)) from exc
+    raise ToolDetectionError('Visual Studio Environment could not be detected.\n\n' + str(exc)) from exc
+
+  key = 'JSONOUTPUTBEGIN:'
+  jsondata = output[output.find(key) + len(key):]
 
   try:
-    env = json.loads(output)
+    env = json.loads(jsondata)
   except json.JSONDecodeError:
-    logger.debug('failed to parse output of "{}"'.format(batch))
+    logger.debug('failed to parse output of "{}"'.format(vcvarsall))
     raise ToolDetectionError('Visual Studio Environment could not be detected')
-  return {'basedir': basedir, 'toolsdir': toolsdir, 'env': env, 'arch': arch, 'version': vsversion}
-
+  return {'env': env, 'arch': arch, 'version': vsversion}
 
 class MsvcToolkit(object):
 
@@ -309,10 +339,10 @@ class MsvcToolkit(object):
 
     if not self.info:
       self.install_info = find_installation(version, target or real_arch)
-      cl = path.join(self.install_info['toolsdir'], 'cl.exe')
-      ml = path.join(self.install_info['toolsdir'], ('ml64.exe' if '64' in self.install_info['arch'] else 'ml.exe'))
-      link = path.join(self.install_info['toolsdir'], 'link.exe')
-      lib = path.join(self.install_info['toolsdir'], 'lib.exe')
+      cl = 'cl.exe'
+      ml = ('ml64.exe' if '64' in self.install_info['arch'] else 'ml.exe')
+      link = 'link.exe'
+      lib = 'lib.exe'
       self.programs = self.Programs(cl, ml, link, lib)
       with override_environ(self.install_info['env']):
         self.info = identify(self.programs.cl)

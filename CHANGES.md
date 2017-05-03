@@ -3,6 +3,7 @@
 Bugfixes
 
 - Fix #177: German MSVC Tools can not be detected
+- Fix #178: MSVC 2017 updated directory structure
 - Fix `shell.find_program()` when program already has the `.exe` suffix
   on Windows
 
