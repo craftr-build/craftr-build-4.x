@@ -274,7 +274,7 @@ def find_installation(versions=(), arch=None):
     raise last_error
   assert False
 
-def _get_vs_environment(install_dir, vsversion, arch=None, _forcecc=None):
+def _get_vs_environment(install_dir, vsversion, arch=None):
   """
   Internal method that retrieves the environment information for a
   Visual Studio installation. *install_dir* must point to the root
@@ -332,20 +332,12 @@ class MsvcToolkit(object):
         self.info = identify(cl)
       except ToolDetectionError as exc:
         pass
-      else:
-        ml = self.info['ml_program']
-        link = self.info['link_program']
-        lib =  self.info['lib_program']
 
     if not self.info:
       self.install_info = find_installation(version, target or real_arch)
-      cl = 'cl.exe'
-      ml = ('ml64.exe' if '64' in self.install_info['arch'] else 'ml.exe')
-      link = 'link.exe'
-      lib = 'lib.exe'
-      self.programs = self.Programs(cl, ml, link, lib)
+      cl = 'cl'
       with override_environ(self.install_info['env']):
-        self.info = identify(self.programs.cl)
+        self.info = identify(cl)
 
     real_target = self.info['target']
     if self.name == 'clang-cl':
@@ -362,7 +354,8 @@ class MsvcToolkit(object):
 
     self.toolkit = toolkit
     self.target_arch = real_target
-    self.programs = self.Programs(cl, ml, link, lib)
+    self.programs = self.Programs('cl.exe', self.info['ml_program'],
+        self.info['link_program'], self.info['lib_program'])
 
   def __str__(self):
     return self.info['version_str']
