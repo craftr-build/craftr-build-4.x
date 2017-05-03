@@ -1,4 +1,10 @@
-# development
+# v2.0.1 (development)
+
+Bugfixes
+
+- Fix #177: German MSVC Tools can not be detected
+
+# v2.0.0
 
 Bugfixes
 

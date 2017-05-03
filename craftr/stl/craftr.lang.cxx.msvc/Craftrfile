@@ -85,7 +85,7 @@ def identify(program):
   """
 
   clang_cl_expr = r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)'
-  msvc_expr = r'compiler\s+version\s*([\d\.]+)\s*for\s*(\w+)'
+  msvc_expr = re.compile(r'compiler\s+version\s*([\d\.]+)\s*\w+\s*(x\w+)', re.I | re.U | re.M)
 
   # Determine kind and version. We need to do this separately from
   # the /showIncludes detection as Clang CL does not display a logo
@@ -95,11 +95,21 @@ def identify(program):
   # script as this will print the help for batch files (Microsoft, pls).
   # MSVC will error on -v, Clang CL will give us good info.
   try:
-    output = shell.pipe([program, '-v'], shell=True, check=False).output
+    res = shell.pipe([program, '-v'], shell=True, check=False)
+    hint = 'clang'
+    if res.returncode != 0:
+      # Seems to be MSVC, which does not support a -v flag. It provides
+      # all the information when being invoked with no arguments.
+      res = shell.pipe([program], shell=True, check=False)
+      hint = 'msvc'
+    output = res.output
   except OSError as exc:
     raise ToolDetectionError(exc)
-  match = re.match(clang_cl_expr, output, re.I)
-  if match:
+
+  if hint == 'clang':
+    match = re.match(clang_cl_expr, output, re.I)
+    if not match:
+      raise ToolDetectionError('Clang-CL version and architecture could not be detected\n\n' + output)
     # We've detected a version of Clang CL!
     name = 'clang-cl'
     version = match.group(1)
@@ -107,7 +117,7 @@ def identify(program):
     thread_model = match.group(3)
   else:
     # Extract the MSVC compiler version and architecture.
-    match = re.search(msvc_expr, output, re.I)
+    match = msvc_expr.search(output)
     if not match:
       raise ToolDetectionError('MSVC version and architecture could not be detected\n\n' + output)
 
