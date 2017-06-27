@@ -4,5 +4,6 @@ glob2==0.5
 jsonschema==2.5.1
 ninja-syntax==1.6.0
 nr==1.4.5
+requests==2.18.1
 termcolor==1.1.0
 Werkzeug==0.11.11

@@ -16,10 +16,10 @@
 
 from craftr.utils import argspec
 from craftr.utils import path
-from urllib.error import URLError, HTTPError
+from requests.exceptions import RequestException as URLError, HTTPError #FIXME !!
 
 import cgi
-import urllib.request
+import requests
 
 
 class UserInterrupt(Exception):
@@ -29,7 +29,7 @@ class UserInterrupt(Exception):
 
 
 def download_file(url, filename=None, file=None, directory=None,
-    on_exists='rename', progress=None, chunksize=4096, urlopen_kwargs=None):
+    on_exists='rename', progress=None, chunksize=4096, request_kwargs=None):
   """
   Download a file from a URL to one of the following destinations:
 
@@ -51,13 +51,12 @@ def download_file(url, filename=None, file=None, directory=None,
     dictionary provides the keys ``size``,  ``downloaded`` and ``response``.
     If the callable returns :const:`False` (specifically the value False), the
     download will be aborted and a :class:`UserInterrupt` will be raised.
-  :param urlopen_kwargs: A dictionary with additional keyword arguments
-    for :func:`urllib.request.urlopen`.
+  :param request_kwargs: A dictionary with additional keyword arguments
+    for :func:`requests.get`.
 
   Raise and return:
 
-  :raise HTTPError: Can be raised by :func:`urllib.request.urlopen`.
-  :raise URLError: Can be raised by :func:`urllib.request.urlopen`.
+  :raise requests.RequestException:
   :raise UserInterrupt: If the *progress* returned :const:`False`.
   :return: If the download mode is *directory*, the name of the downloaded
     file will be returned and False if the file was newly downloaded, True
@@ -70,7 +69,9 @@ def download_file(url, filename=None, file=None, directory=None,
   if sum(map(bool, [filename, file, directory])) != 1:
     raise ValueError('exactly one of filename, file or directory must be specifed')
 
-  response = urllib.request.urlopen(url, **(urlopen_kwargs or {}))
+  request_kwargs = request_kwargs or {}
+  request_kwargs.setdefault('stream', True)
+  response = requests.get(url, **request_kwargs)
 
   if directory:
     try:
@@ -106,12 +107,9 @@ def download_file(url, filename=None, file=None, directory=None,
     raise UserInterrupt
 
   def copy_to_file(fp):
-    while True:
-      data = response.read(chunksize)
-      if not data:
-        break
-      progress_info['downloaded'] += len(data)
-      fp.write(data)
+    for chunk in response.iter_content(4096):
+      progress_info['downloaded'] += len(chunk)
+      fp.write(chunk)
       if progress and progress(progress_info) is False:
         raise UserInterrupt
     progress_info['completed'] = True
