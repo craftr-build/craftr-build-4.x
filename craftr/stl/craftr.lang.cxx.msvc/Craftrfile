@@ -183,8 +183,8 @@ def find_installations(versions=()):
   _valid_versions = [90, 100, 110, 120, 130, 140, 150]
   versions = [int(x) for x in versions]
   for v in versions:
-    if v in _valid_versions:
-      raise ValueError('{} is an invalid or unsupported MSVC version'.format(v))
+    if v not in _valid_versions:
+      raise ValueError('{!r} is an invalid or unsupported MSVC version'.format(v))
 
   # A list of (path, version) to the VS installation directory that we were
   # able to make out on this system for the specified versions.
