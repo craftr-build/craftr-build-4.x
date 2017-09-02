@@ -6,6 +6,7 @@ Bugfixes
 - Fix #178: MSVC 2017 updated directory structure
 - Fix `shell.find_program()` when program already has the `.exe` suffix
   on Windows
+- Fix #182: Java: Multiple -cp,-classpath arguments is incorrect
 
 # v2.0.0
 

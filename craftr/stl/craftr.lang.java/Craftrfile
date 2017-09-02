@@ -80,8 +80,7 @@ class JavaCompiler(object):
     command = [self.javac, '-d', output_dir, '$in']
     command += ['-g'] if builder.get('debug', False) else []
     command += [] if builder.get('warn', True) else ['-nowarn']
-    for fn in builder.get_list('classpath'):
-      command += ['-cp', fn]
+    command += ['-cp', path.pathsep.join(builder.get_list('classpath'))]
     command += additional_flags
 
     return builder.build([command], None, outputs,
