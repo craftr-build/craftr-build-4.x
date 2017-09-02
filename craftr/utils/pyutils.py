@@ -16,6 +16,7 @@
 
 import contextlib
 import sys
+from craftr.utils import shell
 
 
 def flatten(iterable):
