@@ -7,6 +7,7 @@ Bugfixes
 - Fix `shell.find_program()` when program already has the `.exe` suffix
   on Windows
 - Fix #182: Java: Multiple -cp,-classpath arguments is incorrect
+- Fix #183: Changes to session.path not reflected after first call to load()
 - Fix #184: NameError in pyutils.strip_flags: shell is not defined
 
 # v2.0.0

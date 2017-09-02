@@ -158,6 +158,7 @@ class Session(object):
     self._tempdir = None
     self._manifest_cache = {}  # maps manifest_filename: manifest
     self._refresh_cache = True
+    self._path_hash = None
 
   def __enter__(self):
     if Session.current:
@@ -261,6 +262,11 @@ class Session(object):
     return module
 
   def update_manifest_cache(self, force=False):
+    # Force update when Session.path changed.
+    path_hash = hash(tuple(self.path))
+    if self._path_hash != path_hash:
+      self._path_hash = path_hash
+      force = True
     if not self._refresh_cache and not force:
       return
     self._refresh_cache = False
