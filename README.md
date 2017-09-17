@@ -104,7 +104,7 @@ from the Git repository into a virtualenv.
 ## Requirements
 
 - [Ninja] 1.7.1 or newer
-- [CPython][Python 3] 3.4 or 3.5
+- [CPython][Python 3] 3.4+
 
 __Python Dependencies (automatically installed)__
 
