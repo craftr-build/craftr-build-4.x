@@ -1,0 +1,9 @@
+[package]
+name = "@craftr/core"
+version = "3.0.0"
+description = "The Craftr build system core application."
+license = "MIT"
+resolve_root = "lib"
+
+[authors]
+"Niklas Rosenstein" = { email = "rosensteinniklas@gmail.com" }
