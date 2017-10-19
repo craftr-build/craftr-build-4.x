@@ -3,7 +3,7 @@ Craftr's build target representation.
 """
 
 from typing import Iterable, List
-import _actions from './actions'
+import _action from './action'
 import it from './utils/it'
 
 
@@ -114,6 +114,8 @@ class Target:
     translator = translator_class(self)
     self.actions = {}
     self.data.translate(self, translator)
+    if not self.actions:
+      translator(None, '...', _action.Null())
 
   def leaf_actions(self):
     """

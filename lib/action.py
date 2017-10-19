@@ -3,10 +3,14 @@ Actions are generated from build targets and represent concrete
 implementations of tasks on a more detailed level.
 """
 
+import errno
 import io
 import locale
+import os
+import subprocess
 import sumtypes
 import _target from './target'
+import env from './utils/env'
 import ts from './utils/ts'
 
 
@@ -76,6 +80,7 @@ class Action:
     with ts.condition(progress):
       progress.code = code
       progress.executed = True
+      progress.update(1.0)
       progress.notify()
     return code
 
@@ -115,10 +120,11 @@ class ActionProgress(ts.object):
   allow the #ActionData to report the progress of the execution.
   """
 
-  def __init__(self, encoding=None):
+  def __init__(self, encoding=None, do_buffering=True):
     self.executed = False
     self.encoding = encoding or locale.getpreferredencoding()
     self.buffer = io.BytesIO()
+    self.do_buffering = do_buffering
     self.code = None
 
   def update(self, percent=None, message=None):
@@ -126,6 +132,11 @@ class ActionProgress(ts.object):
     Called from #ActionData.execute() to update progress information. If
     *percent* is #None, the action is unable to estimate the current progress.
     The default implementation does nothing.
+
+    This method will be called from #Action.execute() after the action has
+    finished executing. The #ActionProgress.code is available at that time,
+    so the call may check if the execution was successful or not for reporting
+    purposes.
     """
 
     pass
@@ -135,6 +146,106 @@ class ActionProgress(ts.object):
     Prints to the #ActionData.buffer.
     """
 
-    message = (sep.join(map(str, objects)) + end).encode(self.encoding)
-    with ts.condition(self):
-      self.buffer.write(message)
+    if self.do_buffering:
+      message = (sep.join(map(str, objects)) + end).encode(self.encoding)
+      with ts.condition(self):
+        self.buffer.write(message)
+    else:
+      print(*objects, sep=sep, end=end)
+
+  def system(self, argv, cwd=None, environ=None):
+    """
+    Creates a new subprocess and executes it in a blocking fashion. If
+    #ActionProgress.do_buffering is enabled, pipes will be created for the
+    process and the data is copied into the #ActionProgress.buffer.
+
+    Note that this method is only thread-safe when *environ* is #None or
+    other threads do not modify #os.environ unless the #env.lock is used
+    to synchronized access to the dictionary or they use the #env functions.
+
+    Note that this function will constantly acquire the synchronized
+    state of the #ActionProgress object if #do_buffering is enabled, until
+    the process is finished.
+    """
+
+    if isinstance(argv, str):
+      raise TypeError('argv must be a list of arguments, not a string')
+    if any(not isinstance(x, str) for x in argv):
+      raise TypeError('argv[] must be only strings')
+
+    if self.do_buffering:
+      stdin = stdout = subprocess.PIPE
+      stderr = subprocess.STDOUT
+    else:
+      stdin = stdout = stderr = None
+
+    with env.override(environ or {}):
+      proc = subprocess.Popen(argv, cwd=cwd, stdin=stdin,
+        stdout=stdout, stderr=stderr, universal_newlines=False)
+
+    if self.do_buffering:
+      proc.stdin.close()
+      with ts.condition(self):
+        for line in proc.stdout:
+          self.buffer.write(line)
+
+    proc.wait()
+    return proc.returncode
+
+
+class Null(ActionData):
+  """
+  This action implementation simply does nothing. :^) It's important that
+  targets that do not actually perform any actions still generate at least
+  a single action to properly include them in the build process.
+
+  #Target.translate() will automatically create a Null action if no actions
+  have been generated during it's #TargetData.translate() method.
+  """
+
+  def execute(self, action, progress):
+    return 0
+
+
+class Mkdir(ActionData):
+  """
+  An action that ensures that a directory exists.
+  """
+
+  def __init__(self, directory):
+    self.directory = directory
+
+  def execute(self, action, progress):
+    try:
+      os.makedirs(self.directory, exist_ok=True)
+    except OSError as e:
+      progress.print(e)
+      return e.errno
+    else:
+      return 0
+
+
+class System(ActionData):
+  """
+  This action implements executing one or more system commands, usually with
+  the purpose of translating a set of input files to output files. The list
+  of input and output files is not required by the default build backend, but
+  other backends might require it to establish correct relationships between
+  actions.
+  """
+
+  def __init__(self, commands, input_files=(), output_files=(),
+               environ=None, cwd=None):
+    self.commands = commands
+    self.input_files = list(input_files)
+    self.output_files = list(output_files)
+    self.environ = environ
+    self.cwd = cwd
+
+  def execute(self, action, progress):
+    code = 0
+    for command in self.commands:
+      code = progress.system(command, cwd=self.cwd, environ=self.environ)
+      if code != 0:
+        break
+    return code
