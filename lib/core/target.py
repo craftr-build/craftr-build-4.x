@@ -4,7 +4,7 @@ Craftr's build target representation.
 
 from typing import Iterable, List
 import _action from './action'
-import it from './utils/it'
+import it from '../utils/it'
 
 
 class Cell:
@@ -187,7 +187,7 @@ class TargetData:
     # Example
 
     ```python
-    import {ActionData, Mkdir, System} from '@craftr/core/action'
+    import {ActionData, Mkdir, System} from 'craftr/core/action'
     class MyAction(ActionData):
       def translate(self, target, new_action):
         mkdir = new_action('mkdir', [], Mkdir(directory))

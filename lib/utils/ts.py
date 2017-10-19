@@ -13,7 +13,7 @@ in which case you can use the `ts.method` and `ts.property` decorators.
 # Example
 
 ```python
-import ts from '@craftr/core/utils/ts'
+import ts from 'craftr/core/utils/ts'
 
 class Box(ts.object):
 

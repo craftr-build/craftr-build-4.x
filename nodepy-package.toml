@@ -1,5 +1,5 @@
 [package]
-name = "@craftr/core"
+name = "craftr"
 version = "3.0.0"
 description = "The Craftr build system core application."
 license = "MIT"
@@ -10,3 +10,4 @@ resolve_root = "lib"
 
 [dependencies.python]
 sumtypes = ">=0.1a4"
+glob2 = ">=0.6"

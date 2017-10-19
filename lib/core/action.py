@@ -10,8 +10,8 @@ import os
 import subprocess
 import sumtypes
 import _target from './target'
-import env from './utils/env'
-import ts from './utils/ts'
+import env from '../utils/env'
+import ts from '../utils/ts'
 
 
 @sumtypes.sumtype
