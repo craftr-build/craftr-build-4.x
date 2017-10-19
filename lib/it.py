@@ -80,16 +80,20 @@ def filter(iterable, cond, *a, **kw):
 
 
 @stream.register_method
-def unique(iterable):
+def unique(iterable, key=None):
   """
   Yields unique items from *iterable* whilst preserving the original order.
   """
 
+  if key is None:
+    key = lambda x: x
+
   seen = set()
   seen_add = seen.add
   for item in iterable:
-    if item not in seen:
-      seen_add(item)
+    key_val = key(item)
+    if key_val not in seen:
+      seen_add(key_val)
       yield item
 
 
