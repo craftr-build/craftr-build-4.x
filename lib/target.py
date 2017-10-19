@@ -3,6 +3,7 @@ Craftr's build target representation.
 """
 
 from typing import Iterable, List
+import _actions from './actions'
 import it from './utils/it'
 
 
@@ -19,6 +20,16 @@ class Cell:
   def __repr__(self):
     return '<Cell {!r}>'.format(self.name)
 
+  def add_target(self, target):
+    if target.cell is not None and target.cell is not self:
+      raise RuntimeError('Target "{}" is already in cell "{}", can not '
+        'add to cell "{}"'.format(target.name, target.cell.name, self.name))
+    if target.name in self.targets:
+      raise RuntimeError('Target "{}" already exists in Cell "{}"'
+        .format(target.name, self.name))
+    target.cell = self
+    self.targets[target.name] = target
+
 
 class Target:
   """
@@ -28,11 +39,12 @@ class Target:
 
   The actual implementation of a target's behaviour must be implemented in a
   #TargetData subclass.
+
+  Before the target can be used properly, it must be associated with a #Cell
+  by using the #Cell.add_target() method.
   """
 
   def __init__(self, cell, name, private_deps, transitive_deps, data):
-    if not isinstance(cell, Cell):
-      raise TypeError('cell must be an instance of Cell')
     if any(not isinstance(x, Target) for x in private_deps):
       raise TypeError('private_deps must be a list of Targets')
     if any(not isinstance(x, Target) for x in transitive_deps):
@@ -44,6 +56,7 @@ class Target:
     self.private_deps = private_deps
     self.transitive_deps = transitive_deps
     self.data = data
+    self.actions = None
     data.mounted(self)
 
   def __repr__(self):
@@ -51,7 +64,68 @@ class Target:
 
   @property
   def long_name(self):
+    if self.cell is None:
+      raise RuntimeError('Target is not associated with a Cell')
     return '//{}:{}'.format(self.cell.name, self.name)
+
+  def is_translated(self):
+    return self.actions is not None
+
+  def add_action(self, action):
+    """
+    Adds an action to the #Target. If the action's name is not set, a free
+    name will chosen automatically.
+    """
+
+    if action.target is not None and action.target is not self:
+      raise RuntimeError('Action "{}" already in target "{}", can not be '
+        'added to target "{}"'.format(action.name, action.target.long_name,
+        self.target.long_name))
+    if action.name is None:
+      action.name = str(len(self.actions))
+    if action.name in self.actions:
+      raise RuntimeError('Action "{}" already exists in target "{}"'
+        .format(action.name, self.long_name))
+    action.target = self
+    self.actions[action.name] = action
+
+  def translate(self, recursive=True, translator=None):
+    """
+    Translates the target into the action graph. All dependencies of this
+    target must already be translated before it can be translated. If
+    *recursive* is #True, the dependencies of the target will be translated
+    automatically.
+    """
+
+    if self.is_translated():
+      raise RuntimeError('Target "{}" already translated'.format(self.long_name))
+
+    for dep in it.concat(self.private_deps, self.transitive_deps):
+      if not dep.is_translated():
+        if recursive:
+          dep.translate(True)
+          assert dep.is_translated()
+        else:
+          raise RuntimeError('"{}" -> "{}" (dependent target not translated)'
+            .format(self.long_name, dep.long_name))
+
+    if translator_class is None:
+      translator_class = Translator
+    translator = translator_class(self)
+    self.actions = {}
+    self.data.translate(self, translator)
+
+  def leaf_actions(self):
+    """
+    Returns all actions of the target that are leave nodes in the local
+    subgraph.
+    """
+
+    actions = set(self.actions.values())
+    outputs = set()
+    for action in actions:
+      outputs |= set(action.deps)
+    return actions - outputs
 
   def deps(self):
     """
@@ -102,9 +176,45 @@ class TargetData:
 
     self.target = target
 
-  def translate(self, target):
+  def translate(self, target, new_action):
     """
-    Called to translate the target into actions.
+    Called to translate the target into actions. The *new_action* parameter
+    is usually a #Translator instance which can be called to create a new
+    action and associated it with the *target* immediately.
+
+    # Example
+
+    ```python
+    import {ActionData, Mkdir, System} from '@craftr/core/action'
+    class MyAction(ActionData):
+      def translate(self, target, new_action):
+        mkdir = new_action('mkdir', [], Mkdir(directory))
+        new_action('compile', [mkdir], System(commands))
+    ```
     """
 
     raise NotImplementedError
+
+
+class Translator:
+  """
+  A helper class which is used in #TargetData.translate().
+  """
+
+  def __init__(self, target):
+    self.target = target
+
+  def __call__(self, name, deps, data):
+    """
+    Create a new action object that originates from the translator's #Target.
+    The new #Action object is returned. *deps* can be the special value
+    `'<target_deps>'` in which case all leaf actions from the target's
+    dependencies are used.
+    """
+
+    if deps == '<target_deps>':
+      deps = list(self.target.deps().attr('leaf_actions').call().concat())
+
+    action = _action.Action(self.target, name, deps, data)
+    self.target.add_action(action)
+    return action

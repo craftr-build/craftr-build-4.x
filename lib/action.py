@@ -39,6 +39,12 @@ class Action:
   def long_name(self):
     return '{}#{}'.format(self.name)
 
+  def is_executed(self):
+    if self.progress is None:
+      return False
+    with ts.condition(self.progress):
+      return self.progress.executed
+
   def execute(self):
     """
     Exeuctes the action. #Action.progress must be set before this method is
@@ -46,10 +52,15 @@ class Action:
     prints them to the #ActionProgress.buffer.
     """
 
+    for other in self.deps:
+      if not other.is_executed():
+        raise RuntimeError('"{}" -> "{}" (dependent action not executed)'
+          .format(self.long_name, other.long_name))
+
     if self.progress is None:
-      raise RuntimeError('Action.progress must be set before executing')
+      raise RuntimeError('{!r}.progress must be set before execute()'.format(self))
     if self.progress.executed:
-      raise RuntimeError('Action already executed.')
+      raise RuntimeError('{!r} already executed'.format(self))
     progress = self.progress
     progress.executed = True
     try:
@@ -64,6 +75,7 @@ class Action:
         code = 0
     with ts.condition(progress):
       progress.code = code
+      progress.executed = True
       progress.notify()
     return code
 
