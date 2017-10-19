@@ -189,7 +189,7 @@ class TargetData:
     class MyAction(ActionData):
       def translate(self, target, new_action):
         mkdir = new_action('mkdir', [], Mkdir(directory))
-        new_action('compile', [mkdir], System(commands))
+        new_action('compile', [mkdir, '...'], System(commands))
     ```
     """
 
@@ -208,12 +208,23 @@ class Translator:
     """
     Create a new action object that originates from the translator's #Target.
     The new #Action object is returned. *deps* can be the special value
-    `'<target_deps>'` in which case all leaf actions from the target's
-    dependencies are used.
+    `'...'` or a list which contains the string `'...'` in which case all
+    leaf actions from the target's dependencies are added.
     """
 
-    if deps == '<target_deps>':
-      deps = list(self.target.deps().attr('leaf_actions').call().concat())
+    def leaves():
+      return self.target.deps().attr('leaf_actions').call().concat()
+
+    if deps == '...':
+      deps = list(leaves())
+    else:
+      deps = list(deps)
+      try:
+        index = deps.index('...')
+      except ValueError:
+        pass
+      else:
+        deps[index:index+1] = leaves()
 
     action = _action.Action(self.target, name, deps, data)
     self.target.add_action(action)
