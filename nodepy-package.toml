@@ -7,3 +7,6 @@ resolve_root = "lib"
 
 [authors]
 "Niklas Rosenstein" = { email = "rosensteinniklas@gmail.com" }
+
+[dependencies.python]
+sumtypes = ">=0.1a4"
