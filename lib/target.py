@@ -3,7 +3,7 @@ Craftr's build target representation.
 """
 
 from typing import Iterable, List
-import it from './it'
+import it from './utils/it'
 
 
 class Cell:
