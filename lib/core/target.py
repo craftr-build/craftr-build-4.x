@@ -13,8 +13,11 @@ class Cell:
   for a single build script.
   """
 
-  def __init__(self, name):
+  def __init__(self, name, version, directory, builddir):
     self.name = name
+    self.version = version
+    self.directory = directory
+    self.builddir = builddir
     self.targets = {}
 
   def __repr__(self):

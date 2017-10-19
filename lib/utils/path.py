@@ -15,7 +15,7 @@ from os import (
 )
 from os.path import (
   expanduser,
-  normpath as canonical,
+  normpath as norm,
   isabs,
   isfile,
   isdir,
@@ -25,6 +25,10 @@ from os.path import (
   dirname as dir,
   basename as base
 )
+
+
+def canonical(path: str, parent: str = None):
+  return norm(abs(path, parent))
 
 
 def abs(path: str, parent: str = None) -> str:
