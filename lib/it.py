@@ -2,6 +2,7 @@
 Iterator and stream processing utilities.
 """
 
+import builtins
 import functools
 import itertools
 
@@ -98,6 +99,15 @@ def unique(iterable, key=None):
 
 
 @stream.register_method
+def chunks(iterable, n, fill=None):
+  """
+  Collects elements in fixed-length chunks.
+  """
+
+  return itertools.zip_longest(*[iter(iterable)] * n, fillvalue=fill)
+
+
+@stream.register_method
 def concat(iterables):
   """
   Similar to #itertools.chain.from_iterable().
@@ -133,3 +143,13 @@ def of_type(iterable, types):
   """
 
   return (x for x in iterable if isinstance(x, types))
+
+
+@stream.register_method
+def partition(iterable, pred):
+  """
+  Use a predicate to partition items into false and true entries.
+  """
+
+  t1, t2 = itertools.tee(iterable)
+  return itertools.filterfalse(pred, t1), builtins.filter(pred, t2)
