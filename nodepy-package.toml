@@ -3,6 +3,7 @@ name = "craftr"
 version = "3.0.0"
 description = "The Craftr build system core application."
 license = "MIT"
+main = "./lib/api"
 resolve_root = "lib"
 
 [authors]
