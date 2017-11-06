@@ -11,7 +11,7 @@ import craftr, {path, session} from 'craftr'
 
 ONEJAR_FILENAME = path.canonical(
   session.config.get('java.onejar',
-  path.join(module.directory, 'one-jar-boot-0.97.jar')))
+  path.join(str(module.directory), 'one-jar-boot-0.97.jar')))
 
 
 def partition_sources(
