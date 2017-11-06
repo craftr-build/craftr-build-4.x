@@ -77,6 +77,9 @@ class Graph:
   def __init__(self):
     self.__nodes = {}
 
+  def __len__(self):
+    return len(self.__nodes)
+
   def __getitem__(self, key):
     return self.__nodes[key]
 
