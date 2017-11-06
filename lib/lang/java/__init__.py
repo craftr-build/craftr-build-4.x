@@ -130,6 +130,7 @@ class JavaLibrary(JavaBase):
     self.src_roots = src_roots
     self.class_dir = class_dir
     self.javac = javac or session.config.get('java.javac', 'javac')
+    self.extra_arguments = extra_arguments
 
   def mounted(self, target):
     super().mounted(target)
