@@ -55,10 +55,11 @@ class Formatter:
     with self.iolock:
       if not self.verbose:
         tty.clear_line()
-      line = tty.colored('[{} FAILED with {}]:'.format(action.long_name, action.progress.code), 'red', 'white')
-      line += ' ' + tty.colored(action.get_display(), 'yellow')
+      line = tty.colored('[{}]:'.format(action.long_name), 'red')
+      line += ' ' + tty.colored(action.get_display(), 'yellow') + '\n'
       print(line)
       action.progress.print_buffer()
+      print(tty.colored('Failed with exit-code {}\n'.format(action.progress.code), 'red'))
 
 
 class ParallelExecutor:
