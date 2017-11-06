@@ -33,7 +33,7 @@ class Formatter:
       self.num_announced += 1
       width = tty.terminal_size()[0]
       line = self.prefix + tty.colored(
-        '[{}/{} -- {}]:'.format(self.num_announced, len(self.actions), action.long_name),
+        '({}/{}) [{}]:'.format(self.num_announced, len(self.actions), action.long_name),
         'cyan'
       ) + ' '
       line += tty.colored(ellipsize_text(action.get_display(), width-len(line)), 'yellow')
