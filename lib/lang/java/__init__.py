@@ -63,11 +63,6 @@ class JavaBase(craftr.target.TargetData):
     value of the `java.javac_jar` option or simply "jar".
   """
 
-  jar_dir: str = None
-  jar_name: str = None
-  main_class: str = None
-  javac_jar: str = None
-
   def __init__(self, jar_dir: str = None,
                      jar_name: str = None,
                      main_class: str = None,
@@ -117,12 +112,6 @@ class JavaLibrary(JavaBase):
     A list of additional arguments for the Java compiler. They will be
     appended to the ones specified in the configuration.
   """
-
-  srcs: t.List[str]
-  src_roots: t.List[str] = None
-  class_dir: str = None
-  javac: str = None
-  extra_arguments: t.List[str] = None
 
   def __init__(self, srcs: t.List[str],
                      src_roots: t.List[str] = None,
