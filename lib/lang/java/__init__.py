@@ -285,6 +285,7 @@ prebuilt = craftr.target_factory(JavaPrebuilt)
 
 
 def run(binary, *argv, name=None, java=None, **kwargs):
+  kwargs.setdefault('explicit', True)
   target = craftr.T(binary)
   if name is None:
     name = target.name + '_run'
