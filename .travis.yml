@@ -1,0 +1,35 @@
+language: python
+python:
+- '3.3'
+- '3.4'
+- '3.5'
+- '3.6.0'
+- '3.6.1'
+- '3.6.2'
+- nightly
+
+matrix:
+- fast_finish: true
+- allow_failures:
+  - python: '3.6.0'
+
+env:
+- BUILD_MODULE=examples/java #BUILD_OPTIONS="-d java.dist_type=onejar"
+#- BUILD_MODULE=examples/java BUILD_OPTIONS="-d java.dist_type=merge"
+#- BUILD_MODULE=examples/csharp
+
+install:
+- sudo apt-get update
+- pip install git+https://github.com/nodepy/nodepy.git@develop
+- nodepy --version
+- nodepy https://nodepy.org/install-pm
+- nodepy-pm install -I
+- export PATH="$(nodepy-pm bin):$PATH"
+
+# Install Mono
+- if [[ "$BUILD_MODULE" == "examples/csharp" ]]; then
+    sudo apt-get -qq -y install mono-devel gtk-sharp2;
+  fi
+
+script:
+- craftr -p${BUILD_MODULE} $BUILD_OPTIONS -bbuild
