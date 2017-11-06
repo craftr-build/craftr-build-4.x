@@ -47,7 +47,7 @@ class Action:
   def long_name(self):
     return '{}#{}'.format(self.target.long_name, self.name)
 
-  def check_skip(self):
+  def is_skippable(self):
     """
     Checks if the action can be skipped.
     """
@@ -56,10 +56,21 @@ class Action:
       return True
     if self.progress is not None:
       return False
-    if self.data.check_skip(self):
-      self.skipped = True
+    if self.data.is_skippable(self):
+      self.skip()
       return True
     return False
+
+  def skip(self):
+    self.progress = ActionProgress()
+    self.progress.executed = True
+    self.progress.code = 0
+    self.skipped = True
+
+  def all_deps(self):
+    for dep in self.deps:
+      yield dep
+      yield from dep.all_deps()
 
   def get_display(self):
     return self.data.get_display(self)
@@ -89,7 +100,7 @@ class Action:
     if self.progress.executed:
       raise RuntimeError('{!r} already executed'.format(self))
     progress = self.progress
-    progress.executed = True
+    progress.executed = False
     try:
       code = self.data.execute(self, progress)
     except SystemExit as exc:
@@ -100,11 +111,12 @@ class Action:
     else:
       if code is None:
         code = 0
-    with ts.condition(progress):
-      progress.code = code
-      progress.executed = True
-      progress.update(1.0)
-      ts.notify(progress)
+    finally:
+      with ts.condition(progress):
+        progress.code = code
+        progress.executed = True
+        progress.update(1.0)
+        ts.notify(progress)
     return code
 
   def execute_with(self, progress):
@@ -154,7 +166,7 @@ class ActionData:
       attrs.append('{}={!r}'.format(key, value))
     return '{}({})'.format(type(self).__name__, ', '.join(attrs))
 
-  def check_skip(self, action):
+  def is_skippable(self, action):
     """
     Check if the action can be skipped.
     """
@@ -215,6 +227,7 @@ class ActionProgress(ts.object):
 
   def print_buffer(self):
     sys.stdout.buffer.write(self.buffer.getvalue())
+    sys.stdout.flush()
 
   def update(self, percent=None, message=None):
     """
@@ -292,7 +305,7 @@ class Null(ActionData):
   have been generated during it's #TargetData.translate() method.
   """
 
-  def check_skip(self, action):
+  def is_skippable(self, action):
     return True
 
   def execute(self, action, progress):
