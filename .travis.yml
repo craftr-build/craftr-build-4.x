@@ -15,8 +15,8 @@ matrix:
   - python: '3.4'
 
 env:
-- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run" #"-d java.dist_type=onejar"
-#- BUILD_MODULE=examples/java BUILD_OPTIONS="-d java.dist_type=merge"
+- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run -d java.dist_type=onejar"
+- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run -d java.dist_type=merge"
 #- BUILD_MODULE=examples/csharp
 
 install:

@@ -18,6 +18,7 @@ parser.add_argument('-h', '--help', action='store_true')
 parser.add_argument('-p', '--projectdir', metavar='DIR', default='.')
 parser.add_argument('-b', '--builddir', metavar='DIR')
 parser.add_argument('-c', '--config', metavar='FILE')
+parser.add_argument('-d', '--define', metavar='OPTION=VAL', action='append')
 parser.add_argument('-B', '--backend', metavar='MODULE')
 
 
@@ -60,6 +61,17 @@ def main():
   session = Session(args.projectdir, args.builddir)
   if args.config:
     session.config.read(args.config)
+
+  # Apply override configuration values from the command-line.
+  for s in (args.define or ()):
+    if '=' not in s:
+      print('fatal: invalid -d, --define argument: {!r}'.format(s))
+      return 1
+    k, v = s.partition('=')[::2]
+    if not v:
+      session.config.pop(k, None)
+    else:
+      session.config[k] = v
 
   # Load the build backend.
   if args.backend:
