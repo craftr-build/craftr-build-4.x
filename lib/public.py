@@ -92,3 +92,32 @@ def match(string, matchers, kind='glob', default=NotImplemented):
         'be determined.')
     default = default_type()
   return default
+
+
+def t(name):
+  """
+  Shortcut for resolving a target name and retrieving the #target.TargetData
+  object.
+  """
+
+  return session.current.resolve_target(name).data
+
+
+class Gentarget(target.TargetData):
+
+  def __init__(self, commands, input_files=(), output_files=()):
+    self.commands = commands
+    self.input_files = input_files
+    self.output_files = output_files
+
+  def translate(self, target):
+    actions.System.new(
+      target,
+      deps = '...',
+      commands = self.commands,
+      input_files = self.input_files,
+      output_files = self.output_files
+    )
+
+
+gentarget = target_factory(Gentarget)

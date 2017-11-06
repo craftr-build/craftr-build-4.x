@@ -18,3 +18,11 @@ java.binary(
   deps = [':main_lib'],
   main_class = 'Main'
 )
+
+craftr.gentarget(
+  name = 'run',
+  deps = [':main'],
+  commands = [
+    ['java', '-jar', craftr.t(':main').jar_filename]
+  ]
+)

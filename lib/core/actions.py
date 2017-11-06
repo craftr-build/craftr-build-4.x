@@ -9,6 +9,7 @@ import locale
 import os
 import subprocess
 import sumtypes
+import sys
 import traceback
 import _target from './target'
 import env from '../utils/env'
@@ -59,6 +60,9 @@ class Action:
       self.skipped = True
       return True
     return False
+
+  def get_display(self):
+    return self.data.get_display(self)
 
   def is_executed(self):
     if self.skipped:
@@ -113,7 +117,7 @@ class Action:
 class ActionData:
 
   @classmethod
-  def new(cls, target, *, name, deps=(), **kwargs):
+  def new(cls, target, *, name=None, deps=(), **kwargs):
     """
     Creates a new #Action and adds it to *target*.
     """
@@ -205,6 +209,12 @@ class ActionProgress(ts.object):
     self.buffer = io.BytesIO()
     self.do_buffering = do_buffering
     self.code = None
+
+  def buffer_has_content(self):
+    return self.buffer.tell() != 0
+
+  def print_buffer(self):
+    sys.stdout.buffer.write(self.buffer.getvalue())
 
   def update(self, percent=None, message=None):
     """

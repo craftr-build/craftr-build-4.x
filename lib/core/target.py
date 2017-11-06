@@ -52,7 +52,8 @@ class Target:
   by using the #Cell.add_target() method.
   """
 
-  def __init__(self, cell, name, private_deps, transitive_deps, data, explicit=False):
+  def __init__(self, cell, name, private_deps, transitive_deps, data,
+               explicit=False, console=False):
     if any(not isinstance(x, Target) for x in private_deps):
       raise TypeError('private_deps must be a list of Targets')
     if any(not isinstance(x, Target) for x in transitive_deps):
@@ -65,6 +66,7 @@ class Target:
     self.transitive_deps = transitive_deps
     self.data = data
     self.explicit = explicit
+    self.console = console
     self.actions = None
     data.mounted(self)
 
@@ -249,12 +251,14 @@ def target_factory(target_data_class):
   """
 
   @functools.wraps(target_data_class)
-  def factory(*, name, deps=(), transitive_deps=(), explicit=False, **kwargs):
+  def factory(*, name, deps=(), transitive_deps=(), explicit=False,
+              console=False, **kwargs):
     deps = _session.current.resolve_targets(deps)
     transitive_deps = _session.current.resolve_targets(transitive_deps)
     data = target_data_class(**kwargs)
     cell = _session.current.current_cell(create=True)
-    target = Target(cell, name, deps, transitive_deps, data, explicit)
+    target = Target(cell, name, deps, transitive_deps, data,
+                    explicit=explicit, console=console)
     cell.add_target(target)
     return target
 
