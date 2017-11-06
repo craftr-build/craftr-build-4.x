@@ -9,6 +9,17 @@ import target, {target_factory} from './core/target'
 import {Session, current as session} from './core/session'
 
 
+def localpath(p):
+  """
+  Returns the canonical representation of the path *p*. If *p* is a relative
+  path, it will be considered relative to the current module's directory.
+  """
+
+  if path.isrel(p):
+    p = path.join(str(require.current.directory), p)
+  return path.canonical(p)
+
+
 def glob(patterns, parent=None, excludes=None):
   """
   Same as #path.glob(), except that *parent* defaults to the parent directory
@@ -17,7 +28,7 @@ def glob(patterns, parent=None, excludes=None):
   """
 
   if not parent:
-    parent = require.current.directory
+    parent = str(require.current.directory)
   return path.glob(patterns, parent, excludes)
 
 

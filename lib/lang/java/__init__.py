@@ -135,9 +135,9 @@ class JavaLibrary(JavaBase):
     if src_roots is None:
       src_roots = session.config.get('java.src_roots', ['src', 'java', 'javatest'])
     if src_roots:
-      src_roots = [path.canonical(x) for x in src_roots]
+      src_roots = [craftr.localpath(x) for x in src_roots]
 
-    self.srcs = [path.canonical(x) for x in srcs]
+    self.srcs = [craftr.localpath(x) for x in srcs]
     self.src_roots = src_roots
     self.class_dir = class_dir
     self.javac = javac or session.config.get('java.javac', 'javac')
@@ -283,7 +283,7 @@ class JavaPrebuilt(craftr.target.TargetData):
   """
 
   def __init__(self, binary_jar: str):
-    self.binary_jar = binary_jar
+    self.binary_jar = craftr.localpath(binary_jar)
 
   def translate(self, target):
     pass
