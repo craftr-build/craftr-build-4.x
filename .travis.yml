@@ -22,7 +22,7 @@ install:
 - sudo apt-get update
 - pip install git+https://github.com/nodepy/nodepy.git@develop
 - nodepy --version
-- nodepy https://nodepy.org/install-pm
+- nodepy https://nodepy.org/install-pm master
 - nodepy-pm install -I
 - export PATH="$(nodepy-pm bin):$PATH"
 
