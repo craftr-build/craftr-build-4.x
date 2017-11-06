@@ -3,8 +3,10 @@ Craftr's build target representation.
 """
 
 from typing import Iterable, List
-import _action from './action'
+import functools
+import _actions from './actions'
 import it from '../utils/it'
+import _session from './session'
 
 
 class Cell:
@@ -13,7 +15,10 @@ class Cell:
   for a single build script.
   """
 
-  def __init__(self, name, version, directory, builddir):
+  def __init__(self, session, name, version, directory, builddir):
+    if not isinstance(session, _session.Session):
+      raise TypeError('session must be a Session instance')
+    self.session = session
     self.name = name
     self.version = version
     self.directory = directory
@@ -47,7 +52,7 @@ class Target:
   by using the #Cell.add_target() method.
   """
 
-  def __init__(self, cell, name, private_deps, transitive_deps, data):
+  def __init__(self, cell, name, private_deps, transitive_deps, data, explicit=False):
     if any(not isinstance(x, Target) for x in private_deps):
       raise TypeError('private_deps must be a list of Targets')
     if any(not isinstance(x, Target) for x in transitive_deps):
@@ -59,6 +64,7 @@ class Target:
     self.private_deps = private_deps
     self.transitive_deps = transitive_deps
     self.data = data
+    self.explicit = explicit
     self.actions = None
     data.mounted(self)
 
@@ -92,7 +98,7 @@ class Target:
     action.target = self
     self.actions[action.name] = action
 
-  def translate(self, recursive=True, translator=None):
+  def translate(self, recursive=True):
     """
     Translates the target into the action graph. All dependencies of this
     target must already be translated before it can be translated. If
@@ -103,7 +109,7 @@ class Target:
     if self.is_translated():
       raise RuntimeError('Target "{}" already translated'.format(self.long_name))
 
-    for dep in it.concat(self.private_deps, self.transitive_deps):
+    for dep in it.concat([self.private_deps, self.transitive_deps]):
       if not dep.is_translated():
         if recursive:
           dep.translate(True)
@@ -112,13 +118,10 @@ class Target:
           raise RuntimeError('"{}" -> "{}" (dependent target not translated)'
             .format(self.long_name, dep.long_name))
 
-    if translator_class is None:
-      translator_class = Translator
-    translator = translator_class(self)
     self.actions = {}
-    self.data.translate(self, translator)
+    self.data.translate(self)
     if not self.actions:
-      translator(None, '...', _action.Null())
+      _actions.Null.new(self, name=None, deps='...')
 
   def leaf_actions(self):
     """
@@ -181,56 +184,78 @@ class TargetData:
 
     self.target = target
 
-  def translate(self, target, new_action):
+  def translate(self, target):
     """
-    Called to translate the target into actions. The *new_action* parameter
-    is usually a #Translator instance which can be called to create a new
-    action and associated it with the *target* immediately.
+    Called to translate the target into actions.
 
     # Example
 
     ```python
     import {ActionData, Mkdir, System} from 'craftr/core/action'
     class MyAction(ActionData):
-      def translate(self, target, new_action):
-        mkdir = new_action('mkdir', [], Mkdir(directory))
-        new_action('compile', [mkdir, '...'], System(commands))
+      def translate(self, target):
+        mkdir = Mkdir.new(
+          target,
+          name = 'mkdir',
+          deps = [],
+          directory=directory
+        )
+        System.new(
+          target,
+          name = 'compile',
+          deps = [mkdir, '...'],
+          commands = commands
+        )
     ```
     """
 
     raise NotImplementedError
 
 
-class Translator:
+def splitref(s):
   """
-  A helper class which is used in #TargetData.translate().
+  Splits a target reference string into its scope and target-name component.
+  A target reference must be of the format `//<scope>:<target>` or `:<target>`.
+  For the latter form, the returned scope will be #None.
   """
 
-  def __init__(self, target):
-    self.target = target
+  if not isinstance(s, str):
+    raise TypeError('target-reference must be a string', s)
+  if ':' not in s:
+    raise ValueError('invalid target-reference string: {!r}'.format(s))
+  scope, name = s.partition(':')[::2]
+  if scope and not scope.startswith('//'):
+    raise ValueError('invalid target-reference string: {!r}'.format(s))
+  if scope:
+    scope = scope[2:]
+    if not scope:
+      raise ValueError('invalid target-reference string: {!r}'.format(s))
+  return scope or None, name
 
-  def __call__(self, name, deps, data):
-    """
-    Create a new action object that originates from the translator's #Target.
-    The new #Action object is returned. *deps* can be the special value
-    `'...'` or a list which contains the string `'...'` in which case all
-    leaf actions from the target's dependencies are added.
-    """
 
-    def leaves():
-      return self.target.deps().attr('leaf_actions').call().concat()
+def joinref(scope, name):
+  if scope:
+    return '//{}:{}'.format(scope, name)
+  else:
+    return ':{}'.format(name)
 
-    if deps == '...':
-      deps = list(leaves())
-    else:
-      deps = list(deps)
-      try:
-        index = deps.index('...')
-      except ValueError:
-        pass
-      else:
-        deps[index:index+1] = leaves()
 
-    action = _action.Action(self.target, name, deps, data)
-    self.target.add_action(action)
-    return action
+def target_factory(target_data_class):
+  """
+  Returns a function that creates a new target in the current session of the
+  specified *target_data_class*. The factory function accepts private and
+  transitive deps not only as #Target instances but also as strings that will
+  be resolved in the most-recently executed cell.
+  """
+
+  @functools.wraps(target_data_class)
+  def factory(*, name, deps=(), transitive_deps=(), explicit=False, **kwargs):
+    deps = _session.current.resolve_targets(deps)
+    transitive_deps = _session.current.resolve_targets(transitive_deps)
+    data = target_data_class(**kwargs)
+    cell = _session.current.current_cell(create=True)
+    target = Target(cell, name, deps, transitive_deps, data, explicit)
+    cell.add_target(target)
+    return target
+
+  return factory

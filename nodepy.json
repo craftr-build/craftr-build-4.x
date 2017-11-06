@@ -1,0 +1,19 @@
+{
+  "name": "craftr",
+  "version": "3.0.0-dev",
+  "description": "Craftr is a domain-independent build system.",
+  "license": "MIT",
+  "main": "./lib/public",
+  "resolve_root": "./lib",
+  "bin": {
+    "craftr": "./lib/main"
+  },
+  "authors": [
+    "rosensteinniklas@gmail.com"
+  ],
+  "pip_dependencies": {
+    "sumtypes": ">=0.1a4",
+    "glob2": ">=0.6",
+    "Werkzeug": ">=0.12.2"
+  }
+}

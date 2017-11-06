@@ -3,78 +3,10 @@ The public API when importing the `craftr` package.
 """
 
 import fnmatch as _fnmatch
-import functools
-import {Action, ActionData} from './core/action'
-import {Cell, Target, TargetData} from './core/target'
-import _target from './core/target'
 import path from './utils/path'
-import config from './config'
-import platform from './platform'
-
-builddir = 'build'
-target = platform.Triplet.current()
-cells = {}
-
-
-def current_cell():
-  """
-  Returns the currently executed build cell. If there is not already a cell
-  for the currently executed Node.py module, a new cell will be created.
-  Cells can only be created for modules inside a package. All modules inside
-  the same package will be part of the same cell.
-  """
-
-  package = require.current.package
-  if not package:
-    raise RuntimeError('module {!r} is not in a package'.format(require.current))
-  if package.name not in cells:
-    bdir = path.join(builddir, 'cells', package.name)
-    version = package.payload['package'].get('version', '1.0.0')
-    cells[package.name] = Cell(package.name, version, package.directory, bdir)
-  return cells[package.name]
-
-
-def find_target(name):
-  """
-  Resolves a target name in the current cell (relative identifier) or in the
-  #cells dictionary (absolute identifier).
-  """
-
-  if name.startswith(':'):
-    cell, name = None, name[1:]
-  elif name.startswith('//'):
-    cell, name = name[2:].partition(':')[::2]
-  else:
-    raise ValueError('invalid target identifier: {!r}'.format(name))
-
-  if cell is None:
-    cell = current_cell()
-  else:
-    cell = cells[name]
-
-  return cell.targets[name]
-
-
-def target_factory(target_data_type):
-  """
-  Returns a function that creates a new target into the current cell and
-  returns it.
-  """
-
-  def resolve_deps(deps):
-    return [find_target(x) if isinstance(x, str) else x for x in deps]
-
-  @functools.wraps(target_data_type)
-  def wrapper(*, name, deps=(), transitive_deps=(), **kwargs):
-    cell = current_cell()
-    private_deps = resolve_deps(deps)
-    transitive_deps = resolve_deps(transitive_deps)
-    data = target_data_type(**kwargs)
-    target = Target(cell, name, private_deps, transitive_deps, data)
-    cell.add_target(target)
-    return target
-
-  return wrapper
+import actions from './core/actions'
+import target, {target_factory} from './core/target'
+import {Session, current as session} from './core/session'
 
 
 def glob(patterns, parent=None, excludes=None):

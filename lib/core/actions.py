@@ -9,8 +9,10 @@ import locale
 import os
 import subprocess
 import sumtypes
+import traceback
 import _target from './target'
 import env from '../utils/env'
+import sh from '../utils/sh'
 import ts from '../utils/ts'
 
 
@@ -34,6 +36,7 @@ class Action:
     self.deps = deps
     self.data = data
     self.progress = None
+    self.skipped = False
     data.mounted(self)
 
   def __repr__(self):
@@ -41,9 +44,25 @@ class Action:
 
   @property
   def long_name(self):
-    return '{}#{}'.format(self.name)
+    return '{}#{}'.format(self.target.long_name, self.name)
+
+  def check_skip(self):
+    """
+    Checks if the action can be skipped.
+    """
+
+    if self.skipped:
+      return True
+    if self.progress is not None:
+      return False
+    if self.data.check_skip(self):
+      self.skipped = True
+      return True
+    return False
 
   def is_executed(self):
+    if self.skipped:
+      return True
     if self.progress is None:
       return False
     with ts.condition(self.progress):
@@ -81,11 +100,62 @@ class Action:
       progress.code = code
       progress.executed = True
       progress.update(1.0)
-      progress.notify()
+      ts.notify(progress)
     return code
+
+  def execute_with(self, progress):
+    if self.progress is not None:
+      raise RuntimeError('{!r}.progress is already set'.format(self))
+    self.progress = progress
+    return self.execute()
 
 
 class ActionData:
+
+  @classmethod
+  def new(cls, target, *, name, deps=(), **kwargs):
+    """
+    Creates a new #Action and adds it to *target*.
+    """
+
+    def leaves():
+      result = set()
+      for dep in target.private_deps:
+        result |= dep.leaf_actions()
+      for dep in target.transitive_deps:
+        result |= dep.leaf_actions()
+      return result
+
+    if deps == '...':
+      deps = list(leaves())
+    else:
+      deps = list(deps)
+      try:
+        index = deps.index('...')
+      except ValueError:
+        pass
+      else:
+        deps[index:index+1] = list(leaves())
+
+    data = cls(**kwargs)
+    action = Action(target, name, deps, data)
+    target.add_action(action)
+    return action
+
+  def __str__(self):
+    attrs = []
+    for key in dir(self):
+      if key.startswith('_') or hasattr(type(self), key): continue
+      value = getattr(self, key)
+      attrs.append('{}={!r}'.format(key, value))
+    return '{}({})'.format(type(self).__name__, ', '.join(attrs))
+
+  def check_skip(self, action):
+    """
+    Check if the action can be skipped.
+    """
+
+    return False
 
   def mounted(self, action):
     """
@@ -103,6 +173,15 @@ class ActionData:
     """
 
     raise NotImplementedError
+
+  def get_display(self, action):
+    """
+    Return a displayable string. This is usually used the first time the
+    action is executed. If the #execute() calls #ActionProgress.progress()
+    with the *message* parameter, that message is usually displayed then.
+    """
+
+    return str(self)
 
   def hash_components(self, action):
     """
@@ -203,6 +282,9 @@ class Null(ActionData):
   have been generated during it's #TargetData.translate() method.
   """
 
+  def check_skip(self, action):
+    return True
+
   def execute(self, action, progress):
     return 0
 
@@ -214,6 +296,9 @@ class Mkdir(ActionData):
 
   def __init__(self, directory):
     self.directory = directory
+
+  def get_display(self, action):
+    return 'mkdir ' + sh.quote(self.directory)
 
   def execute(self, action, progress):
     try:
@@ -241,6 +326,10 @@ class System(ActionData):
     self.output_files = list(output_files)
     self.environ = environ
     self.cwd = cwd
+
+  def get_display(self, action):
+    commands = (' '.join(sh.quote(x) for x in cmd) for cmd in self.commands)
+    return '$ ' + ' && '.join(commands)
 
   def execute(self, action, progress):
     code = 0

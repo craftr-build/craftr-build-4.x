@@ -1,5 +1,17 @@
 """
-Configuration for Craftr modules.
+Reader/writer for TOML configuration files with filter support. Properties
+that can be filtered must be explicitly specified on the #Configuration object
+before reading.
+
+# Example
+
+```toml
+[native]
+toolkit = "llvm"
+
+[native.'cfg(win32)']
+toolkit = "msvc"
+```
 """
 
 import fnmatch
@@ -68,6 +80,7 @@ class Configuration:
   """
 
   def __init__(self, props=None):
+    self._read_data = {}
     self._data = {}
     self.props = {} if props is None else props
 
@@ -156,7 +169,7 @@ class Configuration:
   def options(self, section: str = None) -> t.List[str]:
     if not section:
       options = []
-      for section in self._parser.keys():
+      for section in self._data.keys():
         options.extend(self.options(section))
       return options
     else:
@@ -189,6 +202,3 @@ class Configuration:
         raise KeyError(key)
     else:
       return section.pop(name, default)
-
-
-module.exports = Configuration()
