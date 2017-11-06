@@ -282,3 +282,13 @@ class JavaPrebuilt(craftr.target.TargetData):
 library = craftr.target_factory(JavaLibrary)
 binary = craftr.target_factory(JavaBinary)
 prebuilt = craftr.target_factory(JavaPrebuilt)
+
+
+def run(binary, *argv, name=None, java=None, **kwargs):
+  target = craftr.T(binary)
+  if name is None:
+    name = target.name + '_run'
+  if java is None:
+    java = session.config.get('java.java', 'java')
+  command = [java, '-jar', target.data.jar_filename] + list(argv)
+  return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)

@@ -103,6 +103,14 @@ def t(name):
   return session.current.resolve_target(name).data
 
 
+def T(name):
+  """
+  Shortcut for resolving a target name.
+  """
+
+  return session.current.resolve_target(name)
+
+
 class Gentarget(target.TargetData):
 
   def __init__(self, commands, input_files=(), output_files=()):
