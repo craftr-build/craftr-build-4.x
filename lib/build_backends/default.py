@@ -70,7 +70,6 @@ class ParallelExecutor:
     self.consolelock = threading.RLock()
     self.datalock = threading.RLock()
     self.action_completed = threading.Condition()
-    self.visited = []
     self.futures = []
 
   def __enter__(self):
@@ -82,8 +81,9 @@ class ParallelExecutor:
 
   def put(self, action):
     with self.datalock:
-      self.visited.append(action)
-      self.futures.append(self.pool.submit(self._worker, action))
+      future = self.pool.submit(self._worker, action)
+      future.action = action
+      self.futures.append(future)
 
   def pop_done(self):
     with self.datalock:
@@ -115,8 +115,7 @@ class ParallelExecutor:
       return action
     except:
       traceback.print_exc()
-      action.progress.executed = True
-      action.progress.code = 1
+      action.progress.abort()
       raise
     finally:
       with self.action_completed:
@@ -132,9 +131,35 @@ class ParallelExecutor:
       with self.action_completed:
         self.action_completed.wait()
 
-  def wait(self):
-    self.pool.shutdown(wait=True)
+  def abort_all(self):
+    #self.pool.shutdown(wait=False)
+    with self.datalock:
+      futures, self.futures = self.futures, []
+    for future in self.futures:
+      progress = future.action.progress
+      if progress:
+        progress.abort()
 
+  def run(self, actions):
+    actions = iter(actions)
+    try:
+      with self:
+        while actions or self.futures:
+          for action in (f.action for f in self.pop_done()):
+            if action.skipped: continue
+            if action.progress.code != 0:
+              self.formatter.announce_failure(action)
+              return action.progress.code
+            self.formatter.announce_finished(action)
+          if actions:
+            action = next(actions, None)
+            if action is None:
+              actions = None
+            elif not action.is_skippable():
+              self.put(action)
+    except:
+      self.abort_all()
+      raise
 
 def _execute_action(action):
   progress = ActionProgress(do_buffering=action.console)
@@ -153,22 +178,10 @@ def build_main(args, session, module):
   # Generate the action graph.
   targets = session.resolve_targets(args.targets) if args.targets else None
   actions = list(session.build_target_graph().translate(targets).topo_sort())
-  iter_actions = iter(actions)
 
   formatter = Formatter(actions, verbose=args.verbose)
-  with ParallelExecutor(max_workers=args.jobs, formatter=formatter) as executor:
-    while iter_actions or executor.futures:
-      for action in (f.result() for f in executor.pop_done()):
-        if action.skipped: continue
-        if action.progress.code != 0:
-          formatter.announce_failure(action)
-          return action.progress.code
-        formatter.announce_finished(action)
-      if iter_actions:
-        action = next(iter_actions, None)
-        if action is None:
-          iter_actions = None
-        elif not action.is_skippable():
-          executor.put(action)
-      else:
-        executor.wait()
+  executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
+  try:
+    executor.run(actions)
+  except KeyboardInterrupt:
+    print('keyboard interrupt')

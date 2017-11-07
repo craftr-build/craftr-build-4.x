@@ -221,10 +221,32 @@ class ActionProgress(ts.object):
     self.buffer = io.BytesIO()
     self.do_buffering = do_buffering
     self.code = None
+    self.aborted = False
+    self.abort_callbacks = []
 
+  @ts.method
+  def is_aborted(self):
+    return self.aborted
+
+  @ts.method
+  def abort(self):
+    if not self.aborted:
+      self.aborted = True
+      for func in self.abort_callbacks:
+        try:
+          func()
+        except:
+          traceback.print_exc()
+
+  @ts.method
+  def on_abort(self, func):
+    self.abort_callbacks.append(func)
+
+  @ts.method
   def buffer_has_content(self):
     return self.buffer.tell() != 0
 
+  @ts.method
   def print_buffer(self):
     sys.stdout.buffer.write(self.buffer.getvalue())
     sys.stdout.flush()
@@ -291,6 +313,7 @@ class ActionProgress(ts.object):
         for line in proc.stdout:
           self.buffer.write(line)
 
+    self.on_abort(lambda: (proc.terminate(), print('TERMINATE!')))
     proc.wait()
     return proc.returncode
 
