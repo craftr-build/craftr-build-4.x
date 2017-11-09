@@ -156,6 +156,17 @@ def glob(patterns: t.Union[str, t.List[str]], parent: str = None,
   return result
 
 
+def addtobase(subject, base_suffix):
+  """
+  Adds the string *base_suffix* to the basename of *subject*.
+  """
+
+  if not base_suffix:
+    return subject
+  base, ext = os.path.splitext(subject)
+  return base + base_suffix + ext
+
+
 def addprefix(subject, prefix):
   """
   Adds the specified *prefix* to the last path element in *subject*.

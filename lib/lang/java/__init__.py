@@ -279,9 +279,62 @@ class JavaPrebuilt(craftr.target.TargetData):
     pass
 
 
+class ProGuard(craftr.target.TargetData):
+  """
+  Run ProGuard on the JAR dependencies of this target. If the *pro_file*
+  argument is specified, it must be the name of a response file that will
+  be passed to the ProGuard commandline.
+
+  The *cwd* will default to the parent directory of *pro_file*, if specified.
+  """
+
+  def __init__(self, pro_file=None, options=(), cwd=None, java=None,
+               outjars=None):
+    self.java = java or session.config.get('java.java', 'java')
+    self.pro_file = craftr.localpath(pro_file) if pro_file else None
+    if not cwd and self.pro_file:
+      cwd = path.dir(self.pro_file)
+    self.cwd = craftr.localpath(cwd) if cwd else None
+    self.options = options
+    self.outjars = outjars
+
+  def translate(self, target):
+    injars = []
+    for data in target.deps().attr('data'):
+      if isinstance(data, JavaPrebuilt):
+        injars.append(data.binary_jar)
+      elif isinstance(data, (JavaBinary, JavaLibrary)):
+        injars.append(data.jar_filename)
+
+    if self.outjars:
+      outjars = self.outjars
+    else:
+      outjars = [path.canonical(path.addtobase(x, '.proguard')) for x in injars]
+
+    args = [self.java, '-jar', str(module.directory.joinpath('proguard-5.3.3.jar'))]
+    if self.pro_file:
+      args.append('@' + self.pro_file)
+    args += ['-injars', path.pathsep.join(injars)]
+    args += ['-outjars', path.pathsep.join(outjars)]
+    # XXX -libraryjars for all transitive dependencies?
+    # XXX rt.jar no longer available in Java 9
+    args += ['-libraryjars', '<java.home>/lib/rt.jar']
+    args += self.options
+
+    craftr.actions.System.new(
+      target,
+      deps = '...',
+      commands = [args],
+      input_files = injars,
+      output_files = outjars,
+      cwd = self.cwd
+    )
+
+
 library = craftr.target_factory(JavaLibrary)
 binary = craftr.target_factory(JavaBinary)
 prebuilt = craftr.target_factory(JavaPrebuilt)
+proguard = craftr.target_factory(ProGuard)
 
 
 def run(binary, *argv, name=None, java=None, **kwargs):
