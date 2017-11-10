@@ -127,5 +127,13 @@ class Gentarget(target.TargetData):
       output_files = self.output_files
     )
 
+  def add_additional_args(self, args):
+    """
+    The default build backend calls this function when additional command-line
+    arguments are specified for this specific target.
+    """
+
+    self.commands[-1].extend(args)
+
 
 gentarget = target_factory(Gentarget)

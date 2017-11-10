@@ -5,7 +5,10 @@ The default, Python-based build backend.
 import concurrent.futures
 import threading
 import traceback
+import sys
+import craftr from '../public'
 import {ActionProgress, Null as NullAction} from '../core/actions'
+import sh from '../utils/sh'
 import tty from '../utils/tty'
 
 try: from multiprocessing import cpu_count
@@ -36,7 +39,10 @@ class Formatter:
         '({}/{}) [{}]:'.format(self.num_announced, len(self.actions), action.long_name),
         'cyan'
       ) + ' '
-      line += tty.colored(ellipsize_text(action.get_display(), width-len(line)), 'yellow')
+      text = action.get_display()
+      if not self.verbose:
+        text = ellipsize_text(text, width-len(line))
+      line += tty.colored(text, 'yellow')
       tty.clear_line()
       print(line, sep=self.sep, end=self.end)
 
@@ -172,6 +178,8 @@ def build_argparser(parser):
   parser.add_argument('targets', nargs='*', metavar='TARGET')
   parser.add_argument('-v', '--verbose', action='store_true')
   parser.add_argument('-j', '--jobs', type=int, default=cpu_count() * 2)
+  parser.add_argument('--dotviz-targets', action='store_true')
+  parser.add_argument('--dotviz-actions', action='store_true')
 
 
 def build_main(args, session, module):
@@ -179,11 +187,32 @@ def build_main(args, session, module):
   require.context.load_module(module)
   session.trigger_event('after_load')
 
+  # Resolve targets and parse additional command-line arguments for the targets.
+  targets = []
+  target_args = {}
+  for target_name in args.targets:
+    name, target_args = target_name.partition('=')[::2]
+    target_args = sh.split(target_args)
+    target = session.resolve_target(name)
+    if target_args and not isinstance(target.data, craftr.Gentarget):
+      tn = type(target.data).__name__
+      print('fatal: additional command-line arguments are only supported\n'
+            '       for gentarget()s ({} is a {})'.format(name, tn))
+      return 1
+    if target_args:
+      target.data.add_additional_args(target_args)
+    targets.append(target)
+
   # Generate the action graph.
-  targets = session.resolve_targets(args.targets) if args.targets else None
-  actions = session.build_target_graph().translate(targets).topo_sort()
-  actions = (x for x in actions if not isinstance(x, NullAction))
-  actions = list(actions)
+  tg = session.build_target_graph()
+  if args.dotviz_targets:
+    tg.dotviz(sys.stdout)
+    return 0
+  ag = tg.translate(targets)
+  if args.dotviz_actions:
+    ag.dotviz(sys.stdout)
+    return 0
+  actions = [x for x in ag.topo_sort() if not isinstance(x, NullAction)]
 
   formatter = Formatter(actions, verbose=args.verbose)
   executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
@@ -191,3 +220,5 @@ def build_main(args, session, module):
     executor.run(actions)
   except KeyboardInterrupt:
     print('keyboard interrupt')
+
+  return 0
