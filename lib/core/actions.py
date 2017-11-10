@@ -123,9 +123,11 @@ class Action:
 class ActionData:
 
   @classmethod
-  def new(cls, target, *, name=None, deps=(), **kwargs):
+  def new(cls, target, *, name=None, deps=..., **kwargs):
     """
-    Creates a new #Action and adds it to *target*.
+    Creates a new #Action and adds it to *target*. If *deps* is an #Ellipsis
+    or a list that contains an #Ellipsis, it will be replaced by the actions
+    of dependent targets.
     """
 
     def leaves():
@@ -136,15 +138,18 @@ class ActionData:
         result |= dep.leaf_actions()
       return result
 
-    if deps == '...':
+    if deps in ('...', ...):
       deps = list(leaves())
     else:
       deps = list(deps)
       try:
         index = deps.index('...')
       except ValueError:
-        pass
-      else:
+        try:
+          index = deps.index(...)
+        except ValueError:
+          index = None
+      if index is not None:
         deps[index:index+1] = list(leaves())
 
     data = cls(**kwargs)

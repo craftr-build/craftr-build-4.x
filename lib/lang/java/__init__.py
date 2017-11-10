@@ -163,12 +163,13 @@ class JavaLibrary(JavaBase):
       mkdir = craftr.actions.Mkdir.new(
         target,
         name = 'mkdir',
+        deps = [],
         directory = self.class_dir
       )
       javac = craftr.actions.System.new(
         target,
         name = 'javac',
-        deps = [mkdir, '...'],
+        deps = [mkdir, ...],
         commands = [command],
         input_files = self.srcs,
         output_files = classfiles
@@ -188,12 +189,13 @@ class JavaLibrary(JavaBase):
     mkdir = craftr.actions.Mkdir.new(
       target,
       name = 'jar_dir',
+      deps = [],
       directory = self.jar_dir
     )
     craftr.actions.System.new(
       target,
       name = 'jar',
-      deps = [javac, mkdir, '...'] if javac else [mkdir, '...'],
+      deps = [javac, mkdir, ...] if javac else [mkdir, ...],
       commands = [command],
       input_files = classfiles,
       output_files = [self.jar_filename]
@@ -251,12 +253,13 @@ class JavaBinary(JavaBase):
     mkdir = craftr.actions.Mkdir.new(
       target,
       name = 'jar_dir',
+      deps = [],
       directory=self.jar_dir
     )
     craftr.actions.System.new(
       target,
       name = self.dist_type,
-      deps = [mkdir, '...'],
+      deps = [mkdir, ...],
       commands = [command],
       input_files = inputs,
       output_files = [self.jar_filename]
@@ -323,7 +326,7 @@ class ProGuard(craftr.target.TargetData):
 
     craftr.actions.System.new(
       target,
-      deps = '...',
+      deps = ...,
       commands = [args],
       input_files = injars,
       output_files = outjars,

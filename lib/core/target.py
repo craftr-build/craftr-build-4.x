@@ -123,7 +123,7 @@ class Target:
     self.actions = {}
     self.data.translate(self)
     if not self.actions:
-      _actions.Null.new(self, name=None, deps='...')
+      _actions.Null.new(self, name=None, deps=...)
 
   def leaf_actions(self):
     """
@@ -205,7 +205,7 @@ class TargetData:
         System.new(
           target,
           name = 'compile',
-          deps = [mkdir, '...'],
+          deps = [mkdir, ...],
           commands = commands
         )
     ```
