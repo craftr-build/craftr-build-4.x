@@ -98,7 +98,10 @@ def main():
   backend_args = backend_parser.parse_args(unknown_args)
 
   # Find the build script as a Node.py module.
-  filename = path.join(args.projectdir, './Craftrfile.py')
+  if path.isfile(args.projectdir):
+    filename = args.projectdir
+  else:
+    filename = path.join(args.projectdir, './Craftrfile.py')
   module = require.new(session.projectdir).resolve(filename)
 
   # Enter the session context and execute the build backend.
