@@ -16,7 +16,7 @@ csharp.build(
 )
 
 csharp.run(
-  name = 'run',
+  name = 'main_run',
   deps = [':main'],
   explicit = True
 )
