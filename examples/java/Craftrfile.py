@@ -9,8 +9,8 @@ java.prebuilt(
 
 java.binary(
   name = 'main',
-  srcs = craftr.glob('src/**.java'),
   deps = [':hello'],
+  srcs = craftr.glob('src/**.java'),
   main_class = 'Main'
 )
 
