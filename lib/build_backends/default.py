@@ -177,6 +177,7 @@ def build_argparser(parser):
 def build_main(args, session, module):
   # Execute the module.
   require.context.load_module(module)
+  session.trigger_event('after_load')
 
   # Generate the action graph.
   targets = session.resolve_targets(args.targets) if args.targets else None

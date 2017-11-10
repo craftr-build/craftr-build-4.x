@@ -5,6 +5,7 @@ definitions from loaded build scripts.
 """
 
 import os
+import traceback
 import werkzeug.local as _local
 import _target from './target'
 import _actions from './actions'
@@ -91,12 +92,14 @@ class ActionGraph(BaseGraph):
 class Session:
 
   current = None
+  EVENTS = ('after_load',)
 
   def __init__(self, projectdir=None, builddir=None):
     self.builddir = builddir or 'build'
     self.projectdir = projectdir or os.getcwd()
     self.config = cfg.Configuration()
     self.cells = {}
+    self.listeners = {}
 
   def __enter__(self):
     if Session.current:
@@ -106,6 +109,20 @@ class Session:
 
   def __exit__(self, *args):
     Session.current = None
+
+  def on(self, event_name, handler):
+    if event_name not in self.EVENTS:
+      raise ValueError('unknown event type: {!r}'.format(event_name))
+    self.listeners.setdefault(event_name, []).append(handler)
+
+  def trigger_event(self, event_name):
+    if event_name not in self.EVENTS:
+      raise ValueError('unknown event type: {!r}'.format(event_name))
+    for handler in self.listeners.get(event_name, []):
+      try:
+        handler()
+      except:
+        traceback.print_exc()
 
   def current_cell(self, create=False):
     """
