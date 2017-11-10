@@ -15,8 +15,4 @@ csharp.build(
   type = 'exe'
 )
 
-csharp.run(
-  name = 'main_run',
-  deps = [':main'],
-  explicit = True
-)
+csharp.run(':main')

@@ -165,65 +165,16 @@ class Csharp(craftr.target.TargetData):
     )
 
 
-class CsharpRun(craftr.target.TargetData):
-  """
-  At least under Windows+Mono, applications compiled with Mono should be run
-  through the Mono bootstrapper.
-  """
-
-  environ: t.Dict[str, str] = None
-  cwd: str = None
-  extra_arguments: t.List[str] = None
-  csc:  CscInfo = None
-
-  def __init__(self, executable: str = None, environ: t.Dict[str, str] = None,
-               cwd: str = None, csc: CscInfo = None,
-               extra_arguments: t.List[str] = None):
-    self.executable = executable
-    self.environ = environ
-    self.cwd = cwd
-    self.csc = csc
-    self.extra_arguments = extra_arguments
-
-  def mounted(self, target):
-    if not self.executable:
-      for data in target.deps().attr('data'):
-        if isinstance(data, Csharp) and 'exe' in data.type:
-          if self.executable:
-            raise ValueError('mulitple executable Csharp dependencies, '
-              'specify the one to run explicitly via `executable=...`')
-          self.executable = data.dll_filename
-        # Inherit the CSC value from the dependency.
-        if isinstance(data, Csharp) and not self.csc:
-          self.csc = data.csc
-      if not self.executable:
-        raise ValueError('specify one Csharp executable dependency or the '
-          '`executable=...` parameter.')
-
-    self.csc = self.csc or CscInfo.get()
-    environ = self.environ.copy() if self.environ else {}
-    environ.update(self.csc.environ)  # XXX What if eg. PATH is specified in self.environ?
-    self.environ = environ
-
-  def translate(self, target):
-    if self.csc.is_mono():
-      command = ['mono']
-    else:
-      command = []
-    command += [self.executable]
-    if self.extra_arguments:
-      command += self.extra_arguments
-
-    craftr.actions.System.new(
-      target,
-      name = 'run',
-      input_files = [self.executable],
-      output_files = [],
-      commands = [command],
-      environ = self.environ,
-      cwd = self.cwd
-    )
+def run(binary, *argv, name=None, csc=None, **kwargs):
+  kwargs.setdefault('explicit', True)
+  target = craftr.T(binary)
+  if name is None:
+    name = target.name + '_run'
+  if csc is None:
+    csc = target.data.csc
+  command = ['mono'] if csc.is_mono() else []
+  command += [target.data.dll_filename] + list(argv)
+  return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)
 
 
 build = craftr.target_factory(Csharp)
-run = craftr.target_factory(CsharpRun)
