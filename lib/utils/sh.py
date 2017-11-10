@@ -1,4 +1,5 @@
 
+import contextlib
 import os
 import re
 import shlex
@@ -45,3 +46,20 @@ def quote(s, for_ninja=False):
     # Fix escaped $ variables on Unix, see issue craftr-build/craftr#30
     s = re.sub(r"'(\$\w+)'", r'\1', s)
   return s
+
+
+def join(args):
+  return ' '.join(map(quote, args))
+
+
+@contextlib.contextmanager
+def override_environ(environ):
+  old = os.environ.copy()
+  os.environ.update(environ)
+  try:
+    yield
+  finally:
+    os.environ.update(old)
+    for key in environ:
+      if key not in old:
+        del os.environ[key]
