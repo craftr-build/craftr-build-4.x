@@ -5,7 +5,7 @@ The default, Python-based build backend.
 import concurrent.futures
 import threading
 import traceback
-import {ActionProgress} from '../core/actions'
+import {ActionProgress, Null as NullAction} from '../core/actions'
 import tty from '../utils/tty'
 
 try: from multiprocessing import cpu_count
@@ -180,7 +180,9 @@ def build_main(args, session, module):
 
   # Generate the action graph.
   targets = session.resolve_targets(args.targets) if args.targets else None
-  actions = list(session.build_target_graph().translate(targets).topo_sort())
+  actions = session.build_target_graph().translate(targets).topo_sort()
+  actions = (x for x in actions if not isinstance(x, NullAction))
+  actions = list(actions)
 
   formatter = Formatter(actions, verbose=args.verbose)
   executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
