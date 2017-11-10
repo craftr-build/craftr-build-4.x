@@ -380,7 +380,7 @@ class System(ActionData):
     return '$ ' + ' && '.join(commands)
 
   def is_skippable(self, action):
-    if not self.input_files and not self.output_files:
+    if not self.input_files or not self.output_files:
       return False
     if not self.input_files:
       if all(os.path.exists(x) for x in self.output_files):

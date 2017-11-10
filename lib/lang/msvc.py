@@ -18,6 +18,7 @@ import typing as t
 import path from '../utils/path'
 import sh from '../utils/sh'
 import {NamedObject} from '../utils/types'
+import craftr from '../public'
 
 def get_arch():
   arch = platform.machine().lower()
@@ -217,7 +218,7 @@ class MsvcToolkit(NamedObject):
 
   @staticmethod
   def CACHEFILE():
-    return path.join(session.builddir, '.config', 'msvc-toolkit.json')
+    return path.join(craftr.session.builddir, '.config', 'msvc-toolkit.json')
 
   CSC_VERSION_REGEX = re.compile(r'compiler\s+version\s+([\d\.]+)', re.I | re.M)
 
@@ -253,7 +254,7 @@ class MsvcToolkit(NamedObject):
     if not installations:
       raise RuntimeError('Unable to detect any MSVC installation. Is it installed?')
 
-    version = config.get('msvc.version')
+    version = craftr.session.config.get('msvc.version')
     if version:
       version = int(version)
       install = next((x for x in installations if x.version == version), None)
@@ -263,10 +264,10 @@ class MsvcToolkit(NamedObject):
       install = installations[0]
       version = install.version
 
-    arch = config.get('msvc.arch', session.arch)
-    platform_type = config.get('msvc.platform_type')
-    sdk_version = config.get('msvc.sdk_version')
-    cache_enabled = config.get('msvc.cache', True)
+    arch = craftr.session.config.get('msvc.arch', get_arch())
+    platform_type = craftr.session.config.get('msvc.platform_type')
+    sdk_version = craftr.session.config.get('msvc.sdk_version')
+    cache_enabled = craftr.session.config.get('msvc.cache', True)
 
     cache = None
     if cache_enabled:
@@ -286,7 +287,7 @@ class MsvcToolkit(NamedObject):
       toolkit = cache  # Nothing has changed
 
     if cache_enabled:
-      session.finally_(lambda: toolkit.save(cls.CACHEFILE()))
+      craftr.session.on('after_load', lambda: toolkit.save(cls.CACHEFILE()))
 
     return toolkit
 
