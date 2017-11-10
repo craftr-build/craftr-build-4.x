@@ -105,6 +105,9 @@ class ParallelExecutor:
         if dep.progress.code != 0:
           action.skip()
           return action  # action skipped because of errored dependency
+      if action.is_skippable():
+        action.skip()
+        return action
       if console:
         with self.consolelock:
           self.formatter.announce_execute(action)
@@ -155,7 +158,7 @@ class ParallelExecutor:
             action = next(actions, None)
             if action is None:
               actions = None
-            elif not action.is_skippable():
+            else:
               self.put(action)
     except:
       self.abort_all()

@@ -52,14 +52,7 @@ class Action:
     Checks if the action can be skipped.
     """
 
-    if self.skipped:
-      return True
-    if self.progress is not None:
-      return False
-    if self.data.is_skippable(self):
-      self.skip()
-      return True
-    return False
+    return self.data.is_skippable(self)
 
   def skip(self):
     self.progress = ActionProgress()
