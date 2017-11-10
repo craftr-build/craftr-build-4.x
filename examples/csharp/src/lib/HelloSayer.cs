@@ -1,6 +1,6 @@
 
 class HelloSayer {
-  public static void SayHello() {
-    System.Console.WriteLine("Hello, World!");
+  public static void SayHello(string name) {
+    System.Console.WriteLine("Hello, " + name + "!");
   }
 }

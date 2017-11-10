@@ -7,15 +7,10 @@ java.prebuilt(
   binary_jar = 'vendor/hello-1.0.0.jar'
 )
 
-java.library(
-  name = 'main_lib',
-  srcs = craftr.glob('src/**.java'),
-  transitive_deps = [':hello']
-)
-
 java.binary(
   name = 'main',
-  deps = [':main_lib'],
+  srcs = craftr.glob('src/**.java'),
+  deps = [':hello'],
   main_class = 'Main'
 )
 

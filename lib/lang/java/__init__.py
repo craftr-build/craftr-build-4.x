@@ -138,7 +138,8 @@ class JavaLibrary(JavaBase):
       self.class_dir = 'classes/' + target.name
     self.class_dir = path.canonical(self.class_dir, target.cell.builddir)
 
-  def translate(self, target):
+  def translate(self, target, jar_filename=None):
+    jar_filename = jar_filename or self.jar_filename
     extra_arguments = session.config.get('java.extra_arguments', []) + (self.extra_arguments or [])
     classpath = []
 
@@ -181,7 +182,7 @@ class JavaLibrary(JavaBase):
     if self.main_class:
       flags += 'e'
 
-    command = [self.javac_jar, flags, self.jar_filename]
+    command = [self.javac_jar, flags, jar_filename]
     if self.main_class:
       command.append(self.main_class)
     command += ['-C', self.class_dir, '.']
@@ -198,11 +199,11 @@ class JavaLibrary(JavaBase):
       deps = [javac, mkdir, ...] if javac else [mkdir, ...],
       commands = [command],
       input_files = classfiles,
-      output_files = [self.jar_filename]
+      output_files = [jar_filename]
     )
 
 
-class JavaBinary(JavaBase):
+class JavaBinary(JavaLibrary):
   """
   Takes a list of Java dependencies and creates an executable JAR archive
   from them.
@@ -229,6 +230,11 @@ class JavaBinary(JavaBase):
   def translate(self, target):
     inputs = []
 
+    if self.srcs:
+      sub_jar = path.addtobase(self.jar_filename, '-classes')
+      super().translate(target, jar_filename=sub_jar)
+      inputs.append(sub_jar)
+
     for data in target.deps().attr('data').of_type(JavaLibrary):
       inputs.append(data.jar_filename)
     for data in target.deps().attr('data').of_type(JavaPrebuilt):
@@ -250,16 +256,18 @@ class JavaBinary(JavaBase):
       for infile in inputs:
         command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
 
-    mkdir = craftr.actions.Mkdir.new(
-      target,
-      name = 'jar_dir',
-      deps = [],
-      directory=self.jar_dir
-    )
+    if 'jar_dir' not in target.actions:
+      mkdir = craftr.actions.Mkdir.new(
+        target,
+        name = 'jar_dir',
+        deps = [],
+        directory=self.jar_dir
+      )
+
     craftr.actions.System.new(
       target,
       name = self.dist_type,
-      deps = [mkdir, ...],
+      deps = [target.actions.get('jar'), target.actions['jar_dir'], ...],
       commands = [command],
       input_files = inputs,
       output_files = [self.jar_filename]

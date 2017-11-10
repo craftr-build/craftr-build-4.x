@@ -92,8 +92,13 @@ class Csharp(craftr.target.TargetData):
   #warn
   #checked
 
-  def __init__(self, srcs: t.List[str], type: str, dll_dir: str = None,
-               dll_name: str = None, main: str = None, csc: CscInfo = None,
+  def __init__(self,
+               srcs: t.List[str],
+               type: str,
+               dll_dir: str = None,
+               dll_name: str = None,
+               main: str = None,
+               csc: CscInfo = None,
                extra_arguments: t.List[str] = None):
     assert type in ('appcontainerexe', 'exe', 'library', 'module', 'winexe', 'winmdobj')
     self.srcs = srcs
