@@ -10,6 +10,7 @@ import os
 import subprocess
 import sumtypes
 import sys
+import time
 import traceback
 import _target from './target'
 import env from '../utils/env'
@@ -339,6 +340,9 @@ class Mkdir(ActionData):
   def get_display(self, action):
     return 'mkdir ' + sh.quote(self.directory)
 
+  def is_skippable(self, action):
+    return os.path.isdir(self.directory)
+
   def execute(self, action, progress):
     try:
       os.makedirs(self.directory, exist_ok=True)
@@ -369,6 +373,22 @@ class System(ActionData):
   def get_display(self, action):
     commands = (' '.join(sh.quote(x) for x in cmd) for cmd in self.commands)
     return '$ ' + ' && '.join(commands)
+
+  def is_skippable(self, action):
+    if not self.input_files and not self.output_files:
+      return False
+    if not self.input_files:
+      if all(os.path.exists(x) for x in self.output_files):
+        return True
+      return False
+    def getmtime(p, default):
+      try:
+        return os.path.getmtime(p)
+      except OSError:
+        return default
+    ifiles = max(getmtime(x, time.time() + 1000) for x in self.input_files)
+    ofiles = min(getmtime(x, 0) for x in self.output_files)
+    return ifiles < ofiles
 
   def execute(self, action, progress):
     code = 0
