@@ -7,6 +7,7 @@ import errno
 import io
 import locale
 import os
+import requests
 import subprocess
 import sumtypes
 import sys
@@ -402,3 +403,20 @@ class System(ActionData):
       if code != 0:
         break
     return code
+
+
+class DownloadFile(ActionData):
+
+  def __init__(self, url: str, filename: str):
+    self.url = url
+    self.filename = filename
+
+  def is_skippable(self, target):
+    return os.path.isfile(self.filename)
+
+  def execute(self, action, progress):
+    progress.print('[Downloading]: {}'.format(self.url))
+    os.makedirs(os.path.dirname(self.filename), exist_ok=True)
+    with open(self.filename, 'wb') as fp:
+      for chunk in requests.get(self.url).iter_content(4096):
+        fp.write(chunk)

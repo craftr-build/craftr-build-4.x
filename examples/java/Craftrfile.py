@@ -7,9 +7,14 @@ java.prebuilt(
   binary_jar = 'vendor/hello-1.0.0.jar'
 )
 
+java.prebuilt(
+  name = 'guava',
+  artifact = 'com.google.guava:guava:23.4-jre'
+)
+
 java.binary(
   name = 'main',
-  deps = [':hello'],
+  deps = [':hello', ':guava'],
   srcs = craftr.glob('src/**.java'),
   main_class = 'Main'
 )

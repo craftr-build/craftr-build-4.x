@@ -9,6 +9,11 @@ Compile Java projects.
 * `java.javac_jar` (str)
 * `java.extra_arguments` (list of str)
 * `java.dist_type` (str)
+* `java.maven_repos` (dict of (str, str)) &ndash; A dictionary that maps
+  name-strings to Maven repository URLs. The default repository with the name
+  `default` points to the URL http://repo1.maven.org/maven2/ and can be 
+  overwritten with a different URL or be disabled by setting it to `false`
+  or an empty string.
 
 ## Functions
 

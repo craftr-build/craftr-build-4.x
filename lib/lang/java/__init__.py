@@ -2,16 +2,33 @@
 Targets for building Java projects.
 """
 
+import copy
 import nodepy
 import re
 import typing as t
 
 import craftr, {path, session} from 'craftr'
+import {NamedObject} from 'craftr/utils/types'
+import maven from './maven'
 
 
 ONEJAR_FILENAME = path.canonical(
   session.config.get('java.onejar',
   path.join(str(module.directory), 'one-jar-boot-0.97.jar')))
+
+
+def _init_repos():
+  repo_config = copy.deepcopy(session.config.get('java.maven_repos', {}))
+  repo_config.setdefault('default', 'http://repo1.maven.org/maven2/')
+
+  repos = []
+  if repo_config['default']:
+    repos.append(maven.MavenRepository('default', repo_config.pop('default')))
+  for name, repo_url in repo_config.items():
+    repos.append(maven.MavenRepository(name, repo_url))
+  return repos
+
+repos = _init_repos()
 
 
 def partition_sources(
@@ -276,18 +293,43 @@ class JavaBinary(JavaLibrary):
 
 class JavaPrebuilt(craftr.target.TargetData):
   """
-  Represents a prebuilt JAR. Does not yield actions.
+  Represents a prebuilt JAR. If an artifact ID is specified, the artifact will
+  be downloaded from Maven Central, or the configured maven repositories.
 
   # Parameters
   binary_jar:
     The path to a binary `.jar` file.
+  artifact:
+    An artifact ID of the format `group:artifact:version` which will be
+    downloaded from Maven.
   """
 
-  def __init__(self, binary_jar: str):
-    self.binary_jar = craftr.localpath(binary_jar)
+  def __init__(self, binary_jar: str = None, artifact: str = None):
+    if sum(1 for x in (binary_jar, artifact) if x) != 1:
+      raise ValueError('need either binary_jar or artifact argument!')
+
+    if artifact:
+      artifact = maven.Artifact.from_id(artifact)
+      binary_jar = path.join(session.builddir, '.maven-artifacts', artifact.to_local_path('jar'))
+    else:
+      binary_jar = craftr.localpath(binary_jar)
+
+    self.binary_jar = binary_jar
+    self.artifact = artifact
 
   def translate(self, target):
-    pass
+    if self.artifact:
+      for repo in repos:
+        pom = repo.download_pom(self.artifact)
+        if pom: break
+      else:
+        # XXX What error to raise??
+        raise RuntimeError('error: could not resolve artifact {}'.format(self.artifact))
+      craftr.actions.DownloadFile.new(
+        target,
+        url = repo.get_artifact_uri(self.artifact, 'jar'),
+        filename = self.binary_jar
+      )
 
 
 class ProGuard(craftr.target.TargetData):
