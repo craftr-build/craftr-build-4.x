@@ -49,10 +49,8 @@ Example Java build script:
 import craftr from 'craftr'
 import java from 'craftr/lang/java'
 
-java.prebuilt(
-  name = 'guava',
-  binary_jar = 'vendor/guava-23.4.jar'
-)
+# Downloads Guava 23.4 from Maven Central.
+java.prebuilt(name = 'guava', artifact = 'com.google.guava:guava:23.4-jre')
 
 java.binary(
   name = 'main',
