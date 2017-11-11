@@ -41,6 +41,7 @@ def get_nuget():
     with open(local_nuget, 'wb') as fp:
       for chunk in response.iter_content():
         fp.write(chunk)
+    path.chmod(local_nuget, '+x')
   return local_nuget
 
 
