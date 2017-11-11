@@ -73,3 +73,5 @@ can be specified using an `=` character.
 
 * The default build backend sometimes runs into a deadlock when interrupting
   the build process with CTRL+C
+* Trigger rebuild if the input variables (eg. system command that is being
+  executed) changed since the last time the action was executed

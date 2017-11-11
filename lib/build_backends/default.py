@@ -208,7 +208,7 @@ def build_main(args, session, module):
   if args.dotviz_targets:
     tg.dotviz(sys.stdout)
     return 0
-  ag = tg.translate(targets)
+  ag = tg.translate(targets or None)
   if args.dotviz_actions:
     ag.dotviz(sys.stdout)
     return 0

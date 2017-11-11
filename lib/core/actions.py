@@ -381,11 +381,12 @@ class System(ActionData):
     return '$ ' + ' && '.join(commands)
 
   def is_skippable(self, action):
-    if not self.input_files or not self.output_files:
-      return False
     if not self.input_files:
-      if all(os.path.exists(x) for x in self.output_files):
-        return True
+      if not self.output_files:
+        return False
+      return all(os.path.exists(x) for x in self.output_files)
+    if not self.output_files:
+      # No way to determine if the action needs to be re-run, always run it.
       return False
     def getmtime(p, default):
       try:
