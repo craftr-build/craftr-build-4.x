@@ -21,20 +21,43 @@ if os.name == 'nt':
 else:
   platform = sys.platform
 
+artifacts_dir = path.join(craftr.session.builddir, '.nuget-artifacts')
+
 
 def get_nuget():
-  local_nuget = path.join(craftr.session.builddir, '.nuget-artifacts', 'nuget.exe')
+  """
+  Checks if the `nuget` command-line program is available, and otherwise
+  downloads it into the artifact directory.
+  """
+
+  local_nuget = path.join(artifacts_dir, 'nuget.exe')
   if not os.path.isfile(local_nuget):
     if sh.which('nuget') is not None:
       return 'nuget'
     log.info('[Downloading] NuGet ({})'.format(local_nuget))
     response = requests.get('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe')
     response.raise_for_status()
-    path.makedirs(path.dir(local_nuget), exist_ok=True)
+    path.makedirs(artifacts_dir, exist_ok=True)
     with open(local_nuget, 'wb') as fp:
       for chunk in response.iter_content():
         fp.write(chunk)
-    return local_nuget
+  return local_nuget
+
+
+def get_ilmerge(csc, version='2.14.1208'):
+  """
+  Checks if the `ILMerge` command-line program is available, and otherwise
+  installs it using NuGet into the artifact directory.
+  """
+
+  local_ilmerge = path.join(artifacts_dir, 'ILMerge.' + version, 'tools', 'ILMerge.exe')
+  if not os.path.isfile(local_ilmerge):
+    if sh.which('ILMerge') is not None:
+      return 'ILMerge'
+    install_cmd = [get_nuget(), 'install', 'ILMerge', '-Version', version]
+    log.info('[Installing] ILMerge.' + version)
+    subprocess.run(csc.exec_args(install_cmd), check=True, cwd=artifacts_dir)
+  return local_ilmerge
 
 
 class CscInfo(NamedObject):
@@ -50,6 +73,11 @@ class CscInfo(NamedObject):
   def is_mono(self):
     # TODO: That's pretty dirty..
     return self.program != ['csc']
+
+  def exec_args(self, argv):
+    if self.is_mono():
+      return ['mono'] + argv
+    return argv
 
   @staticmethod
   @functools.lru_cache()
@@ -198,7 +226,7 @@ class Csharp(craftr.target.TargetData):
     )
 
     if self.merge_assemblies:
-      command = [str(module.directory.joinpath('ILMerge-win-2.14.1208.exe'))]
+      command = [get_ilmerge(self.csc)]
       command += ['/out:' + self.dll_filename] + [build_outfile] + references
       craftr.actions.System.new(
         target,
@@ -219,7 +247,7 @@ class CsharpPrebuilt(craftr.target.TargetData):
           'specified at the same time.')
     if package:
       self.package_name, self.package_version = package.partition(':')[::2]
-      self.install_dir = path.join(craftr.session.builddir, '.nuget-artifacts')
+      self.install_dir = artifacts_dir
       self.package_dir = path.join(self.install_dir, '{}.{}'.format(
           self.package_name, self.package_version))
       # XXX dll_filename?? How to find the right one.
@@ -235,8 +263,7 @@ class CsharpPrebuilt(craftr.target.TargetData):
     if not self.package_name:
       return
     command = [get_nuget(), 'install', self.package_name, '-Version', self.package_version]
-    if self.csc.is_mono():
-      command = ['mono'] + command
+    command = self.csc.exec_args(command)
     mkdir = craftr.actions.Mkdir.new(
       target,
       directory = self.install_dir
@@ -257,8 +284,7 @@ def run(binary, *argv, name=None, csc=None, **kwargs):
     name = target.name + '_run'
   if csc is None:
     csc = target.data.csc
-  command = ['mono'] if csc.is_mono() else []
-  command += [target.data.dll_filename] + list(argv)
+  command = csc.exec_args([target.data.dll_filename] + list(argv))
   return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)
 
 
