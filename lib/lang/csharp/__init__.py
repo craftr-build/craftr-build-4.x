@@ -5,6 +5,7 @@ Targets for building C# projects.
 import functools
 import os
 import re
+import requests
 import subprocess
 import sys
 import typing as t
@@ -12,12 +13,28 @@ import craftr from '../../public'
 import msvc from '../msvc'
 import path from '../../utils/path'
 import sh from '../../utils/sh'
+import log from '../../utils/log'
 import {NamedObject} from '../../utils/types'
 
 if os.name == 'nt':
   platform = 'windows'
 else:
   platform = sys.platform
+
+
+def get_nuget():
+  local_nuget = path.join(craftr.session.builddir, '.nuget-artifacts', 'nuget.exe')
+  if not os.path.isfile(local_nuget):
+    if sh.which('nuget') is not None:
+      return 'nuget'
+    log.info('[Downloading] NuGet ({})'.format(local_nuget))
+    response = requests.get('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe')
+    response.raise_for_status()
+    path.makedirs(path.dir(local_nuget), exist_ok=True)
+    with open(local_nuget, 'wb') as fp:
+      for chunk in response.iter_content():
+        fp.write(chunk)
+    return local_nuget
 
 
 class CscInfo(NamedObject):
@@ -196,7 +213,7 @@ class Csharp(craftr.target.TargetData):
 
 class CsharpPrebuilt(craftr.target.TargetData):
 
-  def __init__(self, dll_filename: str = None, package: str = None):
+  def __init__(self, dll_filename: str = None, package: str = None, csc: CscInfo = None):
     if package and dll_filename:
       raise ValueError('dll_filename and package arguments may not be '
           'specified at the same time.')
@@ -212,11 +229,14 @@ class CsharpPrebuilt(craftr.target.TargetData):
       self.install_dir = None
       self.package_dir = None
       self.dll_filename = craftr.localpath(dll_filename)
+    self.csc = csc or CscInfo.get()
 
   def translate(self, target):
     if not self.package_name:
       return
-    command = ['nuget', 'install', self.package_name, '-Version', self.package_version]
+    command = [get_nuget(), 'install', self.package_name, '-Version', self.package_version]
+    if self.csc.is_mono():
+      command = ['mono'] + command
     mkdir = craftr.actions.Mkdir.new(
       target,
       directory = self.install_dir

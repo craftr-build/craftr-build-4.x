@@ -4,6 +4,8 @@ import os
 import re
 import shlex
 
+from shutil import which
+
 
 class safe(str):
   """
