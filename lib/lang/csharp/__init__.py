@@ -57,6 +57,7 @@ def get_ilmerge(csc, version='2.14.1208'):
       return 'ILMerge'
     install_cmd = [get_nuget(), 'install', 'ILMerge', '-Version', version]
     log.info('[Installing] ILMerge.' + version)
+    path.makedirs(artifacts_dir, exist_ok=True)
     subprocess.run(csc.exec_args(install_cmd), check=True, cwd=artifacts_dir)
   return local_ilmerge
 
