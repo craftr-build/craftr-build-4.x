@@ -75,3 +75,4 @@ can be specified using an `=` character.
   the build process with CTRL+C
 * Trigger rebuild if the input variables (eg. system command that is being
   executed) changed since the last time the action was executed
+* C#: Automatically download NuGet and ILMerge when not available
