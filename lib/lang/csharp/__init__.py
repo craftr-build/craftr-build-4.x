@@ -8,11 +8,11 @@ import re
 import subprocess
 import sys
 import typing as t
-import craftr from '../public'
-import msvc from './msvc'
-import path from '../utils/path'
-import sh from '../utils/sh'
-import {NamedObject} from '../utils/types'
+import craftr from '../../public'
+import msvc from '../msvc'
+import path from '../../utils/path'
+import sh from '../../utils/sh'
+import {NamedObject} from '../../utils/types'
 
 if os.name == 'nt':
   platform = 'windows'
@@ -99,7 +99,8 @@ class Csharp(craftr.target.TargetData):
                dll_name: str = None,
                main: str = None,
                csc: CscInfo = None,
-               extra_arguments: t.List[str] = None):
+               extra_arguments: t.List[str] = None,
+               merge_assemblies: bool = False):
     assert type in ('appcontainerexe', 'exe', 'library', 'module', 'winexe', 'winmdobj')
     self.srcs = srcs
     self.type = type
@@ -108,6 +109,7 @@ class Csharp(craftr.target.TargetData):
     self.main = main
     self.csc = csc
     self.extra_arguments = extra_arguments
+    self.merge_assemblies = merge_assemblies
 
   def mounted(self, target):
     if self.dll_dir:
@@ -119,6 +121,9 @@ class Csharp(craftr.target.TargetData):
 
   @property
   def dll_filename(self):
+    return self._dll_filename()
+
+  def _dll_filename(self, final=True):
     if self.type in ('appcontainerexe', 'exe', 'winexe'):
       suffix = '.exe'
     elif self.type == 'winmdobj':
@@ -129,7 +134,10 @@ class Csharp(craftr.target.TargetData):
       suffix = '.dll'
     else:
       raise ValueError('invalid type: {!r}'.format(self.type))
-    return path.join(self.dll_dir, self.dll_name) + suffix
+    result = path.join(self.dll_dir, self.dll_name) + suffix
+    if self.merge_assemblies and not final:
+      result = path.addtobase(result, '-intermediate')
+    return result
 
   def translate(self, target):
     # XXX Take C# libraries and maybe even other native libraries into account.
@@ -141,15 +149,18 @@ class Csharp(craftr.target.TargetData):
           modules.append(data.dll_filename)
         else:
           references.append(data.dll_filename)
+      elif isinstance(data, CsharpPrebuilt):
+        references.append(data.dll_filename)
 
+    build_outfile = self._dll_filename(False)
     command = self.csc.program + ['-nologo', '-target:' + self.type]
-    command += ['-out:' + self.dll_filename]
+    command += ['-out:' + build_outfile]
     if self.main:
       command.append('-main:' + self.main)
     if modules:
       command.append('-addmodule:' + ';'.join(modules))
     if references:
-      command += ['-reference:' + x for x in reference]
+      command += ['-reference:' + x for x in references]
     if self.extra_arguments:
       command += self.extra_arguments
     command += self.srcs
@@ -159,14 +170,63 @@ class Csharp(craftr.target.TargetData):
       name = 'mkdir',
       directory = self.dll_dir
     )
-    craftr.actions.System.new(
+    build = craftr.actions.System.new(
       target,
       name = 'csc',
       deps = [mkdir, ...],
       environ = self.csc.environ,
       commands = [command],
       input_files = self.srcs,
-      output_files = [self.dll_filename]
+      output_files = [build_outfile]
+    )
+
+    if self.merge_assemblies:
+      command = [str(module.directory.joinpath('ILMerge-win-2.14.1208.exe'))]
+      command += ['/out:' + self.dll_filename] + [build_outfile] + references
+      craftr.actions.System.new(
+        target,
+        name = 'ilmerge',
+        deps = [build],
+        environ = self.csc.environ,
+        commands = [command],
+        input_files = [build_outfile] + references,
+        output_files = [self.dll_filename]
+      )
+
+
+class CsharpPrebuilt(craftr.target.TargetData):
+
+  def __init__(self, dll_filename: str = None, package: str = None):
+    if package and dll_filename:
+      raise ValueError('dll_filename and package arguments may not be '
+          'specified at the same time.')
+    if package:
+      self.package_name, self.package_version = package.partition(':')[::2]
+      self.install_dir = path.join(craftr.session.builddir, '.nuget-artifacts')
+      self.package_dir = path.join(self.install_dir, '{}.{}'.format(
+          self.package_name, self.package_version))
+      # XXX dll_filename?? How to find the right one.
+      self.dll_filename = path.join(self.package_dir, 'lib', 'net40', self.package_name + '.dll')
+    else:
+      self.package_name = self.package_version = None
+      self.install_dir = None
+      self.package_dir = None
+      self.dll_filename = craftr.localpath(dll_filename)
+
+  def translate(self, target):
+    if not self.package_name:
+      return
+    command = ['nuget', 'install', self.package_name, '-Version', self.package_version]
+    mkdir = craftr.actions.Mkdir.new(
+      target,
+      directory = self.install_dir
+    )
+    craftr.actions.System.new(
+      target,
+      commands = [command],
+      deps = [mkdir, ...],
+      output_files = [self.package_dir],
+      cwd = self.install_dir
     )
 
 
@@ -183,3 +243,4 @@ def run(binary, *argv, name=None, csc=None, **kwargs):
 
 
 build = craftr.target_factory(Csharp)
+prebuilt = craftr.target_factory(CsharpPrebuilt)
