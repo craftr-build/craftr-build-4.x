@@ -2,8 +2,11 @@
 Replacement for #os.path with more functionality and a concise API.
 """
 
+import functools
 import glob2
+import operator
 import os
+import stat
 import typing as t
 
 from os import (
@@ -239,3 +242,56 @@ def makedirs(path, exist_ok=True):
   """
 
   os.makedirs(path, exist_ok=exist_ok)
+
+
+def chmod_update(flags, modstring):
+  """
+  Modifies *flags* according to *modstring*.
+  """
+
+  mapping = {
+    'r': (stat.S_IRUSR, stat.S_IRGRP, stat.S_IROTH),
+    'w': (stat.S_IWUSR, stat.S_IWGRP, stat.S_IWOTH),
+    'x': (stat.S_IXUSR, stat.S_IXGRP, stat.S_IXOTH)
+  }
+
+  target, direction = 'a', None
+  for c in modstring:
+    if c in '+-':
+      direction = c
+      continue
+    if c in 'ugoa':
+      target = c
+      direction = None  # Need a - or + after group specifier.
+      continue
+    if c in 'rwx' and direction in '+-':
+      if target == 'a':
+        mask = functools.reduce(operator.or_, mapping[c])
+      else:
+        mask = mapping[c]['ugo'.index(target)]
+      if direction == '-':
+        flags &= ~mask
+      else:
+        flags |= mask
+      continue
+    raise ValueError('invalid chmod: {!r}'.format(modstring))
+
+  return flags
+
+
+def chmod_repr(flags):
+  """
+  Returns a string representation of the access flags *flags*.
+  """
+
+  template = 'rwxrwxrwx'
+  order = (stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR,
+           stat.S_IRGRP, stat.S_IWGRP, stat.S_IXGRP,
+           stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH)
+  return ''.join(template[i] if flags&x else '-'
+                 for i, x in enumerate(order))
+
+
+def chmod(path, modstring):
+  flags = chmod_update(os.stat(path).st_mode, modstring)
+  os.chmod(path, flags)

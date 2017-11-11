@@ -27,4 +27,5 @@ install:
   fi
 
 script:
+- nodepy-pm run test
 - craftr -p${BUILD_MODULE} $BUILD_OPTIONS -bbuild -v
