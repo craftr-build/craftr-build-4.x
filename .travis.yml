@@ -13,6 +13,12 @@ env:
 - BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run -d java.dist_type=merge"
 - BUILD_MODULE=examples/csharp BUILD_OPTIONS=":main_run"
 
+before_install:
+- if [[ "$BUILD_MODULE" == "examples/csharp" ]]; then
+    sudo apt-get -qq -y update > /dev/null;
+    sudo apt-get -qq -y install mono-complete gtk-sharp2 > /dev/null;
+  fi
+
 install:
 - sudo apt-get update
 - pip install git+https://github.com/nodepy/nodepy.git@develop
@@ -20,11 +26,6 @@ install:
 - nodepy https://nodepy.org/install-pm master
 - nodepy-pm install -I
 - export PATH="$(nodepy-pm bin):$PATH"
-
-# Install Mono
-- if [[ "$BUILD_MODULE" == "examples/csharp" ]]; then
-    sudo apt-get -qq -y install mono-devel gtk-sharp2;
-  fi
 
 script:
 - nodepy-pm run test

@@ -109,7 +109,7 @@ class CscInfo(NamedObject):
         program = sh.shellify(program)
         # Also, just make sure that we can find some standard installation
         # of Mono.
-        if match(arch, '*64'):
+        if craftr.match(arch, '*64'):
           monobin = path.join(os.getenv('ProgramFiles'), 'Mono', 'bin')
         else:
           monobin = path.join(os.getenv('ProgramFiles(x86)'), 'Mono', 'bin')
