@@ -42,7 +42,7 @@ def get_nuget():
       for chunk in response.iter_content():
         fp.write(chunk)
     path.chmod(local_nuget, '+x')
-  return local_nuget
+  return path.abs(local_nuget)
 
 
 def get_ilmerge(csc, version='2.14.1208'):
@@ -59,7 +59,7 @@ def get_ilmerge(csc, version='2.14.1208'):
     log.info('[Installing] ILMerge.' + version)
     path.makedirs(artifacts_dir, exist_ok=True)
     subprocess.run(csc.exec_args(install_cmd), check=True, cwd=artifacts_dir)
-  return local_ilmerge
+  return path.abs(local_ilmerge)
 
 
 class CscInfo(NamedObject):
