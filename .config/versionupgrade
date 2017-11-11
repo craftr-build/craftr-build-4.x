@@ -1,0 +1,3 @@
+# Upgrade's version numbers with `$ deft versionupgrade <version>`.
+tag v{VERSION}
+upgrade nodepy.json:  "version": "{VERSION}"
