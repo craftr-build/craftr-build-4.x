@@ -390,12 +390,12 @@ prebuilt = craftr.target_factory(JavaPrebuilt)
 proguard = craftr.target_factory(ProGuard)
 
 
-def run(binary, *argv, name=None, java=None, **kwargs):
+def run(binary, *argv, name=None, java=None, jvm_args=(), **kwargs):
   kwargs.setdefault('explicit', True)
   target = craftr.T(binary)
   if name is None:
     name = target.name + '_run'
   if java is None:
     java = session.config.get('java.java', 'java')
-  command = [java, '-jar', target.data.jar_filename] + list(argv)
+  command = [java] + list(jvm_args) + ['-jar', target.data.jar_filename] + list(argv)
   return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)

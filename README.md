@@ -1,49 +1,56 @@
-<p align="center"><img src=".assets/craftr-logo.png"></p>
-<h1 align="center">Craftr</h1>
-<p align="center">
-  An extensible language-independent build system written in Python.
-</p>
+<img align="left" src=".assets/craftr-logo.png">
+<h1 align="center">Craftr &ndash; Build Tool</h1>
+<p align="center">A modular language-independent build system.</p>
 
 *Version 3.0.0-dev*
 
+## Features
+
+* Installed on a per-project basis, don't break builds due to a mismatching
+  build-system version
+* Completely modular structure, allowing you to write your own extensions
+  for other languages or use other people's extensions
+* Native support for a variety of languages (currently C# and Java)
+
+__Todolist__
+
+* Language modules for C, C++, Cython and Vala
+* The default build backend sometimes runs into a deadlock when interrupting
+  the build process with CTRL+C
+* Trigger rebuild if the input variables (eg. system command that is being
+  executed) changed since the last time the action was executed
+
 ## Installation
 
-Craftr is built with Python, but not exactly standard Python. You will need
-to install [Node.py 2](https://nodepy.org/) or higher beforehand. Craftr is
-installed on a per-project basis so you always have the same build system
-version.
+First, you need to install Node.py and its package manager:
 
-> Note that currently Craftr 3 is in development and there are no tags for
-> it, yet. Thus, installing from the `develop` branch will obviously not
-> always give you the same version.
+    $ pip install --user git+https://github.com/nodepy/nodepy.git@develop
+    $ nodepy https://nodepy.org/install-pm -g master
 
-    $ pip install --user nodepy-runtime
-    $ nodepy-pm install git+https://github.com/craftr-build/craftr@develop
+Craftr requires **Python 3.6** or higher. You install Craftr locally for your
+project using the Node.py package manager:
 
-If you want to keep track of Craftr as a dependency, or may want to install
-additional packages that can work with Craftr, you should add a `nodepy.json`
-package manifest. It is relatively similar to Node.js package manifests.
+    $ nodepy-pm install git+https://github.com/craftr-build/craftr.git@craftr-3.x
+    $ export PATH="$(nodepy-pm bin):$PATH"
+    $ craftr --version
+
+Consider creating a `nodepy.json` package manifest in which you can track
+Craftr and other (build-) dependencies for your project.
 
 ```json
 {
   "name": "myproject",
   "version": "1.0.0",
-  "dependencies": {
-    "craftr-build": "git+https://github.com/craftr-build/craftr@develop"
+  "cfg(dev).dependencies": {
+    "craftr": "git+https://github.com/craftr-build/craftr.git@craftr-3.x"
   }
 }
 ```
 
-## Build scripts
+## Getting started
 
-Craftr build scripts are called `Craftrfile.py` and Craftr runs them to create
-the target build graph. Craftr currently has built-in support for building
-projects of the following programming languages (to be extended in the future):
-
-* C# *(low-grade)*
-* Java *(middle-grade)*
-
-Example Java build script:
+Check out one of the projects in the `examples/` directory. To get you hooked,
+here's the build-script of the example Java project:
 
 ```python
 import craftr from 'craftr'
@@ -62,17 +69,6 @@ java.binary(
 java.run(':main')
 ```
 
-This will use [OneJar](http://one-jar.sourceforge.net/) to include all
-dependencies in the output Jar. You can invoke the `run()` target by
-specifiying the `:main_run` on the command-line. Additional arguments
-can be specified using an `=` character.
+Build & run:
 
-    $ craftr -bbuild :main_run="arg1 arg2 'argument number 3'"
-
-## Todolist
-
-* The default build backend sometimes runs into a deadlock when interrupting
-  the build process with CTRL+C
-* Trigger rebuild if the input variables (eg. system command that is being
-  executed) changed since the last time the action was executed
-* C#: Automatically download NuGet and ILMerge when not available
+    $ craftr -bbuild --verbose :main_run

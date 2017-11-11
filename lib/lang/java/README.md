@@ -2,6 +2,17 @@
 
 Compile Java projects.
 
+## Features
+
+* Download dependencies from Maven Central (TODO: recursive dependency download)
+* Combine JARs using OneJar or by merging them (vendors OneJar-boot 0.97)
+* Apply ProGuard to your JARs (vendors ProGuard 5.3.3)
+
+__Todolist__
+
+* Support inclusion of resource files in JARs
+* More options (warning flags, debug/release, linting, etc.)
+
 ## Options
 
 * `java.onejar` (str)
@@ -17,7 +28,14 @@ Compile Java projects.
 
 ## Functions
 
-### `java.library()`
+All functions inherit the standard parameters of targets:
+
+* `name`
+* `deps`
+* `transitive_deps`
+* `explicit`
+
+### `java.library(**params)`
 
 __Parameters__
 
@@ -31,7 +49,7 @@ __Parameters__
 * `javac`
 * `extra_arguments`
 
-### `java.binary()`
+### `java.binary(**params)`
 
 __Parameters__
 
@@ -41,15 +59,32 @@ __Parameters__
 * `main_class`
 * `dist_type`
 
-### `java.prebuilt()`
+### `java.prebuilt(**params)`
 
 __Parameters__
 
 * `binary_jar`
 
-## Todo
+### `java.proguard(**params)`
 
-* Support inclusion of resource files in JARs
-* More options (warning flags, debug/release, linting, 
-  provided dependencies, etc.)
-* Ability to download dependencies from mavencentral or other repositories
+__Parameters__
+
+* `pro_file`
+* `options`
+* `cwd`
+* `java`
+* `outjars`
+
+### `java.run(target, *argv, **params)`
+
+__Parmeters__
+
+* `target` (str or Target) &ndash; A target reference or a Target object that
+  was created with `java.binary()`
+* `*argv` (str) &ndash; Additional arguments for the binary.
+* `name` (str) &ndash; The target name. Defaults to the name of the specified
+  *target* with an appended `_run`.
+* `java` (str) &ndash; Name of the `java` executable to run. Defaults to the
+  `java.java` option.
+* `jvm_args` (str) &ndash; Additional arguments passed before the `-jar <JAR>`
+  parameter.
