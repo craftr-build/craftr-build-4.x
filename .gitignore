@@ -1,2 +1,3 @@
-.nodepy_modules
-build
+.nodepy_modules/
+build/
+public/

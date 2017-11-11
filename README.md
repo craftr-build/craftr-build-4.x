@@ -24,7 +24,7 @@ __Todolist__
 
 First, you need to install Node.py and its package manager:
 
-    $ pip install --user git+https://github.com/nodepy/nodepy.git@develop
+    $ pip3.6 install --user git+https://github.com/nodepy/nodepy.git@develop
     $ nodepy https://nodepy.org/install-pm -g master
 
 Craftr requires **Python 3.6** or higher. You install Craftr locally for your

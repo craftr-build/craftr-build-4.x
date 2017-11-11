@@ -20,9 +20,11 @@
     "termcolor": ">=1.1.0"
   },
   "scripts": {
-    "test": "$ nodepy-nosetests lib/utils"
+    "test": "$ nodepy-nosetests lib/utils",
+    "docs": "$ yassg public"
   },
   "cfg(dev).dependencies": {
-    "nodepy-nosetests": "git+https://github.com/nodepy/nodepy-nosetests.git@v0.0.6"
+    "nodepy-nosetests": "git+https://github.com/nodepy/nodepy-nosetests.git@v0.0.6",
+    "@NiklasRosenstein/yassg": "git+https://github.com/NiklasRosenstein/yassg.git@master"
   }
 }
