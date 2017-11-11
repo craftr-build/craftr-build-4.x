@@ -1,0 +1,36 @@
+
+environment:
+  matrix:
+  - BUILD_MODULE: examples/java
+    BUILD_OPTIONS: -d java.dist_type=onejar
+    ADD_PATH: C:\Program Files\Java\jdk1.8.0\bin
+  - BUILD_MODULE: examples/java
+    BUILD_OPTIONS: -d java.dist_type=merge
+  - BUILD_MODULE: examples/csharp
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  - BUILD_MODULE: examples/csharp
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+  # NuGet Version is too low in this image to run the C# example.
+  # Newtonsoft.Json requires NuGet 2.12 but 2.8 is installed.
+  #- BUILD_MODULE: examples/csharp
+  #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+  - BUILD_MODULE: examples/csharp
+    BUILD_OPTIONS: -d csharp.csc=mcs
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
+    ADD_PATH: C:\Program Files (x86)\Mono\bin
+  - BUILD_MODULE: examples/csharp
+    BUILD_OPTIONS: -d csharp.impl=mono --arch=x86
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
+build: off
+
+install:
+- set PATH=C:\Python36-x64;C:\Python36-x64\Scripts;%PATH%;%ADD_PATH%
+- pip --version
+- pip install wheel
+- pip install git+https://github.com/nodepy/nodepy.git@develop
+- nodepy --version
+- nodepy https://nodepy.org/install-pm master
+- nodepy-pm install -I
+- set PATH=.nodepy_modules/.bin;%PATH%
+- craftr -p %BUILD_MODULE% %BUILD_OPTIONS% :main_run --verbose

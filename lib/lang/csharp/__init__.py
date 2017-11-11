@@ -89,13 +89,12 @@ class CscInfo(NamedObject):
       raise ValueError('unsupported csharp.impl={!r}'.format(impl))
 
     program = craftr.session.config.get('csharp.csc')
-    if impl == 'net' and program:
-      raise ValueError('csharp.csc not supported with csharp.impl={!r}'.format(impl))
-    elif impl == 'net':
+    if not program and impl == 'net':
       program = 'csc'
-    elif impl == 'mono':
+    elif not program and impl == 'mono':
       program = 'mcs'
-    else: assert False
+    else:
+      assert program
 
     program = sh.split(program)
     if impl == 'net':
