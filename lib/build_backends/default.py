@@ -217,8 +217,9 @@ def build_main(args, session, module):
   formatter = Formatter(actions, verbose=args.verbose)
   executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
   try:
-    executor.run(actions)
+    return executor.run(actions)
   except KeyboardInterrupt:
     print('keyboard interrupt')
+    return 1
 
   return 0
