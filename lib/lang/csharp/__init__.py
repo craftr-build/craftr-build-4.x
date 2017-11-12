@@ -24,7 +24,7 @@ else:
 artifacts_dir = path.join(craftr.session.builddir, '.nuget-artifacts')
 
 
-def get_nuget():
+def get_nuget(csc):
   """
   Checks if the `nuget` command-line program is available, and otherwise
   downloads it into the artifact directory.
@@ -33,7 +33,7 @@ def get_nuget():
   local_nuget = path.join(artifacts_dir, 'nuget.exe')
   if not os.path.isfile(local_nuget):
     if sh.which('nuget') is not None:
-      return 'nuget'
+      return ['nuget']
     log.info('[Downloading] NuGet ({})'.format(local_nuget))
     response = requests.get('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe')
     response.raise_for_status()
@@ -42,7 +42,7 @@ def get_nuget():
       for chunk in response.iter_content():
         fp.write(chunk)
     path.chmod(local_nuget, '+x')
-  return path.abs(local_nuget)
+  return csc.exec_args([path.abs(local_nuget)])
 
 
 def get_ilmerge(csc, version='2.14.1208'):
@@ -54,12 +54,12 @@ def get_ilmerge(csc, version='2.14.1208'):
   local_ilmerge = path.join(artifacts_dir, 'ILMerge.' + version, 'tools', 'ILMerge.exe')
   if not os.path.isfile(local_ilmerge):
     if sh.which('ILMerge') is not None:
-      return 'ILMerge'
-    install_cmd = [get_nuget(), 'install', 'ILMerge', '-Version', version]
+      return ['ILMerge']
+    install_cmd = get_nuget(csc) + ['install', 'ILMerge', '-Version', version]
     log.info('[Installing] ILMerge.' + version)
     path.makedirs(artifacts_dir, exist_ok=True)
-    subprocess.run(csc.exec_args(install_cmd), check=True, cwd=artifacts_dir)
-  return path.abs(local_ilmerge)
+    subprocess.run(install_cmd, check=True, cwd=artifacts_dir)
+  return csc.exec_args([path.abs(local_ilmerge)])
 
 
 class CscInfo(NamedObject):
@@ -108,10 +108,20 @@ class CscInfo(NamedObject):
         program = sh.shellify(program)
         # Also, just make sure that we can find some standard installation
         # of Mono.
-        if craftr.match(arch, '*64'):
-          monobin = path.join(os.getenv('ProgramFiles'), 'Mono', 'bin')
+        arch = craftr.session.config.get('csharp.mono_arch', None)
+        monobin_x64 = path.join(os.getenv('ProgramFiles'), 'Mono', 'bin')
+        monobin_x86 = path.join(os.getenv('ProgramFiles(x86)'), 'Mono', 'bin')
+        if arch is None:
+          if os.path.isdir(monobin_x64):
+            monobin = monobin_x64
+          else:
+            monobin = monobin_x86
+        elif arch == 'x64':
+          monobin = monobin_x64
+        elif arch == 'x86':
+          monobin = monobin_x86
         else:
-          monobin = path.join(os.getenv('ProgramFiles(x86)'), 'Mono', 'bin')
+          raise ValueError('invalid value csharp.mono_arch={!r}'.format(arch))
         environ['PATH'] = os.getenv('PATH') + path.pathsep + monobin
 
       # TODO: Cache the compiler version (like the MsvcToolkit does).
@@ -227,7 +237,7 @@ class Csharp(craftr.target.TargetData):
     )
 
     if self.merge_assemblies:
-      command = [get_ilmerge(self.csc)]
+      command = get_ilmerge(self.csc)
       command += ['/out:' + self.dll_filename] + [build_outfile] + references
       craftr.actions.System.new(
         target,
@@ -263,8 +273,7 @@ class CsharpPrebuilt(craftr.target.TargetData):
   def translate(self, target):
     if not self.package_name:
       return
-    command = [get_nuget(), 'install', self.package_name, '-Version', self.package_version]
-    command = self.csc.exec_args(command)
+    command = get_nuget(self.csc) + ['install', self.package_name, '-Version', self.package_version]
     mkdir = craftr.actions.Mkdir.new(
       target,
       directory = self.install_dir

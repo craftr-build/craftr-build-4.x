@@ -15,11 +15,11 @@ environment:
   #- BUILD_MODULE: examples/csharp
   #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
   - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.csc=mcs
+    BUILD_OPTIONS: -d csharp.impl=mono
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
     ADD_PATH: C:\Program Files (x86)\Mono\bin
   - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono --arch=x86
+    BUILD_OPTIONS: -d csharp.impl=mono
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
 build: off

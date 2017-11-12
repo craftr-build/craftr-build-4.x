@@ -14,6 +14,8 @@ Compile C# projects.
   `mono` on any other).
 * `csharp.csc` (str) &ndash; Name of the C# compiler. Defaults to `csc` when
   the selected implementation is `net`, otherwise `mcs`.
+* `csharp.mono_arch` (str) &ndash; Used to determine the installation path of
+  of Mono on Windows. Must be either `x64` or `x86`.
 
 ## Functions
 
