@@ -1,6 +1,11 @@
 <img align="left" src=".assets/craftr-logo.png">
 <h1 align="center">Craftr &ndash; Build Tool</h1>
-<p align="center">A modular language-independent build system.</p>
+<p align="center">
+  A modular language-independent build system.<br/>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+  <a href="https://travis-ci.org/craftr-build/craftr"><img src="https://travis-ci.org/craftr-build/craftr.svg?branch=craftr-3.x"></a>
+  <a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik?svg=true"></a>
+</p>
 
 *Version 3.0.0-dev*
 
