@@ -295,7 +295,8 @@ def run(binary, *argv, name=None, csc=None, **kwargs):
   if csc is None:
     csc = target.data.csc
   command = csc.exec_args([target.data.dll_filename] + list(argv))
-  return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)
+  return craftr.gentarget(name = name, deps = [target], commands = [command],
+    environ=csc.environ, **kwargs)
 
 
 build = craftr.target_factory(Csharp)

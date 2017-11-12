@@ -113,8 +113,10 @@ def T(name):
 
 class Gentarget(target.TargetData):
 
-  def __init__(self, commands, input_files=(), output_files=()):
+  def __init__(self, commands, environ=None, cwd=None, input_files=(), output_files=()):
     self.commands = commands
+    self.environ = environ
+    self.cwd = cwd
     self.input_files = input_files
     self.output_files = output_files
 
@@ -123,6 +125,8 @@ class Gentarget(target.TargetData):
       target,
       deps = '...',
       commands = self.commands,
+      cwd = self.cwd,
+      environ = self.environ,
       input_files = self.input_files,
       output_files = self.output_files
     )
