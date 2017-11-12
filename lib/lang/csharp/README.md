@@ -32,7 +32,8 @@ __Parameters__
 * `csc` (CScInfo)
 * `extra_arguments` (list of str)
 * `merge_assemblies` (bool) &ndash; If `True`, assemblies will be merged 
-  using the `ILMerge` tool.
+  using the `ILMerge` tool. Note that `ILMerge` does not seem to work properly
+  with Mono on Windows.
 
 ### `csharp.prebuilt()`
 

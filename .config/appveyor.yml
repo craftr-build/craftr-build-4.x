@@ -10,17 +10,23 @@ environment:
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   - BUILD_MODULE: examples/csharp
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
   # NuGet Version is too low in this image to run the C# example.
   # Newtonsoft.Json requires NuGet 2.12 but 2.8 is installed.
+  # =========================================================================
   #- BUILD_MODULE: examples/csharp
   #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-  - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
-    ADD_PATH: C:\Program Files (x86)\Mono\bin
-  - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
+  # ILMerge doesn't work properly with Mono on Windows, so we skip Mono
+  # builds alltogether on Windows for now.
+  # =========================================================================
+  #- BUILD_MODULE: examples/csharp
+  #  BUILD_OPTIONS: -d csharp.impl=mono
+  #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
+  #  ADD_PATH: C:\Program Files (x86)\Mono\bin
+  #- BUILD_MODULE: examples/csharp
+  #  BUILD_OPTIONS: -d csharp.impl=mono
+  #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
 build: off
 
