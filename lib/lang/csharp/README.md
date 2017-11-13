@@ -12,8 +12,8 @@ Compile C# projects.
 * `csharp.impl` (str) &ndash; The .NET implementation to use (`net` or `mono`).
   Automatically selected depending on the current platform (`net` on Windows,
   `mono` on any other).
-* `csharp.csc` (str) &ndash; Name of the C# compiler. Defaults to `csc` when
-  the selected implementation is `net`, otherwise `mcs`.
+* `csharp.csc` (str) &ndash; Name of the C# compiler. Defaults to `csc` but
+  can be set to `mcs` if you want to use the Mono C# compiler instead.
 * `csharp.mono_arch` (str) &ndash; Used to determine the installation path of
   of Mono on Windows. Must be either `x64` or `x86`.
 * `csharp.merge_tool` (str) &ndash; The name of the tool to merge assemblies.

@@ -24,52 +24,6 @@ else:
 artifacts_dir = path.join(craftr.session.builddir, '.nuget-artifacts')
 
 
-def get_nuget(csc):
-  """
-  Checks if the `nuget` command-line program is available, and otherwise
-  downloads it into the artifact directory.
-  """
-
-  local_nuget = path.join(artifacts_dir, 'nuget.exe')
-  if not os.path.isfile(local_nuget):
-    if sh.which('nuget') is not None:
-      return ['nuget']
-    log.info('[Downloading] NuGet ({})'.format(local_nuget))
-    response = requests.get('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe')
-    response.raise_for_status()
-    path.makedirs(artifacts_dir, exist_ok=True)
-    with open(local_nuget, 'wb') as fp:
-      for chunk in response.iter_content():
-        fp.write(chunk)
-    path.chmod(local_nuget, '+x')
-  return csc.exec_args([path.abs(local_nuget)])
-
-
-def get_merget_tool(csc):
-  """
-  Checks if the `ILMerge` or `ILRepack` command-line program is available, and
-  otherwise installs it using NuGet into the artifact directory.
-  """
-
-  tool = craftr.session.config.get('csharp.merge_tool')
-  if not tool:
-    if csc.is_mono():
-      tool = 'ILRepack:2.0.13'
-    else:
-      tool = 'ILMerge:2.14.1208'
-
-  tool_name, version = tool.partition(':')[::2]
-  local_tool = path.join(artifacts_dir, tool_name + '.' + version, 'tools', tool_name + '.exe')
-  if not os.path.isfile(local_tool):
-    if sh.which(tool_name) is not None:
-      return [tool_name]
-    install_cmd = get_nuget(csc) + ['install', tool_name, '-Version', version]
-    log.info('[Installing] {}.{}'.format(tool_name, version))
-    path.makedirs(artifacts_dir, exist_ok=True)
-    subprocess.run(install_cmd, check=True, cwd=artifacts_dir)
-  return csc.exec_args([path.abs(local_tool)])
-
-
 class CscInfo(NamedObject):
   impl: str
   program: t.List[str]
@@ -81,13 +35,62 @@ class CscInfo(NamedObject):
       .format(self.impl, self.program, self.version)
 
   def is_mono(self):
-    # TODO: That's pretty dirty..
-    return self.program != ['csc']
+    assert self.impl in ('net', 'mono'), self.impl
+    return self.impl == 'mono'
 
   def exec_args(self, argv):
     if self.is_mono():
       return ['mono'] + argv
     return argv
+
+  def get_nuget(self):
+    """
+    Checks if the `nuget` command-line program is available, and otherwise
+    downloads it into the artifact directory.
+    """
+
+    local_nuget = path.join(artifacts_dir, 'nuget.exe')
+    if not os.path.isfile(local_nuget):
+      if sh.which('nuget') is not None:
+        return ['nuget']
+      log.info('[Downloading] NuGet ({})'.format(local_nuget))
+      response = requests.get('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe')
+      response.raise_for_status()
+      path.makedirs(artifacts_dir, exist_ok=True)
+      with open(local_nuget, 'wb') as fp:
+        for chunk in response.iter_content():
+          fp.write(chunk)
+      path.chmod(local_nuget, '+x')
+    return self.exec_args([path.abs(local_nuget)])
+
+  def get_merge_tool(self, out, primary, assemblies=()):
+    """
+    Checks if the `ILMerge` or `ILRepack` command-line program is available, and
+    otherwise installs it using NuGet into the artifact directory.
+    """
+
+    tool = craftr.session.config.get('csharp.merge_tool')
+    if not tool:
+      if self.is_mono():
+        tool = 'ILRepack:2.0.13'
+      else:
+        tool = 'ILMerge:2.14.1208'
+
+    tool_name, version = tool.partition(':')[::2]
+    local_tool = path.join(artifacts_dir, tool_name + '.' + version, 'tools', tool_name + '.exe')
+    command = None
+    if not os.path.isfile(local_tool):
+      if sh.which(tool_name) is not None:
+        command = [tool_name]
+      else:
+        install_cmd = self.get_nuget() + ['install', tool_name, '-Version', version]
+        log.info('[Installing] {}.{}'.format(tool_name, version))
+        path.makedirs(artifacts_dir, exist_ok=True)
+        subprocess.run(install_cmd, check=True, cwd=artifacts_dir)
+    if not command:
+      command = self.exec_args([path.abs(local_tool)])
+
+    return command + ['/out:' + out] + [primary] + list(assemblies)
 
   @staticmethod
   @functools.lru_cache()
@@ -96,15 +99,7 @@ class CscInfo(NamedObject):
     if impl not in ('net', 'mono'):
       raise ValueError('unsupported csharp.impl={!r}'.format(impl))
 
-    program = craftr.session.config.get('csharp.csc')
-    if not program and impl == 'net':
-      program = 'csc'
-    elif not program and impl == 'mono':
-      program = 'mcs'
-    else:
-      assert program
-
-    program = sh.split(program)
+    program = sh.split(craftr.session.config.get('csharp.csc', 'csc'))
     if impl == 'net':
       toolkit = msvc.MsvcToolkit.get()
       csc = CscInfo(impl, program, toolkit.environ, toolkit.csc_version)
@@ -133,17 +128,20 @@ class CscInfo(NamedObject):
         environ['PATH'] = os.getenv('PATH') + path.pathsep + monobin
 
       # TODO: Cache the compiler version (like the MsvcToolkit does).
-      with sh.override_environ(environ):
-        version = subprocess.check_output(program + ['--version']).decode().strip()
-      if impl == 'mono':
+      if 'mcs' in program[-1]:
+        with sh.override_environ(environ):
+          version = subprocess.check_output(program + ['--version']).decode().strip()
         m = re.search('compiler\s+version\s+([\d\.]+)', version)
         if not m:
           raise ValueError('Mono compiler version could not be detected from:\n\n  ' + version)
         version = m.group(1)
+      else:
+        with sh.override_environ(environ):
+          version = subprocess.check_output(program + ['/version']).decode().strip()
 
       csc = CscInfo(impl, program, environ, version)
 
-    print('CSC v{}'.format(csc.version))
+    print('{} v{}'.format('CSC' if csc.impl == 'net' else csc.impl, csc.version))
     return csc
 
 
@@ -245,8 +243,7 @@ class Csharp(craftr.target.TargetData):
     )
 
     if self.merge_assemblies:
-      command = get_merget_tool(self.csc)
-      command += ['/out:' + self.dll_filename] + [build_outfile] + references
+      command = self.csc.get_merge_tool(out=self.dll_filename, primary=build_outfile, assemblies=references)
       craftr.actions.System.new(
         target,
         name = 'ilmerge',
@@ -281,7 +278,7 @@ class CsharpPrebuilt(craftr.target.TargetData):
   def translate(self, target):
     if not self.package_name:
       return
-    command = get_nuget(self.csc) + ['install', self.package_name, '-Version', self.package_version]
+    command = self.csc.get_nuget() + ['install', self.package_name, '-Version', self.package_version]
     mkdir = craftr.actions.Mkdir.new(
       target,
       directory = self.install_dir
