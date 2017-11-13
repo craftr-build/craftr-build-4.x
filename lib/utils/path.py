@@ -14,7 +14,8 @@ from os import (
   pathsep,
   curdir,
   pardir,
-  getcwd as cwd
+  getcwd as cwd,
+  listdir
 )
 from os.path import (
   expanduser,

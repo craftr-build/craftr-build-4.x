@@ -11,9 +11,8 @@ import sys
 import typing as t
 import craftr from '../../public'
 import msvc from '../msvc'
-import path from '../../utils/path'
-import sh from '../../utils/sh'
-import log from '../../utils/log'
+import nupkg from './nupkg'
+import {log, path, sh} from '../../utils'
 import {NamedObject} from '../../utils/types'
 
 if os.name == 'nt':
@@ -273,41 +272,49 @@ class CsharpPrebuilt(craftr.target.TargetData):
     if package:
       packages = [package]
 
-    self.packages_install_dir = None
-    self.packages = []
+    self.packages_install_dir = artifacts_dir
+    self.packages = [nupkg.Dependency.from_str(x) for x in (packages or [])]
     self.dll_filenames = list(dll_filenames or [])
     self.csc = csc or CscInfo.get()
 
-    if packages:
-      self.packages_install_dir = artifacts_dir
-      for pkg in packages:
-        name, version = pkg.partition(':')[::2]
-        version, netversion = version.partition('#')[::2]
-        if not netversion:
-          netversion = self.csc.netversion
-        # XXX Determine the .NET target version, not just default to net40.
-        package_dir = path.join(self.packages_install_dir, name + '.' + version)
-        libname = path.join(package_dir, 'lib', netversion, name + '.dll')
-        self.packages.append((name, version, package_dir))
-        self.dll_filenames.append(libname)
-    else:
-      self.dll_filenames.extend(dll_filenames)
+  def install(self):
+    """
+    Installs the NuGet packages and appends all libraries to the
+    #dll_filenames member.
+    """
+
+    deps = set()
+
+    path.makedirs(self.packages_install_dir, exist_ok=True)
+    for dep in self.packages:
+      deps.add(dep)
+
+      # Only install if the .nupkg file does not already exists.
+      nupkg_file = dep.nupkg(self.packages_install_dir)
+      if not path.isfile(nupkg_file):
+        command = self.csc.get_nuget() + ['install', dep.id, '-Version', dep.version]
+        subprocess.run(command, cwd=self.packages_install_dir, check=True)
+
+      # Parse the .nuspec for this package's dependencies.
+      specdom = nupkg.get_nuspec(nupkg_file)
+      if not specdom:
+        log.warn('Could not read .nuspec from "{}"'.format(nupkg_file))
+        continue
+
+      # XXX determine target_framework, None includes ALL dependencies (which is bad)
+      target_framework = None
+      for dep in nupkg.nuspec_eval_deps(specdom, target_framework):
+        deps.add(dep)
+
+    for dep in deps:
+      filename = dep.resolve(self.packages_install_dir, framework=self.csc.netversion)
+      if filename is not None:
+        self.dll_filenames.append(filename)
 
   def translate(self, target):
-    if not self.packages:
-      return
-
-    mkdir = craftr.actions.Mkdir.new(target, directory = self.packages_install_dir)
-    for name, version, package_dir in self.packages:
-      command = self.csc.get_nuget() + ['install', name, '-Version', version]
-      craftr.actions.System.new(
-        target,
-        name = '{}.{}'.format(name, version),
-        commands = [command],
-        deps = [mkdir, ...],
-        output_files = [package_dir],
-        cwd = self.packages_install_dir
-      )
+    # Don't actually create actions here, but we need to install the
+    # dependencies and parse them.
+    self.install()
 
 
 def run(binary, *argv, name=None, csc=None, **kwargs):
