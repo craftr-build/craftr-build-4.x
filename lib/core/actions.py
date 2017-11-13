@@ -65,6 +65,8 @@ class Action:
     Checks if the action can be skipped.
     """
 
+    if isinstance(self.data, Null):
+      return True
     if self.data.is_skippable(self):
       cached_hash = self.cached_hash()
       if cached_hash is None: return False
