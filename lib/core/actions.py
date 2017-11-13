@@ -43,6 +43,10 @@ class Action:
   def long_name(self):
     return '{}#{}'.format(self.target.long_name, self.name)
 
+  @property
+  def session(self):
+    return self.target.cell.session
+
   def is_executed(self):
     if self.skipped:
       return True
@@ -134,15 +138,28 @@ class Action:
     self.data.generate_hash(self, hasher)
     return hasher
 
+  def save_hash(self):
+    """
+    Should be called from the main thread after the action has finished
+    executing. It should be called even if the action did not execute
+    successfully.
+    """
+
+    hashes = self.session.cache.setdefault('hashes', {})
+    if self.is_successful():
+      hashes[self.long_name] = self.hash().hexdigest()
+    else:
+      hashes.pop(self.long_name, None)
+
   def cached_hash(self):
     """
     Returns the cached hash of the action.
     """
 
-    session = self.target.cell.session
+    session = self.session
     if not session.build_backend:
       return None
-    return session.build_backend.get_action_hash(session, self.long_name)
+    return session.cache.get('hashes', {}).get(self.long_name)
 
 
 class ActionData:

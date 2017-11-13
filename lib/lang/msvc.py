@@ -287,7 +287,7 @@ class MsvcToolkit(NamedObject):
       toolkit = cache  # Nothing has changed
 
     if cache_enabled:
-      craftr.session.on('after_load', lambda: toolkit.save(cls.CACHEFILE()))
+      craftr.session.on('after_load', lambda _: toolkit.save(cls.CACHEFILE()))
 
     return toolkit
 

@@ -3,9 +3,10 @@ Command-line entry point for Craftr.
 """
 
 import argparse
+import json
 import sys
 import textwrap
-import path from './utils/path'
+import {log, path} from './utils'
 import {Session} from './core/session'
 
 parser = argparse.ArgumentParser(add_help=False, description="""
@@ -62,6 +63,21 @@ def main():
   if args.config:
     session.config.read(args.config)
 
+  # Load the session's cache file.
+  cache_filename = path.join(session.builddir, '.craftr-cache')
+  if path.isfile(cache_filename):
+    with open(cache_filename) as fp:
+      try:
+        cache = json.load(fp)
+        if not isinstance(cache, dict):
+          raise ValueError('expected object, got {}'.format(type(cache).__name__))
+      except ValueError as exc:
+        log.warn('Could not load DefaultBuildBackend cachefile "{}": {}'
+          .format(cache_filename, exc))
+      else:
+        session.cache = cache
+        del cache
+
   # Apply override configuration values from the command-line.
   for s in (args.define or ()):
     if '=' not in s:
@@ -110,7 +126,12 @@ def main():
 
   # Enter the session context and execute the build backend.
   with session, require.context.push_main(module):
-    return backend.run(session, module, backend_args)
+    try:
+      return backend.run(session, module, backend_args)
+    finally:
+      path.makedirs(path.dir(cache_filename), exist_ok=True)
+      with open(cache_filename, 'w') as fp:
+        json.dump(session.cache, fp)
 
 
 if require.main == module:

@@ -100,6 +100,7 @@ class Session:
     self.config = cfg.Configuration()
     self.cells = {}
     self.listeners = {}
+    self.cache = {}
     self.build_backend = None
 
   def __enter__(self):
@@ -126,12 +127,12 @@ class Session:
       raise ValueError('unknown event type: {!r}'.format(event_name))
     self.listeners.setdefault(event_name, []).append(handler)
 
-  def trigger_event(self, event_name):
+  def trigger_event(self, event_name, data=None):
     if event_name not in self.EVENTS:
       raise ValueError('unknown event type: {!r}'.format(event_name))
     for handler in self.listeners.get(event_name, []):
       try:
-        handler()
+        handler(data)
       except:
         traceback.print_exc()
 

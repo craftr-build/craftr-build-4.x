@@ -8,7 +8,7 @@ import threading
 import traceback
 import sys
 import craftr from '../public'
-import {log, path, sh, tty} from '../utils'
+import {path, sh, tty} from '../utils'
 import {BuildBackend} from '.'
 import {ActionProgress, Null as NullAction} from '../core/actions'
 
@@ -157,6 +157,7 @@ class ParallelExecutor:
       with self:
         while actions or self.futures:
           for action in (f.action for f in self.pop_done()):
+            action.save_hash()
             if action.skipped: continue
             if action.progress.code != 0:
               self.formatter.announce_failure(action)
@@ -183,20 +184,7 @@ class DefaultBuildBackend(BuildBackend):
   CACHE_FILENAME = '.config/default_backend_cache.json'
 
   def init_backend(self, session):
-    self._cache = {}
-    self._cache_filename = path.join(session.builddir, self.CACHE_FILENAME)
-    if path.isfile(self._cache_filename):
-      with open(self._cache_filename) as fp:
-        try:
-          self._cache = json.load(fp)
-        except ValueError as exc:
-          log.warn('Could not load DefaultBuildBackend cachefile "{}": {}'
-            .format(self._cache_filename, exc))
-    self._cache.setdefault('hashes', {})
-
-  def get_action_hash(self, session, action_long_name):
-    hashes = self._cache.get('hashes', {})
-    return hashes.get(action_long_name)
+    pass
 
   def build_parser(self, session, parser):
     parser.add_argument('targets', nargs='*', metavar='TARGET')
@@ -238,25 +226,12 @@ class DefaultBuildBackend(BuildBackend):
 
     formatter = Formatter(actions, verbose=args.verbose)
     executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
-    executor.on_finished = self._action_finished
     try:
       return executor.run(actions)
     except KeyboardInterrupt:
       print('keyboard interrupt')
       return 1
-    finally:
-      path.makedirs(path.dir(self._cache_filename), exist_ok=True)
-      log.info('[Saving] {}'.format(self._cache_filename))
-      with open(self._cache_filename, 'w') as fp:
-        json.dump(self._cache, fp)
     return 0
-
-  def _action_finished(self, action):
-    assert action.is_executed()
-    if action.is_successful():
-      self._cache['hashes'][action.long_name] = action.hash().hexdigest()
-    else:
-      self._cache['hashes'].pop(action.long_name, None)
 
 
 module.exports = DefaultBuildBackend
