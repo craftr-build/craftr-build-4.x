@@ -9,7 +9,7 @@ csharp.prebuilt(name = 'Json.NET', package = 'Newtonsoft.Json:10.0.3')
 csharp.build(
   name = 'lib',
   srcs = craftr.glob('src/lib/*.cs'),
-  type = 'module'
+  type = 'library'
 )
 
 # Build an executable assembly from source and merge them into a single
