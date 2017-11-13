@@ -3,13 +3,14 @@ The default, Python-based build backend.
 """
 
 import concurrent.futures
+import json
 import threading
 import traceback
 import sys
 import craftr from '../public'
+import {log, path, sh, tty} from '../utils'
+import {BuildBackend} from '.'
 import {ActionProgress, Null as NullAction} from '../core/actions'
-import sh from '../utils/sh'
-import tty from '../utils/tty'
 
 try: from multiprocessing import cpu_count
 except ImportError: cpu_count = lambda: 1
@@ -77,6 +78,7 @@ class ParallelExecutor:
     self.datalock = threading.RLock()
     self.action_completed = threading.Condition()
     self.futures = []
+    self.on_finished = None
 
   def __enter__(self):
     self.pool.__enter__()
@@ -160,6 +162,11 @@ class ParallelExecutor:
               self.formatter.announce_failure(action)
               return action.progress.code
             self.formatter.announce_finished(action)
+            if self.on_finished:
+              try:
+                self.on_finished(action)
+              except:
+                traceback.print_exc()
           if actions:
             action = next(actions, None)
             if action is None:
@@ -170,56 +177,86 @@ class ParallelExecutor:
       self.abort_all()
       raise
 
-def _execute_action(action):
-  progress = ActionProgress(do_buffering=action.console)
 
+class DefaultBuildBackend(BuildBackend):
 
-def build_argparser(parser):
-  parser.add_argument('targets', nargs='*', metavar='TARGET')
-  parser.add_argument('-v', '--verbose', action='store_true')
-  parser.add_argument('-j', '--jobs', type=int, default=cpu_count() * 2)
-  parser.add_argument('--dotviz-targets', action='store_true')
-  parser.add_argument('--dotviz-actions', action='store_true')
+  CACHE_FILENAME = '.config/default_backend_cache.json'
 
+  def init_backend(self, session):
+    self._cache = {}
+    self._cache_filename = path.join(session.builddir, self.CACHE_FILENAME)
+    if path.isfile(self._cache_filename):
+      with open(self._cache_filename) as fp:
+        try:
+          self._cache = json.load(fp)
+        except ValueError as exc:
+          log.warn('Could not load DefaultBuildBackend cachefile "{}": {}'
+            .format(self._cache_filename, exc))
+    self._cache.setdefault('hashes', {})
 
-def build_main(args, session, module):
-  # Execute the module.
-  require.context.load_module(module)
-  session.trigger_event('after_load')
+  def get_action_hash(self, session, action_long_name):
+    hashes = self._cache.get('hashes', {})
+    return hashes.get(action_long_name)
 
-  # Resolve targets and parse additional command-line arguments for the targets.
-  targets = []
-  target_args = {}
-  for target_name in args.targets:
-    name, target_args = target_name.partition('=')[::2]
-    target_args = sh.split(target_args)
-    target = session.resolve_target(name)
-    if target_args and not isinstance(target.data, craftr.Gentarget):
-      tn = type(target.data).__name__
-      print('fatal: additional command-line arguments are only supported\n'
-            '       for gentarget()s ({} is a {})'.format(name, tn))
+  def build_parser(self, session, parser):
+    parser.add_argument('targets', nargs='*', metavar='TARGET')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-j', '--jobs', type=int, default=cpu_count() * 2)
+    parser.add_argument('--dotviz-targets', action='store_true')
+    parser.add_argument('--dotviz-actions', action='store_true')
+
+  def run(self, session, module, args):
+    # Execute the module.
+    session.load_main(module)
+
+    # Resolve targets and parse additional command-line arguments for the targets.
+    targets = []
+    target_args = {}
+    for target_name in args.targets:
+      name, target_args = target_name.partition('=')[::2]
+      target_args = sh.split(target_args)
+      target = session.resolve_target(name)
+      if target_args and not isinstance(target.data, craftr.Gentarget):
+        tn = type(target.data).__name__
+        print('fatal: additional command-line arguments are only supported\n'
+              '       for gentarget()s ({} is a {})'.format(name, tn))
+        return 1
+      if target_args:
+        target.data.add_additional_args(target_args)
+      targets.append(target)
+
+    # Generate the action graph.
+    tg = session.build_target_graph()
+    if args.dotviz_targets:
+      tg.dotviz(sys.stdout)
+      return 0
+    ag = tg.translate(targets or None)
+    if args.dotviz_actions:
+      ag.dotviz(sys.stdout)
+      return 0
+    actions = [x for x in ag.topo_sort() if not isinstance(x, NullAction)]
+
+    formatter = Formatter(actions, verbose=args.verbose)
+    executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
+    executor.on_finished = self._action_finished
+    try:
+      return executor.run(actions)
+    except KeyboardInterrupt:
+      print('keyboard interrupt')
       return 1
-    if target_args:
-      target.data.add_additional_args(target_args)
-    targets.append(target)
-
-  # Generate the action graph.
-  tg = session.build_target_graph()
-  if args.dotviz_targets:
-    tg.dotviz(sys.stdout)
+    finally:
+      path.makedirs(path.dir(self._cache_filename), exist_ok=True)
+      log.info('[Saving] {}'.format(self._cache_filename))
+      with open(self._cache_filename, 'w') as fp:
+        json.dump(self._cache, fp)
     return 0
-  ag = tg.translate(targets or None)
-  if args.dotviz_actions:
-    ag.dotviz(sys.stdout)
-    return 0
-  actions = [x for x in ag.topo_sort() if not isinstance(x, NullAction)]
 
-  formatter = Formatter(actions, verbose=args.verbose)
-  executor = ParallelExecutor(max_workers=args.jobs, formatter=formatter)
-  try:
-    return executor.run(actions)
-  except KeyboardInterrupt:
-    print('keyboard interrupt')
-    return 1
+  def _action_finished(self, action):
+    assert action.is_executed()
+    if action.is_successful():
+      self._cache['hashes'][action.long_name] = action.hash().hexdigest()
+    else:
+      self._cache['hashes'].pop(action.long_name, None)
 
-  return 0
+
+module.exports = DefaultBuildBackend

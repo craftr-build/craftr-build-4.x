@@ -100,6 +100,7 @@ class Session:
     self.config = cfg.Configuration()
     self.cells = {}
     self.listeners = {}
+    self.build_backend = None
 
   def __enter__(self):
     if Session.current:
@@ -109,6 +110,16 @@ class Session:
 
   def __exit__(self, *args):
     Session.current = None
+
+  def load_main(self, module, do_init=True):
+    """
+    Given a Node.py #Module instance that is not loaded yet, this function
+    calls #Context.load_module(), then invokes the `after_load` event. Build
+    backends will call this method when they need the module's contents.
+    """
+
+    require.context.load_module(module, do_init=do_init)
+    self.trigger_event('after_load')
 
   def on(self, event_name, handler):
     if event_name not in self.EVENTS:

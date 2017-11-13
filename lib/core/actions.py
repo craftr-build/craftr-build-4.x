@@ -4,12 +4,12 @@ implementations of tasks on a more detailed level.
 """
 
 import errno
+import hashlib
 import io
 import locale
 import os
 import requests
 import subprocess
-import sumtypes
 import sys
 import time
 import traceback
@@ -17,12 +17,6 @@ import _target from './target'
 import env from '../utils/env'
 import sh from '../utils/sh'
 import ts from '../utils/ts'
-
-
-@sumtypes.sumtype
-class HashComponent:
-  Data = sumtypes.constructor('bytes')
-  File = sumtypes.constructor('path')
 
 
 class Action:
@@ -49,12 +43,29 @@ class Action:
   def long_name(self):
     return '{}#{}'.format(self.target.long_name, self.name)
 
+  def is_executed(self):
+    if self.skipped:
+      return True
+    if self.progress is None:
+      return False
+    with ts.condition(self.progress):
+      return self.progress.executed
+
+  def is_successful(self):
+    assert self.is_executed()
+    with ts.condition(self.progress):
+      return self.progress.code == 0
+
   def is_skippable(self):
     """
     Checks if the action can be skipped.
     """
 
-    return self.data.is_skippable(self)
+    if self.data.is_skippable(self):
+      cached_hash = self.cached_hash()
+      if cached_hash is None: return False
+      return self.hash().hexdigest() == cached_hash
+    return False
 
   def skip(self):
     self.progress = ActionProgress()
@@ -69,14 +80,6 @@ class Action:
 
   def get_display(self):
     return self.data.get_display(self)
-
-  def is_executed(self):
-    if self.skipped:
-      return True
-    if self.progress is None:
-      return False
-    with ts.condition(self.progress):
-      return self.progress.executed
 
   def execute(self):
     """
@@ -119,6 +122,27 @@ class Action:
       raise RuntimeError('{!r}.progress is already set'.format(self))
     self.progress = progress
     return self.execute()
+
+  def hash(self, hasher=None):
+    """
+    Computes the hash of the action. If *hasher* is specified, it must be a
+    an object on which `.update(bytes)` can be called. The *hasher* is
+    returned. If no *hasher* is specified, it will be a #hashlib.md5 object.
+    """
+
+    hasher = hasher or hashlib.md5()
+    self.data.generate_hash(self, hasher)
+    return hasher
+
+  def cached_hash(self):
+    """
+    Returns the cached hash of the action.
+    """
+
+    session = self.target.cell.session
+    if not session.build_backend:
+      return None
+    return session.build_backend.get_action_hash(session, self.long_name)
 
 
 class ActionData:
@@ -199,13 +223,7 @@ class ActionData:
 
     return str(self)
 
-  def hash_components(self, action):
-    """
-    Yield #HashComponent values that are to be computed into the action's
-    hash key. This should include any relevant data that can influence the
-    outcome of the action's execution.
-    """
-
+  def generate_hash(self, action, hasher):
     raise NotImplementedError
 
 
@@ -334,6 +352,9 @@ class Null(ActionData):
   def execute(self, action, progress):
     return 0
 
+  def generate_hash(self, action, hasher):
+    hasher.update(b'<NullAction>')
+
 
 class Mkdir(ActionData):
   """
@@ -357,6 +378,10 @@ class Mkdir(ActionData):
       return e.errno
     else:
       return 0
+
+  def generate_hash(self, action, hasher):
+    hasher.update(b'<MkdirAction>')
+    hasher.update(self.directory.encode('utf8'))
 
 
 class System(ActionData):
@@ -405,6 +430,29 @@ class System(ActionData):
         break
     return code
 
+  def generate_hash(self, action, hasher):
+    hasher.update(b'<SystemAction>')
+    hasher.update(b'commands:')
+    for command in self.commands:
+      [hasher.update(b' ' + x.encode('utf8')) for x in command]
+    # XXX How to include environ in the hash generation?
+    hasher.update(b'cwd:')
+    hasher.update((self.cwd or '').encode('utf8'))
+    hasher.update(b'input_files:')
+    for infile in self.input_files:
+      hasher.update(infile.encode('utf8') + b':')
+      try:
+        with open(infile, 'rb') as fp:
+          while True:
+            data = fp.read(1024)
+            if not data: break
+            hasher.update(data)
+      except OSError as e:
+        log.warn('[{}] Hashing -- Error with input file "{}": {}'.format(
+            self.long_name, infile, e))
+    hasher.update(b'output_files:')
+    [hasher.update(b' ' + x.encode('utf8')) for x in self.output_files]
+
 
 class DownloadFile(ActionData):
 
@@ -412,7 +460,7 @@ class DownloadFile(ActionData):
     self.url = url
     self.filename = filename
 
-  def is_skippable(self, target):
+  def is_skippable(self, action):
     return os.path.isfile(self.filename)
 
   def execute(self, action, progress):
@@ -421,3 +469,8 @@ class DownloadFile(ActionData):
     with open(self.filename, 'wb') as fp:
       for chunk in requests.get(self.url).iter_content(4096):
         fp.write(chunk)
+
+  def generate_hash(self, action, hasher):
+    hasher.update(b'<DownloadFileAction>')
+    hasher.update(b'url:' + self.url.encode('utf8'))
+    hasher.update(b'filename:', self.filename.encode('utf8'))

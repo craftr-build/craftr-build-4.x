@@ -73,13 +73,15 @@ def main():
     else:
       session.config[k] = v
 
-  # Load the build backend.
   if args.backend:
     session.config['build.backend'] = args.backend
   args.backend = session.config.get('build.backend', 'default')
+
+  # Load the build backend and create a new argument parser for the unknown
+  # arguments while at the same time updating our main argparser.
   try:
-    backend = require.try_('./build_backends/' + args.backend, args.backend)
-  except require.ResolveError:
+    backend = require.try_('./build_backends/' + args.backend, args.backend)()
+  except require.TryResolveError:
     print('error: could not find module "{}"'.format(args.backend))
     if not args.help:
       raise
@@ -87,15 +89,17 @@ def main():
   else:
     prog = parser.prog + ' <backend={}>'.format(args.backend)
     backend_parser = argparse.ArgumentParser(prog=prog)
-    if hasattr(backend, 'build_argparser'):
-      backend.build_argparser(MultiArgparserDuck([parser, backend_parser]))
+    backend.build_parser(session, MultiArgparserDuck([parser, backend_parser]))
 
   if args.help:
     parser.description = parser.description.format(backend=args.backend)
     parser.print_help()
     return 0
 
+  # Parse the unknown arguments using the backend's argument parser.
   backend_args = backend_parser.parse_args(unknown_args)
+  backend.init_backend(session)
+  session.build_backend = backend
 
   # Find the build script as a Node.py module.
   if path.isfile(args.projectdir):
@@ -106,7 +110,7 @@ def main():
 
   # Enter the session context and execute the build backend.
   with session, require.context.push_main(module):
-    return backend.build_main(backend_args, session, module)
+    return backend.run(session, module, backend_args)
 
 
 if require.main == module:
