@@ -27,7 +27,9 @@ from os.path import (
   join,
   split,
   dirname as dir,
-  basename as base
+  basename as base,
+  getatime,
+  getmtime
 )
 
 

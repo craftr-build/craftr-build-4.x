@@ -14,9 +14,7 @@ import sys
 import time
 import traceback
 import _target from './target'
-import env from '../utils/env'
-import sh from '../utils/sh'
-import ts from '../utils/ts'
+import {env, path, sh, ts} from '../utils'
 
 
 class Action:
@@ -387,7 +385,7 @@ class Mkdir(ActionData):
     return 'mkdir ' + sh.quote(self.directory)
 
   def is_skippable(self, action):
-    return os.path.isdir(self.directory)
+    return path.isdir(self.directory)
 
   def execute(self, action, progress):
     try:
@@ -428,13 +426,13 @@ class System(ActionData):
     if not self.input_files:
       if not self.output_files:
         return False
-      return all(os.path.exists(x) for x in self.output_files)
+      return all(path.exists(x) for x in self.output_files)
     if not self.output_files:
       # No way to determine if the action needs to be re-run, always run it.
       return False
     def getmtime(p, default):
       try:
-        return os.path.getmtime(p)
+        return path.getmtime(p)
       except OSError:
         return default
     ifiles = max(getmtime(x, time.time() + 1000) for x in self.input_files)
@@ -460,15 +458,19 @@ class System(ActionData):
     hasher.update(b'input_files:')
     for infile in self.input_files:
       hasher.update(infile.encode('utf8') + b':')
-      try:
-        with open(infile, 'rb') as fp:
-          while True:
-            data = fp.read(1024)
-            if not data: break
-            hasher.update(data)
-      except OSError as e:
-        log.warn('[{}] Hashing -- Error with input file "{}": {}'.format(
-            self.long_name, infile, e))
+      if path.isfile(infile):
+        hasher.update(str(int(path.getmtime(infile))).encode('utf'))
+      # XXX Heuristic/configuration which file types' contents are hashed?
+      # Hashing large binary input files does not make much sense..
+      #try:
+      #  with open(infile, 'rb') as fp:
+      #    while True:
+      #      data = fp.read(1024)
+      #      if not data: break
+      #      hasher.update(data)
+      #except OSError as e:
+      #  log.warn('[{}] Hashing -- Error with input file "{}": {}'.format(
+      #      self.long_name, infile, e))
     hasher.update(b'output_files:')
     [hasher.update(b' ' + x.encode('utf8')) for x in self.output_files]
 
@@ -480,11 +482,11 @@ class DownloadFile(ActionData):
     self.filename = filename
 
   def is_skippable(self, action):
-    return os.path.isfile(self.filename)
+    return path.isfile(self.filename)
 
   def execute(self, action, progress):
     progress.print('[Downloading]: {}'.format(self.url))
-    os.makedirs(os.path.dirname(self.filename), exist_ok=True)
+    os.makedirs(path.dir(self.filename), exist_ok=True)
     with open(self.filename, 'wb') as fp:
       for chunk in requests.get(self.url).iter_content(4096):
         fp.write(chunk)
