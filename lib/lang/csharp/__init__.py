@@ -99,16 +99,15 @@ class CscInfo(NamedObject):
     if impl not in ('net', 'mono'):
       raise ValueError('unsupported csharp.impl={!r}'.format(impl))
 
-    program = sh.split(craftr.session.config.get('csharp.csc', 'csc'))
+    program = craftr.session.config.get('csharp.csc', 'csc')
+    is_mcs = path.rmvsuffix(program).lower().endswith('mcs')
+
     if impl == 'net':
       toolkit = msvc.MsvcToolkit.get()
-      csc = CscInfo(impl, program, toolkit.environ, toolkit.csc_version)
+      csc = CscInfo(impl, [program], toolkit.environ, toolkit.csc_version)
     else:
       environ = {}
       if platform == 'windows':
-        # On windows, the mono compiler is available as .bat file, thus we
-        # need to run it through the shell.
-        program = sh.shellify(program)
         # Also, just make sure that we can find some standard installation
         # of Mono.
         arch = craftr.session.config.get('csharp.mono_arch', None)
@@ -125,10 +124,15 @@ class CscInfo(NamedObject):
           monobin = monobin_x86
         else:
           raise ValueError('invalid value csharp.mono_arch={!r}'.format(arch))
-        environ['PATH'] = os.getenv('PATH') + path.pathsep + monobin
+        environ['PATH'] = monobin + path.pathsep + os.getenv('PATH')
 
-      # TODO: Cache the compiler version (like the MsvcToolkit does).
-      if 'mcs' in program[-1]:
+        # On windows, the mono compiler is available as .bat file, thus we
+        # need to run it through the shell.
+        program = sh.shellify([program])
+      else:
+        program = [program]
+
+      if is_mcs:
         with sh.override_environ(environ):
           version = subprocess.check_output(program + ['--version']).decode().strip()
         m = re.search('compiler\s+version\s+([\d\.]+)', version)
