@@ -490,4 +490,4 @@ class DownloadFile(ActionData):
   def generate_hash(self, action, hasher):
     hasher.update(b'<DownloadFileAction>')
     hasher.update(b'url:' + self.url.encode('utf8'))
-    hasher.update(b'filename:', self.filename.encode('utf8'))
+    hasher.update(b'filename:' + self.filename.encode('utf8'))
