@@ -21,11 +21,11 @@ environment:
   # builds alltogether on Windows for now.
   # =========================================================================
   - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono -d csharp.program=mcs
+    BUILD_OPTIONS: -d csharp.impl=mono -d csharp.csc=mcs
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
     ADD_PATH: C:\Program Files (x86)\Mono\bin
   - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono -d csharp.program=mcs
+    BUILD_OPTIONS: -d csharp.impl=mono -d csharp.csc=mcs
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
 build: off
