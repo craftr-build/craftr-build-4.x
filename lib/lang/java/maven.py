@@ -172,7 +172,6 @@ def pom_eval_deps(pom):
     elif not dependencies and node.nodeName == 'dependencies':
       dependencies = node
 
-  print('>>>', dependencies)
   if not group_id or not version:
     log.warn('[Error]: could not read version or group_id from POM')
     return []
