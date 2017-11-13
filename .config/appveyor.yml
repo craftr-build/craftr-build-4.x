@@ -20,13 +20,13 @@ environment:
   # ILMerge doesn't work properly with Mono on Windows, so we skip Mono
   # builds alltogether on Windows for now.
   # =========================================================================
-  #- BUILD_MODULE: examples/csharp
-  #  BUILD_OPTIONS: -d csharp.impl=mono
-  #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
-  #  ADD_PATH: C:\Program Files (x86)\Mono\bin
-  #- BUILD_MODULE: examples/csharp
-  #  BUILD_OPTIONS: -d csharp.impl=mono
-  #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+  - BUILD_MODULE: examples/csharp
+    BUILD_OPTIONS: -d csharp.impl=mono
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
+    ADD_PATH: C:\Program Files (x86)\Mono\bin
+  - BUILD_MODULE: examples/csharp
+    BUILD_OPTIONS: -d csharp.impl=mono
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
 build: off
 
