@@ -16,6 +16,10 @@ Compile C# projects.
   the selected implementation is `net`, otherwise `mcs`.
 * `csharp.mono_arch` (str) &ndash; Used to determine the installation path of
   of Mono on Windows. Must be either `x64` or `x86`.
+* `csharp.merge_tool` (str) &ndash; The name of the tool to merge assemblies.
+  This should be either `ILMerge:<version>` or `ILRepack:<version>`. If not
+  specified, will be selected based on `csharp.impl` (ILMerge for `net` and
+  ILRepack for `mono`).
 
 ## Functions
 

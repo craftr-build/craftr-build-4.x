@@ -45,21 +45,29 @@ def get_nuget(csc):
   return csc.exec_args([path.abs(local_nuget)])
 
 
-def get_ilmerge(csc, version='2.14.1208'):
+def get_merget_tool(csc):
   """
-  Checks if the `ILMerge` command-line program is available, and otherwise
-  installs it using NuGet into the artifact directory.
+  Checks if the `ILMerge` or `ILRepack` command-line program is available, and
+  otherwise installs it using NuGet into the artifact directory.
   """
 
-  local_ilmerge = path.join(artifacts_dir, 'ILMerge.' + version, 'tools', 'ILMerge.exe')
-  if not os.path.isfile(local_ilmerge):
-    if sh.which('ILMerge') is not None:
-      return ['ILMerge']
-    install_cmd = get_nuget(csc) + ['install', 'ILMerge', '-Version', version]
-    log.info('[Installing] ILMerge.' + version)
+  tool = craftr.session.config.get('csharp.merge_tool')
+  if not tool:
+    if csc.is_mono():
+      tool = 'ILRepack:2.0.13'
+    else:
+      tool = 'ILMerge:2.14.1208'
+
+  tool_name, version = tool.partition(':')[::2]
+  local_tool = path.join(artifacts_dir, tool_name + '.' + version, 'tools', tool_name + '.exe')
+  if not os.path.isfile(local_tool):
+    if sh.which(tool_name) is not None:
+      return [tool_name]
+    install_cmd = get_nuget(csc) + ['install', tool_name, '-Version', version]
+    log.info('[Installing] {}.{}'.format(tool_name, version))
     path.makedirs(artifacts_dir, exist_ok=True)
     subprocess.run(install_cmd, check=True, cwd=artifacts_dir)
-  return csc.exec_args([path.abs(local_ilmerge)])
+  return csc.exec_args([path.abs(local_tool)])
 
 
 class CscInfo(NamedObject):
@@ -237,7 +245,7 @@ class Csharp(craftr.target.TargetData):
     )
 
     if self.merge_assemblies:
-      command = get_ilmerge(self.csc)
+      command = get_merget_tool(self.csc)
       command += ['/out:' + self.dll_filename] + [build_outfile] + references
       craftr.actions.System.new(
         target,
