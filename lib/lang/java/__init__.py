@@ -7,7 +7,7 @@ import nodepy
 import re
 import typing as t
 
-import craftr, {path, session} from 'craftr'
+import craftr, {log, path, session} from 'craftr'
 import {NamedObject} from 'craftr/utils/types'
 import maven from './maven'
 
@@ -163,7 +163,7 @@ class JavaLibrary(JavaBase):
     for data in target.deps().attr('data').of_type(JavaLibrary):
       classpath.append(data.jar_filename)
     for data in target.deps().attr('data').of_type(JavaPrebuilt):
-      classpath.append(data.binary_jar)
+      classpath.extend(data.binary_jars)
 
     # Calculate output files.
     classfiles = []
@@ -255,7 +255,7 @@ class JavaBinary(JavaLibrary):
     for data in target.deps().attr('data').of_type(JavaLibrary):
       inputs.append(data.jar_filename)
     for data in target.deps().attr('data').of_type(JavaPrebuilt):
-      inputs.append(data.binary_jar)
+      inputs.extend(data.binary_jars)
 
     command = nodepy.runtime.exec_args + [str(require.resolve('./augjar').filename)]
     command += ['-o', self.jar_filename]
@@ -304,32 +304,69 @@ class JavaPrebuilt(craftr.target.TargetData):
     downloaded from Maven.
   """
 
-  def __init__(self, binary_jar: str = None, artifact: str = None):
-    if sum(1 for x in (binary_jar, artifact) if x) != 1:
-      raise ValueError('need either binary_jar or artifact argument!')
-
+  def __init__(self,
+      binary_jar: str = None,
+      binary_jars: t.List[str] = None,
+      artifact: str = None,
+      artifacts: t.List[str] = None):
+    if not binary_jars:
+      binary_jars = []
+    if binary_jar:
+      binary_jars.append(binary_jar)
+    if not artifacts:
+      artifacts = []
     if artifact:
-      artifact = maven.Artifact.from_id(artifact)
-      binary_jar = path.join(session.builddir, '.maven-artifacts', artifact.to_local_path('jar'))
-    else:
-      binary_jar = craftr.localpath(binary_jar)
+      artifacts.append(artifact)
 
-    self.binary_jar = binary_jar
-    self.artifact = artifact
+    self.artifacts = [maven.Artifact.from_id(x) for x in artifacts]
+    self.binary_jars = [craftr.localpath(x) for x in binary_jars]
+    self.did_install = False
 
-  def translate(self, target):
-    if self.artifact:
+  def install(self):
+    """
+    Download the artifacts from the repository and add the binary JAR files
+    to the #binary_jars list.
+    """
+
+    if self.did_install:
+      return
+    self.did_install = True
+
+    poms = {}
+    queue = list(self.artifacts)
+
+    # XXX This should probably be compared against a global set of already
+    #     installed dependencies, so we don't do the same work twice if
+    #     two separate projects need the same dependency.
+
+    log.info('[{}] Resolving JARs...'.format(self.target.long_name))
+    while queue:
+      artifact = queue.pop()
+      if artifact in poms:
+        continue
       for repo in repos:
-        pom = repo.download_pom(self.artifact)
+        pom = repo.download_pom(artifact)
         if pom: break
       else:
-        # XXX What error to raise??
-        raise RuntimeError('error: could not resolve artifact {}'.format(self.artifact))
+        raise RuntimeError('could not find artifact: {}'.format(artifact))
+      poms[artifact] = pom
+      queue.extend(maven.pom_eval_deps(pom))
+
+    for artifact in poms.keys():
+      binary_jar = path.join(session.builddir, '.maven-artifacts', artifact.to_local_path('jar'))
+      self.binary_jars.append(binary_jar)
+
+      # Create a download action. We may create actions even before
+      # #translate(), so we save ourselves some trouble.
       craftr.actions.DownloadFile.new(
-        target,
-        url = repo.get_artifact_uri(self.artifact, 'jar'),
-        filename = self.binary_jar
+        self.target,
+        name = str(artifact),
+        url = repo.get_artifact_uri(artifact, 'jar'),
+        filename = binary_jar
       )
+
+  def translate(self, target):
+    self.install()
 
 
 class ProGuard(craftr.target.TargetData):

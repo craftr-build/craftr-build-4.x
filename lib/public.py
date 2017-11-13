@@ -3,7 +3,7 @@ The public API when importing the `craftr` package.
 """
 
 import fnmatch as _fnmatch
-import path from './utils/path'
+import {log, path} from './utils'
 import actions from './core/actions'
 import target, {target_factory} from './core/target'
 import {Session, current as session} from './core/session'

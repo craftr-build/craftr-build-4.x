@@ -63,7 +63,10 @@ __Parameters__
 
 __Parameters__
 
-* `binary_jar`
+* `binary_jar` (str)
+* `binary_jars` (list of str)
+* `artifact` (str)
+* `artifacts` (list of str)
 
 ### `java.proguard(**params)`
 

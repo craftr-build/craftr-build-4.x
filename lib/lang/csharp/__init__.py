@@ -274,7 +274,7 @@ class CsharpPrebuilt(craftr.target.TargetData):
 
     self.packages_install_dir = artifacts_dir
     self.packages = [nupkg.Dependency.from_str(x) for x in (packages or [])]
-    self.dll_filenames = list(dll_filenames or [])
+    self.dll_filenames = [craftr.localpath(x) for x in (dll_filenames or [])]
     self.csc = csc or CscInfo.get()
 
   def install(self):

@@ -3,6 +3,7 @@ Access maven artifacts.
 """
 
 from xml.etree import ElementTree
+import xml.dom.minidom as minidom
 import requests
 import log from 'craftr/utils/log'
 
@@ -32,8 +33,22 @@ class Artifact:
     self.timestamp = None
     self.build_number = None
 
+  def __hash__(self):
+    return hash(self.as_tuple())
+
+  def __eq__(self, other):
+    if isinstance(other, Artifact):
+      return self.as_tuple() == other.as_tuple()
+    return False
+
+  def __str__(self):
+    return '{}:{}:{}'.format(self.group, self.artifact, self.version)
+
   def __repr__(self):
     return 'Artifact("{}:{}:{}")'.format(self.group, self.artifact, self.version)
+
+  def as_tuple(self):
+    return (self.group, self.artifact, self.version)
 
   def is_snapshot(self):
     return 'SNAPSHOT' in self.version
@@ -116,7 +131,6 @@ class MavenRepository:
     metadata_path = self.get_metadata_path(artifact)
     try:
       data = requests_get_check(metadata_path).text  # XXX user agent
-      print(data)
       eletree = ElementTree.fromstring(data)
       timestamp = eletree.findtext('versioning/snapshot/timestamp')
       build_number = eletree.findtext('versioning/snapshot/buildNumber')
@@ -129,3 +143,62 @@ class MavenRepository:
     metadata_path = "%s/%s/%s/%s/maven-metadata.xml" % (self.uri, group,
         artifact.artifact, artifact.version)
     return metadata_path
+
+
+def pom_eval_deps(pom):
+  """
+  Evaluates the dependencies of a POM XML file.
+  """
+
+  if isinstance(pom, str):
+    pom = minidom.parseString(pom)
+
+  project = pom.getElementsByTagName('project')[0]
+
+  group_id = None
+  version = None
+  dependencies = None
+  for node in iter_dom_children(project):
+    if not version and node.nodeName == 'version':
+      version = node.firstChild.nodeValue
+    elif not group_id and node.nodeName == 'groupId':
+      group_id = node.firstChild.nodeValue
+    elif node.nodeName == 'parent':
+      for node in iter_dom_children(node):
+        if not version and node.nodeName == 'version':
+          version = node.firstChild.nodeValue
+        elif not group_id and node.nodeName == 'groupId':
+          group_id = node.firstChild.nodeValue
+    elif not dependencies and node.nodeName == 'dependencies':
+      dependencies = node
+
+  print('>>>', dependencies)
+  if not group_id or not version:
+    log.warn('[Error]: could not read version or group_id from POM')
+    return []
+  if not dependencies:
+    return []
+
+  def parse_dependency(node):
+    curr_group_id = node.getElementsByTagName('groupId')[0].firstChild.nodeValue
+    curr_artifact_id = node.getElementsByTagName('artifactId')[0].firstChild.nodeValue
+    curr_version = node.getElementsByTagName('version')[0].firstChild.nodeValue
+    if curr_group_id == '${project.groupId}':
+      curr_group_id = group_id
+    if curr_version == '${project.version}':
+      curr_version = version
+    return Artifact(curr_group_id, curr_artifact_id, curr_version)
+
+  results = []
+  for node in iter_dom_children(dependencies):
+    if node.nodeName == 'dependency':
+      results.append(parse_dependency(node))
+
+  return results
+
+
+def iter_dom_children(node):
+  child = node.firstChild
+  while child:
+    yield child
+    child = child.nextSibling
