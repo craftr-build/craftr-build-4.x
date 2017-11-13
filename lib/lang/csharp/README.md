@@ -44,9 +44,13 @@ __Parameters__
 __Parameters__
 
 * `dll_filename` (str)
+* `dll_filenames` (list of str)
 * `package` (str) &ndash; The NuGet package name and version. Must be of the
-  format `<name>:<version>`, eg. `Newtonsoft.Json:10.0.3`. While NuGet does
-  not care about the proper letter case, your filesystem might!
+  format `<name>:<version>#<NETV>`, eg. `Newtonsoft.Json:10.0.3`. While NuGet
+  does not care about the proper letter case, your filesystem might! Note that
+  the `#<NETV>` part is optional and can be used to opt into another .NET
+  framework directory that contains the package's DLL (eg. `ZedGraph:5.1.6#net35-Client`).
+* `packages` (list of str`)
 * `csc` (CscInfo)
 
 ### `csharp.run()`

@@ -29,6 +29,7 @@ class CscInfo(NamedObject):
   program: t.List[str]
   environ: dict
   version: str
+  netversion: str = 'net45'  # XXX determine default netversion here
 
   def __repr__(self):
     return '<CscInfo impl={!r} program={!r} environ=... version={!r}>'\
@@ -216,7 +217,7 @@ class Csharp(craftr.target.TargetData):
         else:
           references.append(data.dll_filename)
       elif isinstance(data, CsharpPrebuilt):
-        references.append(data.dll_filename)
+        references.extend(data.dll_filenames)
 
     build_outfile = self._dll_filename(False)
     command = self.csc.program + ['-nologo', '-target:' + self.type]
@@ -261,39 +262,52 @@ class Csharp(craftr.target.TargetData):
 
 class CsharpPrebuilt(craftr.target.TargetData):
 
-  def __init__(self, dll_filename: str = None, package: str = None, csc: CscInfo = None):
-    if package and dll_filename:
-      raise ValueError('dll_filename and package arguments may not be '
-          'specified at the same time.')
+  def __init__(self,
+               dll_filename: str = None,
+               dll_filenames: t.List[str] = None,
+               package: str = None,
+               packages: t.List[str] = None,
+               csc: CscInfo = None):
+    if dll_filename:
+      dll_filenames = [dll_filenames]
     if package:
-      self.package_name, self.package_version = package.partition(':')[::2]
-      self.install_dir = artifacts_dir
-      self.package_dir = path.join(self.install_dir, '{}.{}'.format(
-          self.package_name, self.package_version))
-      # XXX dll_filename?? How to find the right one.
-      self.dll_filename = path.join(self.package_dir, 'lib', 'net40', self.package_name + '.dll')
-    else:
-      self.package_name = self.package_version = None
-      self.install_dir = None
-      self.package_dir = None
-      self.dll_filename = craftr.localpath(dll_filename)
+      packages = [package]
+
+    self.packages_install_dir = None
+    self.packages = []
+    self.dll_filenames = list(dll_filenames or [])
     self.csc = csc or CscInfo.get()
 
+    if packages:
+      self.packages_install_dir = artifacts_dir
+      for pkg in packages:
+        name, version = pkg.partition(':')[::2]
+        version, netversion = version.partition('#')[::2]
+        if not netversion:
+          netversion = self.csc.netversion
+        # XXX Determine the .NET target version, not just default to net40.
+        package_dir = path.join(self.packages_install_dir, name + '.' + version)
+        libname = path.join(package_dir, 'lib', netversion, name + '.dll')
+        self.packages.append((name, version, package_dir))
+        self.dll_filenames.append(libname)
+    else:
+      self.dll_filenames.extend(dll_filenames)
+
   def translate(self, target):
-    if not self.package_name:
+    if not self.packages:
       return
-    command = self.csc.get_nuget() + ['install', self.package_name, '-Version', self.package_version]
-    mkdir = craftr.actions.Mkdir.new(
-      target,
-      directory = self.install_dir
-    )
-    craftr.actions.System.new(
-      target,
-      commands = [command],
-      deps = [mkdir, ...],
-      output_files = [self.package_dir],
-      cwd = self.install_dir
-    )
+
+    mkdir = craftr.actions.Mkdir.new(target, directory = self.packages_install_dir)
+    for name, version, package_dir in self.packages:
+      command = self.csc.get_nuget() + ['install', name, '-Version', version]
+      craftr.actions.System.new(
+        target,
+        name = '{}.{}'.format(name, version),
+        commands = [command],
+        deps = [mkdir, ...],
+        output_files = [package_dir],
+        cwd = self.packages_install_dir
+      )
 
 
 def run(binary, *argv, name=None, csc=None, **kwargs):
