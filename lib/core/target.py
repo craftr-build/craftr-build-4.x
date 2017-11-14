@@ -79,6 +79,10 @@ class Target:
       raise RuntimeError('Target is not associated with a Cell')
     return '//{}:{}'.format(self.cell.name, self.name)
 
+  @property
+  def session(self):
+    return self.cell.session
+
   def is_translated(self):
     return self.actions is not None
 
@@ -169,6 +173,18 @@ class Target:
       yield it.concat(trans(self))
 
     return it.stream(all()).concat().unique()
+
+  def dependents(self):
+    """
+    Returns a list of all targets that depend on this target. Can only be used
+    when the #Session.target_graph is built (thus, it can be used in
+    #TargetData.translate()).
+    """
+
+    session = self.session
+    if not session.target_graph:
+      raise RuntimeError('Session.target_graph has not been built yet')
+    return it.stream(session.target_graph[self.long_name].outputs).attr('value')
 
 
 class TargetData:

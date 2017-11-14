@@ -102,6 +102,7 @@ class Session:
     self.listeners = {}
     self.cache = {}
     self.build_backend = None
+    self.target_graph = None
 
   def __enter__(self):
     if Session.current:
@@ -189,7 +190,10 @@ class Session:
     Builds a #graph.Graph from the registered targets.
     """
 
-    g = TargetGraph()
+    if self.target_graph:
+      return self.target_graph
+
+    g = self.target_graph = TargetGraph()
     for cell in self.cells.values():
       for target in cell.targets.values():
         g.add(target)
