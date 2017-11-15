@@ -1,17 +1,16 @@
 
-import craftr from 'craftr'
+import {gentarget, glob, t} from 'craftr'
 import cxx from 'craftr/lang/cxx'
 
 cxx.build(
   name = 'lib',
-  target = 'library',
-  srcs = craftr.glob('src/*.c')
+  type = 'library',
+  srcs = glob('src/*.c')
 )
 
 cxx.build(
   name = 'main',
-  target = 'binary',
   deps = [':lib'],
+  type = 'binary',
   srcs = 'main.c'
 )
-

@@ -22,7 +22,7 @@ def _load_compiler():
 class CxxBuild(craftr.target.TargetData):
 
   def __init__(self,
-               target: str,
+               type: str,
                srcs: t.List[str] = None,
                includes: t.List[str] = None,
                exported_includes: t.List[str] = None,
@@ -34,10 +34,10 @@ class CxxBuild(craftr.target.TargetData):
                exported_linker_flags: t.List[str] = None,
                link_style: str = None,
                preferred_linkage: str = 'any',
-               libname: str = None,
+               outname: str = '$(lib)$(name)$(ext)',
                unity_build: bool = None):
-    if target not in ('library', 'binary'):
-      raise ValueError('invalid target: {!r}'.format(target))
+    if type not in ('library', 'binary'):
+      raise ValueError('invalid type: {!r}'.format(type))
     if not link_style:
       link_style = craftr.session.config.get('cxx.link_style', 'static')
     if link_style not in ('static', 'shared'):
@@ -46,8 +46,10 @@ class CxxBuild(craftr.target.TargetData):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
     if unity_build is None:
       unity_build = bool(craftr.session.config.get('cxx.unity_build', False))
+    if isinstance(srcs, str):
+      srcs = [srcs]
     self.srcs = [craftr.localpath(x) for x in (srcs or [])]
-    self.target = target
+    self.type = type
     self.includes = [craftr.localpath(x) for x in (includes or [])]
     self.exported_includes = [craftr.localpath(x) for x in (exported_includes or [])]
     self.defines = defines or []
@@ -58,8 +60,10 @@ class CxxBuild(craftr.target.TargetData):
     self.exported_linker_flags = exported_linker_flags or []
     self.link_style = link_style
     self.preferred_linkage = preferred_linkage
-    self.libname = libname
+    self.outname = outname
     self.unity_build = unity_build
+
+    self.outname_full = None
 
   def translate(self, target):
     # Update the preferred linkage of this target.
@@ -80,7 +84,51 @@ class CxxBuild(craftr.target.TargetData):
           raise RuntimeError('invalid cxx.preferred_linkage option: {!r}'
             .format(self.preferred_linkage))
     assert self.preferred_linkage in ('static', 'shared')
-    compiler.translate(self)
+
+    # Separate C and C++ sources.
+    c_srcs = []
+    cpp_srcs = []
+    unknown = []
+    for src in self.srcs:
+      if src.endswith('.cpp') or src.endswith('.cc'):
+        cpp_srcs.append(src)
+      elif src.endswith('.c'):
+        c_srcs.append(src)
+      else:
+        unknown.append(src)
+    if unknown:
+      if c_srcs or not cpp_srcs:
+        c_srcs.extend(unknown)
+      else:
+        cpp_srcs.extend(unknown)
+
+    # Create the unity source file(s).
+    if self.unity_build:
+      for srcs, suffix in ((c_srcs, '.c'), (cpp_srcs, '.cpp')):
+        if not srcs or len(srcs) == 1:
+          continue
+        unity_filename = path.join(target.cell.builddir, 'unity-source-' + self.target.name + suffix)
+        path.makedirs(path.dir(unity_filename), exist_ok=True)
+        with open(unity_filename, 'w') as fp:
+          for filename in srcs:
+            print('#include "{}"'.format(path.abs(filename)), file=fp)
+        srcs[:] = [unity_filename]
+
+    # Determine the output filename.
+    outfile = compiler.get_output_filename(target)
+    outfile = path.join(target.cell.builddir, outfile)
+    self.outname_full = outfile
+
+    # Determine the output directory for object files.
+    obj_dir = path.join(target.cell.builddir, 'obj', target.name)
+
+    session = compiler.create_session()
+    session.init_session(target, obj_dir)
+    if c_srcs:
+      session.compile_c(c_srcs)
+    if cpp_srcs:
+      session.compile_cpp(cpp_srcs)
+    session.link(outfile)
 
 
 class CxxPrebuilt(craftr.target.TargetData):

@@ -38,8 +38,7 @@ __Todo__
 __Parameters__
 
 * `srcs` (list of str) &ndash; A list of C and/or C++ source files to compile.
-* `target` (str) &ndash; The target build type. Must be either `library` or
-  `binary`.
+* `type` (str) &ndash; The build type. Must be either `library` or `binary`.
 * `includes` (list of str) &ndash; A list of header include directories that
   are available to the source files in this target.
 * `exported_includes` (list of str) &ndash; A list of header include
@@ -62,12 +61,8 @@ __Parameters__
   Always link dynamically (note that depending on two dynamic libraries which
   themselves link statically to the same other library will cause duplicate
   symbol errors);
-* `libname` (str) &ndash; The name of the library if it is produced by this
-  target. The macro `$(ext)` will be replaced with a platform-appropriate
-  extension. The macro `$(lib)` will be replaced by `lib` on a unix-style
-  platform. A version number may be specified like `$(lib)foo.$(ext 2.3)` which
-  will result in `libfoo.2.3.dylib` on Mac and `libfoo.so.2.3` on Linux and
-  `foo.2.3.dll` on Windows.
+* `outname` (str) &ndash; The name of the library or binary produced by the
+  target. Defaults to `$(lib)$(name)$(ext)`.
 * `unity_build` (bool) &ndash; Build all input sources as one unit. This can
   lead to higher performance due to the compiler being able to more agressively
   optimize and also lead to short build times. However, rebuilding the target
