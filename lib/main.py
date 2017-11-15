@@ -135,9 +135,10 @@ def main():
     try:
       return backend.run(session, module, backend_args)
     finally:
-      path.makedirs(path.dir(cache_filename), exist_ok=True)
-      with open(cache_filename, 'w') as fp:
-        json.dump(session.cache, fp)
+      if session.cache:
+        path.makedirs(path.dir(cache_filename), exist_ok=True)
+        with open(cache_filename, 'w') as fp:
+          json.dump(session.cache, fp)
 
 
 if require.main == module:
