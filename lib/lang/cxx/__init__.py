@@ -2,7 +2,7 @@
 import sys
 import typing as t
 import craftr from 'craftr'
-import {path} from 'craftr/utils'
+import {log, path} from 'craftr/utils'
 
 def _load_compiler():
   name = craftr.session.config.get('cxx.compiler', None)
@@ -19,11 +19,11 @@ def _load_compiler():
   return module.get_compiler(fragment)
 
 
-class CxxLibrary(craftr.target.TargetData):
+class CxxBuild(craftr.target.TargetData):
 
   def __init__(self,
-               srcs: t.List[str],
                target: str,
+               srcs: t.List[str] = None,
                includes: t.List[str] = None,
                exported_includes: t.List[str] = None,
                defines: t.List[str] = None,
@@ -46,7 +46,7 @@ class CxxLibrary(craftr.target.TargetData):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
     if unity_build is None:
       unity_build = bool(craftr.session.config.get('cxx.unity_build', False))
-    self.srcs = [craftr.localpath(x) for x in srcs]
+    self.srcs = [craftr.localpath(x) for x in (srcs or [])]
     self.target = target
     self.includes = [craftr.localpath(x) for x in (includes or [])]
     self.exported_includes = [craftr.localpath(x) for x in (exported_includes or [])]
@@ -62,7 +62,25 @@ class CxxLibrary(craftr.target.TargetData):
     self.unity_build = unity_build
 
   def translate(self, target):
-    raise NotImplementedError
+    # Update the preferred linkage of this target.
+    if self.preferred_linkage == 'any':
+      choices = set()
+      for data in target.dependents().attr('data').of_type(CxxBuild):
+        choices.add(data.link_style)
+      if len(choices) > 1:
+        log.warn('Target "{}" has preferred_linkage=any, but dependents '
+          'specify conflicting link_styles {}. Falling back to static.'
+          .format(self.long_name, choices))
+        self.preferred_linkage = 'static'
+      elif len(choices) == 1:
+        self.preferred_linkage = choices.pop()
+      else:
+        self.preferred_linkage = craftr.session.config.get('cxx.preferred_linkage', 'static')
+        if self.preferred_linkage not in ('static', 'shared'):
+          raise RuntimeError('invalid cxx.preferred_linkage option: {!r}'
+            .format(self.preferred_linkage))
+    assert self.preferred_linkage in ('static', 'shared')
+    compiler.translate(self)
 
 
 class CxxPrebuilt(craftr.target.TargetData):
@@ -88,9 +106,9 @@ class CxxPrebuilt(craftr.target.TargetData):
     self.preferred_linkage = preferred_linkage
 
   def translate(self, target):
-    raise NotImplementedError
+    pass
 
 
 compiler = _load_compiler()
-library = craftr.target_factory(CxxLibrary)
+build = craftr.target_factory(CxxBuild)
 prebuilt = craftr.target_factory(CxxPrebuilt)
