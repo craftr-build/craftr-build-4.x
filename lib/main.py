@@ -38,6 +38,12 @@ def main():
   # able to augment the options/
   args, unknown_args = parser.parse_known_args()
 
+  if not args.builddir:
+    if args.projectdir.startswith(path.pardir):
+      args.builddir = '.'
+    else:
+      args.builddir = 'build'
+
   # The builddir can not be the same as the projectdir.
   args.projectdir = path.canonical(args.projectdir)
   if args.projectdir == path.cwd() and not args.builddir:
