@@ -1,85 +1,51 @@
 
-import string
 import craftr from 'craftr'
-import cxx from '.'
 import {log, macro, path} from 'craftr/utils'
-import _msvc from 'craftr/lang/msvc'
-import _base from './base'
+import {MsvcToolkit} from 'craftr/lang/msvc'
+import base from './base'
 
 
-class MsvcCompiler(_base.Compiler):
+class MsvcCompiler(base.Compiler):
 
-  def __init__(self, toolkit=None):
-    self.toolkit = toolkit or _msvc.MsvcToolkit.from_config()
+  name = 'msvc'
 
-  def init_macro_context(self, target, ctx):
-    data = target.data
-    if data.type == 'binary':
-      ctx.define('ext', '.exe')
-    elif data.preferred_linkage == 'static':
-      ctx.define('ext', '.lib')
-    elif data.preferred_linkage == 'shared':
-      ctx.define('ext', '.dll')
-    else: assert False, (data.type, data.preferred_linkage)
+  compiler_c = ['cl', '/nologo']
+  compiler_cpp = ['cl', '/nologo']
+  compiler_out = ['/c', '/Fo%ARG%']
 
-  def create_session(self):
-    return MsvcCompilerSession(self)
+  debug_flag = '/Z7'
+  define_flag = '/D%ARG%'
+  include_flag = '/I%ARG%'
+  expand_flag = '/E'
+  warnings_flag = '/W4'
+  warnings_as_errors_flag = '/WX'
 
+  linker = ['link', '/nologo']
+  linker_out = '/OUT:%ARG%'
+  linker_shared = '/DLL'
+  linker_exe = []
 
-class MsvcCompilerSession(_base.CompilerSession):
+  archiver = ['lib', '/nologo']
+  archiver_out = '/OUT:%ARG%'
 
-  def __init__(self, compiler):
-    super().__init__(compiler)
-    self.objs = []
-    self.obj_actions = []
+  lib_macro = None
+  ext_lib_macro = '.lib'
+  ext_dll_macro = '.dll'
+  ext_exe_macro = '.exe'
+  obj_macro = '.obj'
 
-  def compile_c(self, srcs):
-    # XXX Source files in different folders could have the same basename!
-    for src in srcs:
-      obj_file = path.join(self.obj_dir, path.rmvsuffix(path.base(src)) + '.obj')
-      command = ['cl', src, '/Fo' + obj_file, '/nologo', '/c']
-      action = craftr.actions.System.new(
-        self.target,
-        name = path.base(src),
-        deps = [self.obj_dir_action, ...],
-        commands = [command],
-        input_files = [src],
-        output_files = [obj_file],
-        environ = self.compiler.toolkit.environ
-      )
-      self.objs.append(obj_file)
-      self.obj_actions.append(action)
-
-  def link(self, outfile):
-    libs = []
-    for data in self.target.deps().attr('data'):
-      if isinstance(data, cxx.CxxBuild) and data.type == 'library':
-        assert data.outname_full, data.target
-        libs.append(data.outname_full)
-      elif isinstance(data, cxx.CxxPrebuilt):
-        # XXX
-        pass
-
-    if self.data.type == 'library' and self.data.preferred_linkage == 'static':
-      command = [self.compiler.toolkit.cl_info.lib_program, '/OUT:' + outfile] + self.objs + libs
-    else:
-      command = [self.compiler.toolkit.cl_info.link_program, '/OUT:' + outfile] + self.objs + libs
-      if self.data.preferred_linkage == 'shared':
-        command += ['/dynamic']  # XXX
-    command += ['/nologo']
-    craftr.actions.System.new(
-      self.target,
-      name = 'link',
-      deps = self.obj_actions,
-      commands = [command],
-      input_files = self.objs,
-      output_files = [outfile],
-      environ = self.compiler.toolkit.environ
+  def __init__(self, toolkit):
+    super().__init__(
+      version = toolkit.cl_version,
+      compiler_env = toolkit.environ,
+      linker_env = toolkit.environ,
+      archiver_env = toolkit.environ
     )
+    self.toolkit = toolkit
 
 
 def get_compiler(fragment):
   if fragment:
     log.warn('craftr/lang/cxx/msvc: Fragment not supported. (fragment = {!r})'
       .format(fragment))
-  return MsvcCompiler()
+  return MsvcCompiler(MsvcToolkit.from_config())

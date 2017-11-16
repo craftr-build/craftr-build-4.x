@@ -39,6 +39,11 @@ __Parameters__
 
 * `srcs` (list of str) &ndash; A list of C and/or C++ source files to compile.
 * `type` (str) &ndash; The build type. Must be either `library` or `binary`.
+* `debug` (bool) &ndash; Build this target with debug symbols. If not specified,
+  this option is inherit from the target's dependents.
+* `warnings` (bool) &ndash; Enable all warnings. Defaults to `False`.
+* `warnings_es_errors (bool)` &ndash; Promote warnings to errors. Defaults to
+  `False`.
 * `includes` (list of str) &ndash; A list of header include directories that
   are available to the source files in this target.
 * `exported_includes` (list of str) &ndash; A list of header include

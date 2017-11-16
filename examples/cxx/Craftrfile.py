@@ -14,3 +14,5 @@ cxx.build(
   type = 'binary',
   srcs = 'main.c'
 )
+
+cxx.run(':main')
