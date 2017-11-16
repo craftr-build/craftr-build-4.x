@@ -258,24 +258,39 @@ def joinref(scope, name):
     return ':{}'.format(name)
 
 
-def target_factory(target_data_class):
+class target_factory(object):
   """
-  Returns a function that creates a new target in the current session of the
-  specified *target_data_class*. The factory function accepts private and
-  transitive deps not only as #Target instances but also as strings that will
-  be resolved in the most-recently executed cell.
+  Wrapper for #TargetData classes that produces a #Target with the assigned
+  #TargetData subclass.
   """
 
-  @functools.wraps(target_data_class)
-  def factory(*, name, deps=(), transitive_deps=(), explicit=False,
+  def __init__(self, data_class):
+    self.data_class = data_class
+    self.preprocessors = []
+    self.postprocessors = []
+
+  def __repr__(self):
+    return '<target_factory data_class={!r}>'.format(self.data_class)
+
+  def __call__(self,*, name, deps=(), transitive_deps=(), explicit=False,
               console=False, **kwargs):
+    for func in self.preprocessors:
+      func(kwargs)
     deps = _session.current.resolve_targets(deps)
     transitive_deps = _session.current.resolve_targets(transitive_deps)
-    data = target_data_class(**kwargs)
+    data = self.data_class(**kwargs)
     cell = _session.current.current_cell(create=True)
     target = Target(cell, name, deps, transitive_deps, data,
                     explicit=explicit, console=console)
     cell.add_target(target)
+    for func in self.postprocessors:
+      func(target)
     return target
 
-  return factory
+  def preprocess(self, func):
+    self.preprocessors.append(func)
+    return func
+
+  def postprocessors(self, func):
+    self.postprocessors.append(func)
+    return func
