@@ -43,6 +43,17 @@ class MsvcCompiler(base.Compiler):
     )
     self.toolkit = toolkit
 
+  def build_link_flags(self, target, outfile, additional_input_files):
+    command = super().build_link_flags(target, outfile, additional_input_files)
+    if target.data.linkname_full:
+      command += ['/IMPLIB:' + target.data.linkname_full]
+    return command
+
+  def set_target_outputs(self, target, ctx):
+    super().set_target_outputs(target, ctx)
+    if target.data.type == 'library' and target.data.preferred_linkage == 'shared':
+      target.data.linkname_full = path.setsuffix(target.data.outname_full, '.lib')
+
 
 def get_compiler(fragment):
   if fragment:

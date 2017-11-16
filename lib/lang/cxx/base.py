@@ -15,6 +15,10 @@ class CxxBuild(craftr.target.TargetData):
                debug: bool = None,
                warnings: bool = True,
                warnings_as_errors: bool = False,
+               static_defines: List[str] = None,
+               exported_static_defines: List[str] = None,
+               shared_defines: List[str] = None,
+               exported_shared_defines: List[str] = None,
                includes: List[str] = None,
                exported_includes: List[str] = None,
                defines: List[str] = None,
@@ -45,6 +49,10 @@ class CxxBuild(craftr.target.TargetData):
     self.debug = debug
     self.warnings = warnings
     self.warnings_as_errors = warnings_as_errors
+    self.static_defines = static_defines or []
+    self.exported_static_defines = exported_static_defines or []
+    self.shared_defines = shared_defines or []
+    self.exported_shared_defines = exported_shared_defines or []
     self.includes = [craftr.localpath(x) for x in (includes or [])]
     self.exported_includes = [craftr.localpath(x) for x in (exported_includes or [])]
     self.defines = defines or []
@@ -61,6 +69,9 @@ class CxxBuild(craftr.target.TargetData):
 
     # Set after translate().
     self.outname_full = None
+    # Required for MSVC because the file to link with is different
+    # than the actual output DLL output file.
+    self.linkname_full = None
 
   def translate(self, target):
     # Update the preferred linkage of this target.
@@ -118,11 +129,10 @@ class CxxBuild(craftr.target.TargetData):
             print('#include "{}"'.format(path.abs(filename)), file=fp)
         srcs[:] = [unity_filename]
 
-    # Determine the output filename.
     ctx = macro.Context()
     self.compiler.init_macro_context(target, ctx)
-    self.outname_full = macro.parse(self.outname).eval(ctx)
-    self.outname_full = path.join(target.cell.builddir, self.outname_full)
+    self.compiler.set_target_outputs(target, ctx)
+    assert self.outname_full is not None, 'compiler.set_target_outputs() did not set outname_full'
 
     # Compile object files.
     obj_dir = path.join(target.cell.builddir, 'obj', target.name)
@@ -150,14 +160,15 @@ class CxxBuild(craftr.target.TargetData):
         obj_files.append(objfile)
 
     if obj_files:
-      command = self.compiler.build_link_flags(target, self.outname_full)
+      additional_input_files = []
+      command = self.compiler.build_link_flags(target, self.outname_full, additional_input_files)
       command.extend(obj_files)
       craftr.actions.System.new(
         target,
         commands = [command],
         deps = obj_actions,
         environ = self.compiler.linker_env,
-        input_files = obj_files,
+        input_files = obj_files + additional_input_files,
         output_files = [self.outname_full]
       )
 
@@ -230,6 +241,8 @@ class Compiler(types.NamedObject):
   linker_out: List[str]               # Specify the linker output file.
   linker_shared: List[str]            # Flag(s) to link a shared library.
   linker_exe: List[str]               # Flag(s) to link an executable binary.
+  # XXX support MSVC /WHOLEARCHIVE
+  # XXX support Uninx -fPIC
 
   archiver: List[str]                 # Arguments to invoke the archiver.
   archiver_env: List[str]             # Environment variables for the archiver.
@@ -285,14 +298,23 @@ class Compiler(types.NamedObject):
     assert isinstance(data, CxxBuild)
     assert data.preferred_linkage in ('static', 'shared')
 
-    includes = list(data.includes) + list(data.exported_includes)
     defines = list(data.defines) + list(data.exported_defines)
+    if data.type == 'library' and data.preferred_linkage == 'shared':
+      defines += list(data.shared_defines) + list(data.exported_shared_defines)
+    else:
+      defines += list(data.static_defines) + list(data.exported_static_defines)
+
+    includes = list(data.includes) + list(data.exported_includes)
     flags = list(data.compiler_flags) + list(data.exported_compiler_flags)
     for dep in target.deps().attr('data'):
       if isinstance(dep, CxxBuild):
         includes.extend(dep.exported_includes)
         defines.extend(dep.exported_defines)
         flags.extend(dep.exported_compiler_flags)
+        if dep.type == 'library' and dep.preferred_linkage == 'shared':
+          defines.extend(dep.exported_shared_defines)
+        else:
+          defines.extend(dep.exported_static_defines)
       elif isinstance(dep, CxxPrebuilt):
         includes.extend(dep.includes)
         defines.extend(dep.defines)
@@ -315,7 +337,8 @@ class Compiler(types.NamedObject):
   def build_compile_out_flags(self, target, language, objfile):
     return self.expand(self.compiler_out, objfile)
 
-  def build_link_flags(self, target, outfile):
+  def build_link_flags(self, target, outfile, additional_input_files):
+    assert isinstance(additional_input_files, list)
     is_archive = False
     is_shared = False
 
@@ -340,18 +363,22 @@ class Compiler(types.NamedObject):
       command.extend(self.expand(self.linker_out, outfile))
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
-    additional_libs = []
     flags = []
     for dep in target.deps().attr('data'):
       if isinstance(dep, CxxBuild):
         if dep.type == 'library':
-          additional_libs.append(dep.outname_full)
+          additional_input_files.append(dep.linkname_full or dep.outname_full)
           flags.extend(dep.linker_flags)
       elif isinstance(dep, CxxPrebuilt):
         flags.extend(dep.linker_flags)
         if data.link_style == 'static' and dep.static_libs or not dep.shared_libs:
-          additional_libs.extend(dep.static_libs)
+          additional_input_files.extend(dep.static_libs)
         elif data.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
-          additional_libs.extend(dep.shared_libs)
+          additional_input_files.extend(dep.shared_libs)
 
-    return command + flags + additional_libs
+    return command + flags + additional_input_files
+
+  def set_target_outputs(self, target, ctx):
+    assert isinstance(target.data, CxxBuild)
+    target.data.outname_full = macro.parse(target.data.outname).eval(ctx)
+    target.data.outname_full = path.join(target.cell.builddir, target.data.outname_full)

@@ -44,6 +44,12 @@ __Parameters__
 * `warnings` (bool) &ndash; Enable all warnings. Defaults to `False`.
 * `warnings_es_errors (bool)` &ndash; Promote warnings to errors. Defaults to
   `False`.
+* `static_defines` (list of str) &ndash; A list of preprocessor macros that
+  will only be set when the target is built as a static library or executable.
+* `exported_static_defines` (list of str)
+* `shared_defines` (list of str) &ndash; A list of preprocessor macros that
+  will only be set when the target is built as a shared library.
+* `exported_shared_defines` (list of str)
 * `includes` (list of str) &ndash; A list of header include directories that
   are available to the source files in this target.
 * `exported_includes` (list of str) &ndash; A list of header include
