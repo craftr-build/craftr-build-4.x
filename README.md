@@ -21,9 +21,11 @@
 
 __Todolist__
 
-* Language modules for C, C++, Cython and Vala
+* Language modules for Cython and Vala
 * The default build backend sometimes runs into a deadlock when interrupting
   the build process with CTRL+C
+* Determine additional file dependencies for C/C++ build targets using MSVC
+  `/showIncludes` and GCC/Clang respective options
 
 ## Installation
 
@@ -142,10 +144,8 @@ cxx.build(
 cxx.build(
   name = 'main',
   type = 'binary',
-  srcs = 'main.c',
-  link_style = 'static',
-  binname = 'main$(ext)'
+  srcs = 'main.c'
 )
 
-gentarget(name = 'main_run', commands = [[t(':main').binname_full]])
+cxx.run(':main')
 ```
