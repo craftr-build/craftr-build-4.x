@@ -65,7 +65,7 @@ class _Concatenation(_Node):
     if len(self.children) == 0:
       return _String('')
     elif len(self.children) == 1:
-      child = self._children[0]
+      child = self.children[0]
       if isinstance(child, _Concatenation):
         child = child.unpack()
       return child
