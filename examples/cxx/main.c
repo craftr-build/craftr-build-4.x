@@ -1,5 +1,5 @@
 
-void say_hello();  // src/hello.c
+#include "src/hello.h"
 
 int main() {
   say_hello();
