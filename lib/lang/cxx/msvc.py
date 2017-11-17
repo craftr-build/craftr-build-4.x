@@ -39,9 +39,9 @@ class MsvcCompiler(base.Compiler):
   archiver_out = '/OUT:%ARG%'
 
   lib_macro = None
-  ext_lib_macro = '.lib'
-  ext_dll_macro = '.dll'
-  ext_exe_macro = '.exe'
+  ext_lib_macro = staticmethod(base.extmacro('$(0).lib', '.$(0).lib'))
+  ext_dll_macro = staticmethod(base.extmacro('$(0).dll', '.$(0).dll'))
+  ext_exe_macro = staticmethod(base.extmacro('$(0).exe', '.$(0).exe'))
   obj_macro = '.obj'
 
   def __init__(self, toolkit):

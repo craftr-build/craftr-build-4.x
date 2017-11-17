@@ -21,7 +21,7 @@ class SafeLexer(strex.Lexer):
 
 class _Node:
 
-  def eval(self, ctx):
+  def eval(self, ctx, args):
     raise NotImplementedError
 
 
@@ -30,14 +30,21 @@ class _Macro(_Node):
   def __init__(self, name, args):
     self.name = name
     self.args = args
+    try:
+      self.name_as_int = int(self.name)
+    except ValueError:
+      self.name_as_int = None
 
   def __repr__(self):
     return '_Macro(name={!r}, args={!r})'.format(self.name, self.args)
 
-  def eval(self, ctx):
+  def eval(self, ctx, args):
+    if self.name_as_int is not None:
+      if self.name_as_int >= 0 and self.name_as_int < len(args):
+        return args[self.name_as_int]
+      return ''
     func = ctx.get_function(self.name)
-    args = [x.eval(ctx) for x in self.args]
-    return func(args)
+    return func(ctx, [x.eval(ctx, args) for x in self.args])
 
 
 class _String(_Node):
@@ -49,7 +56,7 @@ class _String(_Node):
   def __repr__(self):
     return '_String(s={!r})'.format(self.s)
 
-  def eval(self, ctx):
+  def eval(self, ctx, args):
     return self.s
 
 
@@ -61,6 +68,21 @@ class _Concatenation(_Node):
   def __repr__(self):
     return '_Concatenation(children={!r})'.format(self.children)
 
+  def strip_whitespace(self):
+    """
+    Removes whitespace from the left and right end of the node. Eventually,
+    #_String nodes will be removed if they result in an empty string.
+    """
+
+    if self.children and isinstance(self.children[0], _String):
+      self.children[0].s = self.children[0].s.lstrip()
+      if not self.children[0].s:
+        self.children.pop(0)
+    if self.children and isinstance(self.children[-1], _String):
+      self.children[-1].s = self.children[-1].s.rstrip()
+      if not self.children[-1].s:
+        self.children.pop(-1)
+
   def unpack(self):
     if len(self.children) == 0:
       return _String('')
@@ -71,8 +93,8 @@ class _Concatenation(_Node):
       return child
     return self
 
-  def eval(self, ctx):
-    return ''.join(x.eval(ctx) for x in self.children)
+  def eval(self, ctx, args):
+    return ''.join(x.eval(ctx, args) for x in self.children)
 
 
 class Parser:
@@ -112,6 +134,8 @@ class Parser:
         result.children.append(_String(token.value))
       else:
         raise RuntimeError('unexpected token', token)
+    if inside_expr:
+      result.strip_whitespace()
     return result
 
   def _parse_macro(self, lexer):
@@ -142,7 +166,7 @@ class Context:
   def define(self, name, value):
     if isinstance(value, str):
       _value = value
-      def value(args):
+      def value(ctx, args):
         return _value
     elif not callable(value):
       raise ValueError('expected string or callable')

@@ -163,7 +163,7 @@ class CxxBuild(craftr.target.TargetData):
     mkdir = craftr.actions.Mkdir.new(target, deps=..., directory=obj_dir)
     obj_files = []
     obj_actions = []
-    obj_suffix = macro.parse('$(obj)').eval(ctx)
+    obj_suffix = macro.parse('$(obj)').eval(ctx, [])
 
     for lang, srcs in (('c', c_srcs), ('cpp', cpp_srcs)):
       if not srcs: continue
@@ -302,7 +302,7 @@ class Compiler(types.NamedObject):
   obj_macro: Union[str, Callable[[List[str]], str]] = None
 
   def __repr__(self):
-    return '<{} name={!r} version={!r}>'.format(self.name, self.version)
+    return '<{} name={!r} version={!r}>'.format(type(self).__name__, self.name, self.version)
 
   def expand(self, args, value=None):
     if isinstance(args, str):
@@ -427,5 +427,27 @@ class Compiler(types.NamedObject):
 
   def set_target_outputs(self, target, ctx):
     assert isinstance(target.data, CxxBuild)
-    target.data.outname_full = macro.parse(target.data.outname).eval(ctx)
+    target.data.outname_full = macro.parse(target.data.outname).eval(ctx, [])
     target.data.outname_full = path.join(target.cell.builddir, target.data.outname_full)
+
+
+def extmacro(without_version, with_version):
+  """
+  Returns a function that should be used for the #Compiler.ext_lib_macro,
+  #Compiler.ext_dll_macro and #Compiler.ext_exe_macro members because the
+  `$(ext)` macro should also support a *version* argument.
+
+  Note that you should wrap the result in `staticmethod()` if you assign it
+  to a member on class-level.
+  """
+
+  without_version = macro.parse(without_version)
+  with_version = macro.parse(with_version)
+  def compiled_extmacro(ctx, args):
+    require.breakpoint()
+    if args and args[0]:
+      return with_version.eval(ctx, args)
+    else:
+      return without_version.eval(ctx, args)
+
+  return compiled_extmacro
