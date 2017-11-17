@@ -2,9 +2,9 @@
 Base classes for implementing compilers.
 """
 
-from typing import List, Dict, Union, Callable
+from typing import List, Dict, Union, Callable, Type
 import craftr from 'craftr'
-import {macro, path, types} from 'craftr/utils'
+import {log, macro, path, types} from 'craftr/utils'
 
 
 class CxxBuild(craftr.target.TargetData):
@@ -31,7 +31,8 @@ class CxxBuild(craftr.target.TargetData):
                preferred_linkage: str = 'any',
                outname: str = '$(lib)$(name)$(ext)',
                unity_build: bool = None,
-               compiler: 'Compiler' = None):
+               compiler: 'Compiler' = None,
+               options: Dict = None):
     if type not in ('library', 'binary'):
       raise ValueError('invalid type: {!r}'.format(type))
     if not link_style:
@@ -44,6 +45,13 @@ class CxxBuild(craftr.target.TargetData):
       unity_build = bool(craftr.session.config.get('cxx.unity_build', False))
     if isinstance(srcs, str):
       srcs = [srcs]
+    if options is None:
+      options = {}
+    if isinstance(options, dict):
+      options = compiler.options_class(**options)
+    if not isinstance(options, compiler.options_class):
+      raise TypeError('options must be None, dict or {}, got {} instead'
+        .format(compilre.options_class.__name__, type(options).__name__))
     self.srcs = [craftr.localpath(x) for x in (srcs or [])]
     self.type = type
     self.debug = debug
@@ -66,12 +74,28 @@ class CxxBuild(craftr.target.TargetData):
     self.outname = outname
     self.unity_build = unity_build
     self.compiler = compiler
+    self.options = options
 
     # Set after translate().
     self.outname_full = None
     # Required for MSVC because the file to link with is different
     # than the actual output DLL output file.
     self.linkname_full = None
+
+  def is_staticlib(self):
+    return self.type == 'library' and self.preferred_linkage == 'static'
+
+  def is_sharedlib(self):
+    return self.type == 'library' and self.preferred_linkage == 'shared'
+
+  def is_binary(self):
+    return self.type == 'binary'
+
+  def mounted(self, target):
+    super().mounted(target)
+    if self.options.__unknown_options__:
+      log.warn('[{}]: Unknown compiler option(s): {}'.format(
+        target.long_name, ', '.join(self.options.__unknown_options__.keys())))
 
   def translate(self, target):
     # Update the preferred linkage of this target.
@@ -213,6 +237,28 @@ class CxxRunTarget(craftr.Gentarget):
     super().translate(target)
 
 
+class CompilerOptions(types.NamedObject):
+  """
+  Base-class for the options supported by a specific compiler. Subclasses
+  should provide annotations of the supported members. The constructor of this
+  class accepts any keyword arguments, and will store all unknown options in
+  the `__unknown_options__` dictionary.
+
+  All options should have default values.
+  """
+
+  def __init__(self, **kwargs):
+    self.__unknown_options__ = {}
+    for key in tuple(kwargs.keys()):
+      if key not in self.__annotations__:
+        self.__unknown_options__[key] = kwargs.pop(key)
+    super().__init__(**kwargs)
+
+  def __repr__(self):
+    return '<{} ({} unknown option(s))>'.format(type(self).__name__,
+      len(self.__unknown_options__))
+
+
 class Compiler(types.NamedObject):
   """
   Represents the flags necessary to support the compilation and linking with
@@ -223,6 +269,7 @@ class Compiler(types.NamedObject):
 
   name: str
   version: str
+  options_class: Type[CompilerOptions]
 
   compiler_c: List[str]               # Arguments to invoke the C compiler.
   compiler_cpp: List[str]             # Arguments to invoke the C++ compiler.

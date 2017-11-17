@@ -79,6 +79,10 @@ __Parameters__
   optimize and also lead to short build times. However, rebuilding the target
   will lead to all sources to be recompiled. Default is based on the
   `cxx.unity_build` option.
+* `options` (dict of (str, any)) &ndash; Additional options for the current
+  compiler. The options will be converted into the compiler's `option_class`
+  where unknown options are allowed but will trigger a warning when the target
+  is created.
 
 ### `cxx.prebuilt()`
 
