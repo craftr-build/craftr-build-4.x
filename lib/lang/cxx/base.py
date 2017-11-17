@@ -15,6 +15,7 @@ class CxxBuild(craftr.target.TargetData):
                debug: bool = None,
                warnings: bool = True,
                warnings_as_errors: bool = False,
+               optimize: str = None,
                static_defines: List[str] = None,
                exported_static_defines: List[str] = None,
                shared_defines: List[str] = None,
@@ -35,6 +36,8 @@ class CxxBuild(craftr.target.TargetData):
                options: Dict = None):
     if type not in ('library', 'binary'):
       raise ValueError('invalid type: {!r}'.format(type))
+    if optimize not in (None, 'speed', 'size'):
+      raise ValueError('invalid value for optimize: {!r}'.format(optimize))
     if not link_style:
       link_style = craftr.session.config.get('cxx.link_style', 'static')
     if link_style not in ('static', 'shared'):
@@ -57,6 +60,7 @@ class CxxBuild(craftr.target.TargetData):
     self.debug = debug
     self.warnings = warnings
     self.warnings_as_errors = warnings_as_errors
+    self.optimize = optimize
     self.static_defines = static_defines or []
     self.exported_static_defines = exported_static_defines or []
     self.shared_defines = shared_defines or []
@@ -117,12 +121,28 @@ class CxxBuild(craftr.target.TargetData):
             .format(self.preferred_linkage))
     assert self.preferred_linkage in ('static', 'shared')
 
-    # Inherit the debug option if it is None.
+    # Inherit the debug option if it is not set.
+    # XXX What do to on different values?
     if self.debug is None:
       for data in target.dependents().attr('data').of_type(CxxBuild):
         if data.debug:
           self.debug = True
           break
+      else:
+        self.debug = False
+
+    # Inherit the optimize flag if it is not set.
+    # XXX What do to on different values?
+    if self.optimize is None:
+      for data in target.dependents().attr('data').of_type(CxxBuild):
+        if data.optimize:
+          self.optimize = data.optimize
+          break
+      else:
+        self.optimize = craftr.session.config.get('cxx.optimize', 'speed')
+      if self.optimize not in ('speed', 'size'):
+        raise RuntimeError('[{}] invalid optimize: {!r}'.format(
+          target.long_name, self.optimize))
 
     # Separate C and C++ sources.
     c_srcs = []
@@ -282,6 +302,8 @@ class Compiler(types.NamedObject):
   expand_flag: List[str]              # Flag(s) to request macro-expanded source.
   warnings_flag: List[str]            # Flag(s) to enable all warnings.
   warnings_as_errors_flag: List[str]  # Flag(s) to turn warnings into errors.
+  optimize_speed_flag: List[str]
+  optimize_size_flag: List[str]
 
   linker: List[str]                   # Arguments to invoke the linker.
   linker_env: Dict[str, str]          # Environment variables for the binary linker.
@@ -378,6 +400,8 @@ class Compiler(types.NamedObject):
       command.extend(self.expand(self.warnings_flag))
     if data.warnings_as_errors:
       command.extend(self.expand(self.warnings_as_errors))
+    if not data.debug:
+      command += self.expand(getattr(self, 'optimize_' + data.optimize + '_flag'))
 
     return command
 
@@ -444,7 +468,6 @@ def extmacro(without_version, with_version):
   without_version = macro.parse(without_version)
   with_version = macro.parse(with_version)
   def compiled_extmacro(ctx, args):
-    require.breakpoint()
     if args and args[0]:
       return with_version.eval(ctx, args)
     else:

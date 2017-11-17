@@ -44,6 +44,8 @@ __Parameters__
 * `warnings` (bool) &ndash; Enable all warnings. Defaults to `False`.
 * `warnings_es_errors (bool)` &ndash; Promote warnings to errors. Defaults to
   `False`.
+* `optimize` (str) &ndash; The optimization type. Will not be considered when
+  building the target in debug mode.
 * `static_defines` (list of str) &ndash; A list of preprocessor macros that
   will only be set when the target is built as a static library or executable.
 * `exported_static_defines` (list of str)
