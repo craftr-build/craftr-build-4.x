@@ -98,11 +98,13 @@ class MsvcCompiler(base.Compiler):
     options = data.options
     if options.nodefaultlib:
       command += ['/NODEFAULTLIB']
+    if data.is_sharedlib():
+      command += ['/IMPLIB:' + data.linkname_full]  # set from set_target_outputs()
     return command
 
   def set_target_outputs(self, target, ctx):
     super().set_target_outputs(target, ctx)
-    if target.data.type == 'library' and target.data.preferred_linkage == 'shared':
+    if target.data.is_sharedlib():
       target.data.linkname_full = path.setsuffix(target.data.outname_full, '.lib')
 
 
