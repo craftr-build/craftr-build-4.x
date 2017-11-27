@@ -25,7 +25,6 @@
   },
   "cfg(dev).dependencies": {
     "nodepy-nosetests": "git+https://github.com/nodepy/nodepy-nosetests.git@v0.0.6",
-    "@NiklasRosenstein/yassg": "git+https://github.com/NiklasRosenstein/yassg.git@master",
-    "@NiklasRosenstein/deft": "git+https://github.com/NiklasRosenstein/deft.git@master"
+    "@NiklasRosenstein/yassg": "git+https://github.com/NiklasRosenstein/yassg.git@v0.2.0"
   }
 }
