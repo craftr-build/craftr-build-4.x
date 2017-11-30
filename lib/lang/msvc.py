@@ -15,8 +15,7 @@ import subprocess
 import sys
 import tempfile
 import typing as t
-import path from '../utils/path'
-import sh from '../utils/sh'
+import {log, path, sh} from '../utils'
 import {NamedObject} from '../utils/types'
 import craftr from '../public'
 
@@ -275,7 +274,7 @@ class MsvcToolkit(NamedObject):
         with contextlib.suppress(FileNotFoundError):
           cache = cls.from_file(cls.CACHEFILE())
       except json.JSONDecodeError as e:
-        print('warning: could not load MsvcToolkit cache ({}): {}'
+        log.warn('could not load MsvcToolkit cache ({}): {}'
           .format(cls.CACHEFILE(), e))
 
     key_info = (version, arch, platform_type, sdk_version)
@@ -339,14 +338,14 @@ class MsvcToolkit(NamedObject):
   @functools.lru_cache()
   def get(cls):
     toolkit = cls.from_config()
-    print('MSVC v{}-{} ({})'.format(
+    log.info('MSVC v{}-{} ({})'.format(
       toolkit.version, toolkit.arch, toolkit.directory))
     return toolkit
 
 
 def main():
   if not MsvcInstallation.list():
-    print('no MSVC installations could be detected.', file=sys.stderr)
+    log.error('no MSVC installations could be detected.')
     sys.exit(1)
   for inst in MsvcInstallation.list():
     print('- %4d: %s' % (inst.version, inst.directory))

@@ -145,7 +145,7 @@ class CscInfo(NamedObject):
 
       csc = CscInfo(impl, program, environ, version)
 
-    print('{} v{}'.format('CSC' if csc.impl == 'net' else csc.impl, csc.version))
+    log.info('{} v{}'.format('CSC' if csc.impl == 'net' else csc.impl, csc.version))
     return csc
 
 
