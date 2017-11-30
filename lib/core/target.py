@@ -212,16 +212,10 @@ class TargetData:
     import {ActionData, Mkdir, System} from 'craftr/core/action'
     class MyAction(ActionData):
       def translate(self, target):
-        mkdir = Mkdir.new(
-          target,
-          name = 'mkdir',
-          deps = [],
-          directory=directory
-        )
+        # ...
         System.new(
           target,
           name = 'compile',
-          deps = [mkdir, ...],
           commands = commands
         )
     ```

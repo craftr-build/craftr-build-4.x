@@ -231,15 +231,9 @@ class Csharp(craftr.target.TargetData):
       command += self.extra_arguments
     command += self.srcs
 
-    mkdir = craftr.actions.Mkdir.new(
-      target,
-      name = 'mkdir',
-      directory = self.dll_dir
-    )
     build = craftr.actions.System.new(
       target,
       name = 'csc',
-      deps = [mkdir, ...],
       environ = self.csc.environ,
       commands = [command],
       input_files = self.srcs,

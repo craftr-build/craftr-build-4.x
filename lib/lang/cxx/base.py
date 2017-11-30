@@ -180,7 +180,6 @@ class CxxBuild(craftr.target.TargetData):
 
     # Compile object files.
     obj_dir = path.join(target.cell.builddir, 'obj', target.name)
-    mkdir = craftr.actions.Mkdir.new(target, deps=..., directory=obj_dir)
     obj_files = []
     obj_actions = []
     obj_suffix = macro.parse('$(obj)').eval(ctx, [])
@@ -196,7 +195,6 @@ class CxxBuild(craftr.target.TargetData):
         obj_actions.append(craftr.actions.System.new(
           target,
           commands = [command],
-          deps = [mkdir],
           environ = self.compiler.compiler_env,
           input_files = [filename],
           output_files = [objfile]

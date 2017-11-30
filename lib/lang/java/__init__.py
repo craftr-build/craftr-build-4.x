@@ -178,16 +178,9 @@ class JavaLibrary(JavaBase):
       command += self.srcs
       command += extra_arguments
 
-      mkdir = craftr.actions.Mkdir.new(
-        target,
-        name = 'mkdir',
-        deps = [],
-        directory = self.class_dir
-      )
       javac = craftr.actions.System.new(
         target,
         name = 'javac',
-        deps = [mkdir, ...],
         commands = [command],
         input_files = self.srcs,
         output_files = classfiles
@@ -204,16 +197,10 @@ class JavaLibrary(JavaBase):
       command.append(self.main_class)
     command += ['-C', self.class_dir, '.']
 
-    mkdir = craftr.actions.Mkdir.new(
-      target,
-      name = 'jar_dir',
-      deps = [],
-      directory = self.jar_dir
-    )
     craftr.actions.System.new(
       target,
       name = 'jar',
-      deps = [javac, mkdir, ...] if javac else [mkdir, ...],
+      deps = [javac, ...],
       commands = [command],
       input_files = classfiles,
       output_files = [jar_filename]
@@ -273,18 +260,10 @@ class JavaBinary(JavaLibrary):
       for infile in inputs:
         command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
 
-    if 'jar_dir' not in target.actions:
-      mkdir = craftr.actions.Mkdir.new(
-        target,
-        name = 'jar_dir',
-        deps = [],
-        directory=self.jar_dir
-      )
-
     craftr.actions.System.new(
       target,
       name = self.dist_type,
-      deps = [target.actions.get('jar'), target.actions['jar_dir'], ...],
+      deps = [target.actions.get('jar'), ...],
       commands = [command],
       input_files = inputs,
       output_files = [self.jar_filename]

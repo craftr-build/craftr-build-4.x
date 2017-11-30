@@ -440,12 +440,22 @@ class System(ActionData):
     return ifiles < ofiles
 
   def execute(self, action, progress):
-    code = 0
+    # Make sure the output directories exist.
+    output_dirs = set(os.path.normpath(os.path.dirname(x)) for x in self.output_files)
+    for output_dir in output_dirs:
+      try:
+        os.makedirs(output_dir, exist_ok=True)
+      except OSError as e:
+        progress.print(e)
+        return e.errno
+
+    # Run the commands.
     for command in self.commands:
       code = progress.system(command, cwd=self.cwd, environ=self.environ)
       if code != 0:
-        break
-    return code
+        return code
+
+    return 0
 
   def generate_hash(self, action, hasher):
     hasher.update(b'<SystemAction>')
@@ -481,11 +491,13 @@ class DownloadFile(ActionData):
     self.url = url
     self.filename = filename
 
+  def get_display(self, action):
+    return 'Download "{}" to "{}"'.format(self.url, self.filename)
+
   def is_skippable(self, action):
     return path.isfile(self.filename)
 
   def execute(self, action, progress):
-    progress.print('[Downloading]: {}'.format(self.url))
     os.makedirs(path.dir(self.filename), exist_ok=True)
     with open(self.filename, 'wb') as fp:
       for chunk in requests.get(self.url).iter_content(4096):
