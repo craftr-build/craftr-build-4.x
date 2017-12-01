@@ -36,6 +36,7 @@ class MsvcCompiler(base.Compiler):
   linker_out = '/OUT:%ARG%'
   linker_shared = '/DLL'
   linker_exe = []
+  linker_lib ='%ARG%.lib'
 
   archiver = ['lib', '/nologo']
   archiver_out = '/OUT:%ARG%'

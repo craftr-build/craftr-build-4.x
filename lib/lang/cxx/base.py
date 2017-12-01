@@ -2,14 +2,25 @@
 Base classes for implementing compilers.
 """
 
+__all__ = [
+  'infer_linkage',
+  'infer_debug',
+  'CxxBuild',
+  'CxxPrebuilt',
+  'CxxRunTarget',
+  'CompilerOptions',
+  'Compiler',
+  'extmacro'
+]
+
 from typing import List, Dict, Union, Callable, Type
 import craftr from 'craftr'
-import {log, macro, path, types} from 'craftr/utils'
+import {it, log, macro, path, types} from 'craftr/utils'
 
 
 def infer_linkage(target):
   choices = set()
-  for data in target.dependents().attr('data').of_type(CxxBuild):
+  for data in target.dependent_impls().of_type(CxxBuild):
     choices.add(data.link_style)
   if len(choices) > 1:
     log.warn('Target "{}" has preferred_linkage=any, but dependents '
@@ -27,7 +38,7 @@ def infer_linkage(target):
 
 
 def infer_debug(target):
-  for data in target.dependents().attr('data').of_type(CxxBuild):
+  for data in target.dependent_impls().of_type(CxxBuild):
     if data.debug:
       return True
   else:
@@ -55,6 +66,8 @@ class CxxBuild(craftr.target.TargetData):
                exported_compiler_flags: List[str] = None,
                linker_flags: List[str] = None,
                exported_linker_flags: List[str] = None,
+               syslibs: List[str] = None,
+               exported_syslibs: List[str] = None,
                link_style: str = None,
                preferred_linkage: str = 'any',
                outname: str = '$(lib)$(name)$(ext)',
@@ -100,6 +113,8 @@ class CxxBuild(craftr.target.TargetData):
     self.exported_compiler_flags = exported_compiler_flags or []
     self.linker_flags = linker_flags or []
     self.exported_linker_flags = exported_linker_flags or []
+    self.syslibs = syslibs or []
+    self.exported_syslibs = exported_syslibs or []
     self.link_style = link_style
     self.preferred_linkage = preferred_linkage
     self.outname = outname
@@ -232,6 +247,7 @@ class CxxPrebuilt(craftr.target.TargetData):
                shared_libs: List[str] = None,
                compiler_flags: List[str] = None,
                linker_flags: List[str] = None,
+               syslibs: List[str] = None,
                preferred_linkage: List[str] = 'any'):
     if preferred_linkage not in ('any', 'static', 'shared'):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
@@ -241,6 +257,7 @@ class CxxPrebuilt(craftr.target.TargetData):
     self.shared_libs = shared_libs or []
     self.compiler_flags = compiler_flags or []
     self.linker_flags = linker_flags or []
+    self.syslibs = syslibs or []
     self.preferred_linkage = preferred_linkage
 
   def translate(self, target):
@@ -441,18 +458,22 @@ class Compiler(types.NamedObject):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
+    libs = set(data.syslibs)
     for dep in target.impls():
       if isinstance(dep, CxxBuild):
+        libs |= set(dep.exported_syslibs)
         if dep.type == 'library':
           additional_input_files.append(dep.linkname_full or dep.outname_full)
           flags.extend(dep.linker_flags)
       elif isinstance(dep, CxxPrebuilt):
+        libs |= set(dep.syslibs)
         flags.extend(dep.linker_flags)
         if data.link_style == 'static' and dep.static_libs or not dep.shared_libs:
           additional_input_files.extend(dep.static_libs)
         elif data.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
           additional_input_files.extend(dep.shared_libs)
 
+    flags += it.concat([self.expand(self.linker_lib, x) for x in libs])
     return command + flags + additional_input_files
 
   def set_target_outputs(self, target, ctx):
