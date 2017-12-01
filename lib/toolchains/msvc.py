@@ -41,7 +41,7 @@ class MsvcInstallation(NamedObject):
     Generates the path to the `vcvarsall.bat`.
     """
 
-    if self.version >= 2017:
+    if self.version >= 150:
       return os.path.join(self.directory, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
     else:
       return os.path.join(self.directory, 'VC', 'vcvarsall.bat')
@@ -119,7 +119,7 @@ class MsvcInstallation(NamedObject):
 
     # Special handling for MSVC 2017.
     # TODO: Can MSVC 2017 be installed in an alternative location?
-    if 2017 not in have_versions:
+    if 150 not in have_versions:
       programfiles = os.getenv('ProgramFiles(x86)', '') or os.getenv('ProgramFiles', '')
       if programfiles:
         vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Community')
@@ -128,7 +128,7 @@ class MsvcInstallation(NamedObject):
         if not os.path.isdir(vspath):
           vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
         if os.path.isdir(vspath):
-          results.append(cls(2017, vspath))
+          results.append(cls(150, vspath))
 
     # TODO: Special handling for newer MSVC versions?
 
@@ -149,7 +149,7 @@ class ClInfo(NamedObject):
 
   version: str
   version_str: str
-  target: str
+  target: str  # Either x86 or x64
   msvc_deps_prefix: str = None
   assembler_program: str
   link_program: str

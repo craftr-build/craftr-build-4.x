@@ -2,7 +2,7 @@
 from typing import List
 import craftr from 'craftr'
 import {log, macro, path} from 'craftr/utils'
-import {MsvcToolkit} from 'craftr/lang/msvc'
+import {MsvcToolkit} from 'craftr/toolchains/msvc'
 import base from './base'
 
 
@@ -36,7 +36,8 @@ class MsvcCompiler(base.Compiler):
   linker_out = '/OUT:%ARG%'
   linker_shared = '/DLL'
   linker_exe = []
-  linker_lib ='%ARG%.lib'
+  linker_lib = '%ARG%.lib'
+  linker_libpath = '/LIBPATH:%ARG%'
 
   archiver = ['lib', '/nologo']
   archiver_out = '/OUT:%ARG%'

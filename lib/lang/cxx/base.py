@@ -248,6 +248,7 @@ class CxxPrebuilt(craftr.target.TargetData):
                compiler_flags: List[str] = None,
                linker_flags: List[str] = None,
                syslibs: List[str] = None,
+               libpath: List[str] = None,
                preferred_linkage: List[str] = 'any'):
     if preferred_linkage not in ('any', 'static', 'shared'):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
@@ -258,6 +259,7 @@ class CxxPrebuilt(craftr.target.TargetData):
     self.compiler_flags = compiler_flags or []
     self.linker_flags = linker_flags or []
     self.syslibs = syslibs or []
+    self.libpath = libpath or []
     self.preferred_linkage = preferred_linkage
 
   def translate(self, target):
@@ -333,6 +335,8 @@ class Compiler(types.NamedObject):
   linker_out: List[str]               # Specify the linker output file.
   linker_shared: List[str]            # Flag(s) to link a shared library.
   linker_exe: List[str]               # Flag(s) to link an executable binary.
+  linker_lib: List[str]
+  linker_libpath: List[str]
   # XXX support MSVC /WHOLEARCHIVE
   # XXX support Uninx -fPIC
 
@@ -458,22 +462,25 @@ class Compiler(types.NamedObject):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
-    libs = set(data.syslibs)
+    libs = list(data.syslibs)
+    libpath = list()
     for dep in target.impls():
       if isinstance(dep, CxxBuild):
-        libs |= set(dep.exported_syslibs)
+        libs += dep.exported_syslibs
         if dep.type == 'library':
           additional_input_files.append(dep.linkname_full or dep.outname_full)
           flags.extend(dep.linker_flags)
       elif isinstance(dep, CxxPrebuilt):
-        libs |= set(dep.syslibs)
+        libs += dep.syslibs
+        libpath += dep.libpath
         flags.extend(dep.linker_flags)
         if data.link_style == 'static' and dep.static_libs or not dep.shared_libs:
           additional_input_files.extend(dep.static_libs)
         elif data.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
           additional_input_files.extend(dep.shared_libs)
 
-    flags += it.concat([self.expand(self.linker_lib, x) for x in libs])
+    flags += it.concat([self.expand(self.linker_libpath, x) for x in it.unique(libpath)])
+    flags += it.concat([self.expand(self.linker_lib, x) for x in it.unique(libs)])
     return command + flags + additional_input_files
 
   def set_target_outputs(self, target, ctx):

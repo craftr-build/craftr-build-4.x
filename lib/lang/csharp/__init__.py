@@ -9,11 +9,11 @@ import requests
 import subprocess
 import sys
 import typing as t
-import craftr from '../../public'
-import msvc from '../msvc'
+import craftr from 'craftr'
+import msvc from 'craftr/toolchains/msvc'
+import {log, path, sh} from 'craftr/utils'
+import {NamedObject} from 'craftr/utils/types'
 import nupkg from './nupkg'
-import {log, path, sh} from '../../utils'
-import {NamedObject} from '../../utils/types'
 
 if os.name == 'nt':
   platform = 'windows'
