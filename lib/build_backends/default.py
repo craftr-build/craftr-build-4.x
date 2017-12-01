@@ -121,7 +121,7 @@ class ParallelExecutor:
           self.formatter.announce_execute(action)
           action.execute()
       else:
-        self.announce_execute(action)
+        self.formatter.announce_execute(action)
         action.execute()
       return action
     except:
