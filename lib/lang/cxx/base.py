@@ -274,6 +274,9 @@ class CxxRunTarget(craftr.Gentarget):
     self.target_to_run = target_to_run
     self.argv = argv
 
+  def complete(self, target):
+    target.explicit = True
+
   def translate(self, target):
     assert self.target_to_run.is_translated(), self.target_to_run
     self.commands = [

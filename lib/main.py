@@ -61,7 +61,9 @@ def main():
     if not path.isfile(config_filename):
       config_filename = './craftrconfig.toml'
       if not path.isfile(config_filename):
-        config_filename = None
+        config_filename = './craftr/config.toml'
+        if not path.isfile(config_filename):
+          config_filename = None
     args.config = config_filename
 
   # Initialize our build session.
@@ -128,6 +130,8 @@ def main():
     filename = args.projectdir
   else:
     filename = path.join(args.projectdir, './Craftrfile.py')
+    if not path.isfile(filename):
+      filename = path.join(args.projectdir, 'craftr', 'build.py')
   module = require.new(session.projectdir).resolve(filename)
 
   # Enter the session context and execute the build backend.
