@@ -66,6 +66,14 @@ class BaseGraph(graph.Graph):
 
 class TargetGraph(BaseGraph):
 
+  def complete(self):
+    """
+    Call the the #Target.complete() method on all targets.
+    """
+
+    for target in self.values():
+      target.complete()
+
   def translate(self, targets=None):
     # Default to all non-explicit targets.
     if targets is None:
@@ -74,7 +82,7 @@ class TargetGraph(BaseGraph):
     # Ensure that all targets are translated into actions.
     for target in self.topo_sort():
       if not target.is_translated():
-        target.translate(recursive=False)
+        target.translate()
 
     # Build up the action graph.
     g = ActionGraph()

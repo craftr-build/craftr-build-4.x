@@ -218,6 +218,7 @@ class DefaultBuildBackend(BuildBackend):
     if args.dotviz_targets:
       tg.dotviz(sys.stdout)
       return 0
+    tg.complete()
     ag = tg.translate(targets or None)
     if args.dotviz_actions:
       ag.dotviz(sys.stdout)

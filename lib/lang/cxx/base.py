@@ -7,6 +7,33 @@ import craftr from 'craftr'
 import {log, macro, path, types} from 'craftr/utils'
 
 
+def infer_linkage(target):
+  choices = set()
+  for data in target.dependents().attr('data').of_type(CxxBuild):
+    choices.add(data.link_style)
+  if len(choices) > 1:
+    log.warn('Target "{}" has preferred_linkage=any, but dependents '
+      'specify conflicting link_styles {}. Falling back to static.'
+      .format(target.long_name, choices))
+    preferred_linkage = 'static'
+  elif len(choices) == 1:
+    preferred_linkage = choices.pop()
+  else:
+    preferred_linkage = craftr.session.config.get('cxx.preferred_linkage', 'static')
+    if preferred_linkage not in ('static', 'shared'):
+      raise RuntimeError('invalid cxx.preferred_linkage option: {!r}'
+        .format(preferred_linkage))
+  return preferred_linkage
+
+
+def infer_debug(target):
+  for data in target.dependents().attr('data').of_type(CxxBuild):
+    if data.debug:
+      return True
+  else:
+    return False
+
+
 class CxxBuild(craftr.target.TargetData):
 
   def __init__(self,
@@ -104,32 +131,13 @@ class CxxBuild(craftr.target.TargetData):
   def translate(self, target):
     # Update the preferred linkage of this target.
     if self.preferred_linkage == 'any':
-      choices = set()
-      for data in target.dependents().attr('data').of_type(CxxBuild):
-        choices.add(data.link_style)
-      if len(choices) > 1:
-        log.warn('Target "{}" has preferred_linkage=any, but dependents '
-          'specify conflicting link_styles {}. Falling back to static.'
-          .format(self.long_name, choices))
-        self.preferred_linkage = 'static'
-      elif len(choices) == 1:
-        self.preferred_linkage = choices.pop()
-      else:
-        self.preferred_linkage = craftr.session.config.get('cxx.preferred_linkage', 'static')
-        if self.preferred_linkage not in ('static', 'shared'):
-          raise RuntimeError('invalid cxx.preferred_linkage option: {!r}'
-            .format(self.preferred_linkage))
+      self.preferred_linkage = infer_linkage(target)
     assert self.preferred_linkage in ('static', 'shared')
 
     # Inherit the debug option if it is not set.
     # XXX What do to on different values?
     if self.debug is None:
-      for data in target.dependents().attr('data').of_type(CxxBuild):
-        if data.debug:
-          self.debug = True
-          break
-      else:
-        self.debug = False
+      self.debug = infer_debug(target)
 
     # Inherit the optimize flag if it is not set.
     # XXX What do to on different values?
@@ -373,7 +381,7 @@ class Compiler(types.NamedObject):
 
     includes = list(data.includes) + list(data.exported_includes)
     flags = list(data.compiler_flags) + list(data.exported_compiler_flags)
-    for dep in target.deps().attr('data'):
+    for dep in target.impls():
       if isinstance(dep, CxxBuild):
         includes.extend(dep.exported_includes)
         defines.extend(dep.exported_defines)
@@ -433,7 +441,7 @@ class Compiler(types.NamedObject):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
-    for dep in target.deps().attr('data'):
+    for dep in target.impls():
       if isinstance(dep, CxxBuild):
         if dep.type == 'library':
           additional_input_files.append(dep.linkname_full or dep.outname_full)

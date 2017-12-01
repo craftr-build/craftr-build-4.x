@@ -209,7 +209,7 @@ class Csharp(craftr.target.TargetData):
     # XXX Take C# libraries and maybe even other native libraries into account.
     modules = []
     references = []
-    for data in target.deps().attr('data'):
+    for data in target.impls():
       if isinstance(data, Csharp):
         if data.type == 'module':
           modules.append(data.dll_filename)

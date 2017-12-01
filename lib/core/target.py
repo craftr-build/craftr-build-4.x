@@ -5,7 +5,7 @@ Craftr's build target representation.
 from typing import Iterable, List
 import functools
 import _actions from './actions'
-import it from '../utils/it'
+import {log, it} from '../utils'
 import _session from './session'
 
 
@@ -68,6 +68,8 @@ class Target:
     self.explicit = explicit
     self.console = console
     self.actions = None
+    self.traits = []
+    self._is_completed = False
     data.mounted(self)
 
   def __repr__(self):
@@ -83,8 +85,80 @@ class Target:
   def session(self):
     return self.cell.session
 
+  def add_trait(self, trait):
+    """
+    Adds a "trait" to the target, that is a separate #TargetData instance that
+    describes additional data/information for this target. Note that traits
+    are not translated into actions.
+    """
+
+    assert isinstance(trait, TargetData), type(trait)
+    self.traits.append(trait)
+    trait.mounted(self)
+
+  def get_trait(self, trait_type):
+    """
+    Returns the first trait that matches the specified type. If no such trait
+    is found, #None is returned.
+    """
+
+    for trait in self.traits:
+      if isinstance(trait, trait_type):
+        return trait
+    return None
+
+  def is_completed(self):
+    return self._is_completed
+
   def is_translated(self):
     return self.actions is not None
+
+  def complete(self):
+    """
+    Calls #TargetData.complete().
+    """
+
+    if self.is_completed():
+      raise RuntimeError('Target is already completed.')
+    for dep in self.deps(first_only=True):
+      if not dep.is_completed():
+        raise RuntimeError('"{}" -> "{}" (dependent target not completed)'
+          .format(self.long_name, dep.long_name))
+    self._is_completed = True
+    self.data.complete(self)
+    for trait in self.traits:
+      trait.complete(self)
+
+  def translate(self):
+    """
+    Translates the target into the action graph. All dependencies of this
+    target must already be translated before it can be translated.
+    """
+
+    if self.is_translated():
+      raise RuntimeError('Target "{}" already translated'.format(self.long_name))
+
+    for dep in self.deps(first_only=True):
+      if not dep.is_translated():
+        raise RuntimeError('"{}" -> "{}" (dependent target not translated)'
+          .format(self.long_name, dep.long_name))
+
+    self.actions = {}
+    self.data.translate(self)
+    if not self.actions:
+      _actions.Null.new(self, name='null')
+
+  def leaf_actions(self):
+    """
+    Returns all actions of the target that are leave nodes in the local
+    subgraph.
+    """
+
+    actions = set(self.actions.values())
+    outputs = set()
+    for action in actions:
+      outputs |= set(action.deps)
+    return actions - outputs
 
   def add_action(self, action):
     """
@@ -104,44 +178,7 @@ class Target:
     action.target = self
     self.actions[action.name] = action
 
-  def translate(self, recursive=True):
-    """
-    Translates the target into the action graph. All dependencies of this
-    target must already be translated before it can be translated. If
-    *recursive* is #True, the dependencies of the target will be translated
-    automatically.
-    """
-
-    if self.is_translated():
-      raise RuntimeError('Target "{}" already translated'.format(self.long_name))
-
-    for dep in it.concat([self.private_deps, self.transitive_deps]):
-      if not dep.is_translated():
-        if recursive:
-          dep.translate(True)
-          assert dep.is_translated()
-        else:
-          raise RuntimeError('"{}" -> "{}" (dependent target not translated)'
-            .format(self.long_name, dep.long_name))
-
-    self.actions = {}
-    self.data.translate(self)
-    if not self.actions:
-      _actions.Null.new(self, name=None, deps=...)
-
-  def leaf_actions(self):
-    """
-    Returns all actions of the target that are leave nodes in the local
-    subgraph.
-    """
-
-    actions = set(self.actions.values())
-    outputs = set()
-    for action in actions:
-      outputs |= set(action.deps)
-    return actions - outputs
-
-  def deps(self):
+  def deps(self, first_only=False):
     """
     Returns an iterator for all dependencies of the target that should be
     taken into account when converting the target into actions. These include
@@ -157,10 +194,13 @@ class Target:
     # Example
 
     ```python
-    for d in target.deps().attr('data').of_type(MyTargetData):
+    for d in target.impls().of_type(MyTargetData):
       pass
     ```
     """
+
+    if first_only:
+      return it.stream([self.transitive_deps, self.private_deps]).concat().unique()
 
     def trans(target) -> Iterable[List[Target]]:
       yield target.transitive_deps
@@ -186,6 +226,29 @@ class Target:
       raise RuntimeError('Session.target_graph has not been built yet')
     return it.stream(session.target_graph[self.long_name].outputs).attr('value')
 
+  def impls(self, first_only=False):
+    """
+    Uses #deps() to iterate over all dependencies and yields all #TargetData
+    instances that can be found, including traits.
+    """
+
+    def generate():
+      for dep in self.deps(first_only):
+        yield dep.data
+        yield from dep.traits
+    return it.stream(generate())
+
+  def dependent_impls(self):
+    """
+    Same as #impls() for #dependents().
+    """
+
+    def generate():
+      for dep in self.dependents():
+        yield dep.data
+        yield from dep.traits
+    return it.stream(generate())
+
 
 class TargetData:
   """
@@ -195,12 +258,29 @@ class TargetData:
   def __init__(self):
     self.target = None
 
+  def is_trait(self):
+    if not self.target:
+      raise RuntimeError('not attached to a target')
+    if self in self.target.traits:
+      return True
+    elif self == self.target.data:
+      return False
+    else:
+      raise RuntimeError('not part of target "{}"'.format(self.target.long_name))
+
   def mounted(self, target):
     """
     Called when the #TargetData is passed into a #Target constructor.
     """
 
     self.target = target
+
+  def complete(self, target):
+    """
+    Called before the translation process when the full target graph is known.
+    """
+
+    pass
 
   def translate(self, target):
     """

@@ -160,10 +160,11 @@ class JavaLibrary(JavaBase):
     extra_arguments = session.config.get('java.extra_arguments', []) + (self.extra_arguments or [])
     classpath = []
 
-    for data in target.deps().attr('data').of_type(JavaLibrary):
-      classpath.append(data.jar_filename)
-    for data in target.deps().attr('data').of_type(JavaPrebuilt):
-      classpath.extend(data.binary_jars)
+    for data in target.impls():
+      if isinstance(data, JavaLibrary):
+        classpath.append(data.jar_filename)
+      elif isinstance(data, JavaPrebuilt):
+        classpath.extend(data.binary_jars)
 
     # Calculate output files.
     classfiles = []
@@ -239,10 +240,11 @@ class JavaBinary(JavaLibrary):
       super().translate(target, jar_filename=sub_jar)
       inputs.append(sub_jar)
 
-    for data in target.deps().attr('data').of_type(JavaLibrary):
-      inputs.append(data.jar_filename)
-    for data in target.deps().attr('data').of_type(JavaPrebuilt):
-      inputs.extend(data.binary_jars)
+    for data in target.impls():
+      if isinstance(data, JavaLibrary):
+        inputs.append(data.jar_filename)
+      elif isinstance(data, JavaPrebuilt)
+        inputs.extend(data.binary_jars)
 
     command = nodepy.runtime.exec_args + [str(require.resolve('./augjar').filename)]
     command += ['-o', self.jar_filename]
@@ -369,7 +371,7 @@ class ProGuard(craftr.target.TargetData):
 
   def translate(self, target):
     injars = []
-    for data in target.deps().attr('data'):
+    for data in target.impls():
       if isinstance(data, JavaPrebuilt):
         injars.append(data.binary_jar)
       elif isinstance(data, (JavaBinary, JavaLibrary)):
