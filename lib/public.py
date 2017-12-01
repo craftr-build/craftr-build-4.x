@@ -140,4 +140,48 @@ class Gentarget(target.TargetData):
     self.commands[-1].extend(args)
 
 
+class ProxyTarget(target.TargetData):
+  """
+  This class represents a proxy that will be replaced with a real target
+  on target completion (#Target.complete()). For this, the proxy will
+  replace itself with the real implementation returned by the wrapped
+  function or overwritten #unwrap_proxy() method.
+  """
+
+  def __init__(self, unwrapper=None):
+    self.__unwrapper = unwrapper
+
+  def unwrap_proxy(self, target):
+    if not self.__unwrapper:
+      raise RuntimeError('ProxyTarget(unwrapper) missing')
+    return self.__unwrapper(target)
+
+  def complete(self, target):
+    data = self.unwrap_proxy(target)
+    if self.is_trait():
+      target.traits[target.traits.index(self)] = data
+    else:
+      target.data = data
+    data.mounted(target)
+    if self != target.data:
+      data.complete(target)
+
+  def translate(self, target):
+    pass
+
+
 gentarget = target_factory(Gentarget)
+proxytarget = target_factory(ProxyTarget)
+
+
+def proxy(*args, **kwargs):
+  """
+  Decorator for a #ProxyTarget.
+  """
+
+  if 'unwrapper' in kwargs:
+    raise TypeError('unexpected argument: unwrapper')
+  def decorator(func):
+    kwargs['unwrapper'] = func
+    return proxytarget(*args, **kwargs)
+  return decorator
