@@ -36,6 +36,47 @@ parser.add_argument(
        'LANGUAGE. A BUILD.cr.py and nodepy.json file will be created.',
 )
 
+parser.add_argument(
+  '--backend',
+  help='The backend to use for building. The last (explicitly) used backend '
+       'is remembered when using the --prepare-build or --build options. If '
+       'this option is not defined, it is read from the `build.backend` '
+       'configuration value. Defaults to `ninja`.'
+)
+
+parser.add_argument(
+  '--release',
+  action='store_true',
+  help='Configure a release build. This option will set the `craftr.release` '
+       'configuration value and also the `release` member of the Craftr '
+       'core module.'
+)
+
+parser.add_argument(
+  '--configure',
+  nargs='?',
+  default='BUILD.cr.py',
+  help='Execute the build script and generate a JSON database file that '
+       'contains all the build information.'
+)
+
+parser.add_argument(
+  '--prepare-build',
+  action='store_true',
+  help='Prepare the build process by generating all the data for the '
+       'selected build backend, but not actually execute the build. Use '
+       'this option if you want to invoke the build backend manually instead '
+       'of via the --build option.'
+)
+
+parser.add_argument(
+  '--build',
+  action='store_true',
+  help='Load the build configuration from the --configure step and execute '
+       'the build process using the configured backend. Implies the '
+       '--prepare-build option.'
+)
+
 
 def main(argv=None):
   args = parser.parse_args(argv)
