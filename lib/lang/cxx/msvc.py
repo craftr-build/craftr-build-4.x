@@ -57,11 +57,10 @@ class MsvcCompiler(base.Compiler):
     )
     self.toolkit = toolkit
 
-  def build_compile_flags(self, target, language):
-    command = super().build_compile_flags(target, language)
-    data = target.data
-    options = data.options
-    if data.debug:
+  def build_compile_flags(self, impl, language):
+    command = super().build_compile_flags(impl, language)
+    options = impl.options
+    if impl.debug:
       command += ['/Od', '/RTC1', '/FC']
       if not self.version or self.version >= '18':
         # Enable parallel writes to .pdb files.
@@ -78,36 +77,35 @@ class MsvcCompiler(base.Compiler):
     # If not explicitly specified, determine whether we should link the
     # MSVC runtime library statically or dynamically.
     if not options.msvc_runtime_library:
-      if data.link_style == 'static':
+      if impl.link_style == 'static':
         options.msvc_runtime_library = 'static'
-      elif data.link_style == 'shared':
+      elif impl.link_style == 'shared':
         options.msvc_runtime_library = 'dynamic'
       else:
-        assert False, data.link_style
+        assert False, impl.link_style
 
     if options.msvc_runtime_library == 'static':
-      command += ['/MTd' if data.debug else '/MT']
+      command += ['/MTd' if impl.debug else '/MT']
     elif options.msvc_runtime_library == 'dynamic':
-      command += ['/MDd' if data.debug else '/MD']
+      command += ['/MDd' if impl.debug else '/MD']
     else:
       assert False, options.msvc_runtime_library
 
     return command
 
-  def build_link_flags(self, target, outfile, additional_input_files):
-    command = super().build_link_flags(target, outfile, additional_input_files)
-    data = target.data
-    options = data.options
+  def build_link_flags(self, impl, outfile, additional_input_files):
+    command = super().build_link_flags(impl, outfile, additional_input_files)
+    options = impl.options
     if options.nodefaultlib:
       command += ['/NODEFAULTLIB']
-    if data.is_sharedlib():
-      command += ['/IMPLIB:' + data.linkname_full]  # set from set_target_outputs()
+    if impl.is_sharedlib():
+      command += ['/IMPLIB:' + impl.linkname_full]  # set from set_target_outputs()
     return command
 
-  def set_target_outputs(self, target, ctx):
-    super().set_target_outputs(target, ctx)
-    if target.data.is_sharedlib():
-      target.data.linkname_full = path.setsuffix(target.data.outname_full, '.lib')
+  def set_target_outputs(self, impl, ctx):
+    super().set_target_outputs(impl, ctx)
+    if impl.is_sharedlib():
+      impl.linkname_full = path.setsuffix(impl.outname_full, '.lib')
 
 
 def get_compiler(fragment):

@@ -8,12 +8,15 @@ __all__ = [
   'CxxBuild',
   'CxxPrebuilt',
   'CxxRunTarget',
+  'CxxEmbedFiles',
   'CompilerOptions',
   'Compiler',
   'extmacro'
 ]
 
 from typing import List, Dict, Union, Callable, Type
+import nodepy
+import re
 import craftr from 'craftr'
 import {it, log, macro, path, types} from 'craftr/utils'
 
@@ -73,7 +76,8 @@ class CxxBuild(craftr.target.TargetData):
                outname: str = '$(lib)$(name)$(ext)',
                unity_build: bool = None,
                compiler: 'Compiler' = None,
-               options: Dict = None):
+               options: Dict = None,
+               localize_srcs: bool = True):
     if type not in ('library', 'binary'):
       raise ValueError('invalid type: {!r}'.format(type))
     if optimize not in (None, 'speed', 'size'):
@@ -95,7 +99,7 @@ class CxxBuild(craftr.target.TargetData):
     if not isinstance(options, compiler.options_class):
       raise TypeError('options must be None, dict or {}, got {} instead'
         .format(compilre.options_class.__name__, type(options).__name__))
-    self.srcs = [craftr.localpath(x) for x in (srcs or [])]
+    self.srcs = [craftr.localpath(x) for x in (srcs or [])] if localize_srcs else (srcs or [])
     self.type = type
     self.debug = debug
     self.warnings = warnings
@@ -121,6 +125,7 @@ class CxxBuild(craftr.target.TargetData):
     self.unity_build = unity_build
     self.compiler = compiler
     self.options = options
+    self.compile_step_deps = []
 
     # Set after translate().
     self.outname_full = None
@@ -197,8 +202,8 @@ class CxxBuild(craftr.target.TargetData):
         srcs[:] = [unity_filename]
 
     ctx = macro.Context()
-    self.compiler.init_macro_context(target, ctx)
-    self.compiler.set_target_outputs(target, ctx)
+    self.compiler.init_macro_context(self, ctx)
+    self.compiler.set_target_outputs(self, ctx)
     assert self.outname_full is not None, 'compiler.set_target_outputs() did not set outname_full'
 
     # Compile object files.
@@ -209,15 +214,16 @@ class CxxBuild(craftr.target.TargetData):
 
     for lang, srcs in (('c', c_srcs), ('cpp', cpp_srcs)):
       if not srcs: continue
-      command = self.compiler.build_compile_flags(target, lang)
+      command = self.compiler.build_compile_flags(self, lang)
       for filename in srcs:
         # XXX Could result in clashing object file names!
         objfile = path.join(obj_dir, path.base(path.rmvsuffix(filename)) + obj_suffix)
-        command.extend(self.compiler.build_compile_out_flags(target, lang, objfile))
+        command.extend(self.compiler.build_compile_out_flags(self, lang, objfile))
         command.append(filename)
         obj_actions.append(craftr.actions.System.new(
           target,
           commands = [command],
+          deps = self.compile_step_deps,
           environ = self.compiler.compiler_env,
           input_files = [filename],
           output_files = [objfile]
@@ -226,7 +232,7 @@ class CxxBuild(craftr.target.TargetData):
 
     if obj_files:
       additional_input_files = []
-      command = self.compiler.build_link_flags(target, self.outname_full, additional_input_files)
+      command = self.compiler.build_link_flags(self, self.outname_full, additional_input_files)
       command.extend(obj_files)
       craftr.actions.System.new(
         target,
@@ -283,6 +289,51 @@ class CxxRunTarget(craftr.Gentarget):
       [self.target_to_run.data.outname_full] + list(self.argv)
     ]
     super().translate(target)
+
+
+class CxxEmbedFiles(craftr.target.TargetData):
+  """
+  Embed one or more resource files into an executable or library.
+  """
+
+  def __init__(self, files, names=None, cfile=None, compiler=None):
+    if names is not None and len(names) != len(files):
+      raise ValueError('len(names) must match len(files)')
+    self.files = files
+    self.names = names
+    self.cfile = cfile
+    self.compiler = compiler
+    self.build_trait = None
+
+  def complete(self, target):
+    if self.names is None:
+      self.names = []
+      for fn in self.files:
+        fn = path.rel(fn, target.cell.builddir)
+        self.names.append(re.sub('[^\w\d_]+', '_', fn))
+    if not self.cfile:
+      self.cfile = path.join(target.cell.builddir, target.name + '_embedd.c')
+    self.build_trait = CxxBuild(
+      srcs = [self.cfile],
+      type = 'library',
+      compiler = self.compiler,
+      localize_srcs = False
+    )
+    target.add_trait(self.build_trait)
+
+  def translate(self, target):
+    command = nodepy.runtime.exec_args + [str(require.resolve('./tools/files2c').filename), '-o', self.cfile]
+    for infile, cname in zip(self.files, self.names):
+      command += ['{}:{}'.format(infile, cname)]
+    gen = craftr.actions.System.new(
+      target,
+      name = 'files2c',
+      commands = [command],
+      input_files = self.files,
+      output_files = [self.cfile]
+    )
+    self.build_trait.compile_step_deps.append(gen)
+    self.build_trait.translate(target)
 
 
 class CompilerOptions(types.NamedObject):
@@ -366,34 +417,33 @@ class Compiler(types.NamedObject):
       return result
     return list(args)
 
-  def init_macro_context(self, target, ctx):
-    if self.lib_macro and target.data.type == 'library':
+  def init_macro_context(self, impl, ctx):
+    if self.lib_macro and impl.type == 'library':
       ctx.define('lib', self.lib_macro)
-    if target.data.type == 'library':
-      if target.data.preferred_linkage == 'static':
+    if impl.type == 'library':
+      if impl.preferred_linkage == 'static':
         ext_macro = self.ext_lib_macro
-      elif target.data.preferred_linkage == 'shared':
+      elif impl.preferred_linkage == 'shared':
         ext_macro = self.ext_dll_macro
       else:
-        assert False, target.data.preferred_linkage
-    elif target.data.type == 'binary':
+        assert False, impl.preferred_linkage
+    elif impl.type == 'binary':
       ext_macro = self.ext_exe_macro
     else:
-      assert False, target.data.type
+      assert False, impl.type
     if ext_macro:
       ctx.define('ext', ext_macro)
     if self.obj_macro:
       ctx.define('obj', self.obj_macro)
-    ctx.define('name', target.name)
+    ctx.define('name', impl.target.name)
 
-  def build_compile_flags(self, target, language):
+  def build_compile_flags(self, impl, language):
     """
     Build the compiler flags. Does not include the #compiler_out argument,
-    yet. Use the #build_compile_out_flags() method for that. The *target* must
-    be a #CxxBuild target.
+    yet. Use the #build_compile_out_flags() method for that.
     """
 
-    data = target.data
+    data = impl
     assert isinstance(data, CxxBuild)
     assert data.preferred_linkage in ('static', 'shared')
 
@@ -405,7 +455,7 @@ class Compiler(types.NamedObject):
 
     includes = list(data.includes) + list(data.exported_includes)
     flags = list(data.compiler_flags) + list(data.exported_compiler_flags)
-    for dep in target.impls():
+    for dep in impl.target.impls():
       if isinstance(dep, CxxBuild):
         includes.extend(dep.exported_includes)
         defines.extend(dep.exported_defines)
@@ -435,15 +485,15 @@ class Compiler(types.NamedObject):
 
     return command
 
-  def build_compile_out_flags(self, target, language, objfile):
+  def build_compile_out_flags(self, impl, language, objfile):
     return self.expand(self.compiler_out, objfile)
 
-  def build_link_flags(self, target, outfile, additional_input_files):
+  def build_link_flags(self, impl, outfile, additional_input_files):
     assert isinstance(additional_input_files, list)
     is_archive = False
     is_shared = False
 
-    data = target.data
+    data = impl
     if data.type == 'library':
       if data.preferred_linkage == 'shared':
         is_shared = True
@@ -467,7 +517,7 @@ class Compiler(types.NamedObject):
     flags = []
     libs = list(data.syslibs)
     libpath = list()
-    for dep in target.impls():
+    for dep in impl.target.impls():
       if isinstance(dep, CxxBuild):
         libs += dep.exported_syslibs
         if dep.type == 'library':
@@ -486,10 +536,10 @@ class Compiler(types.NamedObject):
     flags += it.concat([self.expand(self.linker_lib, x) for x in it.unique(libs)])
     return command + flags + additional_input_files
 
-  def set_target_outputs(self, target, ctx):
-    assert isinstance(target.data, CxxBuild)
-    target.data.outname_full = macro.parse(target.data.outname).eval(ctx, [])
-    target.data.outname_full = path.join(target.cell.builddir, target.data.outname_full)
+  def set_target_outputs(self, impl, ctx):
+    assert isinstance(impl, CxxBuild)
+    impl.outname_full = macro.parse(impl.outname).eval(ctx, [])
+    impl.outname_full = path.join(impl.target.cell.builddir, impl.outname_full)
 
 
 def extmacro(without_version, with_version):

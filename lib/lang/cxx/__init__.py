@@ -22,6 +22,7 @@ def _load_compiler():
 
 
 compiler = _load_compiler()
+embed = craftr.target_factory(CxxEmbedFiles)
 build = craftr.target_factory(CxxBuild)
 prebuilt = craftr.target_factory(CxxPrebuilt)
 
@@ -40,5 +41,6 @@ def run(target, *argv, name=None, **kwargs):
 
 
 @build.preprocess
+@embed.preprocess
 def _build_preprocess(kwargs):
   kwargs.setdefault('compiler', compiler)

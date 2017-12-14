@@ -94,6 +94,14 @@ def match(string, matchers, kind='glob', default=NotImplemented):
   return default
 
 
+def error(*message):
+  """
+  Raises a #RuntimeError.
+  """
+
+  raise RuntimeError(' '.join(map(str, message)))
+
+
 def t(name):
   """
   Shortcut for resolving a target name and retrieving the #target.TargetData
