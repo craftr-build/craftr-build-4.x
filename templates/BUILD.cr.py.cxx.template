@@ -1,0 +1,18 @@
+
+import {path, glob, gentarget, t} from 'craftr'
+import cxx from 'craftr/lang/cxx'
+
+cxx.build(
+  name = 'lib',
+  type = 'library',
+  srcs = glob('src/**/*.c'),
+  libname = '$(lib)myproject$(ext 1.3)',
+)
+
+cxx.build(
+  name = 'main',
+  type = 'binary',
+  srcs = 'main.c'
+)
+
+cxx.run(':main')

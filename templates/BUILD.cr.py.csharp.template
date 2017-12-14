@@ -1,0 +1,20 @@
+
+import {path, glob, gentarget, t} from 'craftr'
+import csharp from 'craftr/lang/csharp'
+
+csharp.prebuilt(
+  name = 'libs',
+  packages = [
+    'Newtonsoft.Json:10.0.3'
+  ]
+)
+
+csharp.build(
+  name = 'main',
+  deps = [':libs'],
+  srcs = glob('src/**/*.cs'),
+  type = 'exe',
+  merge_assemblies = True
+)
+
+csharp.run(':main')

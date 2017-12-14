@@ -4,9 +4,9 @@
   "description": "Craftr is a domain-independent build system.",
   "license": "MIT",
   "main": "./lib/public",
-  "resolve_root": "./lib",
+  "resolve_root": "./src",
   "bin": {
-    "craftr": "./lib/main"
+    "craftr": "./src/main"
   },
   "authors": [
     "rosensteinniklas@gmail.com"
