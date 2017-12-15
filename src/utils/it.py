@@ -19,6 +19,12 @@ class stream:
   def __iter__(self):
     return iter(self.iterable)
 
+  def __getitem__(self, val):
+    if isinstance(val, slice):
+      return self.slice(val.start, val.stop, val.step)
+    else:
+      raise TypeError('{}() is only subscriptable with slices')
+
   @classmethod
   def register_method(cls, func, name=None):
     name = name or func.__name__

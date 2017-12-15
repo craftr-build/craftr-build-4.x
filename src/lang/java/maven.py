@@ -5,7 +5,9 @@ Access maven artifacts.
 from xml.etree import ElementTree
 import xml.dom.minidom as minidom
 import requests
-import log from 'craftr/utils/log'
+
+import logging as log # TODO
+#import log from 'craftr/utils/log'
 
 def requests_get_check(*args, **kwargs):
   response = requests.get(*args, **kwargs)

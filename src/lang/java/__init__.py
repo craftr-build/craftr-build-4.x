@@ -7,18 +7,17 @@ import nodepy
 import re
 import typing as t
 
-import craftr, {log, path, session} from 'craftr'
-import {NamedObject} from 'craftr/utils/types'
+import craftr, {path, options} from 'craftr'
 import maven from './maven'
 
 
 ONEJAR_FILENAME = path.canonical(
-  session.config.get('java.onejar',
+  options.get('java.onejar',
   path.join(str(module.directory), 'one-jar-boot-0.97.jar')))
 
 
 def _init_repos():
-  repo_config = copy.deepcopy(session.config.get('java.maven_repos', {}))
+  repo_config = copy.deepcopy(options.get('java.maven_repos', {}))
   repo_config.setdefault('default', 'http://repo1.maven.org/maven2/')
 
   repos = []
@@ -60,7 +59,7 @@ def partition_sources(
   return result
 
 
-class JavaBase(craftr.target.TargetData):
+class JavaBase(craftr.TargetTrait):
   """
   jar_dir:
     The directory where the jar will be created in.
@@ -85,26 +84,23 @@ class JavaBase(craftr.target.TargetData):
                      main_class: str = None,
                      javac_jar: str = None):
     if jar_dir:
-      jar_dir = path.canonical(self.jar_dir, self.cell.builddir)
+      jar_dir = path.canonical(self.jar_dir, self.target.cell.build_directory)
     self.jar_dir = jar_dir
     self.jar_name = jar_name
     self.main_class = main_class
-    self.javac_jar = javac_jar or session.config.get('java.javac_jar', 'jar')
-
-  def mounted(self, target):
-    super().mounted(target)
-    cell = target.cell
+    self.javac_jar = javac_jar or options.get('java.javac_jar', 'jar')
     if not self.jar_dir:
-      self.jar_dir = cell.builddir
+      self.jar_dir = self.target.cell.build_directory
     if not self.jar_name:
-      self.jar_name = (cell.name.split('/')[-1] + '-' + target.name + '-' + cell.version)
+      self.jar_name = (self.target.cell.name.split('/')[-1] + '-' + self.target.name + '-' + self.target.cell.version)
 
   @property
   def jar_filename(self) -> str:
     return path.join(self.jar_dir, self.jar_name) + '.jar'
 
 
-class JavaLibrary(JavaBase):
+@craftr.TargetFactory
+class library(JavaBase):
   """
   The base target for compiling Java source code and creating a Java binary
   or libary JAR file.
@@ -139,36 +135,33 @@ class JavaLibrary(JavaBase):
     super().__init__(**kwargs)
 
     if src_roots is None:
-      src_roots = session.config.get('java.src_roots', ['src', 'java', 'javatest'])
+      src_roots = options.get('java.src_roots', ['src', 'java', 'javatest'])
     if src_roots:
       src_roots = [craftr.localpath(x) for x in src_roots]
 
     self.srcs = [craftr.localpath(x) for x in srcs]
     self.src_roots = src_roots
     self.class_dir = class_dir
-    self.javac = javac or session.config.get('java.javac', 'javac')
+    self.javac = javac or options.get('java.javac', 'javac')
     self.extra_arguments = extra_arguments
-
-  def mounted(self, target):
-    super().mounted(target)
     if not self.class_dir:
-      self.class_dir = 'classes/' + target.name
-    self.class_dir = path.canonical(self.class_dir, target.cell.builddir)
+      self.class_dir = 'classes/' + self.target.name
+    self.class_dir = path.canonical(self.class_dir, self.target.cell.build_directory)
 
-  def translate(self, target, jar_filename=None):
+  def translate(self, jar_filename=None):
     jar_filename = jar_filename or self.jar_filename
-    extra_arguments = session.config.get('java.extra_arguments', []) + (self.extra_arguments or [])
+    extra_arguments = options.get('java.extra_arguments', []) + (self.extra_arguments or [])
     classpath = []
 
-    for data in target.impls():
-      if isinstance(data, JavaLibrary):
+    for data in self.target.traits():
+      if isinstance(data, library):
         classpath.append(data.jar_filename)
-      elif isinstance(data, JavaPrebuilt):
+      elif isinstance(data, prebuilt):
         classpath.extend(data.binary_jars)
 
     # Calculate output files.
     classfiles = []
-    for base, sources in partition_sources(self.srcs, self.src_roots, target.cell.directory).items():
+    for base, sources in partition_sources(self.srcs, self.src_roots, self.target.cell.directory).items():
       for src in sources:
         classfiles.append(path.join(self.class_dir, path.setsuffix(src, '.class')))
 
@@ -179,13 +172,14 @@ class JavaLibrary(JavaBase):
       command += self.srcs
       command += extra_arguments
 
-      javac = craftr.actions.System.new(
-        target,
+      javac = craftr.BuildAction(
         name = 'javac',
+        deps = ...,
         commands = [command],
         input_files = self.srcs,
         output_files = classfiles
       )
+      self.target.add_action(javac)
     else:
       javac = None
 
@@ -198,17 +192,17 @@ class JavaLibrary(JavaBase):
       command.append(self.main_class)
     command += ['-C', self.class_dir, '.']
 
-    craftr.actions.System.new(
-      target,
+    self.target.add_action(craftr.BuildAction(
       name = 'jar',
-      deps = [javac, ...],
+      deps = [javac or ...],
       commands = [command],
       input_files = classfiles,
       output_files = [jar_filename]
-    )
+    ))
 
 
-class JavaBinary(JavaLibrary):
+@craftr.TargetFactory
+class binary(library.cls):
   """
   Takes a list of Java dependencies and creates an executable JAR archive
   from them.
@@ -226,24 +220,24 @@ class JavaBinary(JavaLibrary):
     if not main_class:
       raise ValueError('missing value for "main_class"')
     if not dist_type:
-      dist_type = session.config.get('java.dist_type', 'onejar')
+      dist_type = options.get('java.dist_type', 'onejar')
     if dist_type not in ('merge', 'onejar'):
       raise ValueError('invalid dist_type: {!r}'.format(self.dist_type))
     self.main_class = main_class
     self.dist_type = dist_type
 
-  def translate(self, target):
+  def translate(self):
     inputs = []
 
     if self.srcs:
       sub_jar = path.addtobase(self.jar_filename, '-classes')
-      super().translate(target, jar_filename=sub_jar)
+      super().translate(jar_filename=sub_jar)
       inputs.append(sub_jar)
 
-    for data in target.impls():
-      if isinstance(data, JavaLibrary):
+    for data in self.target.traits()[1:]:
+      if isinstance(data, library):
         inputs.append(data.jar_filename)
-      elif isinstance(data, JavaPrebuilt)
+      elif isinstance(data, prebuilt):
         inputs.extend(data.binary_jars)
 
     command = nodepy.runtime.exec_args + [str(require.resolve('./augjar').filename)]
@@ -262,17 +256,17 @@ class JavaBinary(JavaLibrary):
       for infile in inputs:
         command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
 
-    craftr.actions.System.new(
-      target,
+    self.target.add_action(craftr.BuildAction(
       name = self.dist_type,
-      deps = [target.actions.get('jar'), ...],
+      deps = [self.target.actions.get('jar') or ...],
       commands = [command],
       input_files = inputs,
       output_files = [self.jar_filename]
-    )
+    ))
 
 
-class JavaPrebuilt(craftr.target.TargetData):
+@craftr.TargetFactory
+class prebuilt(craftr.TargetTrait):
   """
   Represents a prebuilt JAR. If an artifact ID is specified, the artifact will
   be downloaded from Maven Central, or the configured maven repositories.
@@ -320,7 +314,7 @@ class JavaPrebuilt(craftr.target.TargetData):
     #     installed dependencies, so we don't do the same work twice if
     #     two separate projects need the same dependency.
 
-    log.info('[{}] Resolving JARs...'.format(self.target.long_name))
+    print('[{}] Resolving JARs...'.format(self.target.long_name))
     while queue:
       artifact = queue.pop()
       if artifact in poms:
@@ -334,23 +328,31 @@ class JavaPrebuilt(craftr.target.TargetData):
       queue.extend(maven.pom_eval_deps(pom))
 
     for artifact in poms.keys():
-      binary_jar = path.join(session.builddir, '.maven-artifacts', artifact.to_local_path('jar'))
+      binary_jar = path.join(craftr.build_directory, '.maven-artifacts', artifact.to_local_path('jar'))
       self.binary_jars.append(binary_jar)
 
       # Create a download action. We may create actions even before
       # #translate(), so we save ourselves some trouble.
-      craftr.actions.DownloadFile.new(
-        self.target,
+      command = nodepy.runtime.exec_args + [
+        str(require.resolve('craftr/tools/download').filename),
+        '--url', repo.get_artifact_uri(artifact, 'jar'),
+        '--to', binary_jar
+      ]
+      self.target.add_action(craftr.BuildAction(
         name = str(artifact),
-        url = repo.get_artifact_uri(artifact, 'jar'),
-        filename = binary_jar
-      )
+        commands = [command],
+        output_files = [binary_jar]
+      ))
 
-  def translate(self, target):
+  def complete(self):
     self.install()
 
+  def translate(self):
+    pass
 
-class ProGuard(craftr.target.TargetData):
+
+@craftr.TargetFactory
+class proguard(craftr.TargetTrait):
   """
   Run ProGuard on the JAR dependencies of this target. If the *pro_file*
   argument is specified, it must be the name of a response file that will
@@ -361,7 +363,7 @@ class ProGuard(craftr.target.TargetData):
 
   def __init__(self, pro_file=None, options=(), cwd=None, java=None,
                outjars=None):
-    self.java = java or session.config.get('java.java', 'java')
+    self.java = java or options.get('java.java', 'java')
     self.pro_file = craftr.localpath(pro_file) if pro_file else None
     if not cwd and self.pro_file:
       cwd = path.dir(self.pro_file)
@@ -369,12 +371,12 @@ class ProGuard(craftr.target.TargetData):
     self.options = options
     self.outjars = outjars
 
-  def translate(self, target):
+  def translate(self):
     injars = []
-    for data in target.impls():
-      if isinstance(data, JavaPrebuilt):
+    for data in self.target.traits():
+      if isinstance(data, prebuilt):
         injars.append(data.binary_jar)
-      elif isinstance(data, (JavaBinary, JavaLibrary)):
+      elif isinstance(data, (binary, library)):
         injars.append(data.jar_filename)
 
     if self.outjars:
@@ -392,28 +394,21 @@ class ProGuard(craftr.target.TargetData):
     args += ['-libraryjars', '<java.home>/lib/rt.jar']
     args += self.options
 
-    craftr.actions.System.new(
-      target,
+    self.target.add_action(craftr.BuildAction(
       deps = ...,
       commands = [args],
       input_files = injars,
       output_files = outjars,
       cwd = self.cwd
-    )
-
-
-library = craftr.target_factory(JavaLibrary)
-binary = craftr.target_factory(JavaBinary)
-prebuilt = craftr.target_factory(JavaPrebuilt)
-proguard = craftr.target_factory(ProGuard)
+    ))
 
 
 def run(binary, *argv, name=None, java=None, jvm_args=(), **kwargs):
   kwargs.setdefault('explicit', True)
-  target = craftr.T(binary)
+  target = craftr.resolve_target(binary)
   if name is None:
     name = target.name + '_run'
   if java is None:
-    java = session.config.get('java.java', 'java')
-  command = [java] + list(jvm_args) + ['-jar', target.data.jar_filename] + list(argv)
+    java = options.get('java.java', 'java')
+  command = [java] + list(jvm_args) + ['-jar', target.trait.jar_filename] + list(argv)
   return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)

@@ -51,7 +51,7 @@ def current_cell(create=False):
       raise RuntimeError('no active BuildCell')
 
 
-def resolve_target(self, target):
+def resolve_target(target):
   """
   Resolve a target identifier string of the format `[//<cell>]:target`.
   If *target* is already a #BuildTarget instance, it is returned as-is.
@@ -60,13 +60,36 @@ def resolve_target(self, target):
   if isinstance(target, BuildTarget):
     return target
   cell_name, name = _build.splitref(target)
-  if not scope:
+  if not cell_name:
     cell_name = current_cell().name
   try:
     return cells[cell_name].targets[name]
   except KeyError:
-    raise ValueError('scope or target does not exist: {!r}'.format(
-      _build.joinref(scope, name)))
+    raise ValueError('cell or target does not exist: {!r}'.format(
+      _build.joinref(cell_name, name)))
+
+
+def localpath(p):
+  """
+  Returns the canonical representation of the path *p*. If *p* is a relative
+  path, it will be considered relative to the current module's directory.
+  """
+
+  if path.isrel(p):
+    p = path.join(str(require.current.directory), p)
+  return path.canonical(p)
+
+
+def glob(patterns, parent=None, excludes=None):
+  """
+  Same as #path.glob(), except that *parent* defaults to the parent directory
+  of the currently executed module (not always the same directory as the cell
+  base directory!).
+  """
+
+  if not parent:
+    parent = str(require.current.directory)
+  return path.glob(patterns, parent, excludes)
 
 
 class TargetFactory(object):
@@ -93,6 +116,9 @@ class TargetFactory(object):
     for func in self.postprocessors:
       func(target)
     return target
+
+  def __instancecheck__(self, other):
+    return isinstance(other, self.cls)
 
   def preprocess(self, func):
     self.preprocessors.append(func)
@@ -123,6 +149,6 @@ class gentarget(TargetTrait):
 
   def translate(self):
     self.target.add_action(BuildAction(
-      deps=self.target.deps(), commands=self.commands,
+      deps=..., commands=self.commands,
       cwd=self.cwd, environ=self.environ,
       input_files=self.input_files, output_files=self.output_files))

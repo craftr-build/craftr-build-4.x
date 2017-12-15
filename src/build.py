@@ -110,13 +110,31 @@ class BuildTarget:
     self.is_translated = False
     self.actions = {}
 
+  def __repr__(self):
+    return '<BuildTarget "{}">'.format(self.long_name)
+
   @property
   def long_name(self):
     return '//{}:{}'.format(self.cell.name, self.name)
 
+  def leaf_actions(self):
+    actions = set(self.actions.values())
+    outputs = set()
+    for action in actions:
+      outputs |= set(action.deps)
+    return actions - outputs
+
   def add_action(self, action):
     if not action.name:
       action.name = str(len(self.actions))
+
+    leafs = it.concat(x.leaf_actions() for x in self.direct_deps())
+    if action.deps == Ellipsis:
+      action.deps = list(leafs)
+    elif Ellipsis in action.deps:
+      index = action.deps.index(Ellipsis)
+      action.deps[index:index+1] = list(leafs)
+
     action.target = self
     if action.name in self.actions:
       raise RuntimeError('Action "{}" already exists'.format(action.long_name))
@@ -132,7 +150,7 @@ class BuildTarget:
     """
 
     if not self.trait:
-      return ()
+      return it.stream(())
 
     assert order in ('pre', 'post')
     def recursive(trait):
@@ -143,7 +161,7 @@ class BuildTarget:
         recursive(sub)
       if order != 'pre':
         yield trait
-    return recursive(self.trait)
+    return it.stream(recursive(self.trait))
 
   def deps(self):
     from typing import Iterable, List
@@ -156,6 +174,9 @@ class BuildTarget:
       yield from it.concat(trans(x) for x in self.internal_deps)
       yield it.concat(trans(self))
     return it.stream(all()).concat().unique()
+
+  def direct_deps(self):
+    return it.concat([self.internal_deps, self.transitive_deps])
 
   def complete(self):
     if self.is_completed:
@@ -226,12 +247,15 @@ class BuildAction:
 
   def __init__(self, target=None, name=None, deps=None, commands=None,
                input_files=None, output_files=None, cwd=None, environ=None):
+    if deps is Ellipsis:
+      deps = [Ellipsis]
     self.target = target
     self.name = name
-    self.deps = deps
-    self.commands = commands or []
-    self.input_files = input_files or []
-    self.output_files = output_files or []
+    self.deps = list(deps or [])
+    assert all(isinstance(x, BuildAction) or x is Ellipsis for x in self.deps)
+    self.commands = list(commands or [])
+    self.input_files = list(input_files or [])
+    self.output_files = list(output_files or [])
     self.cwd = cwd
     self.environ = environ
 
@@ -285,3 +309,11 @@ class BuildGraph:
 
   def hash(self, node):
     return hashlib.sha1(json.dumps(node._asdict()).encode('utf8')).hexdigest()[:12]
+
+  def dotviz(self, fp):
+    fp.write('digraph "craftr" {\n')
+    for node in self.nodes():
+      fp.write('\t{} [label="{}"];\n'.format(id(node), node.name))
+      for dep in node.deps:
+        fp.write('\t\t{} -> {};\n'.format(id(self[dep]), id(node)))
+    fp.write('}\n')

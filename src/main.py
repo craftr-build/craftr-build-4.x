@@ -190,6 +190,22 @@ parser.add_argument(
        'you want the specified targets to be cleaned recursively.'
 )
 
+parser.add_argument(
+  '--dotviz',
+  metavar='FILE',
+  nargs='?',
+  default=NotImplemented,
+  help='Render a .dot graph file to the specified FILE or stdout and exit.'
+)
+
+parser.add_argument(
+  'backend_args',
+  nargs='*',
+  default=[],
+  help='Additional arguments for the build backend. These arguments will '
+       'be passed both to --build and --clean (not --prepare-build).'
+)
+
 
 def get_platform_tags():
   name = sys.platform.lower()
@@ -286,6 +302,16 @@ def main(argv=None):
       error('fatal: could not change to directory "{}" ({})'.format(args.cwd, e))
       return 1
 
+  # Validate that no backend_args are specified unless --build or --clean
+  # is used.
+  if args.backend_args and args.build is NotImplemented and args.clean is NotImplemented:
+    for arg in args.backend_args:
+      parser.print_usage()
+      error('craftr: error: unrecognized argument: {}'.format(arg))
+      error('        note: additional argument are only supported in the '
+            '--build or --clean steps')
+      return 1
+
   # Handle --run-build-node
   if (args.build is not NotImplemented or args.clean is not NotImplemented
       or args.configure is not NotImplemented or args.flush
@@ -303,6 +329,8 @@ def main(argv=None):
     except KeyError:
       error('fatal: build node "{}" does not exist'.format(args.run_build_node))
       return 1
+    for directory in (os.path.dirname(x) for x in node.output_files):
+      os.makedirs(directory, exist_ok=True)
     old_env = os.environ.copy()
     os.environ.update(node.environ or {})
     if node.cwd:
@@ -443,11 +471,21 @@ def main(argv=None):
       json.dump(craftr.cache, fp)
 
   # Load the build graph from file if we need it.
-  if not build_graph and (args.prepare_build or args.run_build_node or
-      args.build is not NotImplemented or args.clean is not NotImplemented):
-    if not args.run_build_node:
+  if not build_graph and (args.prepare_build or
+      args.dotviz is not NotImplemented or args.build is not NotImplemented
+      or args.clean is not NotImplemented):
+    if args.dotviz is NotImplemented:
       print('note: loading "{}"'.format(build_graph_file))
     build_graph = craftr.BuildGraph().read(build_graph_file)
+
+  # Handle --dotviz
+  if args.dotviz is not NotImplemented:
+    if args.dotviz is None:
+      build_graph.dotviz(sys.stdout)
+    else:
+      with open(args.dotviz, 'w') as fp:
+        build_graph.dotviz(fp)
+    return 0
 
   # Handle --prepare-build
   if args.prepare_build or args.build is not NotImplemented:
@@ -455,11 +493,11 @@ def main(argv=None):
 
   # Handle --build
   if args.build is not NotImplemented:
-    backend.build(craftr.build_directory, build_graph)
+    backend.build(craftr.build_directory, build_graph, args.backend_args)
 
   # Handle --clean
   if args.clean is not NotImplemented:
-    backend.clean(craftr.build_directory, build_graph)
+    backend.clean(craftr.build_directory, build_graph, args.backend_args)
 
 
 def quickstart(language):

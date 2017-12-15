@@ -43,7 +43,7 @@ def prepare_build(build_directory, graph):
     writer.newline()
 
     for node in sorted(graph.nodes(), key=lambda x: x.name):
-      phony_name = 'node_' + make_rule_name(graph, node)
+      phony_name = make_rule_name(graph, node)
       rule_name = 'rule_' + phony_name
 
       command = [
@@ -53,20 +53,22 @@ def prepare_build(build_directory, graph):
         '--run-build-node', node.name,
         '--cwd', os.getcwd()
       ]
-      writer.rule(rule_name, command)
+      writer.rule(rule_name, command, description=node.name)
 
-      deps = [make_rule_name(x) for x in node.deps] + list(node.output_files)
-      writer.build(deps or [phony_name] , rule_name, node.input_files)
-      if deps:
+      deps = [make_rule_name(graph, graph[x]) for x in node.deps] + list(node.input_files)
+      outputs = list(node.output_files)
+
+      writer.build(outputs or [phony_name] , rule_name, deps)
+      if outputs:
         writer.build([phony_name], 'phony', node.output_files)
       writer.newline()
 
 
-def build(build_directory, graph):
-  command = ['ninja']
+def build(build_directory, graph, args):
+  command = ['ninja'] + list(args)
   subprocess.run(command, cwd=build_directory)
 
 
-def clean(build_directory, graph):
-  command = ['ninja', '-t', 'clean']
+def clean(build_directory, graph, args):
+  command = ['ninja', '-t', 'clean'] + list(args)
   subprocess.run(command, cwd=build_directory)
