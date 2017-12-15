@@ -3,6 +3,7 @@ Build API.
 """
 
 import collections
+import hashlib
 import json
 import os
 import craftr from './index'
@@ -248,7 +249,10 @@ class BuildGraph:
   BuildNode = collections.namedtuple('BuildNode', 'name deps commands input_files output_files cwd environ explicit console')
 
   def __init__(self):
-    self.nodes = {}
+    self._nodes = {}
+
+  def __getitem__(self, key):
+    return self._nodes[key]
 
   def from_actions(self, actions):
     for action in actions:
@@ -257,20 +261,27 @@ class BuildGraph:
           action.commands, action.input_files, action.output_files,
           action.cwd, action.environ, action.target.explicit,
           action.target.console)
-      self.nodes[node.name] = node
+      self._nodes[node.name] = node
     return self
 
   def from_json(self, data):
-    self.nodes.update({x['name']: self.BuildNode(**x) for x in data})
+    self._nodes.update({x['name']: self.BuildNode(**x) for x in data})
 
   def to_json(self):
-    return [x._asdict() for x in self.nodes.values()]
+    return [x._asdict() for x in self._nodes.values()]
 
   def read(self, filename):
     with open(filename, 'r') as fp:
       self.from_json(json.load(fp))
+    return self
 
   def write(self, filename):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as fp:
       json.dump(self.to_json(), fp)
+
+  def nodes(self):
+    return self._nodes.values()
+
+  def hash(self, node):
+    return hashlib.sha1(json.dumps(node._asdict()).encode('utf8')).hexdigest()[:12]
