@@ -325,6 +325,20 @@ def main(argv=None):
     toml.dump(craftr.options.data(), sys.stdout)
     return 0
 
+  # Handle --backend, load the backend only if we need it, or it makes
+  # sense to validate that the backend exists (eg. on --configure).
+  if not args.backend:
+    args.backend = craftr.options.get('build.backend', 'ninja')
+  if args.configure is not NotImplemented or args.prepare_build or \
+      args.build is not NotImplemented or args.clean is not NotImplemented:
+    try:
+      backend = require.context.require.try_('craftr/backend/' + args.backend, args.backend)
+    except require.TryResolveError:
+      error('fatal: could not load backend "{}"'.format(args.backend))
+      return 1
+  else:
+    backend = None
+
   # Handle --configure
   if args.configure is not NotImplemented:
     if not args.configure:
@@ -333,9 +347,9 @@ def main(argv=None):
       args.configure = posixpath.join(args.configure, 'BUILD.cr.py')
     if not os.path.isabs(args.configure):
       args.configure = './' + args.configure
-    module = require.new('.').try_(args.configure)
-    with require.context.push_main(module):
-      require.context.load_module(module)
+    build_module = require.new('.').resolve(args.configure)
+    with require.context.push_main(build_module):
+      require.context.load_module(build_module)
     # TODO: Store the build graph in a Craftr-specific file-format.
 
   # Handle --configure or --save-cache
