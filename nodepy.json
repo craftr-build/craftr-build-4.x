@@ -3,7 +3,7 @@
   "version": "3.0.0-dev",
   "description": "Craftr is a domain-independent build system.",
   "license": "MIT",
-  "main": "./lib/public",
+  "main": "./src/index",
   "resolve_root": "./src",
   "bin": {
     "craftr": "./src/main"

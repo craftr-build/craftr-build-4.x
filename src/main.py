@@ -4,10 +4,15 @@ Command-line entry point for the Craftr build system.
 
 import argparse
 import functools
+import json
 import os
+import platform
+import posixpath
 import shutil
 import sys
 
+import craftr from 'craftr'
+import {concat} from 'craftr/utils/it'
 import {reindent, ReindentHelpFormatter} from 'craftr/utils/text'
 
 error = functools.partial(print, file=sys.stderr)
@@ -17,13 +22,9 @@ parser = argparse.ArgumentParser(
   formatter_class=ReindentHelpFormatter,
   prog='craftr',
   description='''
-    The Craftr Build System
-    -----------------------
-
     Craftr is a modular language-indepenent build system that is written in
-    Python. It's core features are cross-platform compatibility, extensibility
-    as well as performance and a Python as a powerful tool for customizing
-    build steps.
+    Python. It's core features are cross-platform compatibility, easy
+    extensibility and Python as powerful build scripting language.
   ''',
 )
 
@@ -37,11 +38,24 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--backend',
-  help='The backend to use for building. The last (explicitly) used backend '
-       'is remembered when using the --prepare-build or --build options. If '
-       'this option is not defined, it is read from the `build.backend` '
-       'configuration value. Defaults to `ninja`.'
+  '--show-config-tags',
+  action='store_true',
+  help='Show the tags associated with the configuration and exit. They are '
+       'the properties that you can use in the Craftr configuration file '
+       'for conditional options.'
+)
+
+parser.add_argument(
+  '--show-build-directory',
+  action='store_true',
+  help='Show the final build directory (including release and backend name) '
+       'and exit.'
+)
+
+parser.add_argument(
+  '--recursive',
+  action='store_true',
+  help='Clean targets recursively in the --clean step.'
 )
 
 parser.add_argument(
@@ -53,7 +67,50 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--build-root',
+  metavar='DIRECTORY',
+  help='The build root directory. If not specified, defaults to the value '
+       'of the `build.directory` option. If that is not specified, it '
+       'defaults to build/ on --configure, otherwise it will be determined '
+       'from the directories in the current working directory.'
+)
+
+parser.add_argument(
+  '--backend',
+  help='The backend to use for building. The last (explicitly) used backend '
+       'is remembered when using the --prepare-build or --build options. If '
+       'this option is not defined, it is read from the `build.backend` '
+       'configuration value. Defaults to `ninja`.'
+)
+
+parser.add_argument(
+  '--config',
+  help='Specify a TOML configuration file to load. Note that any values '
+       'specified with --options take precedence over the configuration '
+       'file. Defaults to BUILD.cr.toml'
+)
+
+parser.add_argument(
+  '--options',
+  metavar='KEY=VALUE',
+  nargs='+',
+  default=[],
+  action='append',
+  help='Define one or more options that override the Craftr configuration '
+       'file. This command-line option can be used multiple times.'
+)
+
+parser.add_argument(
+  '--flush',
+  action='store_true',
+  help='Flush existing build configuration files. Use this option if you '
+       'want to run the --configure step again without taking into options '
+       'saved from a previous run.'
+)
+
+parser.add_argument(
   '--configure',
+  metavar='BUILDSCRIPT',
   nargs='?',
   default='BUILD.cr.py',
   help='Execute the build script and generate a JSON database file that '
@@ -63,25 +120,207 @@ parser.add_argument(
 parser.add_argument(
   '--prepare-build',
   action='store_true',
-  help='Prepare the build process by generating all the data for the '
-       'selected build backend, but not actually execute the build. Use '
-       'this option if you want to invoke the build backend manually instead '
-       'of via the --build option.'
+  help='Prepare the build process by generating all files for the selected '
+       'build backend, but not actually execute the build. Use this option if '
+       'you want to invoke the build backend manually instead of via the '
+       '--build step.'
 )
 
 parser.add_argument(
   '--build',
-  action='store_true',
-  help='Load the build configuration from the --configure step and execute '
-       'the build process using the configured backend. Implies the '
-       '--prepare-build option.'
+  metavar='TARGET',
+  nargs='*',
+  help='Execute the build for all or the specified TARGETs using the build '
+       'backend configured with --backend or in the Craftr configuration '
+       'file. This step implies the --prepare-build step.'
 )
+
+parser.add_argument(
+  '--clean',
+  metavar='TARGET',
+  nargs='*',
+  help='Clean all or the specified TARGETs. Use the --recursive option if '
+       'you want the specified targets to be cleaned recursively.'
+)
+
+
+def get_platform_tags():
+  name = sys.platform.lower()
+  system = platform.system().lower()
+  tags = set()
+  if name.startswith('win32'):
+    if 'cygwin' in system:
+      tags.add('cygwin')
+    tags.add('win32')
+  elif name.startswith('darwin'):
+    tags.add('posix')
+    tags.add('darwin')
+  elif name.startswith('linux'):
+    tags.add('posix')
+    tags.add('linux')
+    with open('/proc/version') as fp:
+      if 'microsoft' in fp.read().lower():
+        tags.add('wsl')
+        tags.remove('linux')
+  return tags
+
+
+def mark_build_root(build_root):
+  os.makedirs(build_root, exist_ok=True)
+  open(os.path.join(build_root, '.craftr_build_root'), 'w').close()
+
+
+def find_build_root():
+  results = []
+  for name in os.listdir('.'):
+    if os.path.isfile(os.path.join(name, '.craftr_build_root')):
+      results.append(name)
+  if len(results) > 1:
+    error('fatal: multiple candidates found for --build-root')
+    error('       candidates are')
+    for name in results:
+      print('  --build-root', name)  # TODO shell quote
+    sys.exit(1)
+  if not results:
+    return None
+  return results[0]
+
+
+def set_options(options):
+  options = list(options)
+  print(options)
+  no_such_options = set()
+  invalid_options = set()
+  for option in options:
+    key, sep, value = option.partition('=')
+    if not sep:
+      try:
+        craftr.options.pop(key)
+      except KeyError:
+        no_such_options.add(key)
+    else:
+      if value.lower() in ('', 'true', '1', 'on', 'yes'):
+        value = True
+      elif value.lower() in ('false', '0', 'off', 'no'):
+        value = False
+      try:
+        craftr.options[key] = value
+      except KeyError:
+        invalid_options.add(key)
+  return no_such_options, invalid_options
 
 
 def main(argv=None):
   args = parser.parse_args(argv)
   if args.quickstart is not NotImplemented:
     return quickstart(language=args.quickstart)
+
+  tags = get_platform_tags()
+  if not tags and not args.show_config_tags:
+    print('note: unexpected platform "{}"'.format(sys.platform))
+
+  # Handle --release
+  if args.release:
+    craftr.release = True
+    craftr.options['build.release'] = True
+    tags.add('release')
+  else:
+    craftr.release = False
+    tags.add('debug')
+
+  # Initialize configuration platform properties.
+  [craftr.options.add_cfg_property(x) for x in tags]
+
+  # Handle --show-platform-tags
+  if args.show_config_tags:
+    print(','.join(sorted(tags)))
+    return 0
+
+  # Handle --config
+  if not args.config and os.path.isfile('BUILD.cr.toml'):
+    craftr.options.read('BUILD.cr.toml')
+  elif args.config:
+    craftr.options.read(args.config)
+
+  # Handle --options
+  set_options(concat(args.options))
+
+  # Determine the build directory.
+  if not args.build_root:
+    args.build_root = craftr.options.get('build.directory', None)
+  if not args.build_root:
+    args.build_root = find_build_root()
+    if args.build_root and args.build_root != 'build':
+      print('note: automatically selected build root directory "{}"'.format(
+          args.build_root))
+  if not args.build_root:
+    args.build_root = 'build'
+  mark_build_root(args.build_root)
+  mode = 'release' if args.release else 'debug'
+  craftr.build_directory = os.path.join(args.build_root, mode)
+
+  # Handle --show-build-directory
+  if args.show_build_directory:
+    print(craftr.build_directory)
+    return 0
+
+  # Handle --flush
+  if args.flush and os.path.exists(craftr.build_directory):
+    msg = 'note: removing build directory "{}" (--flush)'
+    print(msg.format(craftr.build_directory))
+    shutil.rmtree(craftr.build_directory)
+
+  # Read in the cache from the previous build.
+  cache_file = os.path.join(craftr.build_directory, 'craftr_cache.json')
+  if os.path.isfile(cache_file):
+    with open(cache_file) as fp:
+      try:
+        craftr.cache = json.load(fp)
+      except json.JSONDecodeError as e:
+        print('warn: could not load cache from "{}"'.format(cache_file))
+
+  # Combine --options with the cached options, and set them again.
+  craftr.cache['options'] = list(concat(
+      [craftr.cache.get('options', []), concat(args.options)]
+  ))
+  no_such_options, invalid_options = set_options(craftr.cache['options'])
+  if no_such_options:
+    print('note: these options can not be removed:', no_such_options)
+  if invalid_options:
+    print('note: these options can not be set:', invalid_options)
+
+  # Handle --configure
+  if args.configure is not NotImplemented:
+    if not args.configure:
+      args.configure = 'BUILD.cr.py'
+    if os.path.isdir(args.configure):
+      args.configure = posixpath.join(args.configure, 'BUILD.cr.py')
+    if not os.path.isabs(args.configure):
+      args.configure = './' + args.configure
+    module = require.new('.').resolve(args.configure)
+    with require.context.push_main(module):
+      require.context.load_module(module)
+    with open(cache_file, 'w') as fp:
+      json.dump(craftr.cache, fp)
+
+    # TODO: Store the build graph in a Craftr-specific file-format.
+
+  # Handle --prepare-build
+  if args.prepare_build:
+    # TODO: Load the build graph back from the Craftr-specific file-format.
+    # TODO: Invoke the build backend to prepare the build.
+    print('todo: --prepare-build')
+
+  # Handle --build
+  if args.build is not NotImplemented:
+    # TODO: Invoke the build backend.
+    print('todo: --build')
+
+  # Handle --clean
+  if args.clean is not NotImplemented:
+    # TODO: Invoke the build backend for cleanup, or cleanup from the info
+    #       in the Craftr-specific build-graph file-format.
+    print('todo: --clean')
 
 
 def quickstart(language):
