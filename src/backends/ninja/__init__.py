@@ -25,6 +25,10 @@ def quote(s, for_ninja=False):
   return s
 
 
+def make_rule_name(graph, node):
+  return re.sub('[^\d\w\-_\.]+', '_', node.name) + '_' + graph.hash(node)
+
+
 def prepare_build(build_directory, graph):
   build_file = os.path.join(build_directory, 'build.ninja')
   print('note: writing "{}"'.format(build_file))
@@ -38,19 +42,23 @@ def prepare_build(build_directory, graph):
     writer.variable('nodepy_exec_args', ' '.join(map(quote, nodepy.runtime.exec_args)))
     writer.newline()
 
-    rule_name_counter = {}
     for node in sorted(graph.nodes(), key=lambda x: x.name):
-      rule_name = re.sub('[^\d\w\-_\.]+', '_', node.name) + '_' + graph.hash(node)
-      number = rule_name_counter.setdefault(rule_name, 0)
-      rule_name_counter[rule_name] = number + 1
-      if number > 0:
-        rule_name += '__' + str(number)
+      phony_name = 'node_' + make_rule_name(graph, node)
+      rule_name = 'rule_' + phony_name
 
-      command = ['$nodepy_exec_args', str(require.resolve('craftr/main').filename),
-                '--build-directory', build_directory, '--run-build-node', node.name,
-                '--cwd', os.getcwd()]
+      command = [
+        '$nodepy_exec_args',
+        str(require.resolve('craftr/main').filename),
+        '--build-directory', build_directory,
+        '--run-build-node', node.name,
+        '--cwd', os.getcwd()
+      ]
       writer.rule(rule_name, command)
-      writer.build(node.output_files or [rule_name] , rule_name, node.input_files)
+
+      deps = [make_rule_name(x) for x in node.deps] + list(node.output_files)
+      writer.build(deps or [phony_name] , rule_name, node.input_files)
+      if deps:
+        writer.build([phony_name], 'phony', node.output_files)
       writer.newline()
 
 
