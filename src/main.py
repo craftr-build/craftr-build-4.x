@@ -388,21 +388,16 @@ def main(argv=None):
     build_graph = craftr.BuildGraph().read(build_graph_file)
 
   # Handle --prepare-build
-  if args.prepare_build:
-    # TODO: Load the build graph back from the Craftr-specific file-format.
-    # TODO: Invoke the build backend to prepare the build.
-    print('todo: --prepare-build')
+  if args.prepare_build or args.build is not NotImplemented:
+    backend.prepare_build(craftr.build_directory, build_graph)
 
   # Handle --build
   if args.build is not NotImplemented:
-    # TODO: Invoke the build backend.
-    print('todo: --build')
+    backend.build(craftr.build_directory, build_graph)
 
   # Handle --clean
   if args.clean is not NotImplemented:
-    # TODO: Invoke the build backend for cleanup, or cleanup from the info
-    #       in the Craftr-specific build-graph file-format.
-    print('todo: --clean')
+    backend.clean(craftr.build_directory, build_graph)
 
 
 def quickstart(language):
