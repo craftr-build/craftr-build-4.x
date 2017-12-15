@@ -238,6 +238,12 @@ def merge_options(*opts):
 
 
 def main(argv=None):
+  if argv is None:
+    argv = sys.argv[1:]
+  if not argv:
+    parser.print_usage()
+    return 0
+
   args = parser.parse_args(argv)
   if args.quickstart is not NotImplemented:
     return quickstart(language=args.quickstart)
