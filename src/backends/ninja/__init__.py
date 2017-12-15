@@ -50,7 +50,7 @@ def prepare_build(build_directory, graph):
         '$nodepy_exec_args',
         str(require.resolve('craftr/main').filename),
         '--build-directory', build_directory,
-        '--run-build-node', node.name,
+        '--run-node', node.name,
         '--cwd', os.getcwd()
       ]
       writer.rule(rule_name, command, description=node.name)

@@ -173,12 +173,18 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--run-build-node',
+  '--run-node',
   metavar='NAME',
   help='Execute the command for the specified build-node. Build nodes names '
        'are formatted as `//<cell>:<target>#<node>`. This can be used '
        'internally by build backends to implement deduplication. This option '
        'requires the --build-directory to be set.'
+)
+
+parser.add_argument(
+  '--show-node',
+  metavar='NAME',
+  help='Show the information for the specified build node.'
 )
 
 parser.add_argument(
@@ -284,6 +290,35 @@ def merge_options(*opts):
   return result
 
 
+def run_build_node(graph, node_name):
+  try:
+    node = graph[node_name]
+  except KeyError:
+    error('fatal: build node "{}" does not exist'.format(node_name))
+    return 1
+  for directory in (os.path.dirname(x) for x in node.output_files):
+    os.makedirs(directory, exist_ok=True)
+  old_env = os.environ.copy()
+  os.environ.update(node.environ or {})
+  if node.cwd:
+    os.chdir(node.cwd)
+  for command in node.commands:
+    code = subprocess.call(command)
+    if code != 0:
+      return code
+  return 0
+
+
+def show_build_node(graph, node_name):
+  try:
+    node = graph[node_name]
+  except KeyError:
+    error('fatal: build node "{}" does not exist'.format(node_name))
+    return 1
+  json.dump(node._asdict(), sys.stdout, indent=2)
+  return 0
+
+
 def main(argv=None):
   if argv is None:
     argv = sys.argv[1:]
@@ -312,36 +347,20 @@ def main(argv=None):
             '--build or --clean steps')
       return 1
 
-  # Handle --run-build-node
+  # Handle --run-node if a --build-directory is explicitly specified.
   if (args.build is not NotImplemented or args.clean is not NotImplemented
       or args.configure is not NotImplemented or args.flush
-      or args.prepare_build) and args.run_build_node:
+      or args.prepare_build) and args.run_node:
     print(args)
-    error('fatal: --run-build-node can not be combined with other build steps.')
+    error('fatal: --run-node can not be combined with other build steps.')
     return 1
-  if args.run_build_node:
-    if not args.build_directory:
-      error('fatal: --run-build-node requires --build-directory')
-      return 1
+  if args.run_node and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
-    try:
-      node = build_graph[args.run_build_node]
-    except KeyError:
-      error('fatal: build node "{}" does not exist'.format(args.run_build_node))
-      return 1
-    for directory in (os.path.dirname(x) for x in node.output_files):
-      os.makedirs(directory, exist_ok=True)
-    old_env = os.environ.copy()
-    os.environ.update(node.environ or {})
-    if node.cwd:
-      os.chdir(node.cwd)
-    for command in node.commands:
-      if len(node.commands) > 1:
-        print('$', command)  # TODO
-      code = subprocess.call(command)
-      if code != 0:
-        return code
-    return 0
+    return run_build_node(build_graph, args.run_node)
+  # Handle --show-node if --build-directory was not explicitly specified.
+  if args.show_node and args.build_directory:
+    build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
+    return show_build_node(build_graph, args.show_node)
 
   tags = get_platform_tags()
   if not tags and not args.show_config_tags:
@@ -471,12 +490,20 @@ def main(argv=None):
       json.dump(craftr.cache, fp)
 
   # Load the build graph from file if we need it.
-  if not build_graph and (args.prepare_build or
-      args.dotviz is not NotImplemented or args.build is not NotImplemented
+  if not build_graph and (args.prepare_build or args.run_node or args.show_node
+      or args.dotviz is not NotImplemented or args.build is not NotImplemented
       or args.clean is not NotImplemented):
     if args.dotviz is NotImplemented:
       print('note: loading "{}"'.format(build_graph_file))
     build_graph = craftr.BuildGraph().read(build_graph_file)
+
+  # Handle --run-node if --build-directory was not explicitly specified.
+  if args.run_node:
+    return run_build_node(build_graph, args.run_node)
+
+  # Handle --show-node if --build-directory was not explicitly specified.
+  if args.show_node:
+    return show_build_node(build_graph, args.show_node)
 
   # Handle --dotviz
   if args.dotviz is not NotImplemented:
