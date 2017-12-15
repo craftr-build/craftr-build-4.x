@@ -37,6 +37,9 @@ class Configuration:
   def add_cfg_property(self, key, value=True):
     self._cfg_context.vars[key] = value
 
+  def data(self):
+    return self._data
+
   def read(self, filename):
     with open(filename, 'r') as fp:
       data = toml.load(fp)

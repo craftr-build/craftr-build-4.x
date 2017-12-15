@@ -10,6 +10,7 @@ import platform
 import posixpath
 import shutil
 import sys
+import toml
 
 import craftr from 'craftr'
 import {concat} from 'craftr/utils/it'
@@ -53,6 +54,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--show-config',
+  action='store_true',
+  help='Print the configuration values in TOML format.'
+)
+
+parser.add_argument(
   '--recursive',
   action='store_true',
   help='Clean targets recursively in the --clean step.'
@@ -84,6 +91,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--save-cache',
+  action='store_true',
+  help='Save the cache (which includes the specified --options) to the build '
+       'cache file. This option is implied by the --configure step.'
+)
+
+parser.add_argument(
   '--config',
   help='Specify a TOML configuration file to load. Note that any values '
        'specified with --options take precedence over the configuration '
@@ -112,7 +126,7 @@ parser.add_argument(
   '--configure',
   metavar='BUILDSCRIPT',
   nargs='?',
-  default='BUILD.cr.py',
+  default=NotImplemented,
   help='Execute the build script and generate a JSON database file that '
        'contains all the build information.'
 )
@@ -130,6 +144,7 @@ parser.add_argument(
   '--build',
   metavar='TARGET',
   nargs='*',
+  default=NotImplemented,
   help='Execute the build for all or the specified TARGETs using the build '
        'backend configured with --backend or in the Craftr configuration '
        'file. This step implies the --prepare-build step.'
@@ -139,6 +154,7 @@ parser.add_argument(
   '--clean',
   metavar='TARGET',
   nargs='*',
+  default=NotImplemented,
   help='Clean all or the specified TARGETs. Use the --recursive option if '
        'you want the specified targets to be cleaned recursively.'
 )
@@ -188,7 +204,6 @@ def find_build_root():
 
 def set_options(options):
   options = list(options)
-  print(options)
   no_such_options = set()
   invalid_options = set()
   for option in options:
@@ -208,6 +223,18 @@ def set_options(options):
       except KeyError:
         invalid_options.add(key)
   return no_such_options, invalid_options
+
+
+def merge_options(*opts):
+  result = []
+  for option in concat(opts):
+    key, sep, value = option.partition('=')
+    for other in result:
+      if other == key or other.startswith(key + '='):
+        break
+    else:
+      result.append(option)
+  return result
 
 
 def main(argv=None):
@@ -280,14 +307,17 @@ def main(argv=None):
         print('warn: could not load cache from "{}"'.format(cache_file))
 
   # Combine --options with the cached options, and set them again.
-  craftr.cache['options'] = list(concat(
-      [craftr.cache.get('options', []), concat(args.options)]
-  ))
+  craftr.cache['options'] = merge_options(craftr.cache.get('options', []), concat(args.options))
   no_such_options, invalid_options = set_options(craftr.cache['options'])
   if no_such_options:
     print('note: these options can not be removed:', no_such_options)
   if invalid_options:
     print('note: these options can not be set:', invalid_options)
+
+  # Handle --show-config
+  if args.show_config:
+    toml.dump(craftr.options.data(), sys.stdout)
+    return 0
 
   # Handle --configure
   if args.configure is not NotImplemented:
@@ -297,13 +327,17 @@ def main(argv=None):
       args.configure = posixpath.join(args.configure, 'BUILD.cr.py')
     if not os.path.isabs(args.configure):
       args.configure = './' + args.configure
-    module = require.new('.').resolve(args.configure)
+    module = require.new('.').try_(args.configure)
     with require.context.push_main(module):
       require.context.load_module(module)
+    # TODO: Store the build graph in a Craftr-specific file-format.
+
+  # Handle --configure or --save-cache
+  if args.configure is not NotImplemented or args.save_cache:
+    print('note: writing "{}"'.format(cache_file))
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     with open(cache_file, 'w') as fp:
       json.dump(craftr.cache, fp)
-
-    # TODO: Store the build graph in a Craftr-specific file-format.
 
   # Handle --prepare-build
   if args.prepare_build:
