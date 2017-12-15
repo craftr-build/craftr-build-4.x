@@ -153,7 +153,7 @@ class library(JavaBase):
     extra_arguments = options.get('java.extra_arguments', []) + (self.extra_arguments or [])
     classpath = []
 
-    for data in self.target.traits():
+    for data in self.target.dep_traits():
       if isinstance(data, library):
         classpath.append(data.jar_filename)
       elif isinstance(data, prebuilt):
@@ -234,7 +234,7 @@ class binary(library.cls):
       super().translate(jar_filename=sub_jar)
       inputs.append(sub_jar)
 
-    for data in self.target.traits()[1:]:
+    for data in self.target.dep_traits():
       if isinstance(data, library):
         inputs.append(data.jar_filename)
       elif isinstance(data, prebuilt):

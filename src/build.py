@@ -178,6 +178,12 @@ class BuildTarget:
   def direct_deps(self):
     return it.concat([self.internal_deps, self.transitive_deps])
 
+  def dep_traits(self):
+    return self.deps().attr('traits').call().concat()
+
+  def direct_dep_traits(self):
+    return self.direct_deps().attr('traits').call().concat()
+
   def complete(self):
     if self.is_completed:
       return
