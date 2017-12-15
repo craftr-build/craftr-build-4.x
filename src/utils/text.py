@@ -6,6 +6,12 @@ import argparse
 import textwrap
 
 
+def plural(word, number):
+  if number == 1:
+    return word
+  return word + 's'  # TODO: special plurals
+
+
 def reindent(text, indent=''):
   """
   Uses #textwrap.dedent() to on *text*, then splits it by lines to add the

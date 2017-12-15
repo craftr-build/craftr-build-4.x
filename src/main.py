@@ -14,7 +14,7 @@ import toml
 
 import craftr from 'craftr'
 import {concat} from 'craftr/utils/it'
-import {reindent, ReindentHelpFormatter} from 'craftr/utils/text'
+import {plural, reindent, ReindentHelpFormatter} from 'craftr/utils/text'
 
 error = functools.partial(print, file=sys.stderr)
 
@@ -63,6 +63,12 @@ parser.add_argument(
   '--recursive',
   action='store_true',
   help='Clean targets recursively in the --clean step.'
+)
+
+parser.add_argument(
+  '--dry',
+  action='store_true',
+  help='In the --configure step, do not save any build configuration.'
 )
 
 parser.add_argument(
@@ -332,15 +338,20 @@ def main(argv=None):
   if args.configure is not NotImplemented or args.prepare_build or \
       args.build is not NotImplemented or args.clean is not NotImplemented:
     try:
-      backend = require.context.require.try_('craftr/backend/' + args.backend, args.backend)
+      backend = require.context.require.try_('craftr/backends/' + args.backend, args.backend)
     except require.TryResolveError:
       error('fatal: could not load backend "{}"'.format(args.backend))
       return 1
   else:
     backend = None
 
+  build_graph = None
+  build_graph_file = os.path.join(craftr.build_directory, 'craftr_build_graph.json')
+
   # Handle --configure
   if args.configure is not NotImplemented:
+    if not args.dry:
+      args.save_cache = True
     if not args.configure:
       args.configure = 'BUILD.cr.py'
     if os.path.isdir(args.configure):
@@ -350,14 +361,31 @@ def main(argv=None):
     build_module = require.new('.').resolve(args.configure)
     with require.context.push_main(build_module):
       require.context.load_module(build_module)
-    # TODO: Store the build graph in a Craftr-specific file-format.
+    targets = list(concat(x.targets.values() for x in craftr.cells.values()))
+    for target in targets:
+      target.complete()
+    for target in targets:
+      target.translate()
+    actions = list(concat(x.actions.values() for x in targets))
+    print('note: generated', len(actions), plural('action', len(actions)),
+          'from', len(targets), plural('target', len(targets)))
+    if not args.dry:
+      build_graph = craftr.BuildGraph().from_actions(actions)
+      print('note: writing "{}"'.format(build_graph_file))
+      build_graph.write(build_graph_file)
 
-  # Handle --configure or --save-cache
-  if args.configure is not NotImplemented or args.save_cache:
+  # Handle --save-cache
+  if args.save_cache:
     print('note: writing "{}"'.format(cache_file))
     os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     with open(cache_file, 'w') as fp:
       json.dump(craftr.cache, fp)
+
+  # Load the build graph from file if we need it.
+  if not build_graph and (args.prepare_build or
+      args.build is not NotImplemented or args.clean is not NotImplemented):
+    print('note: loading "{}"'.format(build_graph_file))
+    build_graph = craftr.BuildGraph().read(build_graph_file)
 
   # Handle --prepare-build
   if args.prepare_build:
