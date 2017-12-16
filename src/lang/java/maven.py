@@ -28,12 +28,14 @@ class Artifact:
     group, artifact, version = id_str.split(':')
     return cls(group, artifact, version)
 
-  def __init__(self, group, artifact, version=None):
+  def __init__(self, group, artifact, version=None, scope='compile', optional=False):
     self.group = group
     self.artifact = artifact
     self.version = version
     self.timestamp = None
     self.build_number = None
+    self.scope = scope
+    self.optional = optional
 
   def __hash__(self):
     return hash(self.as_tuple())
@@ -53,7 +55,9 @@ class Artifact:
     return (self.group, self.artifact, self.version)
 
   def is_snapshot(self):
-    return 'SNAPSHOT' in self.version
+    if self.version:
+      return 'SNAPSHOT' in self.version
+    return False
 
   def to_local_path(self, ext):
     return '{s.artifact}-{s.version}.{e}'.format(s=self, e=ext)
@@ -68,14 +72,18 @@ class Artifact:
       return template.format(g=self.group.replace('.', '/'), s=self, e=ext,
           v=self.version.replace('-SNAPSHOT', ''))
 
+  def to_maven_metadata(self):
+    return '{}/{}'.format(self.group.replace('.', '/'), self.artifact) + '/maven-metadata.xml'
+
 
 class MavenRepository:
 
   def __init__(self, name, uri):
     self.name = name
-    self.uri = uri
+    self.uri = uri.rstrip('/')
     self.pom_cache = {}
     self.pom_not_found = set()
+    self.metadata_cache = {}
 
   def __repr__(self):
     return 'MavenRepository(name={!r}, uri={!r})'.format(self.name, self.uri)
@@ -102,6 +110,23 @@ class MavenRepository:
       return None
     if artifact in self.pom_cache:
       return self.pom_cache[artifact]
+
+    if not artifact.version:
+      if artifact in self.metadata_cache:
+        metadata = self.metadata_cache[artifact]
+      else:
+        metadata_path = self.uri + '/' + artifact.to_maven_metadata()
+        response = requests.get(metadata_path)
+        if response.status_code != 200:
+          return None
+        metadata = minidom.parseString(response.content)
+        self.metadata_cache[artifact] = metadata
+      try:
+        latest = metadata.getElementsByTagName('latest')[0].firstChild.nodeValue
+      except IndexError:
+        latest = metadata.getElementsByTagName('version')[0].firstChild.nodeValue
+      artifact.version = latest
+
     if artifact.is_snapshot():
       snapshot_info = self.get_snapshot_info(artifact)
       if snapshot_info is not None:
@@ -123,10 +148,7 @@ class MavenRepository:
       maven_name = artifact.to_maven_name(ext)
     else:
       maven_name = artifact.to_maven_snapshot_name(ext)
-    if self.uri.endswith('/'):
-      maven_path = self.uri + maven_name
-    else:
-      maven_path = self.uri + '/' + maven_name
+    maven_path = self.uri + '/' + maven_name
     return maven_path
 
   def get_snapshot_info(self, artifact):
@@ -158,6 +180,7 @@ def pom_eval_deps(pom):
   project = pom.getElementsByTagName('project')[0]
 
   group_id = None
+  artifact_id = None
   version = None
   dependencies = None
   for node in iter_dom_children(project):
@@ -165,12 +188,16 @@ def pom_eval_deps(pom):
       version = node.firstChild.nodeValue
     elif not group_id and node.nodeName == 'groupId':
       group_id = node.firstChild.nodeValue
+    elif not artifact_id and node.nodeName == 'artifactId':
+      artifact_id = node.firstChild.nodeValue
     elif node.nodeName == 'parent':
       for node in iter_dom_children(node):
         if not version and node.nodeName == 'version':
           version = node.firstChild.nodeValue
         elif not group_id and node.nodeName == 'groupId':
           group_id = node.firstChild.nodeValue
+        elif not artifact_id and node.nodeName == 'artifactId':
+          artifact_id = node.firstChild.nodeValue
     elif not dependencies and node.nodeName == 'dependencies':
       dependencies = node
 
@@ -181,14 +208,47 @@ def pom_eval_deps(pom):
     return []
 
   def parse_dependency(node):
-    curr_group_id = node.getElementsByTagName('groupId')[0].firstChild.nodeValue
-    curr_artifact_id = node.getElementsByTagName('artifactId')[0].firstChild.nodeValue
-    curr_version = node.getElementsByTagName('version')[0].firstChild.nodeValue
-    if curr_group_id == '${project.groupId}':
-      curr_group_id = group_id
-    if curr_version == '${project.version}':
-      curr_version = version
-    return Artifact(curr_group_id, curr_artifact_id, curr_version)
+    try:
+      scope = node.getElementsByTagName('scope')[0].firstChild.nodeValue
+    except IndexError:
+      scope = 'compile'
+
+    try:
+      optional = node.getElementsByTagName('optional')[0].firstChild.nodeValue
+    except IndexError:
+      optional = False
+    else:
+      if optional == 'true':
+        optional = True
+      elif optional == 'false':
+        optional = False
+      else:
+        log.warn('unexpected <optional> value "{}"'.format(optional))
+        optional = False
+
+    dep_group = node.getElementsByTagName('groupId')[0].firstChild.nodeValue
+    dep_artifact = node.getElementsByTagName('artifactId')[0].firstChild.nodeValue
+
+    try:
+      dep_version = node.getElementsByTagName('version')[0].firstChild.nodeValue
+    except IndexError:
+      dep_version = None
+
+    # Try to resolve some of the properties.
+    if dep_group in ('${project.groupId}', '${pom.groupId}'):
+      dep_group = group_id
+    if dep_version in ('${project.version}', '${pom.version}'):
+      dep_version = version
+
+    # We're not a full-blown POM evaluator, so give a warning when
+    # we can't handle the property in the dependency version.
+    if dep_version and '$' in dep_version:
+      msg = 'unable to resolve "{}" in dependency {}:{} ({}:{}:{})'
+      log.warn(msg.format(dep_version, dep_group, dep_artifact,
+          group_id, artifact_id, version))
+      dep_version = None
+
+    return Artifact(dep_group, dep_artifact, dep_version, scope, optional)
 
   results = []
   for node in iter_dom_children(dependencies):

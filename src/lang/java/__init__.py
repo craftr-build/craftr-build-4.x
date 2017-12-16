@@ -179,7 +179,7 @@ class library(JavaBase):
         name = 'javac',
         deps = ...,
         commands = [command],
-        input_files = self.srcs,
+        input_files = classpath + self.srcs,
         output_files = classfiles
       )
       self.target.add_action(javac)
@@ -255,9 +255,9 @@ class binary(library.cls):
     command += ['-o', self.jar_filename]
 
     if self.dist_type == 'merge':
-      command += [inputs.pop(0)]  # Merge into the first specified dependency.
+      command += [inputs[0]]  # Merge into the first specified dependency.
       command += ['-s', 'Main-Class=' + self.main_class]
-      for infile in inputs:
+      for infile in inputs[1:]:
         command += ['-m', infile]
 
     else:
@@ -319,7 +319,7 @@ class prebuilt(craftr.TargetTrait):
     self.did_install = True
 
     poms = {}
-    queue = list(self.artifacts)
+    queue = [(0, x) for x in self.artifacts]
 
     # XXX This should probably be compared against a global set of already
     #     installed dependencies, so we don't do the same work twice if
@@ -327,18 +327,44 @@ class prebuilt(craftr.TargetTrait):
 
     print('[{}] Resolving JARs...'.format(self.target.long_name))
     while queue:
-      artifact = queue.pop()
-      if artifact in poms:
+      depth, artifact = queue.pop()
+      if artifact.scope != 'compile':
         continue
-      for repo in repos:
-        pom = repo.download_pom(artifact)
-        if pom: break
-      else:
-        raise RuntimeError('could not find artifact: {}'.format(artifact))
-      poms[artifact] = pom
-      queue.extend(maven.pom_eval_deps(pom))
 
-    for artifact in poms.keys():
+      # For now, we use this to avoid downloading the same dependency in
+      # different versions, instead only the first version that we find.
+      artifact_id = '{}:{}'.format(artifact.group, artifact.artifact)
+      if artifact_id in poms:
+        continue
+
+      # Try to find a POM manifest for the artifact.
+      for repo in repos:
+        # If the artifact has no version, that version may be filled in by
+        # the repository, but we only want to use that filled in version if
+        # we can get a POM.
+        artifact_clone = copy.copy(artifact)
+        pom = repo.download_pom(artifact_clone)
+        if pom:
+          artifact = artifact_clone
+          break
+      else:
+        if not artifact.optional:
+          raise RuntimeError('could not find artifact: {}'.format(artifact))
+        print(indent[:-2] + '    SKIP (Optional)')
+        continue
+
+      # Cache the POM and add its dependencies so we can "recursively"
+      # resolve them.
+      poms[artifact_id] = (artifact, pom, repo)
+      queue.extend([(depth+1, x) for x in maven.pom_eval_deps(pom)])
+
+      # Print dependency info.
+      #tree_indicator = '| ' if queue and queue[-1][0] > depth else '\\ '
+      indent = '| ' * depth
+      print('  {}{} ({})'.format('| ' * depth, artifact, repo.name))
+
+    # Download dependencies.
+    for artifact, pom, repo in poms.values():
       binary_jar = path.join(craftr.build_directory, '.maven-artifacts', artifact.to_local_path('jar'))
       self.binary_jars.append(binary_jar)
 
@@ -351,6 +377,7 @@ class prebuilt(craftr.TargetTrait):
       ]
       self.target.add_action(craftr.BuildAction(
         name = str(artifact),
+        deps = ...,
         commands = [command],
         output_files = [binary_jar]
       ))

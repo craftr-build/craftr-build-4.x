@@ -170,7 +170,7 @@ def main():
           for name in curr_namelist:
             if skip_meta_inf and name.startswith('META-INF/'):
               continue
-            if name in collected_names:
+            if not name.endswith('/') and name in collected_names:
               print('fatal: duplicate entry: {!r}'.format(name))
               continue
 
