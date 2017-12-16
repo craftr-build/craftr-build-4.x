@@ -89,7 +89,7 @@ parser.add_argument(
   '--release',
   action='store_true',
   help='Configure a release build. This option will set the `craftr.release` '
-       'configuration value and also the `release` member of the Craftr '
+       'configuration value and also the `is_release` member of the Craftr '
        'core module.'
 )
 
@@ -402,13 +402,15 @@ def main(argv=None):
   if not tags and not args.show_config_tags:
     print('note: unexpected platform "{}"'.format(sys.platform))
 
+  craftr.is_configure = True
+
   # Handle --release
   if args.release:
-    craftr.release = True
+    craftr.is_release = True
     craftr.options['build.release'] = True
     tags.add('release')
   else:
-    craftr.release = False
+    craftr.is_release = False
     tags.add('debug')
 
   # Initialize configuration platform properties.

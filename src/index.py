@@ -5,8 +5,11 @@ Public build-script API of the Craftr build system.
 import {Configuration} from './utils/cfgparser'
 import path from './utils/path'
 
+#: Set to True when `craftr --configure` is executed.
+is_configure = False
+
 #: Set to True when this is a release build.
-release = False
+is_release = False
 
 #: Set to the build directory.
 build_directory = None
