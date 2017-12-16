@@ -334,16 +334,49 @@ def run_build_node(graph, node_name):
   except KeyError:
     error('fatal: build node "{}" does not exist'.format(node_name))
     return 1
+
+  # Ensure that the output directories exist.
+  created_dirs = set()
   for directory in (os.path.dirname(x) for x in node.output_files):
-    os.makedirs(directory, exist_ok=True)
+    if directory not in created_dirs:
+      os.makedirs(directory, exist_ok=True)
+      created_dirs.add(directory)
+
+  # Update the environment and working directory.
   old_env = os.environ.copy()
   os.environ.update(node.environ or {})
   if node.cwd:
     os.chdir(node.cwd)
-  for command in node.commands:
-    code = subprocess.call(command)
+
+  # Used to print the command-list on failure.
+  def print_command_list(current=None):
+    print('Command list:'.format(node.name))
+    for cmd in node.commands:
+      print('>' if current == cmd else ' ', '$', ' '.join(map(shlex.quote , cmd)))
+
+  # Execute the subcommands/
+  for cmd in node.commands:
+    code = subprocess.call(cmd)
     if code != 0:
+      error('\n' + '-'*60)
+      error('fatal: "{}" exited with code {}.'.format(node.name, code))
+      print_command_list(cmd)
+      error('-'*60 + '\n')
       return code
+
+  # Check if all output files have been produced by the commands.
+  missing_files = [x for x in node.output_files if not os.path.exists(x)]
+  if missing_files:
+    error('\n' + '-'*60)
+    error('fatal: "{}" produced only {} of {} listed output files.'.format(node.name,
+        len(node.output_files) - len(missing_files), len(node.output_files)))
+    error('The missing files are:')
+    for x in missing_files:
+      print('  -', x)
+    print_command_list()
+    error('-'*60 + '\n')
+    return 1
+
   return 0
 
 
