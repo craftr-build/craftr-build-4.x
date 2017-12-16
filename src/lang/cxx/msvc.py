@@ -66,7 +66,7 @@ class MsvcCompiler(base.Compiler):
       command += ['/Od', '/RTC1', '/FC']
       if not self.version or self.version >= '18':
         # Enable parallel writes to .pdb files.
-        command += ['/Fs']
+        command += ['/FS']
       if options.embedd_debug_symbols:
         command += ['/Z7']
       else:
