@@ -2,12 +2,15 @@
 environment:
   matrix:
   - BUILD_MODULE: examples/java
-    BUILD_OPTIONS: -d java.dist_type=onejar
+    BUILD_OPTIONS: :main_run --options java.dist_type=onejar
     ADD_PATH: C:\Program Files\Java\jdk1.8.0\bin
+
   - BUILD_MODULE: examples/java
-    BUILD_OPTIONS: -d java.dist_type=merge
+    BUILD_OPTIONS: :main_run --options java.dist_type=merge
+
   - BUILD_MODULE: examples/csharp
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
   - BUILD_MODULE: examples/csharp
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
@@ -21,11 +24,12 @@ environment:
   # builds alltogether on Windows for now.
   # =========================================================================
   - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono -d csharp.csc=mcs
+    BUILD_OPTIONS: :main_run --options csharp.impl=mono csharp.csc=mcs
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
     ADD_PATH: C:\Program Files (x86)\Mono\bin
+
   - BUILD_MODULE: examples/csharp
-    BUILD_OPTIONS: -d csharp.impl=mono -d csharp.csc=mcs
+    BUILD_OPTIONS: :main_run --options csharp.impl=mono csharp.csc=mcs
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
 build: off
@@ -38,5 +42,5 @@ install:
 - nodepy --version
 - nodepy https://nodepy.org/install-pm master
 - nodepy-pm install -I
-- set PATH=.nodepy_modules/.bin;%PATH%
-- craftr -p %BUILD_MODULE% %BUILD_OPTIONS% :main_run --verbose
+- set PATH=.nodepy/bin;%PATH%
+- craftr --configure %BUILD_MODULE% --build %BUILD_OPTIONS%
