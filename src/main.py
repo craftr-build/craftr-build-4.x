@@ -553,6 +553,12 @@ def main(argv=None):
         build_graph.dotviz(fp)
     return 0
 
+  # Handle --clean
+  if args.clean is not NotImplemented:
+    build_graph.deselect_all()
+    build_graph.select(args.clean or [], craftr.cache['main_build_cell'])
+    backend.clean(craftr.build_directory, build_graph, args.backend_args)
+
   # Handle --prepare-build
   if args.prepare_build or args.build is not NotImplemented:
     backend.prepare_build(craftr.build_directory, build_graph)
@@ -562,12 +568,6 @@ def main(argv=None):
     build_graph.deselect_all()
     build_graph.select(args.build or [], craftr.cache['main_build_cell'])
     backend.build(craftr.build_directory, build_graph, args.backend_args)
-
-  # Handle --clean
-  if args.clean is not NotImplemented:
-    build_graph.deselect_all()
-    build_graph.select(args.clean or [], craftr.cache['main_build_cell'])
-    backend.clean(craftr.build_directory, build_graph, args.backend_args)
 
 
 def quickstart(language):
