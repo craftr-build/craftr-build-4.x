@@ -145,7 +145,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--configure',
+  '-c', '--configure',
   metavar='BUILDSCRIPT',
   nargs='?',
   default=NotImplemented,
@@ -163,7 +163,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--build',
+  '-b', '--build',
   metavar='TARGET',
   nargs='*',
   default=NotImplemented,
