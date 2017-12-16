@@ -17,8 +17,8 @@ addons:
       - ca-certificates-mono
 
 env:
-- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run -d java.dist_type=onejar"
-- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run -d java.dist_type=merge"
+- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run --options java.dist_type=onejar"
+- BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run --options java.dist_type=merge"
 - BUILD_MODULE=examples/csharp BUILD_OPTIONS=":main_run"
 
 install:
@@ -31,4 +31,4 @@ install:
 
 script:
 - nodepy-pm run test
-- craftr -p${BUILD_MODULE} $BUILD_OPTIONS -bbuild -v
+- craftr --configure ${BUILD_MODULE} --build $BUILD_OPTIONS
