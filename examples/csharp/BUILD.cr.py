@@ -1,25 +1,27 @@
+# Sample Craftr build script for C# projects.
 
 import craftr from 'craftr'
 import csharp from 'craftr/lang/csharp'
 
-# Download Json.NET using NuGet (requires the 'nuget' command)/
-csharp.prebuilt(name = 'Json.NET', package = 'Newtonsoft.Json:10.0.3')
+csharp.prebuilt(
+  name = 'Json.NET',
+  packages = [
+    'Newtonsoft.Json:10.0.3'  # Automatically installed with NuGet
+  ]
+)
 
-# Build a DLL assembly from source.
 csharp.build(
   name = 'lib',
   srcs = craftr.glob('src/lib/*.cs'),
   type = 'library'
 )
 
-# Build an executable assembly from source and merge them into a single
-# assembly using ILMerge.
 csharp.build(
   name = 'main',
   deps = [':Json.NET', ':lib'],
   srcs = craftr.glob('src/*.cs'),
   type = 'exe',
-  merge_assemblies = True
+  merge_assemblies = True  # Will combine assemblies using ILMerge/ILRepack
 )
 
 csharp.run(':main')

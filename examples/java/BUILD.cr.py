@@ -1,8 +1,7 @@
-
+# Sample Craftr build script for Java projects.
 
 import craftr from 'craftr'
 import java from 'craftr/lang/java'
-
 
 java.prebuilt(
   name = 'libs',

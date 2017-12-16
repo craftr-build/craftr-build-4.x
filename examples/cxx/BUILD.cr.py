@@ -1,21 +1,20 @@
+# Sample Craftr build script for C/C++ projects.
 
-import {gentarget, glob} from 'craftr'
+import craftr from 'craftr'
 import cxx from 'craftr/lang/cxx'
 
-cxx.build(
+cxx.library(
   name = 'lib',
-  type = 'library',
-  srcs = glob('src/*.c'),
+  srcs = craftr.glob('src/*.c'),
   shared_defines = ['HELLOLIB_EXPORTS'],
   exported_shared_defines = ['HELLOLIB_SHARED']
 )
 
-cxx.build(
+cxx.binary(
   name = 'main',
   deps = [':lib'],
-  type = 'binary',
   srcs = 'main.c',
-  link_style = 'shared'
+  link_style = 'shared'  # Explicitly link shared (default is static)
 )
 
 cxx.run(':main')
