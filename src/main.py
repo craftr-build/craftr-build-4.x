@@ -286,19 +286,22 @@ def set_options(options):
   for option in options:
     key, sep, value = option.partition('=')
     if not sep:
+      value = True
+    elif not value:
       try:
         craftr.options.pop(key)
       except KeyError:
         no_such_options.add(key)
+      continue
     else:
       if value.lower() in ('', 'true', '1', 'on', 'yes'):
         value = True
       elif value.lower() in ('false', '0', 'off', 'no'):
         value = False
-      try:
-        craftr.options[key] = value
-      except KeyError:
-        invalid_options.add(key)
+    try:
+      craftr.options[key] = value
+    except KeyError:
+      invalid_options.add(key)
   return no_such_options, invalid_options
 
 

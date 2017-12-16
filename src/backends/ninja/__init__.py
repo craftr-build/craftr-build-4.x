@@ -10,11 +10,12 @@ import subprocess
 import sys
 import zipfile
 
+import craftr from 'craftr'
 import {Writer as NinjaWriter} from './ninja_syntax'
 
 NINJA_FILENAME = 'ninja' + ('.exe' if os.name == 'nt' else '')
 NINJA_MIN_VERSION = '1.7.1'
-if sys.platform.startswith('win32') == 'nt':
+if sys.platform.startswith('win32'):
   NINJA_PLATFORM = 'win'
 elif sys.platform.startswith('darwin'):
   NINJA_PLATFORM = 'mac'
@@ -55,9 +56,11 @@ def check_ninja_version(build_directory, download=False):
   local_ninja = os.path.join(build_directory, NINJA_FILENAME)
   if os.path.isfile(local_ninja):
     ninja = local_ninja
-  else:
+  elif not craftr.options.get('ninja.local_install', False):
     # Otherwise, check if there's a ninja version installed.
     ninja = shutil.which('ninja')
+  else:
+    ninja = None
 
   # Check the minimum Ninja version.
   if ninja:
@@ -75,6 +78,7 @@ def check_ninja_version(build_directory, download=False):
       with zfile.open(NINJA_FILENAME) as src:
         with open(ninja, 'wb') as dst:
           shutil.copyfileobj(src, dst)
+      os.chmod(ninja, int('766', 8))
     ninja_version = subprocess.check_output([ninja, '--version']).decode().strip()
 
   if not download and ninja_version:
