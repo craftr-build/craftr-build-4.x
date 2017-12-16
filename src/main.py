@@ -207,6 +207,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--list-nodes',
+  action='store_true',
+  help='List all build nodes and exit.'
+)
+
+parser.add_argument(
   '--clean',
   metavar='TARGET',
   nargs='*',
@@ -351,6 +357,12 @@ def show_build_node(graph, node_name):
   return 0
 
 
+def list_build_nodes(graph):
+  for node in sorted(graph.nodes(), key=lambda x: x.name):
+    print(node.name)
+  return 0
+
+
 def main(argv=None):
   if argv is None:
     argv = sys.argv[1:]
@@ -416,6 +428,10 @@ def main(argv=None):
   if args.show_node and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
     return show_build_node(build_graph, args.show_node)
+  # Handle --list-nodes
+  if args.list_nodes and args.build_directory:
+    build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
+    return list_build_nodes(build_graph)
 
   tags = get_platform_tags()
   if not tags and not args.show_config_tags:
@@ -548,7 +564,8 @@ def main(argv=None):
       json.dump(craftr.cache, fp)
 
   # Load the build graph from file if we need it.
-  if not build_graph and (args.prepare_build or args.run_node or args.show_node
+  if not build_graph and (args.prepare_build
+      or args.run_node or args.show_node or args.list_nodes
       or args.dotviz is not NotImplemented or args.build is not NotImplemented
       or args.clean is not NotImplemented):
     if args.dotviz is NotImplemented:
@@ -562,6 +579,10 @@ def main(argv=None):
   # Handle --show-node if --build-directory was not explicitly specified.
   if args.show_node:
     return show_build_node(build_graph, args.show_node)
+
+  # Handle --list-nodes if --build-directory was not explicitly specified.
+  if args.list_nodes:
+    return list_build_nodes(build_graph)
 
   # Handle --dotviz
   if args.dotviz is not NotImplemented:

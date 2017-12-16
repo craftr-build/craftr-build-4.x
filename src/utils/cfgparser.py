@@ -43,7 +43,7 @@ class Configuration:
   def read(self, filename):
     with open(filename, 'r') as fp:
       data = toml.load(fp)
-    for key, value in data.keys():
+    for key, value in data.items():
       if key.startswith('cfg(') and key.endswith(')'):
         if not self._cfg_context.eval(key[4:-1]):
           continue
