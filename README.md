@@ -2,10 +2,10 @@
 
 ## The Craftr build system
 
-<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-yellow.svg"></a>
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square"></a>
+<img src="https://img.shields.io/badge/version-3.0.0--dev-blue.svg?style=flat-square"/>
 <a href="https://travis-ci.org/craftr-build/craftr"><img src="https://travis-ci.org/craftr-build/craftr.svg?branch=craftr-3.x"></a>
 <a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik?svg=true"></a>
-<img src="https://img.shields.io/badge/version-3.0.0--dev-blue.svg"/>
 
   [Ninja]: https://github.com/ninja-build/ninja.git
   [Node.py]: https://github.com/nodepy/nodepy
