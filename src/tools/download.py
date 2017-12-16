@@ -9,8 +9,8 @@ parser.add_argument('--url')
 parser.add_argument('--to')
 parser.add_argument('--makedirs', action='store_true')
 
-def main():
-  args = parser.parse_args()
+def main(argv=None):
+  args = parser.parse_args(argv)
   if not args.url:
     parser.error('missing required option --url')
   if not args.to:

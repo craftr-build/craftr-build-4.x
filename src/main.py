@@ -40,6 +40,19 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--list-tools',
+  action='store_true',
+  help='List tools available with the --tool option.'
+)
+
+parser.add_argument(
+  '-t', '--tool',
+  metavar='NAME [ARGS ...]',
+  nargs='...',
+  help='Run a script from the craftr/tools directory.'
+)
+
+parser.add_argument(
   '--show-config-tags',
   action='store_true',
   help='Show the tags associated with the configuration and exit. They are '
@@ -336,6 +349,29 @@ def main(argv=None):
     except OSError as e:
       error('fatal: could not change to directory "{}" ({})'.format(args.cwd, e))
       return 1
+
+  # Handle --list-tools
+  if args.list_tools:
+    for name in module.directory.joinpath('tools').iterdir():
+      print('-', name)
+    return 0
+
+  # Handle --tool
+  if args.tool is not None:
+    if not args.tool:
+      error('fatal: --tool requires at least one argument')
+      return 1
+    try:
+      tool_module = require.try_('./tools/' + args.tool[0])
+    except require.TryResolveError:
+      error('fatal: no such tool:', args.tool[0])
+      return 1
+    try:
+      old_arg0 = sys.argv[0]
+      sys.argv[0] += ' --tool {}'.format(args.tool[0])
+      return tool_module.main(args.tool[1:])
+    finally:
+      sys.argv[0] = old_arg0
 
   # Validate that no backend_args are specified unless --build or --clean
   # is used.
