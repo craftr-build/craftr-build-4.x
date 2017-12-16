@@ -9,18 +9,21 @@ import requests
 import subprocess
 import sys
 import typing as t
-import craftr from 'craftr'
-import msvc from 'craftr/toolchains/msvc'
-import {log, path, sh} from 'craftr/utils'
+import craftr, {options} from 'craftr'
+import msvc from 'craftr/tools/msvc'
+import path from 'craftr/utils/path'
+import sh from 'craftr/utils/sh'
 import {NamedObject} from 'craftr/utils/types'
 import nupkg from './nupkg'
+
+import logging as log
 
 if os.name == 'nt':
   platform = 'windows'
 else:
   platform = sys.platform
 
-artifacts_dir = path.join(craftr.session.builddir, '.nuget-artifacts')
+artifacts_dir = path.join(craftr.build_directory, '.nuget-artifacts')
 
 
 class CscInfo(NamedObject):
@@ -69,7 +72,7 @@ class CscInfo(NamedObject):
     otherwise installs it using NuGet into the artifact directory.
     """
 
-    tool = craftr.session.config.get('csharp.merge_tool')
+    tool = options.get('csharp.merge_tool')
     if not tool:
       if self.is_mono():
         tool = 'ILRepack:2.0.13'
@@ -95,11 +98,11 @@ class CscInfo(NamedObject):
   @staticmethod
   @functools.lru_cache()
   def get():
-    impl = craftr.session.config.get('csharp.impl', 'net' if platform == 'windows' else 'mono')
+    impl = options.get('csharp.impl', 'net' if platform == 'windows' else 'mono')
     if impl not in ('net', 'mono'):
       raise ValueError('unsupported csharp.impl={!r}'.format(impl))
 
-    program = craftr.session.config.get('csharp.csc', 'csc')
+    program = options.get('csharp.csc', 'csc')
     is_mcs = path.rmvsuffix(program).lower().endswith('mcs')
 
     if impl == 'net':
@@ -110,7 +113,7 @@ class CscInfo(NamedObject):
       if platform == 'windows':
         # Also, just make sure that we can find some standard installation
         # of Mono.
-        arch = craftr.session.config.get('csharp.mono_arch', None)
+        arch = options.get('csharp.mono_arch', None)
         monobin_x64 = path.join(os.getenv('ProgramFiles'), 'Mono', 'bin')
         monobin_x86 = path.join(os.getenv('ProgramFiles(x86)'), 'Mono', 'bin')
         if arch is None:
@@ -149,7 +152,8 @@ class CscInfo(NamedObject):
     return csc
 
 
-class Csharp(craftr.target.TargetData):
+@craftr.TargetFactory
+class build(craftr.TargetTrait):
 
   # TODO: More features for the C# target.
   #platform: str = None
@@ -176,13 +180,11 @@ class Csharp(craftr.target.TargetData):
     self.csc = csc
     self.extra_arguments = extra_arguments
     self.merge_assemblies = merge_assemblies
-
-  def mounted(self, target):
     if self.dll_dir:
-      self.dll_dir = canonicalize(self.dll_dir, target.cell.builddir)
+      self.dll_dir = canonicalize(self.dll_dir, self.target.cell.build_directory)
     else:
-      self.dll_dir = target.cell.builddir
-    self.dll_name = self.dll_name or (target.cell.name.split('/')[-1] + '-' + target.name + '-' + target.cell.version)
+      self.dll_dir = self.target.cell.build_directory
+    self.dll_name = self.dll_name or (self.target.cell.name.split('/')[-1] + '-' + self.target.name + '-' + self.target.cell.version)
     self.csc = self.csc or CscInfo.get()
 
   @property
@@ -205,17 +207,17 @@ class Csharp(craftr.target.TargetData):
       result = path.addtobase(result, '-intermediate')
     return result
 
-  def translate(self, target):
+  def translate(self):
     # XXX Take C# libraries and maybe even other native libraries into account.
     modules = []
     references = []
-    for data in target.impls():
-      if isinstance(data, Csharp):
+    for data in self.target.dep_traits():
+      if isinstance(data, build):
         if data.type == 'module':
           modules.append(data.dll_filename)
         else:
           references.append(data.dll_filename)
-      elif isinstance(data, CsharpPrebuilt):
+      elif isinstance(data, prebuilt):
         references.extend(data.dll_filenames)
 
     build_outfile = self._dll_filename(False)
@@ -231,29 +233,30 @@ class Csharp(craftr.target.TargetData):
       command += self.extra_arguments
     command += self.srcs
 
-    build = craftr.actions.System.new(
-      target,
+    build_action = craftr.BuildAction(
       name = 'csc',
+      deps = ...,
       environ = self.csc.environ,
       commands = [command],
       input_files = self.srcs,
       output_files = [build_outfile]
     )
+    self.target.add_action(build_action)
 
     if self.merge_assemblies:
       command = self.csc.get_merge_tool(out=self.dll_filename, primary=build_outfile, assemblies=references)
-      craftr.actions.System.new(
-        target,
+      self.target.add_action(craftr.BuildAction(
         name = 'ilmerge',
-        deps = [build],
+        deps = [build_action],
         environ = self.csc.environ,
         commands = [command],
         input_files = [build_outfile] + references,
         output_files = [self.dll_filename]
-      )
+      ))
 
 
-class CsharpPrebuilt(craftr.target.TargetData):
+@craftr.TargetFactory
+class prebuilt(craftr.TargetTrait):
 
   def __init__(self,
                dll_filename: str = None,
@@ -305,23 +308,22 @@ class CsharpPrebuilt(craftr.target.TargetData):
       if filename is not None:
         self.dll_filenames.append(filename)
 
-  def translate(self, target):
+  def complete(self):
     # Don't actually create actions here, but we need to install the
     # dependencies and parse them.
     self.install()
 
+  def translate(self):
+    pass
+
 
 def run(binary, *argv, name=None, csc=None, **kwargs):
   kwargs.setdefault('explicit', True)
-  target = craftr.T(binary)
+  target = craftr.resolve_target(binary)
   if name is None:
     name = target.name + '_run'
   if csc is None:
-    csc = target.data.csc
-  command = csc.exec_args([target.data.dll_filename] + list(argv))
+    csc = target.trait.csc
+  command = csc.exec_args([target.trait.dll_filename] + list(argv))
   return craftr.gentarget(name = name, deps = [target], commands = [command],
     environ=csc.environ, **kwargs)
-
-
-build = craftr.target_factory(Csharp)
-prebuilt = craftr.target_factory(CsharpPrebuilt)
