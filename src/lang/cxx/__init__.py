@@ -1,11 +1,12 @@
 
+import functools
+import logging as log
 import sys
 import typing as t
+
 import craftr from 'craftr'
 import path from 'craftr/utils/path'
-import _base, * from './base'
-
-import logging as log
+import {build, prebuilt, run as _run, embed} from './base'
 
 
 def _load_compiler():
@@ -24,12 +25,15 @@ def _load_compiler():
 
 
 compiler = _load_compiler()
+library = functools.partial(build, type='library')
+binary = functools.partial(build, type='binary')
+
 
 def run(target, *argv, name=None, **kwargs):
   target = craftr.resolve_target(target)
   if not name:
     name = target.name + '_run'
-  return _base.run(
+  return _run(
     name = name,
     deps = [target],
     target_to_run = target,
