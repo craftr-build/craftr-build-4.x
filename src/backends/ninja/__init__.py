@@ -12,7 +12,7 @@ import zipfile
 
 import {Writer as NinjaWriter} from './ninja_syntax'
 
-NINJA_FILENAME = 'ninja' + '.exe' if os.name == 'nt' else ''
+NINJA_FILENAME = 'ninja' + ('.exe' if os.name == 'nt' else '')
 NINJA_MIN_VERSION = '1.7.1'
 if sys.platform.startswith('win32') == 'nt':
   NINJA_PLATFORM = 'win'
