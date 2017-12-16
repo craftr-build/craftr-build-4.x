@@ -1,5 +1,5 @@
 
-import {gentarget, glob, t} from 'craftr'
+import {gentarget, glob} from 'craftr'
 import cxx from 'craftr/lang/cxx'
 
 cxx.build(

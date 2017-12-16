@@ -2,12 +2,14 @@
 import sys
 import typing as t
 import craftr from 'craftr'
-import {log, path} from 'craftr/utils'
-import * from './base'
+import path from 'craftr/utils/path'
+import _base, * from './base'
+
+import logging as log
 
 
 def _load_compiler():
-  name = craftr.session.config.get('cxx.compiler', None)
+  name = craftr.options.get('cxx.compiler', None)
   if name is None:
     if sys.platform.startswith('win32'):
       name = 'msvc'
@@ -22,16 +24,12 @@ def _load_compiler():
 
 
 compiler = _load_compiler()
-embed = craftr.target_factory(CxxEmbedFiles)
-build = craftr.target_factory(CxxBuild)
-prebuilt = craftr.target_factory(CxxPrebuilt)
-
 
 def run(target, *argv, name=None, **kwargs):
-  target = craftr.T(target)
+  target = craftr.resolve_target(target)
   if not name:
     name = target.name + '_run'
-  return craftr.target_factory(CxxRunTarget)(
+  return _base.run(
     name = name,
     deps = [target],
     target_to_run = target,

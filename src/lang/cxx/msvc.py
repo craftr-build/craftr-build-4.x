@@ -1,8 +1,10 @@
 
 from typing import List
+import logging as log
 import craftr from 'craftr'
-import {log, macro, path} from 'craftr/utils'
-import {MsvcToolkit} from 'craftr/toolchains/msvc'
+import macro from 'craftr/utils/macro'
+import path from 'craftr/utils/path'
+import {MsvcToolkit} from 'craftr/tools/msvc'
 import base from './base'
 
 
