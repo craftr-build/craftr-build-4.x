@@ -8,6 +8,7 @@ import json
 import os
 import platform
 import posixpath
+import shlex
 import shutil
 import subprocess
 import sys
@@ -218,11 +219,21 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  'backend_args',
-  nargs='*',
+  '--build-args',
+  action='append',
   default=[],
-  help='Additional arguments for the build backend. These arguments will '
-       'be passed both to --build and --clean (not --prepare-build).'
+  help='Additional arguments for the --build step that are passed on to the '
+       'build backend. The argument(s) to this option must be a string that '
+       'will itself be treated as a list of arguments.'
+)
+
+parser.add_argument(
+  '--clean-args',
+  action='append',
+  default=[],
+  help='Additional arguments for the --clean step that are passed on to the '
+       'build backend. The argument(s) to this option must be a string that '
+       'will itself be treated as a list of arguments.'
 )
 
 
@@ -372,16 +383,6 @@ def main(argv=None):
       return tool_module.main(args.tool[1:])
     finally:
       sys.argv[0] = old_arg0
-
-  # Validate that no backend_args are specified unless --build or --clean
-  # is used.
-  if args.backend_args and args.build is NotImplemented and args.clean is NotImplemented:
-    for arg in args.backend_args:
-      parser.print_usage()
-      error('craftr: error: unrecognized argument: {}'.format(arg))
-      error('        note: additional argument are only supported in the '
-            '--build or --clean steps')
-      return 1
 
   # Handle --run-node if a --build-directory is explicitly specified.
   if (args.build is not NotImplemented or args.clean is not NotImplemented
@@ -557,7 +558,8 @@ def main(argv=None):
   if args.clean is not NotImplemented:
     build_graph.deselect_all()
     build_graph.select(args.clean or [], craftr.cache['main_build_cell'])
-    backend.clean(craftr.build_directory, build_graph, args.backend_args)
+    clean_args = list(concat(map(shlex.split, args.clean_args)))
+    backend.clean(craftr.build_directory, build_graph, clean_args)
 
   # Handle --prepare-build
   if args.prepare_build or args.build is not NotImplemented:
@@ -567,7 +569,8 @@ def main(argv=None):
   if args.build is not NotImplemented:
     build_graph.deselect_all()
     build_graph.select(args.build or [], craftr.cache['main_build_cell'])
-    backend.build(craftr.build_directory, build_graph, args.backend_args)
+    build_args = list(concat(map(shlex.split, args.build_args)))
+    backend.build(craftr.build_directory, build_graph, build_args)
 
 
 def quickstart(language):
