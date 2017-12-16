@@ -469,6 +469,7 @@ def main(argv=None):
     build_module = require.new('.').resolve(args.configure)
     with require.context.push_main(build_module):
       require.context.load_module(build_module)
+      craftr.cache['main_build_cell'] = craftr.BuildCell(build_module.package).name
     targets = list(concat(x.targets.values() for x in craftr.cells.values()))
     for target in targets:
       target.complete()
@@ -520,10 +521,14 @@ def main(argv=None):
 
   # Handle --build
   if args.build is not NotImplemented:
+    build_graph.deselect_all()
+    build_graph.select(args.build or [], craftr.cache['main_build_cell'])
     backend.build(craftr.build_directory, build_graph, args.backend_args)
 
   # Handle --clean
   if args.clean is not NotImplemented:
+    build_graph.deselect_all()
+    build_graph.select(args.clean or [], craftr.cache['main_build_cell'])
     backend.clean(craftr.build_directory, build_graph, args.backend_args)
 
 
@@ -547,8 +552,8 @@ def quickstart(language):
   else:
     with manifest_template.open() as src:
       data = src.read()
-    data.replace('{NAME}', project_name)
-    data.replace('{VERSION}', project_version)
+    data = data.replace('{NAME}', os.path.basename(os.getcwd()))
+    data = data.replace('{VERSION}', '1.0.0')
     with open('nodepy.json', 'w') as dst:
       dst.write(data)
     print('created: nodepy.json')

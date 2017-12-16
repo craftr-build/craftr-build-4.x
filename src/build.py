@@ -280,6 +280,8 @@ class BuildGraph:
 
   def __init__(self):
     self._nodes = {}
+    self._targets = collections.defaultdict(list)
+    self._selected = []
 
   def __getitem__(self, key):
     return self._nodes[key]
@@ -292,6 +294,7 @@ class BuildGraph:
           action.cwd, action.environ, action.target.explicit,
           action.target.console)
       self._nodes[node.name] = node
+      self._targets[node.name.partition('#')[0]].append(node)
     return self
 
   def from_json(self, data):
@@ -323,3 +326,22 @@ class BuildGraph:
       for dep in node.deps:
         fp.write('\t\t{} -> {};\n'.format(id(self[dep]), id(node)))
     fp.write('}\n')
+
+  def deselect_all(self):
+    self._selected = []
+
+  def select(self, node_name, main_build_cell=None):
+    if isinstance(node_name, str):
+      node_name = [node_name]
+    for node_name in node_name:
+      if node_name.startswith(':') and main_build_cell is not None:
+        node_name = '//' + main_build_cell + node_name
+      if node_name in self._nodes:
+        self._selected.append(node_name)
+      elif node_name in self._targets:
+        self._selected.extend(x.name for x in self._targets[node_name])
+      else:
+        raise ValueError(node_name)
+
+  def selected(self):
+    return (self[k] for k in self._selected)

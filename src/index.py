@@ -107,9 +107,9 @@ class TargetFactory(object):
               console=False, **kwargs):
     for func in self.preprocessors:
       func(kwargs)
+    cell = current_cell(create=True)
     deps = [resolve_target(x) for x in deps]
     transitive_deps = [resolve_target(x) for x in transitive_deps]
-    cell = current_cell(create=True)
     target = BuildTarget(cell, name, deps, transitive_deps, explicit, console)
     target.set_trait(self.cls.new(target, **kwargs))
     cell.add_target(target)

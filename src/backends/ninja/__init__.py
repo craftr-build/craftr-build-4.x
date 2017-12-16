@@ -25,6 +25,11 @@ def quote(s, for_ninja=False):
   return s
 
 
+def make_rule_description(node):
+  commands = [' '.join(map(quote, x)) for x in node.commands]
+  return ' && '.join(commands)
+
+
 def make_rule_name(graph, node):
   return re.sub('[^\d\w\-_\.]+', '_', node.name) + '_' + graph.hash(node)
 
@@ -42,9 +47,12 @@ def prepare_build(build_directory, graph):
     writer.variable('nodepy_exec_args', ' '.join(map(quote, nodepy.runtime.exec_args)))
     writer.newline()
 
+    non_explicit = []
     for node in sorted(graph.nodes(), key=lambda x: x.name):
       phony_name = make_rule_name(graph, node)
       rule_name = 'rule_' + phony_name
+      if not node.explicit:
+        non_explicit.append(phony_name)
 
       command = [
         '$nodepy_exec_args',
@@ -53,22 +61,27 @@ def prepare_build(build_directory, graph):
         '--run-node', node.name,
         '--cwd', os.getcwd()
       ]
-      writer.rule(rule_name, command, description=node.name)
-
-      deps = [make_rule_name(graph, graph[x]) for x in node.deps] + list(node.input_files)
-      outputs = list(node.output_files)
-
-      writer.build(outputs or [phony_name] , rule_name, deps)
-      if outputs:
+      writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
+      writer.build(
+        outputs = node.output_files or [phony_name],
+        rule = rule_name,
+        inputs = node.input_files,
+        order_only = [make_rule_name(graph, graph[x]) for x in node.deps])
+      if node.output_files:
         writer.build([phony_name], 'phony', node.output_files)
       writer.newline()
 
+    if non_explicit:
+      writer.default(non_explicit)
+
 
 def build(build_directory, graph, args):
-  command = ['ninja'] + list(args)
+  targets = [make_rule_name(graph, node) for node in graph.selected()]
+  command = ['ninja'] + list(args) + targets
   subprocess.run(command, cwd=build_directory)
 
 
 def clean(build_directory, graph, args):
-  command = ['ninja', '-t', 'clean'] + list(args)
+  targets = [make_rule_name(graph, node) for node in graph.selected()]
+  command = ['ninja', '-t', 'clean'] + list(args) + targets
   subprocess.run(command, cwd=build_directory)
