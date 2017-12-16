@@ -18,7 +18,7 @@ import typing as t
 import path from '../utils/path'
 import sh from '../utils/sh'
 import {NamedObject} from '../utils/types'
-import craftr from '../index'
+import craftr, {options} from '../index'
 
 import logging as log
 #import log from '../utils/log'
@@ -219,10 +219,6 @@ class MsvcToolkit(NamedObject):
   Windows SDK, etc. Additionally, it can be saved to and loaded from disk.
   """
 
-  @staticmethod
-  def CACHEFILE():
-    return path.join(craftr.session.builddir, '.config', 'msvc-toolkit.json')
-
   CSC_VERSION_REGEX = re.compile(r'compiler\s+version\s+([\d\.]+)', re.I | re.M)
 
   version: int
@@ -241,11 +237,7 @@ class MsvcToolkit(NamedObject):
     return cls(inst.version, inst.directory, environ, arch, platform_type, sdk_version)
 
   @classmethod
-  def from_file(cls, file):
-    if isinstance(file, str):
-      with open(file, 'r') as fp:
-        return cls.from_file(fp)
-    data = json.load(file)
+  def fromdict(cls, data):
     if data.get('_cl_info'):
       data['_cl_info'] = ClInfo(**data['_cl_info'])
     return cls(**data)
@@ -257,7 +249,7 @@ class MsvcToolkit(NamedObject):
     if not installations:
       raise RuntimeError('Unable to detect any MSVC installation. Is it installed?')
 
-    version = craftr.session.config.get('msvc.version')
+    version = options.get('msvc.version')
     if version:
       version = int(version)
       install = next((x for x in installations if x.version == version), None)
@@ -267,39 +259,24 @@ class MsvcToolkit(NamedObject):
       install = installations[0]
       version = install.version
 
-    arch = craftr.session.config.get('msvc.arch', get_arch())
-    platform_type = craftr.session.config.get('msvc.platform_type')
-    sdk_version = craftr.session.config.get('msvc.sdk_version')
-    cache_enabled = craftr.session.config.get('msvc.cache', True)
+    arch = options.get('msvc.arch', get_arch())
+    platform_type = options.get('msvc.platform_type')
+    sdk_version = options.get('msvc.sdk_version')
+    cache_enabled = options.get('msvc.cache', craftr.is_configure)
 
     cache = None
-    if cache_enabled:
-      try:
-        with contextlib.suppress(FileNotFoundError):
-          cache = cls.from_file(cls.CACHEFILE())
-      except json.JSONDecodeError as e:
-        log.warn('could not load MsvcToolkit cache ({}): {}'
-          .format(cls.CACHEFILE(), e))
+    if cache_enabled and 'msvc.cache' in craftr.cache:
+      cache = cls.fromdict(craftr.cache['msvc.cache'])
 
     key_info = (version, arch, platform_type, sdk_version)
     if not cache or cache.key_info != key_info:
       toolkit = cls.from_installation(install, arch, platform_type, sdk_version)
       if cache_enabled:
-        toolkit.save(cls.CACHEFILE())
+        craftr.cache['msvc.cache'] = toolkit.asdict()
     else:
       toolkit = cache  # Nothing has changed
 
-    if cache_enabled:
-      craftr.session.on('after_load', lambda _: toolkit.save(cls.CACHEFILE()))
-
     return toolkit
-
-  def save(self, file):
-    if isinstance(file, str):
-      path.makedirs(path.dir(file))
-      with open(file, 'w') as fp:
-        return self.save(fp)
-    json.dump(self.asdict(), file, cls=AsDictJSONEncoder)
 
   @property
   def key_info(self):
