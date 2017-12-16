@@ -37,6 +37,9 @@ def make_rule_name(graph, node):
 
 def prepare_build(build_directory, graph):
   build_file = os.path.join(build_directory, 'build.ninja')
+  if os.path.exists(build_file) and os.path.getmtime(build_file) >= graph.mtime():
+    return  # Does not need to be re-exported, as the build graph hasn't changed.
+
   print('note: writing "{}"'.format(build_file))
   with open(build_file, 'w') as fp:
     writer = NinjaWriter(fp, width=9000)

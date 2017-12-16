@@ -6,6 +6,8 @@ import collections
 import hashlib
 import json
 import os
+import time
+
 import craftr from './index'
 import it from './utils/it'
 
@@ -295,6 +297,7 @@ class BuildGraph:
     self._nodes = {}
     self._targets = collections.defaultdict(list)
     self._selected = []
+    self._mtime = time.time()
 
   def __getitem__(self, key):
     return self._nodes[key]
@@ -323,6 +326,7 @@ class BuildGraph:
   def read(self, filename):
     with open(filename, 'r') as fp:
       self.from_json(json.load(fp))
+    self._mtime = os.path.getmtime(filename)
     return self
 
   def write(self, filename):
@@ -362,3 +366,6 @@ class BuildGraph:
 
   def selected(self):
     return (self[k] for k in self._selected)
+
+  def mtime(self):
+    return self._mtime
