@@ -15,9 +15,13 @@ import subprocess
 import sys
 import tempfile
 import typing as t
-import {log, path, sh} from '../utils'
+import path from '../utils/path'
+import sh from '../utils/sh'
 import {NamedObject} from '../utils/types'
-import craftr from '../public'
+import craftr from '../index'
+
+import logging as log
+#import log from '../utils/log'
 
 def get_arch():
   arch = platform.machine().lower()
@@ -343,13 +347,26 @@ class MsvcToolkit(NamedObject):
     return toolkit
 
 
-def main():
-  if not MsvcInstallation.list():
-    log.error('no MSVC installations could be detected.')
-    sys.exit(1)
-  for inst in MsvcInstallation.list():
-    print('- %4d: %s' % (inst.version, inst.directory))
+def main(argv=None):
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--json', action='store_true', help='Output in JSON format.')
+  args = parser.parse_args(argv)
+
+  installs = MsvcInstallation.list()
+
+  if args.json:
+    result = {}
+    for inst in MsvcInstallation.list():
+      result[inst.version] = inst.directory
+    print(json.dumps(result, indent=2))
+  else:
+    if not installs:
+      log.error('no MSVC installations could be detected.')
+      return 1
+    for inst in MsvcInstallation.list():
+      print('- %4d: %s' % (inst.version, inst.directory))
 
 
 if require.main == module:
-  main()
+  sys.exit(main())
