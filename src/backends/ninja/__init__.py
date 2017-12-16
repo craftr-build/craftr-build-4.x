@@ -86,7 +86,7 @@ def check_ninja_version(build_directory, download=False):
   return ninja
 
 
-def prepare_build(build_directory, graph):
+def prepare_build(build_directory, graph, args):
   check_ninja_version(build_directory, download=True)
   build_file = os.path.join(build_directory, 'build.ninja')
   if os.path.exists(build_file) and os.path.getmtime(build_file) >= graph.mtime():
@@ -143,7 +143,7 @@ def build(build_directory, graph, args):
   if not ninja:
     return 1
   targets = [make_rule_name(graph, node) for node in graph.selected()]
-  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')] + list(args) + targets
+  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')] + args.build_args + targets
   subprocess.run(command)
 
 
@@ -151,6 +151,14 @@ def clean(build_directory, graph, args):
   ninja = check_ninja_version(build_directory)
   if not ninja:
     return 1
-  targets = [make_rule_name(graph, node) for node in graph.selected()]
-  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean'] + list(args) + targets
+
+  if args.recursive:
+    targets = [make_rule_name(graph, node) for node in graph.selected()]
+  else:
+    # Use -r and passing rules only cleans files that have been created by that rule.
+    targets = ['rule_' + make_rule_name(graph, node) for node in graph.selected()]
+    if targets:
+      targets.insert(0, '-r')
+
+  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean'] + args.clean_args + targets
   subprocess.run(command)

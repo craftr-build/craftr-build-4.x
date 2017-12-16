@@ -631,18 +631,18 @@ def main(argv=None):
     build_graph.deselect_all()
     build_graph.select(args.clean or [], craftr.cache['main_build_cell'])
     clean_args = list(concat(map(shlex.split, args.clean_args)))
-    backend.clean(craftr.build_directory, build_graph, clean_args)
+    backend.clean(craftr.build_directory, build_graph, args)
 
   # Handle --prepare-build
   if args.prepare_build or args.build is not NotImplemented:
-    backend.prepare_build(craftr.build_directory, build_graph)
+    backend.prepare_build(craftr.build_directory, build_graph, args)
 
   # Handle --build
   if args.build is not NotImplemented:
     build_graph.deselect_all()
     build_graph.select(args.build or [], craftr.cache['main_build_cell'])
     build_args = list(concat(map(shlex.split, args.build_args)))
-    backend.build(craftr.build_directory, build_graph, build_args)
+    backend.build(craftr.build_directory, build_graph, args)
 
 
 def quickstart(language):
