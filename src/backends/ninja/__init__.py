@@ -2,6 +2,7 @@
 import nodepy
 import os
 import re
+import shlex
 import subprocess
 
 import {Writer as NinjaWriter} from './ninja_syntax'

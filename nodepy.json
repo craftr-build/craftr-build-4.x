@@ -20,7 +20,7 @@
     "nr": ">=1.4.8"
   },
   "scripts": {
-    "test": "$ nodepy-nosetests lib/utils",
+    "test": "$ nodepy-nosetests src/utils",
     "docs": "$ yassg public"
   },
   "cfg(dev).dependencies": {
