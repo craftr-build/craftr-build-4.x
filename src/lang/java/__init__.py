@@ -11,6 +11,9 @@ import craftr, {path, options} from 'craftr'
 import maven from './maven'
 
 
+# TODO: Ensure consistent command-line arguments order
+
+
 ONEJAR_FILENAME = path.canonical(
   options.get('java.onejar',
   path.join(str(module.directory), 'one-jar-boot-0.97.jar')))
@@ -209,30 +212,38 @@ class binary(library.cls):
 
   # Parameters
   dist_type:
-    The distribution type. Can be `'merge'` or `'onejar'`. The default is
-    the value configured in `java.dist_type` or `'onejar'`
+    The distribution type. Can be `'merge'`, `'onejar'` or `None`. The default
+    is the value configured in `java.dist_type` (which defaults to `'merge'`).
   """
 
   def __init__(self, main_class: str = None,
-                     dist_type: str = None,
+                     dist_type: str = NotImplemented,
                      **kwargs):
     super().__init__(**kwargs)
     if not main_class:
       raise ValueError('missing value for "main_class"')
-    if not dist_type:
-      dist_type = options.get('java.dist_type', 'onejar')
-    if dist_type not in ('merge', 'onejar'):
-      raise ValueError('invalid dist_type: {!r}'.format(self.dist_type))
+    if dist_type not in ('merge', 'onejar', None, NotImplemented):
+      raise ValueError('invalid dist_type: {!r}'.format(dist_type))
     self.main_class = main_class
     self.dist_type = dist_type
+
+  def complete(self):
+    if self.dist_type is NotImplemented:
+      self.dist_type = options.get('java.dist_type', 'merge')
 
   def translate(self):
     inputs = []
 
     if self.srcs:
-      sub_jar = path.addtobase(self.jar_filename, '-classes')
+      if self.dist_type is None:
+        sub_jar = self.jar_filename
+      else:
+        sub_jar = path.addtobase(self.jar_filename, '-classes')
       super().translate(jar_filename=sub_jar)
       inputs.append(sub_jar)
+
+    if self.dist_type is None:
+      return
 
     for data in self.target.dep_traits():
       if isinstance(data, library):
@@ -405,6 +416,7 @@ class proguard(craftr.TargetTrait):
 
 def run(binary, *argv, name=None, java=None, jvm_args=(), **kwargs):
   kwargs.setdefault('explicit', True)
+  kwargs.setdefault('console', True)
   target = craftr.resolve_target(binary)
   if name is None:
     name = target.name + '_run'
