@@ -298,10 +298,14 @@ class BuildGraph:
     return self
 
   def from_json(self, data):
-    self._nodes.update({x['name']: self.BuildNode(**x) for x in data})
+    self._nodes.update({x['name']: self.BuildNode(**x) for x in data['nodes']})
+    self._targets.update({k: [self._nodes[x] for x in v] for k, v in data['targets'].items()})
 
   def to_json(self):
-    return [x._asdict() for x in self._nodes.values()]
+    return {
+      'nodes': [x._asdict() for x in self._nodes.values()],
+      'targets': {k: [x.name for x in v] for k, v in self._targets.items()}
+    }
 
   def read(self, filename):
     with open(filename, 'r') as fp:
