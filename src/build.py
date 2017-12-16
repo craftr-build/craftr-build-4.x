@@ -109,6 +109,7 @@ class BuildTarget:
     self.is_completed = False
     self.is_translated = False
     self.actions = {}
+    self._dependents = []
 
   def __repr__(self):
     return '<BuildTarget "{}">'.format(self.long_name)
@@ -128,7 +129,7 @@ class BuildTarget:
     if not action.name:
       action.name = str(len(self.actions))
 
-    leafs = it.concat(x.leaf_actions() for x in self.direct_deps())
+    leafs = it.concat(x.leaf_actions() for x in self.first_order_deps())
     if action.deps == Ellipsis:
       action.deps = list(leafs)
     elif Ellipsis in action.deps:
@@ -175,18 +176,30 @@ class BuildTarget:
       yield it.concat(trans(self))
     return it.stream(all()).concat().unique()
 
-  def direct_deps(self):
-    return it.concat([self.internal_deps, self.transitive_deps])
-
   def dep_traits(self):
     return self.deps().attr('traits').call().concat()
 
-  def direct_dep_traits(self):
-    return self.direct_deps().attr('traits').call().concat()
+  def first_order_deps(self):
+    return it.concat([self.internal_deps, self.transitive_deps])
+
+  def first_order_deps_traits(self):
+    return self.first_order_deps().attr('traits').call().concat()
+
+  def dependents(self):
+    if self._dependents is None:
+      raise RuntimeError('BuildTarget._dependents not created')
+    return it.stream(self._dependents)
+
+  def dependents_traits(self):
+    return self.dependents().attr('traits').call().concat()
 
   def complete(self):
     if self.is_completed:
       return
+    self._dependents = []
+    for dep in self.first_order_deps():
+      dep.complete()
+      dep._dependents.append(self)
     for trait in self.traits(order='post'):
       trait.complete()
     self.is_completed = True
