@@ -1,11 +1,25 @@
 
+import io
 import nodepy
 import os
 import re
+import requests
 import shlex
+import shutil
 import subprocess
+import zipfile
 
 import {Writer as NinjaWriter} from './ninja_syntax'
+
+NINJA_FILENAME = 'ninja' + '.exe' if os.name == 'nt' else ''
+NINJA_MIN_VERSION = '1.7.1'
+if os.name == 'nt':
+  NINJA_PLATFORM = 'win'
+elif sys.platform.startswith('darwin'):
+  NINJA_PLATFORM = 'mac'
+else:
+  NINJA_PLATFORM = 'linux'
+NINJA_URL = 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-{}.zip'.format(NINJA_PLATFORM)
 
 
 def quote(s, for_ninja=False):
@@ -35,7 +49,40 @@ def make_rule_name(graph, node):
   return re.sub('[^\d\w\-_\.]+', '_', node.name) + '_' + graph.hash(node)
 
 
+def check_ninja_version(build_directory, download=False):
+  # If there's a local ninja version, use it.
+  local_ninja = os.path.join(build_directory, NINJA_FILENAME)
+  if os.path.isfile(local_ninja):
+    ninja = local_ninja
+  else:
+    # Otherwise, check if there's a ninja version installed.
+    ninja = shutil.which('ninja')
+
+  # Check the minimum Ninja version.
+  if ninja:
+    ninja_version = subprocess.check_output([ninja, '--version']).decode().strip()
+    if not ninja_version or ninja_version < NINJA_MIN_VERSION:
+      print('note: need at least ninja {} (have {} at "{}")'.format(NINJA_MIN_VERSION, out, ninja))
+      ninja = None
+      ninja_version = None
+
+  if not ninja and download:
+    # Download a new Ninja version into the build directory.
+    ninja = local_ninja
+    print('note: downloading Ninja ({})'.format(NINJA_URL))
+    with zipfile.ZipFile(io.BytesIO(requests.get(NINJA_URL).content)) as zfile:
+      with zfile.open(NINJA_FILENAME) as src:
+        with open(ninja, 'wb') as dst:
+          shutil.copyfileobj(src, dst)
+    ninja_version = subprocess.check_output([ninja, '--version']).decode().strip()
+
+  if not download and ninja_version:
+    print('note: Ninja v{} ({})'.format(ninja_version, ninja))
+  return ninja
+
+
 def prepare_build(build_directory, graph):
+  check_ninja_version(build_directory, download=True)
   build_file = os.path.join(build_directory, 'build.ninja')
   if os.path.exists(build_file) and os.path.getmtime(build_file) >= graph.mtime():
     return  # Does not need to be re-exported, as the build graph hasn't changed.
@@ -87,12 +134,18 @@ def prepare_build(build_directory, graph):
 
 
 def build(build_directory, graph, args):
+  ninja = check_ninja_version(build_directory)
+  if not ninja:
+    return 1
   targets = [make_rule_name(graph, node) for node in graph.selected()]
-  command = ['ninja', '-f', os.path.join(build_directory, 'build.ninja')] + list(args) + targets
+  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')] + list(args) + targets
   subprocess.run(command)
 
 
 def clean(build_directory, graph, args):
+  ninja = check_ninja_version(build_directory)
+  if not ninja:
+    return 1
   targets = [make_rule_name(graph, node) for node in graph.selected()]
-  command = ['ninja', '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean'] + list(args) + targets
+  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean'] + list(args) + targets
   subprocess.run(command)
