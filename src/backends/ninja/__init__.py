@@ -7,13 +7,14 @@ import requests
 import shlex
 import shutil
 import subprocess
+import sys
 import zipfile
 
 import {Writer as NinjaWriter} from './ninja_syntax'
 
 NINJA_FILENAME = 'ninja' + '.exe' if os.name == 'nt' else ''
 NINJA_MIN_VERSION = '1.7.1'
-if os.name == 'nt':
+if sys.platform.startswith('win32') == 'nt':
   NINJA_PLATFORM = 'win'
 elif sys.platform.startswith('darwin'):
   NINJA_PLATFORM = 'mac'
