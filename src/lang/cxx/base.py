@@ -49,7 +49,7 @@ def infer_debug(target):
     if data.debug:
       return True
   else:
-    return False
+    return not craftr.is_release
 
 
 @craftr.TargetFactory
