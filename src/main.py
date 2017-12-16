@@ -350,9 +350,9 @@ def run_build_node(graph, node_name):
 
   # Used to print the command-list on failure.
   def print_command_list(current=None):
-    print('Command list:'.format(node.name))
+    error('Command list:'.format(node.name))
     for cmd in node.commands:
-      print('>' if current == cmd else ' ', '$', ' '.join(map(shlex.quote , cmd)))
+      error('>' if current == cmd else ' ', '$', ' '.join(map(shlex.quote , cmd)))
 
   # Execute the subcommands/
   for cmd in node.commands:
