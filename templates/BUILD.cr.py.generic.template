@@ -1,7 +1,0 @@
-
-import {path, glob, gentarget, t} from 'craftr'
-import cxx from 'craftr/lang/cxx'
-import java from 'craftr/lang/java'
-import csharp from 'craftr/lang/csharp'
-
-# Define targets here ...

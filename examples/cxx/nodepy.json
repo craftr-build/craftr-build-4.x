@@ -1,6 +1,7 @@
 {
-  "name": "{NAME}",
-  "version": "{VERSION}",
+  "publish": false,
+  "name": "craftr-example-cxx",
+  "version": "1.0.0",
   "cfg(dev).dependencies": {
     "craftr": "git+https://github.com/craftr-build/craftr.git@craftr-3.x"
   }

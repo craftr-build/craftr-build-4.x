@@ -33,17 +33,22 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument(
   '--quickstart',
-  metavar='LANGUAGE',
+  metavar='EXAMPLE',
   nargs='?',
-  default=NotImplemented,
-  help='Generate Craftr project files from a template for the specified '
-       'LANGUAGE. A BUILD.cr.py and nodepy.json file will be created.',
+  help='Copy one of the examples to the current working directory. Use '
+       '--list-quickstart to show all available quickstart examples.'
+)
+
+parser.add_argument(
+  '--list-quickstart',
+  action='store_true',
+  help='Show a list of all available quickstart examples and exit.'
 )
 
 parser.add_argument(
   '--list-tools',
   action='store_true',
-  help='List tools available with the --tool option.'
+  help='List tools available with the --tool option and exit.'
 )
 
 parser.add_argument(
@@ -354,21 +359,31 @@ def main(argv=None):
     return 0
 
   args = parser.parse_args(argv)
-  if args.quickstart is not NotImplemented:
-    return quickstart(language=args.quickstart)
 
+  # Handle --quickstart
+  if args.quickstart:
+    return quickstart(args.quickstart)
+
+  # Handle --list-quickstart
+  if args.list_quickstart:
+    for directory in module.package.directory.joinpath('examples').iterdir():
+      if directory.is_dir():
+        print('-', directory.name)
+    return 0
+
+  # Handle --list-tools
+  if args.list_tools:
+    for tool_file in module.directory.joinpath('tools').iterdir():
+      print('-', tool_file.with_suffix('').name)
+    return 0
+
+  # Handle --cwd
   if args.cwd:
     try:
       os.chdir(args.cwd)
     except OSError as e:
       error('fatal: could not change to directory "{}" ({})'.format(args.cwd, e))
       return 1
-
-  # Handle --list-tools
-  if args.list_tools:
-    for name in module.directory.joinpath('tools').iterdir():
-      print('-', name)
-    return 0
 
   # Handle --tool
   if args.tool is not None:
@@ -577,37 +592,26 @@ def main(argv=None):
 
 
 def quickstart(language):
-  templates_dir = module.package.directory.joinpath('templates')
-  if not templates_dir.is_dir():
-    error('fatal: template directory does not exist')
+  directory = module.package.directory.joinpath('examples', language)
+  if not directory.is_dir():
+    error('fatal: quickstart "{}" does not exist'.format(directory))
     return 1
 
-  if language is None:
-    language = 'generic'
-  template_file = templates_dir.joinpath('BUILD.cr.py.{}.template'.format(language))
-  if not template_file.is_file():
-    error('fatal: no template for "{}"'.format(language))
-    return 1
+  def copytree(src, dst):
+    for item in os.listdir(src):
+      s = os.path.join(src, item)
+      d = os.path.join(dst, item)
+      if os.path.isdir(s):
+        os.makedirs(d, exist_ok=True)
+        copytree(s, d)
+      else:
+        if not os.path.isfile(d):
+          print('write:', d)
+          shutil.copy2(s, d)
+        else:
+          print('skip:', d, '(file already exists)')
 
-  manifest_template = templates_dir.joinpath('nodepy.json.template')
-  if os.path.isfile('nodepy.json'):
-    print('note: nodepy.json already exists in current directory.')
-    print('      The file will not be overwritten from the template.')
-  else:
-    with manifest_template.open() as src:
-      data = src.read()
-    data = data.replace('{NAME}', os.path.basename(os.getcwd()))
-    data = data.replace('{VERSION}', '1.0.0')
-    with open('nodepy.json', 'w') as dst:
-      dst.write(data)
-    print('created: nodepy.json')
-
-  if os.path.isfile('BUILD.cr.py'):
-    print('note: BUILD.cr.py already exists in the current directory.')
-    print('      The file will not be overwritten from the template.')
-  else:
-    shutil.copy2(str(template_file), 'BUILD.cr.py')
-    print('created: BUILD.cr.py')
+  copytree(str(directory), '.')
 
 
 if require.main == module:
