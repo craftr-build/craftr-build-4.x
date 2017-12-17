@@ -28,13 +28,14 @@ class Artifact:
     group, artifact, version = id_str.split(':')
     return cls(group, artifact, version)
 
-  def __init__(self, group, artifact, version=None, scope='compile', optional=False):
+  def __init__(self, group, artifact, version=None, scope='compile', type='jar', optional=False):
     self.group = group
     self.artifact = artifact
     self.version = version
     self.timestamp = None
     self.build_number = None
     self.scope = scope
+    self.type = type
     self.optional = optional
 
   def __hash__(self):
@@ -214,6 +215,11 @@ def pom_eval_deps(pom):
       scope = 'compile'
 
     try:
+      deptype = node.getElementsByTagName('type')[0].firstChild.nodeValue
+    except IndexError:
+      deptype = 'jar'
+
+    try:
       optional = node.getElementsByTagName('optional')[0].firstChild.nodeValue
     except IndexError:
       optional = False
@@ -248,7 +254,10 @@ def pom_eval_deps(pom):
           group_id, artifact_id, version))
       dep_version = None
 
-    return Artifact(dep_group, dep_artifact, dep_version, scope, optional)
+    if not dep_version and dep_group.startswith(group_id):
+      dep_version = version
+
+    return Artifact(dep_group, dep_artifact, dep_version, scope, deptype, optional)
 
   results = []
   for node in iter_dom_children(dependencies):

@@ -328,7 +328,7 @@ class prebuilt(craftr.TargetTrait):
     print('[{}] Resolving JARs...'.format(self.target.long_name))
     while queue:
       depth, artifact = queue.pop()
-      if artifact.scope != 'compile':
+      if artifact.scope != 'compile' or artifact.type != 'jar':
         continue
 
       # For now, we use this to avoid downloading the same dependency in
@@ -359,7 +359,6 @@ class prebuilt(craftr.TargetTrait):
       queue.extend([(depth+1, x) for x in reversed(maven.pom_eval_deps(pom))])
 
       # Print dependency info.
-      #tree_indicator = '| ' if queue and queue[-1][0] > depth else '\\ '
       indent = '| ' * depth
       print('  {}{} ({})'.format('| ' * depth, artifact, repo.name))
 
