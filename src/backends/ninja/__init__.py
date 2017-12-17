@@ -121,10 +121,10 @@ def prepare_build(build_directory, graph, args):
       ]
       order_only = []
       for dep in [graph[x] for x in node.deps]:
-        #if not dep.output_files:
+        if not dep.output_files:
           order_only.append(make_rule_name(graph, dep))
-        #else:
-        #  order_only.extend(dep.output_files)
+        else:
+          order_only.extend(dep.output_files)
 
       command = ' '.join(quote(x, for_ninja=True) for x in command)
       writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
