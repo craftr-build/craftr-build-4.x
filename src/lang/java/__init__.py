@@ -319,7 +319,7 @@ class prebuilt(craftr.TargetTrait):
     self.did_install = True
 
     poms = {}
-    queue = [(0, x) for x in self.artifacts]
+    queue = [(0, x) for x in reversed(self.artifacts)]
 
     # XXX This should probably be compared against a global set of already
     #     installed dependencies, so we don't do the same work twice if
@@ -356,7 +356,7 @@ class prebuilt(craftr.TargetTrait):
       # Cache the POM and add its dependencies so we can "recursively"
       # resolve them.
       poms[artifact_id] = (artifact, pom, repo)
-      queue.extend([(depth+1, x) for x in maven.pom_eval_deps(pom)])
+      queue.extend([(depth+1, x) for x in reversed(maven.pom_eval_deps(pom))])
 
       # Print dependency info.
       #tree_indicator = '| ' if queue and queue[-1][0] > depth else '\\ '
