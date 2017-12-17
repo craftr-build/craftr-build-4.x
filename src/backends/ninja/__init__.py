@@ -48,7 +48,7 @@ def make_rule_description(node):
 
 
 def make_rule_name(graph, node):
-  return re.sub('[^\d\w\-_\.]+', '_', node.name) + '_' + graph.hash(node)
+  return re.sub('[^\d\w\-_\.]+', '_', node.name)
 
 
 def check_ninja_version(build_directory, download=False):
@@ -115,7 +115,9 @@ def prepare_build(build_directory, graph, args):
         '$nodepy_exec_args',
         str(require.resolve('craftr/main').filename),
         '--build-directory', build_directory,
-        '--run-node', node.name
+        # Place the hash in the command string, so Ninja always knows when
+        # when the definition of the build node changed.
+        '--run-node', '{}^{}'.format(node.name, graph.hash(node)),
       ]
       order_only = []
       for dep in [graph[x] for x in node.deps]:
@@ -124,6 +126,7 @@ def prepare_build(build_directory, graph, args):
         #else:
         #  order_only.extend(dep.output_files)
 
+      command = ' '.join(quote(x, for_ninja=True) for x in command)
       writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
       writer.build(
         outputs = node.output_files or [phony_name],

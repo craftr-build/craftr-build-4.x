@@ -196,7 +196,7 @@ parser.add_argument(
 
 parser.add_argument(
   '--run-node',
-  metavar='NAME',
+  metavar='NAME[^HASH]',
   help='Execute the command for the specified build-node. Build nodes names '
        'are formatted as `//<cell>:<target>#<node>`. This can be used '
        'internally by build backends to implement deduplication. This option '
@@ -357,10 +357,19 @@ def get_additional_args_for(node_name):
 
 
 def run_build_node(graph, node_name):
+  if '^' in node_name:
+    node_name, node_hash = node_name.split('^', 1)
+  else:
+    node_hash = None
+
   try:
     node = graph[node_name]
   except KeyError:
     error('fatal: build node "{}" does not exist'.format(node_name))
+    return 1
+
+  if node_hash is not None and node_hash != graph.hash(node):
+    error('fatal: build node hash inconsistency, maybe try --prepare-build')
     return 1
 
   # TODO: The additional args feature should be explicitly supported by the
@@ -428,7 +437,10 @@ def show_build_node(graph, node_name):
   except KeyError:
     error('fatal: build node "{}" does not exist'.format(node_name))
     return 1
-  json.dump(node._asdict(), sys.stdout, indent=2)
+  data = node._asdict()
+  data['hash'] = graph.hash(node)
+  json.dump(data, sys.stdout, indent=2)
+  print()
   return 0
 
 
