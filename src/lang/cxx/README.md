@@ -15,6 +15,10 @@
   `cxx.library()` and `cxx.prebuilt()` parameter when there are no dependents
   that override the `link_style.`
 
+---
+
+* `msvc.runtime_library`
+
 ## Functions
 
 ### `cxx.version()`

@@ -79,6 +79,8 @@ class MsvcCompiler(base.Compiler):
     # If not explicitly specified, determine whether we should link the
     # MSVC runtime library statically or dynamically.
     if not options.msvc_runtime_library:
+      options.msvc_runtime_library = craftr.options.get('msvc.runtime_library')
+    if not options.msvc_runtime_library:
       if impl.link_style == 'static':
         options.msvc_runtime_library = 'static'
       elif impl.link_style == 'shared':
