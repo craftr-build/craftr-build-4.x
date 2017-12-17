@@ -361,6 +361,8 @@ def run_build_node(graph, node_name):
     node_name, node_hash = node_name.split('^', 1)
   else:
     node_hash = None
+  if node_name.startswith(':'):
+    node_name = '//' + craftr.cache['main_build_cell'] + node_name
 
   try:
     node = graph[node_name]
@@ -432,6 +434,8 @@ def run_build_node(graph, node_name):
 
 
 def show_build_node(graph, node_name):
+  if node_name.startswith(':'):
+    node_name = '//' + craftr.cache['main_build_cell'] + node_name
   try:
     node = graph[node_name]
   except KeyError:
