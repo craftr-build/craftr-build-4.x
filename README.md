@@ -41,7 +41,7 @@ installed on your system, then follow these steps:
 
 ### Quickstart
 
-    craftr --quickstart {java,csharp,cxx}
+    craftr --quickstart {java,csharp,cxx-shared}
 
 This will copy one of the example projects into your current directory.
 
