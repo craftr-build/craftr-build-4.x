@@ -93,6 +93,10 @@ The configure and build this project, and execute the compiled JAR archive:
 
     $ craftr --configure --build :main_run
 
+You can pass additional arguments to a run-target without reconfiguring:
+
+    $ craftr --configure --build :main_run="--say-hello --to John"
+
 ---
 
 <p align="center">Copyright &copy; Niklas Rosenstein 2015, 2016, 2017</p>

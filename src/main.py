@@ -3,6 +3,7 @@ Command-line entry point for the Craftr build system.
 """
 
 import argparse
+import contextlib
 import functools
 import json
 import os
@@ -188,7 +189,9 @@ parser.add_argument(
   default=NotImplemented,
   help='Execute the build for all or the specified TARGETs using the build '
        'backend configured with --backend or in the Craftr configuration '
-       'file. This step implies the --prepare-build step.'
+       'file. This step implies the --prepare-build step. Additional '
+       'arguments can be passed to a target using the TARGET="ARGS ..." '
+       'syntax (useful for run targets).'
 )
 
 parser.add_argument(
@@ -328,12 +331,44 @@ def merge_options(*opts):
   return result
 
 
+def get_additional_args_for(node_name):
+  """
+  In the --build step, a `craftr_additional_args.json` file may be present
+  which specifies additional arguments passed to a target via the command-line.
+  This extracts the additional arguments for the specified *node_name*, falling
+  back to the node's target if such an entry exists.
+  """
+
+  additional_args_file = os.path.join(craftr.build_directory, 'craftr_additional_args.json')
+  if not os.path.isfile(additional_args_file):
+    return []
+  with open(additional_args_file, 'r') as fp:
+    additional_args = json.load(fp)
+  try:
+    return shlex.split(additional_args[node_name])
+  except KeyError:
+    pass
+  target_name = node_name.partition('#')[0]
+  try:
+    return shlex.split(additional_args[target_name])
+  except KeyError:
+    pass
+  return []
+
+
 def run_build_node(graph, node_name):
   try:
     node = graph[node_name]
   except KeyError:
     error('fatal: build node "{}" does not exist'.format(node_name))
     return 1
+
+  # TODO: The additional args feature should be explicitly supported by the
+  #       build node, allowing it to specify a position where the additional
+  #       args will be rendered.
+  #       Usually, the option only makes sense for targets that run a single
+  #       command such as cxx.run(), java.run(), etc.
+  additional_args = get_additional_args_for(node_name)
 
   # Ensure that the output directories exist.
   created_dirs = set()
@@ -349,18 +384,21 @@ def run_build_node(graph, node_name):
     os.chdir(node.cwd)
 
   # Used to print the command-list on failure.
-  def print_command_list(current=None):
+  def print_command_list(current=-1):
     error('Command list:'.format(node.name))
-    for cmd in node.commands:
-      error('>' if current == cmd else ' ', '$', ' '.join(map(shlex.quote , cmd)))
+    for i, cmd in enumerate(node.commands):
+      error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
 
   # Execute the subcommands/
-  for cmd in node.commands:
+  for i, cmd in enumerate(node.commands):
+    # Add the additional_args to the last command in the chain.
+    if i == len(node.commands) - 1:
+      cmd = cmd + additional_args
     code = subprocess.call(cmd)
     if code != 0:
       error('\n' + '-'*60)
       error('fatal: "{}" exited with code {}.'.format(node.name, code))
-      print_command_list(cmd)
+      print_command_list(i)
       error('-'*60 + '\n')
       return code
 
@@ -394,6 +432,22 @@ def list_build_nodes(graph):
   for node in sorted(graph.nodes(), key=lambda x: x.name):
     print(node.name)
   return 0
+
+
+def prepare_target_list(targets):
+  """
+  Parses a list of targets specified on the command-line passed to --build
+  or --clean, converting them to absolute target names.
+  """
+
+  main_build_cell = craftr.cache['main_build_cell']
+  result = []
+  for target in targets:
+    target, sep, args = target.partition('=')
+    if target.startswith(':'):
+      target = '//' + main_build_cell + target
+    result.append((target, args))
+  return result
 
 
 def main(argv=None):
@@ -454,6 +508,8 @@ def main(argv=None):
     print(args)
     error('fatal: --run-node can not be combined with other build steps.')
     return 1
+
+  craftr.build_directory = args.build_directory
   if args.run_node and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
     return run_build_node(build_graph, args.run_node)
@@ -499,18 +555,20 @@ def main(argv=None):
   set_options(concat(args.options))
 
   # Determine the build directory.
-  if not args.build_root:
-    args.build_root = craftr.options.get('build.directory', None)
-  if not args.build_root:
-    args.build_root = find_build_root()
-    if args.build_root and args.build_root != 'build':
-      print('note: automatically selected build root directory "{}"'.format(
-          args.build_root))
-  if not args.build_root:
-    args.build_root = 'build'
-  mark_build_root(args.build_root)
-  mode = 'release' if args.release else 'debug'
-  craftr.build_directory = os.path.join(args.build_root, mode)
+  if not args.build_directory:
+    if not args.build_root:
+      args.build_root = craftr.options.get('build.directory', None)
+    if not args.build_root:
+      args.build_root = find_build_root()
+      if args.build_root and args.build_root != 'build':
+        print('note: automatically selected build root directory "{}"'.format(
+            args.build_root))
+    if not args.build_root:
+      args.build_root = 'build'
+    mark_build_root(args.build_root)
+    mode = 'release' if args.release else 'debug'
+    args.build_directory = os.path.join(args.build_root, mode)
+    craftr.build_directory = args.build_directory
 
   # Handle --show-build-directory
   if args.show_build_directory:
@@ -629,7 +687,11 @@ def main(argv=None):
   # Handle --clean
   if args.clean is not NotImplemented:
     build_graph.deselect_all()
-    build_graph.select(args.clean or [], craftr.cache['main_build_cell'])
+    targets, args = zip(*prepare_target_list(args.clean or []))
+    if any(args):
+      error('fatal: can not pass additional arguments to targets in --clean')
+      return 1
+    build_graph.select(targets)
     clean_args = list(concat(map(shlex.split, args.clean_args)))
     backend.clean(craftr.build_directory, build_graph, args)
 
@@ -640,9 +702,31 @@ def main(argv=None):
   # Handle --build
   if args.build is not NotImplemented:
     build_graph.deselect_all()
-    build_graph.select(args.build or [], craftr.cache['main_build_cell'])
-    build_args = list(concat(map(shlex.split, args.build_args)))
-    backend.build(craftr.build_directory, build_graph, args)
+
+    # We write this into another JSON cache to populate additional
+    # arguments to already configured tasks.
+    additional_args = {}
+    for target, target_args in prepare_target_list(args.build):
+      if target_args:
+        additional_args[target] = target_args
+      build_graph.select(target)
+
+    # Write the file, or ensure it does not exist.
+    additional_args_file = os.path.join(craftr.build_directory, 'craftr_additional_args.json')
+    if additional_args:
+      print('note: writing "{}"'.format(additional_args_file))
+      with open(additional_args_file, 'w') as fp:
+        json.dump(additional_args, fp)
+    else:
+      with contextlib.suppress(FileNotFoundError):
+        os.remove(additional_args_file)
+
+    try:
+      build_args = list(concat(map(shlex.split, args.build_args)))
+      backend.build(craftr.build_directory, build_graph, args)
+    finally:
+      with contextlib.suppress(FileNotFoundError):
+        os.remove(additional_args_file)
 
 
 def quickstart(language):

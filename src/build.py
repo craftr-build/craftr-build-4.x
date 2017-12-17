@@ -351,12 +351,10 @@ class BuildGraph:
   def deselect_all(self):
     self._selected = []
 
-  def select(self, node_name, main_build_cell=None):
+  def select(self, node_name):
     if isinstance(node_name, str):
       node_name = [node_name]
     for node_name in node_name:
-      if node_name.startswith(':') and main_build_cell is not None:
-        node_name = '//' + main_build_cell + node_name
       if node_name in self._nodes:
         self._selected.append(node_name)
       elif node_name in self._targets:
