@@ -3,6 +3,6 @@
   "name": "craftr-example-csharp",
   "version": "1.0.0",
   "cfg(dev).dependencies": {
-    "craftr": "git+https://github.com/craftr-build/craftr.git@craftr-3.x"
+    "craftr": "git+https://github.com/craftr-build/craftr.git@master"
   }
 }
