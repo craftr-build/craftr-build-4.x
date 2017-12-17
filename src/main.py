@@ -691,12 +691,13 @@ def main(argv=None):
   # Handle --clean
   if args.clean is not NotImplemented:
     build_graph.deselect_all()
-    targets, args = zip(*prepare_target_list(args.clean or []))
-    if any(args):
-      error('fatal: can not pass additional arguments to targets in --clean')
-      return 1
-    build_graph.select(targets)
-    clean_args = list(concat(map(shlex.split, args.clean_args)))
+    if args.clean:
+      targets, args = zip(*prepare_target_list(args.clean))
+      if any(args):
+        error('fatal: can not pass additional arguments to targets in --clean')
+        return 1
+      build_graph.select(targets)
+    args.clean_args = list(concat(map(shlex.split, args.clean_args)))
     backend.clean(craftr.build_directory, build_graph, args)
 
   # Handle --prepare-build
@@ -726,7 +727,7 @@ def main(argv=None):
         os.remove(additional_args_file)
 
     try:
-      build_args = list(concat(map(shlex.split, args.build_args)))
+      args.build_args = list(concat(map(shlex.split, args.build_args)))
       backend.build(craftr.build_directory, build_graph, args)
     finally:
       with contextlib.suppress(FileNotFoundError):

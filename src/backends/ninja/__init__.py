@@ -142,8 +142,9 @@ def build(build_directory, graph, args):
   ninja = check_ninja_version(build_directory)
   if not ninja:
     return 1
-  targets = [make_rule_name(graph, node) for node in graph.selected()]
-  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')] + args.build_args + targets
+  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')]
+  command += args.build_args
+  command += [make_rule_name(graph, node) for node in graph.selected()]
   subprocess.run(command)
 
 
@@ -160,5 +161,7 @@ def clean(build_directory, graph, args):
     if targets:
       targets.insert(0, '-r')
 
-  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean'] + args.clean_args + targets
+  command = [ninja, '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean']
+  command += args.clean_args
+  command += targets
   subprocess.run(command)
