@@ -394,7 +394,11 @@ def run_build_node(graph, node_name):
     # Add the additional_args to the last command in the chain.
     if i == len(node.commands) - 1:
       cmd = cmd + additional_args
-    code = subprocess.call(cmd)
+    try:
+      code = subprocess.call(cmd)
+    except FileNotFoundError as e:
+      error(e)
+      code = 127
     if code != 0:
       error('\n' + '-'*60)
       error('fatal: "{}" exited with code {}.'.format(node.name, code))
