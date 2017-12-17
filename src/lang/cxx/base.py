@@ -105,6 +105,8 @@ class build(craftr.TargetTrait):
       raise TypeError('options must be None, dict or {}, got {} instead'
         .format(compilre.options_class.__name__, type(options).__name__))
     self.srcs = [craftr.localpath(x) for x in (srcs or [])] if localize_srcs else (srcs or [])
+    if not self.srcs:
+      raise ValueError('srcs must have minimum length 1')
     self.type = type
     self.debug = debug
     self.warnings = warnings
@@ -276,7 +278,7 @@ class prebuilt(craftr.TargetTrait):
     self.libpath = libpath or []
     self.preferred_linkage = preferred_linkage
 
-  def translate(self, target):
+  def translate(self):
     pass
 
 
