@@ -425,7 +425,7 @@ def run_build_node(graph, node_name):
         len(node.output_files) - len(missing_files), len(node.output_files)))
     error('The missing files are:')
     for x in missing_files:
-      print('  -', x)
+      error('  -', x)
     print_command_list()
     error('-'*60 + '\n')
     return 1
