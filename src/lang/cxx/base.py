@@ -221,10 +221,10 @@ class build(craftr.TargetTrait):
 
     for lang, srcs in (('c', c_srcs), ('cpp', cpp_srcs)):
       if not srcs: continue
-      command = self.compiler.build_compile_flags(self, lang)
       for filename in srcs:
         # XXX Could result in clashing object file names!
         objfile = path.join(obj_dir, path.base(path.rmvsuffix(filename)) + obj_suffix)
+        command = self.compiler.build_compile_flags(self, lang)
         command.extend(self.compiler.build_compile_out_flags(self, lang, objfile))
         command.append(filename)
         obj_actions.append(craftr.BuildAction(

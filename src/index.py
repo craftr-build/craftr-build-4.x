@@ -31,7 +31,15 @@ import _build, {BuildCell, BuildAction,
     from './build'
 
 
-def current_cell(create=False):
+def cell():
+  """
+  Shortcut for #get_current_cell() with *create* set to #True.
+  """
+
+  return get_current_cell(create=True)
+
+
+def get_current_cell(create=False):
   """
   Retrieves the current #BuildCell. If there is no current cell, a
   #RuntimeError is raised, unless *create* is set to #True, in which case
@@ -64,7 +72,7 @@ def resolve_target(target):
     return target
   cell_name, name = _build.splitref(target)
   if not cell_name:
-    cell_name = current_cell().name
+    cell_name = get_current_cell().name
   try:
     return cells[cell_name].targets[name]
   except KeyError:
@@ -110,7 +118,7 @@ class TargetFactory(object):
               console=False, **kwargs):
     for func in self.preprocessors:
       func(kwargs)
-    cell = current_cell(create=True)
+    cell = get_current_cell(create=True)
     deps = [resolve_target(x) for x in deps]
     transitive_deps = [resolve_target(x) for x in transitive_deps]
     target = BuildTarget(cell, name, deps, transitive_deps, explicit, console)
