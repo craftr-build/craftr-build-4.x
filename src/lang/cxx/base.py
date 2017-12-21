@@ -27,8 +27,8 @@ import types from 'craftr/utils/types'
 
 def infer_linkage(target):
   choices = set()
-  for data in target.dependents_traits().of_type(build):
-    choices.add(data.link_style)
+  for trait in target.dependents_traits().of_type(build):
+    choices.add(trait.link_style)
   if len(choices) > 1:
     log.warn('Target "{}" has preferred_linkage=any, but dependents '
       'specify conflicting link_styles {}. Falling back to static.'
@@ -45,8 +45,8 @@ def infer_linkage(target):
 
 
 def infer_debug(target):
-  for data in target.dependents_traits().of_type(build):
-    if data.debug:
+  for trait in target.dependents_traits().of_type(build):
+    if trait.debug:
       return True
   else:
     return not craftr.is_release
@@ -175,9 +175,9 @@ class build(craftr.TargetTrait):
     # Inherit the optimize flag if it is not set.
     # XXX What do to on different values?
     if self.optimize is None:
-      for data in self.target.dependents_traits().of_type(build):
-        if data.optimize:
-          self.optimize = data.optimize
+      for trait in self.target.dependents_traits().of_type(build):
+        if trait.optimize:
+          self.optimize = trait.optimize
           break
       else:
         self.optimize = options.get('cxx.optimize', 'speed')
@@ -482,18 +482,17 @@ class Compiler(types.NamedObject):
     yet. Use the #build_compile_out_flags() method for that.
     """
 
-    data = trait
-    assert isinstance(data, build)
-    assert data.preferred_linkage in ('static', 'shared')
+    assert isinstance(trait, build)
+    assert trait.preferred_linkage in ('static', 'shared')
 
-    defines = list(data.defines) + list(data.exported_defines)
-    if data.type == 'library' and data.preferred_linkage == 'shared':
-      defines += list(data.shared_defines) + list(data.exported_shared_defines)
+    defines = list(trait.defines) + list(trait.exported_defines)
+    if trait.type == 'library' and trait.preferred_linkage == 'shared':
+      defines += list(trait.shared_defines) + list(trait.exported_shared_defines)
     else:
-      defines += list(data.static_defines) + list(data.exported_static_defines)
+      defines += list(trait.static_defines) + list(trait.exported_static_defines)
 
-    includes = list(data.includes) + list(data.exported_includes)
-    flags = list(data.compiler_flags) + list(data.exported_compiler_flags)
+    includes = list(trait.includes) + list(trait.exported_includes)
+    flags = list(trait.compiler_flags) + list(trait.exported_compiler_flags)
     for dep in trait.target.dep_traits():
       if isinstance(dep, build):
         includes.extend(dep.exported_includes)
@@ -519,12 +518,12 @@ class Compiler(types.NamedObject):
     if trait.is_sharedlib():
       command += self.expand(self.pic_flag)
 
-    if data.warnings:
+    if trait.warnings:
       command.extend(self.expand(self.warnings_flag))
-    if data.warnings_as_errors:
+    if trait.warnings_as_errors:
       command.extend(self.expand(self.warnings_as_errors))
-    if not data.debug:
-      command += self.expand(getattr(self, 'optimize_' + data.optimize + '_flag'))
+    if not trait.debug:
+      command += self.expand(getattr(self, 'optimize_' + trait.optimize + '_flag'))
 
     return command
 
@@ -533,18 +532,17 @@ class Compiler(types.NamedObject):
     is_archive = False
     is_shared = False
 
-    data = trait
-    if data.type == 'library':
-      if data.preferred_linkage == 'shared':
+    if trait.type == 'library':
+      if trait.preferred_linkage == 'shared':
         is_shared = True
-      elif data.preferred_linkage == 'static':
+      elif trait.preferred_linkage == 'static':
         is_archive = True
       else:
-        assert False, data.preferred_linkage
-    elif data.type == 'binary':
+        assert False, trait.preferred_linkage
+    elif trait.type == 'binary':
       pass
     else:
-      assert False, data.type
+      assert False, trait.type
 
     if is_archive:
       command = self.expand(self.archiver)
@@ -555,7 +553,7 @@ class Compiler(types.NamedObject):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
-    libs = list(data.syslibs)
+    libs = list(trait.syslibs)
     libpath = list()
     for dep in trait.target.dep_traits():
       if isinstance(dep, build):
@@ -567,9 +565,9 @@ class Compiler(types.NamedObject):
         libs += dep.syslibs
         libpath += dep.libpath
         flags.extend(dep.linker_flags)
-        if data.link_style == 'static' and dep.static_libs or not dep.shared_libs:
+        if trait.link_style == 'static' and dep.static_libs or not dep.shared_libs:
           additional_input_files.extend(dep.static_libs)
-        elif data.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
+        elif trait.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
           additional_input_files.extend(dep.shared_libs)
 
     flags += it.concat([self.expand(self.linker_libpath, x) for x in it.unique(libpath)])
