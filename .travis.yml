@@ -20,6 +20,8 @@ env:
 - BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run --options java.dist_type=onejar"
 - BUILD_MODULE=examples/java BUILD_OPTIONS=":main_run --options java.dist_type=merge"
 - BUILD_MODULE=examples/csharp BUILD_OPTIONS=":main_run"
+- BUILD_MODULE=examples/cxx BUILD_OPTIONS=:main_run="--hex 42"
+- BUILD_MODULE=examples/cxx-shared BUILD_OPTIONS=":main_run"
 
 install:
 - sudo apt-get update

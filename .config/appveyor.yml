@@ -32,9 +32,13 @@ environment:
     BUILD_OPTIONS: :main_run --options csharp.impl=mono csharp.csc=mcs
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
-build: off
+  - BUILD_MODULE: examples/cxx
+    BUILD_OPTIONS: :main_run="--hex 42"
 
-install:
+  - BUILD_MODULE: examples/cxx-shared
+    BUILD_OPTIONS: :main_run
+
+build_script:
 - set PATH=C:\Python36-x64;C:\Python36-x64\Scripts;%PATH%;%ADD_PATH%
 - pip --version
 - pip install wheel
