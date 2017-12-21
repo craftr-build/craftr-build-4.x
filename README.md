@@ -25,8 +25,10 @@ easily implemented and installed using [Node.py's Package manager][nodepy-pm].
 
 ### Installation
 
-Make sure you have at least [Python 3.6](https://www.python.org/downloads/release/python-363/)
-installed on your system, then follow these steps:
+Craftr is compatible with Python 3.4 and newer, though we recommend 3.6 or
+newer. You can install the latest version of Python from the Python.org
+[downloads page](https://www.python.org/downloads/). Once you have Python
+installed on your system, follow these steps:
 
     # Install Node.py (https://nodepy.org)
     pip3.6 install --user git+https://github.com/nodepy/nodepy.git@develop

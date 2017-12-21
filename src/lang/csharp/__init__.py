@@ -92,7 +92,8 @@ class CscInfo(NamedObject):
         install_cmd = self.get_nuget() + ['install', tool_name, '-Version', version]
         log.info('[Installing] {}.{}'.format(tool_name, version))
         path.makedirs(artifacts_dir, exist_ok=True)
-        subprocess.run(install_cmd, check=True, cwd=artifacts_dir)
+        subprocess.check_call(install_cmd, cwd=artifacts_dir)
+
     if not command:
       command = self.exec_args([path.abs(local_tool)])
 
@@ -293,7 +294,7 @@ class prebuilt(craftr.TargetTrait):
       nupkg_file = dep.nupkg(self.packages_install_dir)
       if not path.isfile(nupkg_file):
         command = self.csc.get_nuget() + ['install', dep.id, '-Version', dep.version]
-        subprocess.run(command, cwd=self.packages_install_dir, check=True)
+        subprocess.check_call(command, cwd=self.packages_install_dir)
 
       # Parse the .nuspec for this package's dependencies.
       specdom = nupkg.get_nuspec(nupkg_file)

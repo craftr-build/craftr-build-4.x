@@ -345,7 +345,8 @@ class BuildGraph:
     return self._nodes.values()
 
   def hash(self, node):
-    return hashlib.sha1(json.dumps(node._asdict()).encode('utf8')).hexdigest()[:12]
+    data = json.dumps(node._asdict(), sort_keys=True)
+    return hashlib.sha1(data.encode('utf8')).hexdigest()[:12]
 
   def dotviz(self, fp):
     fp.write('digraph "craftr" {\n')

@@ -7,11 +7,6 @@ __all__ = ['NamedObject']
 import collections
 import sys
 
-# This module requires Python 3.6 or newer (type annotations on class
-# variables. ordered dictionaries, object.__init_subclass__()).
-if sys.version < '3.6':
-  raise EnvironmentError('Python 3.6+ required')
-
 
 class NamedObjectMeta(type):
 

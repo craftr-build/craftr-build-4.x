@@ -23,12 +23,28 @@ remove files from it.
 """
 
 import argparse
+import errno
 import codecs
 import contextlib
 import os
 import shutil
 import sys
+import tempfile
 import zipfile
+
+
+@contextlib.contextmanager
+def named_tempfile(*args, **kwargs):
+  kwargs.setdefault('delete', False)
+  fp = tempfile.NamedTemporaryFile(*args, **kwargs)
+  try:
+    yield fp
+  finally:
+    try:
+      os.remove(fp.name)
+    except OSError as e:
+      if e.errno != errno.ENOENT:
+        raise
 
 
 def parse_manifest(fp):
@@ -191,13 +207,18 @@ def main():
 
             # Special case, write the manifest data that we modified.
             if name == 'META-INF/MANIFEST.MF':
-              with outjar.open(name, 'w') as fp:
+              with named_tempfile() as fp:
                 write_manifest(utf8writer(fp), manifest)
+                fp.close()
+                outjar.write(fp.name, name)
 
             # Otherwise just copy the whole file contents.
             else:
-              with curr_jar.open(name) as src, outjar.open(name, 'w') as dst:
-                shutil.copyfileobj(src, dst)
+              with curr_jar.open(name) as src:
+                with named_tempfile() as tmp:
+                  shutil.copyfileobj(src, tmp)
+                  tmp.close()
+                  outjar.write(tmp.name, name)
 
             if args.verbose:
               print('copied:', name)
@@ -206,8 +227,7 @@ def main():
 
       # Write all new files into the archive.
       for name, source in put_files.items():
-        with open(source, 'rb') as src, outjar.open(name, 'w') as dst:
-          shutil.copyfileobj(src, dst)
+        outjar.write(source, name)
         if args.verbose:
           print('copied:', name, '(from {})'.format(source))
 

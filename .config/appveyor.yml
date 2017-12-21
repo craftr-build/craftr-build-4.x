@@ -47,7 +47,7 @@ build_script:
 - pip install wheel
 - pip install git+https://github.com/nodepy/nodepy.git@develop
 - nodepy --version
-- nodepy https://nodepy.org/install-pm master
-- nodepy-pm install -I
+- nodepy https://nodepy.org/install-pm develop
+- nodepy-pm install -PI
 - set PATH=.nodepy/bin;%PATH%
 - craftr --configure %BUILD_MODULE% --build %BUILD_OPTIONS%

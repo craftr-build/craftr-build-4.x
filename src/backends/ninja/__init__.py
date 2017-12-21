@@ -165,7 +165,7 @@ def build(build_directory, graph, args):
   command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')]
   command += args.build_args
   command += [make_rule_name(graph, node) for node in graph.selected()]
-  return subprocess.run(command).returncode
+  return subprocess.call(command)
 
 
 def clean(build_directory, graph, args):
@@ -184,4 +184,4 @@ def clean(build_directory, graph, args):
   command = [ninja, '-f', os.path.join(build_directory, 'build.ninja'), '-t', 'clean']
   command += args.clean_args
   command += targets
-  return subprocess.run(command).returncode
+  return subprocess.call(command)
