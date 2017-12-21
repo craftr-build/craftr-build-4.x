@@ -21,6 +21,8 @@ class GccCompiler(base.Compiler):
   compiler_cpp = 'g++'
   compiler_out = ['-c', '-o', '%ARG%']
 
+  c_std = '-std=%ARG%'
+  cpp_std = '-std=%ARG%'
   pic_flag = '-fPIC'
   debug_flag = '-g'
   define_flag = '-D%ARG%'

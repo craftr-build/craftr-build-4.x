@@ -58,6 +58,8 @@ class build(craftr.TargetTrait):
   def __init__(self,
                type: str,
                srcs: List[str] = None,
+               c_std = None,
+               cpp_std = None,
                debug: bool = None,
                warnings: bool = True,
                warnings_as_errors: bool = False,
@@ -109,6 +111,8 @@ class build(craftr.TargetTrait):
       raise ValueError('srcs must have minimum length 1')
     self.type = type
     self.debug = debug
+    self.c_std = c_std
+    self.cpp_std = cpp_std
     self.warnings = warnings
     self.warnings_as_errors = warnings_as_errors
     self.optimize = optimize
@@ -399,6 +403,8 @@ class Compiler(types.NamedObject):
   compiler_env: Dict[str, str]        # Environment variables for the compiler.
   compiler_out: List[str]             # Specify the compiler object output file.
 
+  c_std: List[str]
+  cpp_std: List[str]
   pic_flag: List[str]                 # Flag(s) to enable position independent code.
   debug_flag: List[str]               # Flag(s) to enable debug symbols.
   define_flag: str                    # Flag to define a preprocessor macro.
@@ -437,10 +443,7 @@ class Compiler(types.NamedObject):
     if isinstance(args, str):
       args = [args]
     if value is not None:
-      result = [x.replace('%ARG%', value) for x in args]
-      if result == args:
-        result.append(value)
-      return result
+      return [x.replace('%ARG%', value) for x in args]
     return list(args)
 
   def init_macro_context(self, trait, ctx):
@@ -510,6 +513,10 @@ class Compiler(types.NamedObject):
     command = self.expand(getattr(self, 'compiler_' + language))
     command.append('$in')
     command.extend(self.expand(self.compiler_out, '$out'))
+
+    std_value = getattr(trait, language + '_std')
+    if std_value:
+      command.extend(self.expand(getattr(self, language + '_std'), std_value))
     for include in includes:
       command.extend(self.expand(self.include_flag, include))
     for define in defines:

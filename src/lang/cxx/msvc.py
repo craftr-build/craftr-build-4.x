@@ -24,6 +24,8 @@ class MsvcCompiler(base.Compiler):
   compiler_cpp = ['cl', '/nologo']
   compiler_out = ['/c', '/Fo%ARG%']
 
+  c_std = []
+  cpp_std = []
   pic_flag = []
   debug_flag = []  # handled explicitly together with embedd_debug_symbols
   define_flag = '/D%ARG%'
