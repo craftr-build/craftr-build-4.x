@@ -8,11 +8,14 @@ import base from './base'
 
 
 class MsvcCompilerOptions(base.CompilerOptions):
-  nodefaultlib: bool = False
-  embedd_debug_symbols: bool = True
-  msvc_disable_warnings: List[str] = None
-  msvc_enabled_exceptions: bool = True
-  msvc_runtime_library: str = None
+
+  __annotations__ = [
+    ('nodefaultlib', bool, False),
+    ('embedd_debug_symbols', bool, True),
+    ('msvc_disable_warnings', List[str], None),
+    ('msvc_enabled_exceptions', bool, True),
+    ('msvc_runtime_library', str, None)
+  ]
 
 
 class MsvcCompiler(base.Compiler):

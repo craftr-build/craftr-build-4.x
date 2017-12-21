@@ -27,11 +27,14 @@ artifacts_dir = path.join(craftr.build_directory, '.nuget-artifacts')
 
 
 class CscInfo(NamedObject):
-  impl: str
-  program: t.List[str]
-  environ: dict
-  version: str
-  netversion: str = 'net45'  # XXX determine default netversion here
+
+  __annotations__ = [
+    ('impl', str),
+    ('program', t.List[str]),
+    ('environ', dict),
+    ('version', str),
+    ('netversion', str, 'net45')  # XXX determine default netversion here
+  ]
 
   def __repr__(self):
     return '<CscInfo impl={!r} program={!r} environ=... version={!r}>'\

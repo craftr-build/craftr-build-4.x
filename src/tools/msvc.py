@@ -35,8 +35,10 @@ class MsvcInstallation(NamedObject):
   Represents an MSVC installation directory.
   """
 
-  version: int
-  directory: str
+  __annotations__ = [
+    ('version', int),
+    ('directory', str)
+  ]
 
   @property
   @functools.lru_cache()
@@ -151,13 +153,15 @@ class AsDictJSONEncoder(json.JSONEncoder):
 
 class ClInfo(NamedObject):
 
-  version: str
-  version_str: str
-  target: str  # Either x86 or x64
-  msvc_deps_prefix: str = None
-  assembler_program: str
-  link_program: str
-  lib_program: str
+  __annotations__ = [
+    ('version', str),
+    ('version_str', str),
+    ('target', str),  # Either x86 or x64
+    ('msvc_deps_prefix', str, None),
+    ('assembler_program', str),
+    ('link_program', str),
+    ('lib_program', str)
+  ]
 
   VERSION_REGEX = re.compile(r'compiler\s+version\s*([\d\.]+)\s*\w+\s*(x\w+)', re.I | re.M)
 
@@ -221,15 +225,17 @@ class MsvcToolkit(NamedObject):
 
   CSC_VERSION_REGEX = re.compile(r'compiler\s+version\s+([\d\.]+)', re.I | re.M)
 
-  version: int
-  directory: str
-  environ: dict
-  arch: str
-  platform_type: str = None
-  sdk_version: str = None
-  _csc_version: str = None
-  _vbc_version: str = None
-  _cl_info: ClInfo = None
+  __annotations__ = [
+    ('version', int),
+    ('directory', str),
+    ('environ', dict, None),
+    ('arch', str, None),
+    ('platform_type', str, None),
+    ('sdk_version', str, None),
+    ('_csc_version', str, None),
+    ('_vbc_version', str, None),
+    ('_cl_info', ClInfo, None)
+  ]
 
   @classmethod
   def from_installation(cls, inst, arch=None, platform_type=None, sdk_version=None):

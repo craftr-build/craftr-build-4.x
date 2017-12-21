@@ -394,47 +394,48 @@ class Compiler(types.NamedObject):
   it is not present, the argument will be appended to the flags.
   """
 
-  name: str
-  version: str
-  options_class: Type[CompilerOptions]
+  __annotations__ = [
+    ('name', str),
+    ('version', str),
+    ('options_class', Type[CompilerOptions]),
 
-  compiler_c: List[str]               # Arguments to invoke the C compiler.
-  compiler_cpp: List[str]             # Arguments to invoke the C++ compiler.
-  compiler_env: Dict[str, str]        # Environment variables for the compiler.
-  compiler_out: List[str]             # Specify the compiler object output file.
+    ('compiler_c', List[str]),               # Arguments to invoke the C compiler.
+    ('compiler_cpp', List[str]),             # Arguments to invoke the C++ compiler.
+    ('compiler_env', Dict[str, str]),        # Environment variables for the compiler.
+    ('compiler_out', List[str]),             # Specify the compiler object output file.
 
-  c_std: List[str]
-  cpp_std: List[str]
-  pic_flag: List[str]                 # Flag(s) to enable position independent code.
-  debug_flag: List[str]               # Flag(s) to enable debug symbols.
-  define_flag: str                    # Flag to define a preprocessor macro.
-  include_flag: str                   # Flag to specify include directories.
-  expand_flag: List[str]              # Flag(s) to request macro-expanded source.
-  warnings_flag: List[str]            # Flag(s) to enable all warnings.
-  warnings_as_errors_flag: List[str]  # Flag(s) to turn warnings into errors.
-  optimize_speed_flag: List[str]
-  optimize_size_flag: List[str]
+    ('c_std', List[str]),
+    ('cpp_std', List[str]),
+    ('pic_flag', List[str]),                 # Flag(s) to enable position independent code.
+    ('debug_flag', List[str]),               # Flag(s) to enable debug symbols.
+    ('define_flag', str),                    # Flag to define a preprocessor macro.
+    ('include_flag', str),                   # Flag to specify include directories.
+    ('expand_flag', List[str]),              # Flag(s) to request macro-expanded source.
+    ('warnings_flag', List[str]),            # Flag(s) to enable all warnings.
+    ('warnings_as_errors_flag', List[str]),  # Flag(s) to turn warnings into errors.
+    ('optimize_speed_flag', List[str]),
+    ('optimize_size_flag', List[str]),
 
-  linker_c: List[str]                 # Arguments to invoke the linker for C programs.
-  linker_cpp: List[str]               # Arguments to invoke the linker for C++/C programs.
-  linker_env: Dict[str, str]          # Environment variables for the binary linker.
-  linker_out: List[str]               # Specify the linker output file.
-  linker_shared: List[str]            # Flag(s) to link a shared library.
-  linker_exe: List[str]               # Flag(s) to link an executable binary.
-  linker_lib: List[str]
-  linker_libpath: List[str]
-  # XXX support MSVC /WHOLEARCHIVE
-  # XXX support Uninx -fPIC
+    ('linker_c', List[str]),                 # Arguments to invoke the linker for C programs.
+    ('linker_cpp', List[str]),               # Arguments to invoke the linker for C++/C programs.
+    ('linker_env', Dict[str, str]),          # Environment variables for the binary linker.
+    ('linker_out', List[str]),               # Specify the linker output file.
+    ('linker_shared', List[str]),            # Flag(s) to link a shared library.
+    ('linker_exe', List[str]),               # Flag(s) to link an executable binary.
+    ('linker_lib', List[str]),
+    ('linker_libpath', List[str]),
+    # XXX support MSVC /WHOLEARCHIVE
 
-  archiver: List[str]                 # Arguments to invoke the archiver.
-  archiver_env: List[str]             # Environment variables for the archiver.
-  archiver_out: List[str]             # Flag(s) to specify the output file.
+    ('archiver', List[str]),                 # Arguments to invoke the archiver.
+    ('archiver_env', List[str]),             # Environment variables for the archiver.
+    ('archiver_out', List[str]),             # Flag(s) to specify the output file.
 
-  lib_macro: Union[str, Callable[[List[str]], str]] = None
-  ext_lib_macro: Union[str, Callable[[List[str]], str]] = None
-  ext_dll_macro: Union[str, Callable[[List[str]], str]] = None
-  ext_exe_macro: Union[str, Callable[[List[str]], str]] = None
-  obj_macro: Union[str, Callable[[List[str]], str]] = None
+    ('lib_macro', Union[str, Callable[[List[str]], str]], None),
+    ('ext_lib_macro', Union[str, Callable[[List[str]], str]], None),
+    ('ext_dll_macro', Union[str, Callable[[List[str]], str]], None),
+    ('ext_exe_macro', Union[str, Callable[[List[str]], str]], None),
+    ('obj_macro', Union[str, Callable[[List[str]], str]], None)
+  ]
 
   def __repr__(self):
     return '<{} name={!r} version={!r}>'.format(type(self).__name__, self.name, self.version)

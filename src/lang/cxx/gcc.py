@@ -7,7 +7,8 @@ import base from './base'
 
 
 class GccCompilerOptions(base.CompilerOptions):
-  pass
+
+  __annotations__ = []
 
 
 class GccCompiler(base.Compiler):
