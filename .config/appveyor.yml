@@ -4,6 +4,7 @@ environment:
   - BUILD_MODULE: examples/java
     BUILD_OPTIONS: :main_run --options java.dist_type=onejar
     ADD_PATH: C:\Program Files\Java\jdk1.8.0\bin
+    ALLOW_FAILURE: true  # JVM runs out of RAM when using onejar + tensorflow
 
   - BUILD_MODULE: examples/java
     BUILD_OPTIONS: :main_run --options java.dist_type=merge
@@ -14,15 +15,13 @@ environment:
   - BUILD_MODULE: examples/csharp
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
+  ###
   # NuGet Version is too low in this image to run the C# example.
   # Newtonsoft.Json requires NuGet 2.12 but 2.8 is installed.
-  # =========================================================================
+  ###
   #- BUILD_MODULE: examples/csharp
   #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
 
-  # ILMerge doesn't work properly with Mono on Windows, so we skip Mono
-  # builds alltogether on Windows for now.
-  # =========================================================================
   - BUILD_MODULE: examples/csharp
     BUILD_OPTIONS: :main_run --options csharp.impl=mono csharp.csc=mcs
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
@@ -37,6 +36,10 @@ environment:
 
   - BUILD_MODULE: examples/cxx-shared
     BUILD_OPTIONS: :main_run
+
+matrix:
+  allow_failures:
+    - ALLOW_FAILURE: true
 
 build_script:
 - set PATH=C:\Python36-x64;C:\Python36-x64\Scripts;%PATH%;%ADD_PATH%
