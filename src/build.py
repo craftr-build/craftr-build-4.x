@@ -160,8 +160,7 @@ class BuildTarget:
       if order == 'pre':
         yield trait
       for sub in trait.subtraits():
-        yield sub
-        recursive(sub)
+        yield from recursive(sub)
       if order != 'pre':
         yield trait
     return it.stream(recursive(self.trait))
@@ -209,6 +208,8 @@ class BuildTarget:
   def translate(self):
     if self.is_translated:
       return
+    for dep in self.first_order_deps():
+      dep.translate()
     for trait in self.traits(order='post'):
       trait.translate()
     self.is_translated = True
