@@ -752,11 +752,15 @@ def main(argv=None):
         return 1
       build_graph.select(targets)
     args.clean_args = list(concat(map(shlex.split, args.clean_args)))
-    backend.clean(craftr.build_directory, build_graph, args)
+    res = backend.clean(craftr.build_directory, build_graph, args)
+    if res not in (0, None):
+      return res
 
   # Handle --prepare-build
   if args.prepare_build or args.build is not NotImplemented:
-    backend.prepare_build(craftr.build_directory, build_graph, args)
+    res = backend.prepare_build(craftr.build_directory, build_graph, args)
+    if res not in (0, None):
+      return res
 
   # Handle --build
   if args.build is not NotImplemented:
@@ -782,10 +786,14 @@ def main(argv=None):
 
     try:
       args.build_args = list(concat(map(shlex.split, args.build_args)))
-      backend.build(craftr.build_directory, build_graph, args)
+      res = backend.build(craftr.build_directory, build_graph, args)
     finally:
       with contextlib.suppress(FileNotFoundError):
         os.remove(additional_args_file)
+    if res not in (0, None):
+      return res
+
+  return 0
 
 
 def quickstart(language):
