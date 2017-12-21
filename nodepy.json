@@ -17,7 +17,8 @@
     "toml": ">=0.9.3",
     "colorama": ">=0.3.9",
     "termcolor": ">=1.1.0",
-    "nr": ">=1.4.8"
+    "nr": ">=1.4.8",
+    "requests": ">=2.18.4"
   },
   "scripts": {
     "test": "$ nodepy-nosetests src/utils",
