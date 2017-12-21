@@ -149,6 +149,12 @@ class build(craftr.TargetTrait):
   def is_binary(self):
     return self.type == 'binary'
 
+  def has_cpp_sources(self):
+    for fname in self.srcs:
+      if fname.endswith('.cpp') or fname.endswith('.cc'):
+        return True
+    return False
+
   def mounted(self, target):
     super().mounted(target)
     if self.options.__unknown_options__:
@@ -221,26 +227,27 @@ class build(craftr.TargetTrait):
 
     for lang, srcs in (('c', c_srcs), ('cpp', cpp_srcs)):
       if not srcs: continue
-      for filename in srcs:
-        # XXX Could result in clashing object file names!
-        objfile = path.join(obj_dir, path.base(path.rmvsuffix(filename)) + obj_suffix)
-        command = self.compiler.build_compile_flags(self, lang)
-        command.extend(self.compiler.build_compile_out_flags(self, lang, objfile))
-        command.append(filename)
-        obj_actions.append(craftr.BuildAction(
-          commands = [command],
-          deps = self.compile_step_deps + [...],
-          environ = self.compiler.compiler_env,
-          input_files = [filename],
-          output_files = [objfile]
-        ))
-        self.target.add_action(obj_actions[-1])
-        obj_files.append(objfile)
+      # XXX Could result in clashing object file names!
+      objfiles = [
+        path.join(obj_dir, path.base(path.rmvsuffix(x)) + obj_suffix)
+        for x in srcs
+      ]
+      command = self.compiler.build_compile_flags(self, lang)
+      obj_actions.append(craftr.BuildAction(
+        name = 'compile_' + lang,
+        commands = [command],
+        deps = self.compile_step_deps + [...],
+        environ = self.compiler.compiler_env,
+        input_files = srcs,
+        output_files = objfiles,
+        foreach = True
+      ))
+      self.target.add_action(obj_actions[-1])
+      obj_files.extend(objfiles)
 
     if obj_files:
       additional_input_files = []
       command = self.compiler.build_link_flags(self, self.outname_full, additional_input_files)
-      command.extend(obj_files)
       output_files = [self.outname_full]
       if self.linkname_full:
         output_files.append(self.linkname_full)
@@ -392,6 +399,7 @@ class Compiler(types.NamedObject):
   compiler_env: Dict[str, str]        # Environment variables for the compiler.
   compiler_out: List[str]             # Specify the compiler object output file.
 
+  pic_flag: List[str]                 # Flag(s) to enable position independent code.
   debug_flag: List[str]               # Flag(s) to enable debug symbols.
   define_flag: str                    # Flag to define a preprocessor macro.
   include_flag: str                   # Flag to specify include directories.
@@ -401,7 +409,8 @@ class Compiler(types.NamedObject):
   optimize_speed_flag: List[str]
   optimize_size_flag: List[str]
 
-  linker: List[str]                   # Arguments to invoke the linker.
+  linker_c: List[str]                 # Arguments to invoke the linker for C programs.
+  linker_cpp: List[str]               # Arguments to invoke the linker for C++/C programs.
   linker_env: Dict[str, str]          # Environment variables for the binary linker.
   linker_out: List[str]               # Specify the linker output file.
   linker_shared: List[str]            # Flag(s) to link a shared library.
@@ -435,8 +444,20 @@ class Compiler(types.NamedObject):
     return list(args)
 
   def init_macro_context(self, trait, ctx):
+    """
+    Initializes the context for macro evaluation in the #build trait *trait*.
+    The following macros will be defined:
+
+    * `$(lib <name>)` derived from #Compiler.lib_macro
+    * `$(ext <name>)` and `$(ext <name>, <version>)` derived from
+      #Compiler.ext_lib_macro, #Compiler.ext_dll_macro and
+      #Compiler.ext_exe_macro
+    * `$(obj <name>)` derived from #Compiler.obj_macro
+    """
+
     if self.lib_macro and trait.type == 'library':
       ctx.define('lib', self.lib_macro)
+
     if trait.type == 'library':
       if trait.preferred_linkage == 'static':
         ext_macro = self.ext_lib_macro
@@ -444,6 +465,7 @@ class Compiler(types.NamedObject):
         ext_macro = self.ext_dll_macro
       else:
         assert False, trait.preferred_linkage
+
     elif trait.type == 'binary':
       ext_macro = self.ext_exe_macro
     else:
@@ -487,11 +509,15 @@ class Compiler(types.NamedObject):
         flags.extend(dep.compiler_flags)
 
     command = self.expand(getattr(self, 'compiler_' + language))
+    command.append('$in')
+    command.extend(self.expand(self.compiler_out, '$out'))
     for include in includes:
       command.extend(self.expand(self.include_flag, include))
     for define in defines:
       command.extend(self.expand(self.define_flag, define))
     command.extend(flags)
+    if trait.is_sharedlib():
+      command += self.expand(self.pic_flag)
 
     if data.warnings:
       command.extend(self.expand(self.warnings_flag))
@@ -501,9 +527,6 @@ class Compiler(types.NamedObject):
       command += self.expand(getattr(self, 'optimize_' + data.optimize + '_flag'))
 
     return command
-
-  def build_compile_out_flags(self, trait, language, objfile):
-    return self.expand(self.compiler_out, objfile)
 
   def build_link_flags(self, trait, outfile, additional_input_files):
     assert isinstance(additional_input_files, list)
@@ -527,7 +550,7 @@ class Compiler(types.NamedObject):
       command = self.expand(self.archiver)
       command.extend(self.expand(self.archiver_out, outfile))
     else:
-      command = self.expand(self.linker)
+      command = self.expand(self.linker_cpp if trait.has_cpp_sources() else self.linker_c)
       command.extend(self.expand(self.linker_out, outfile))
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
@@ -551,7 +574,7 @@ class Compiler(types.NamedObject):
 
     flags += it.concat([self.expand(self.linker_libpath, x) for x in it.unique(libpath)])
     flags += it.concat([self.expand(self.linker_lib, x) for x in it.unique(libs)])
-    return command + flags + additional_input_files
+    return command + ['$in'] + flags + additional_input_files
 
   def set_target_outputs(self, trait, ctx):
     assert isinstance(trait, build)
@@ -571,6 +594,8 @@ def extmacro(without_version, with_version):
 
   without_version = macro.parse(without_version)
   with_version = macro.parse(with_version)
+
+  @macro.function
   def compiled_extmacro(ctx, args):
     if args and args[0]:
       return with_version.eval(ctx, args)

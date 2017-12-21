@@ -2,7 +2,6 @@
 from typing import List
 import logging as log
 import craftr from 'craftr'
-import macro from 'craftr/utils/macro'
 import path from 'craftr/utils/path'
 import {MsvcToolkit} from 'craftr/tools/msvc'
 import base from './base'
@@ -25,6 +24,7 @@ class MsvcCompiler(base.Compiler):
   compiler_cpp = ['cl', '/nologo']
   compiler_out = ['/c', '/Fo%ARG%']
 
+  pic_flag = []
   debug_flag = []  # handled explicitly together with embedd_debug_symbols
   define_flag = '/D%ARG%'
   include_flag = '/I%ARG%'
@@ -34,7 +34,8 @@ class MsvcCompiler(base.Compiler):
   optimize_speed_flag = '/O2'
   optimize_size_flag = ['/O1', '/Os']
 
-  linker = ['link', '/nologo']
+  linker_c = ['link', '/nologo']
+  linker_cpp = linker_c
   linker_out = '/OUT:%ARG%'
   linker_shared = '/DLL'
   linker_exe = []
@@ -45,9 +46,9 @@ class MsvcCompiler(base.Compiler):
   archiver_out = '/OUT:%ARG%'
 
   lib_macro = None
-  ext_lib_macro = staticmethod(base.extmacro('$(0).lib', '.$(0).lib'))
-  ext_dll_macro = staticmethod(base.extmacro('$(0).dll', '.$(0).dll'))
-  ext_exe_macro = staticmethod(base.extmacro('$(0).exe', '.$(0).exe'))
+  ext_lib_macro = base.extmacro('.lib', '.$(0).lib')
+  ext_dll_macro = base.extmacro('.dll', '.$(0).dll')
+  ext_exe_macro = base.extmacro('.exe', '.$(0).exe')
   obj_macro = '.obj'
 
   def __init__(self, toolkit):

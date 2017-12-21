@@ -97,6 +97,15 @@ class _Concatenation(_Node):
     return ''.join(x.eval(ctx, args) for x in self.children)
 
 
+class _Function(_Node):
+
+  def __init__(self, func):
+    self.func = func
+
+  def eval(self, ctx, args):
+    return self.func(ctx, args)
+
+
 class Parser:
 
   _rules = [
@@ -156,22 +165,27 @@ class Context:
 
   def get_function(self, name):
     try:
-      return self.functions[name]
+      value = self.functions[name]
     except KeyError:
       if self.safe:
         return lambda *x: ''
       else:
         raise
+    if isinstance(value, _Node):
+      return value.eval
+    return value
 
   def define(self, name, value):
     if isinstance(value, str):
-      _value = value
-      def value(ctx, args):
-        return _value
-    elif not callable(value):
+      value = parse(value)
+    if not callable and not isinstance(value, _Node):
       raise ValueError('expected string or callable')
     self.functions[name] = value
 
 
 def parse(s):
   return Parser().parse(s)
+
+
+def function(func):
+  return _Function(func)
