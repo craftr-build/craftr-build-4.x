@@ -267,7 +267,8 @@ class BuildAction:
   """
 
   def __init__(self, target=None, name=None, deps=None, commands=None,
-               input_files=None, output_files=None, cwd=None, environ=None):
+               input_files=None, output_files=None, cwd=None, environ=None,
+               foreach=False):
     if deps is Ellipsis:
       deps = [Ellipsis]
     self.target = target
@@ -279,6 +280,11 @@ class BuildAction:
     self.output_files = list(output_files or [])
     self.cwd = cwd
     self.environ = environ
+    self.foreach = foreach
+
+    if self.foreach and len(self.input_files) != len(self.output_files):
+      raise ValueError('BuildAction.foreach can only be true when the '
+                       'number of input files matches the number of output files.')
 
   def __repr__(self):
     return '<BuildTarget "{}">'.format(self.long_name)
@@ -291,7 +297,7 @@ class BuildAction:
 
 class BuildGraph:
 
-  BuildNode = collections.namedtuple('BuildNode', 'name deps commands input_files output_files cwd environ explicit console')
+  BuildNode = collections.namedtuple('BuildNode', 'name deps commands input_files output_files cwd environ explicit console foreach')
 
   def __init__(self):
     self._nodes = {}
@@ -308,7 +314,7 @@ class BuildGraph:
           action.long_name, [x.long_name for x in action.deps],
           action.commands, action.input_files, action.output_files,
           action.cwd, action.environ, action.target.explicit,
-          action.target.console)
+          action.target.console, action.foreach)
       self._nodes[node.name] = node
       self._targets[node.name.partition('#')[0]].append(node)
     return self

@@ -117,8 +117,12 @@ def prepare_build(build_directory, graph, args):
         '--build-directory', build_directory,
         # Place the hash in the command string, so Ninja always knows when
         # when the definition of the build node changed.
-        '--run-node', '{}^{}'.format(node.name, graph.hash(node)),
+        '--run-node', '{}^{}'.format(node.name, graph.hash(node))
       ]
+      if node.foreach:
+        command += ['--run-node-index=$index']
+      command = ' '.join(quote(x, for_ninja=True) for x in command)
+
       order_only = []
       for dep in [graph[x] for x in node.deps]:
         if not dep.output_files:
@@ -126,13 +130,26 @@ def prepare_build(build_directory, graph, args):
         else:
           order_only.extend(dep.output_files)
 
-      command = ' '.join(quote(x, for_ninja=True) for x in command)
       writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
-      writer.build(
-        outputs = node.output_files or [phony_name],
-        rule = rule_name,
-        inputs = node.input_files,
-        order_only = order_only)
+      if node.foreach:
+        assert len(node.input_files) == len(node.output_files), node.name
+        for index, (infiles, outfiles) in enumerate(zip(node.input_files, node.output_files)):
+          if isinstance(infiles, str): infiles = [infiles]
+          if isinstance(outfiles, str): outfiles = [outfiles]
+          writer.build(
+            outputs = outfiles,
+            rule = rule_name,
+            inputs = infiles,
+            order_only = order_only,
+            variables = {'index': str(index)}
+          )
+      else:
+        writer.build(
+          outputs = node.output_files or [phony_name],
+          rule = rule_name,
+          inputs = node.input_files,
+          order_only = order_only)
+
       if node.output_files:
         writer.build([phony_name], 'phony', node.output_files)
       writer.newline()

@@ -204,6 +204,15 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--run-node-index',
+  metavar='INDEX',
+  type=int,
+  help='Use this option for nodes that are executed for each input/output '
+       'pair to specify the pair index. If a node is marked as "foreach" and '
+       'this argument is not present, an error will be presented.'
+)
+
+parser.add_argument(
   '--show-node',
   metavar='NAME',
   help='Show the information for the specified build node.'
@@ -356,7 +365,23 @@ def get_additional_args_for(node_name):
   return []
 
 
-def run_build_node(graph, node_name):
+def substitute_inputs_outputs(command, inputs, outputs):
+  if '$in' in command:
+    index = command.index('$in')
+    command[index:index+1] = inputs
+  else:
+    # TODO
+    pass
+  if '$out' in command:
+    index = command.index('$out')
+    command[index:index+1] = outputs
+  else:
+    # TODO
+    pass
+  return command
+
+
+def run_build_node(graph, node_name, index):
   if '^' in node_name:
     node_name, node_hash = node_name.split('^', 1)
   else:
@@ -370,9 +395,21 @@ def run_build_node(graph, node_name):
     error('fatal: build node "{}" does not exist'.format(node_name))
     return 1
 
+  if node.foreach and index is None:
+    error('fatal: build node is marked "foreach" but --run-node-index is '
+          'not specified.')
+    return 1
+
   if node_hash is not None and node_hash != graph.hash(node):
     error('fatal: build node hash inconsistency, maybe try --prepare-build')
     return 1
+
+  if node.foreach:
+    input_files, output_files = node.input_files[index], node.output_files[index]
+    if isinstance(input_files, str): input_files = [input_files]
+    if isinstance(output_files, str): output_files = [output_files]
+  else:
+    input_files, output_files = node.input_files, node.output_files
 
   # TODO: The additional args feature should be explicitly supported by the
   #       build node, allowing it to specify a position where the additional
@@ -400,8 +437,9 @@ def run_build_node(graph, node_name):
     for i, cmd in enumerate(node.commands):
       error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
 
-  # Execute the subcommands/
+  # Execute the subcommands.
   for i, cmd in enumerate(node.commands):
+    cmd = substitute_inputs_outputs(cmd, input_files, output_files)
     # Add the additional_args to the last command in the chain.
     if i == len(node.commands) - 1:
       cmd = cmd + additional_args
@@ -532,7 +570,7 @@ def main(argv=None):
   craftr.build_directory = args.build_directory
   if args.run_node and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
-    return run_build_node(build_graph, args.run_node)
+    return run_build_node(build_graph, args.run_node, args.run_node_index)
   # Handle --show-node if --build-directory was not explicitly specified.
   if args.show_node and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
@@ -685,7 +723,7 @@ def main(argv=None):
 
   # Handle --run-node if --build-directory was not explicitly specified.
   if args.run_node:
-    return run_build_node(build_graph, args.run_node)
+    return run_build_node(build_graph, args.run_node, args.run_node_index)
 
   # Handle --show-node if --build-directory was not explicitly specified.
   if args.show_node:
