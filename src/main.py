@@ -9,6 +9,7 @@ import json
 import os
 import platform
 import posixpath
+import re
 import shlex
 import shutil
 import subprocess
@@ -366,18 +367,25 @@ def get_additional_args_for(node_name):
 
 
 def substitute_inputs_outputs(command, inputs, outputs):
-  if '$in' in command:
-    index = command.index('$in')
-    command[index:index+1] = inputs
-  else:
-    # TODO
-    pass
-  if '$out' in command:
-    index = command.index('$out')
-    command[index:index+1] = outputs
-  else:
-    # TODO
-    pass
+  """
+  Substitutes the $in and $out references in *command* for the *inputs*
+  and *outputs*.
+  """
+
+  def expand(commands, var, files):
+    regexp = re.compile('\\${}\\b'.format(re.escape(var)))
+    offset = 0
+    for i in range(len(commands)):
+      i += offset
+      match = regexp.search(commands[i])
+      if not match: continue
+      prefix, suffix = commands[i][:match.start()], commands[i][match.end():]
+      subst = [prefix + x + suffix for x in files]
+      commands[i:i+1] = subst
+      offset += len(subst) - 1
+
+  expand(command, 'in', inputs)
+  expand(command, 'out', outputs)
   return command
 
 
