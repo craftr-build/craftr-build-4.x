@@ -27,6 +27,7 @@
 #pragma once
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <unordered_map>
 #include <string>
@@ -38,8 +39,9 @@ public:
 
   /* Settings for the argument parser. */
   struct settings_t {
-    std::string short_option_prefix = "-";
-    std::string long_option_prefix = "--";
+    std::string short_option_prefix;
+    std::string long_option_prefix;
+    settings_t() : short_option_prefix("-"), long_option_prefix("--") {}
   };
 
   /* A structure that represents an option. */
@@ -64,7 +66,7 @@ public:
   struct parse_error : public std::exception {
     std::string _msg;
     parse_error(std::string const& msg) : _msg(msg) {}
-    virtual char const* what() const { return _msg.c_str(); }
+    virtual char const* what() const throw() { return _msg.c_str(); }
   };
 
   using arglist_t = std::vector<std::string>;
