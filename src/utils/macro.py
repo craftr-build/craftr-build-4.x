@@ -127,6 +127,8 @@ class Parser:
     for token in lexer:
       if token.type == '\\':
         token = lexer.next()
+        if token.type != '$$':
+          result.children.append(_String('\\'))
         result.children.append(_String(token.string_repr or token.value))
       elif token.type == '$$':
         result.children.append(_String('$'))
