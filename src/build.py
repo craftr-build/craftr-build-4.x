@@ -10,6 +10,7 @@ import time
 
 import craftr from './index'
 import it from './utils/it'
+import path from './utils/path'
 
 
 class BuildCell:
@@ -48,7 +49,7 @@ class BuildCell:
 
   @property
   def build_directory(self):
-    return os.path.join(craftr.build_directory, 'cells', self.name)
+    return os.path.abspath(os.path.join(craftr.build_directory, 'cells', self.name))
 
   def add_target(self, target):
     if target.cell is not None and target.cell is not self:
@@ -277,8 +278,8 @@ class BuildAction:
     self.deps = list(deps or [])
     assert all(isinstance(x, BuildAction) or x is Ellipsis for x in self.deps)
     self.commands = list(commands or [])
-    self.input_files = list(input_files or [])
-    self.output_files = list(output_files or [])
+    self.input_files = [path.canonical(x) for x in input_files or []]
+    self.output_files = [path.canonical(x) for x in output_files or []]
     self.cwd = cwd
     self.environ = environ
     self.foreach = foreach
