@@ -109,13 +109,13 @@ class MsvcCompiler(base.Compiler):
     if options.nodefaultlib:
       command += ['/NODEFAULTLIB']
     if impl.is_sharedlib():
-      command += ['/IMPLIB:' + impl.linkname_full]  # set from set_target_outputs()
+      command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
     return command
 
   def set_target_outputs(self, impl, ctx):
     super().set_target_outputs(impl, ctx)
     if impl.is_sharedlib():
-      impl.linkname_full = path.setsuffix(impl.outname_full, '.lib')
+      impl.linkname_full = [path.setsuffix(x, '.lib') for x in impl.outname_full]
 
 
 def get_compiler(fragment):

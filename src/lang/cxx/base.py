@@ -95,8 +95,6 @@ class build(craftr.TargetTrait):
       raise ValueError('invalid link_style: {!r}'.format(link_style))
     if preferred_linkage not in ('any', 'static', 'shared'):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
-    if unity_build is None:
-      unity_build = bool(craftr.options.get('cxx.unity_build', False))
     if isinstance(srcs, str):
       srcs = [srcs]
     if options is None:
@@ -138,11 +136,28 @@ class build(craftr.TargetTrait):
     self.options = options
     self.compile_step_deps = []
 
+    if self.is_foreach():
+      if len(outname) != len(self.srcs):
+        raise ValueError('if outname is a list, it must have the same length as srcs')
+    elif not isinstance(self.outname, str):
+      raise ValueError('outname must be a list or str')
+
+    if self.unity_build is None:
+      if self.is_foreach():
+        self.unity_build = False
+      else:
+        unity_build = bool(craftr.options.get('cxx.unity_build', False))
+    elif self.unity_build and self.is_foreach():
+      raise ValueError('unity_build can not be combined with foreach build target')
+
     # Set after translate().
     self.outname_full = None
     # Required for MSVC because the file to link with is different
     # than the actual output DLL output file.
     self.linkname_full = None
+
+  def is_foreach(self):
+    return isinstance(self.outname, list)
 
   def is_staticlib(self):
     return self.type == 'library' and self.preferred_linkage == 'static'
@@ -251,16 +266,16 @@ class build(craftr.TargetTrait):
 
     if obj_files:
       additional_input_files = []
-      command = self.compiler.build_link_flags(self, self.outname_full, additional_input_files)
-      output_files = [self.outname_full]
+      command = self.compiler.build_link_flags(self, '$out', additional_input_files)
+      outputs = list(self.outname_full)
       if self.linkname_full:
-        output_files.append(self.linkname_full)
+        outputs.extend(self.linkname_full)
       self.target.add_action(craftr.BuildAction(
         commands = [command],
         deps = obj_actions,
         environ = self.compiler.linker_env,
         input_files = obj_files + additional_input_files,
-        output_files = output_files
+        output_files = outputs
       ))
 
 
@@ -307,9 +322,9 @@ class run(craftr.gentarget.cls):
 
   def translate(self):
     assert self.target_to_run.is_translated, self.target_to_run
-    self.commands = [
-      [self.target_to_run.trait.outname_full] + list(self.argv)
-    ]
+    self.commands = []
+    for filename in self.target_to_run.trait.outname_full:
+      self.commands.append([filename] + list(self.argv))
     super().translate()
 
 
@@ -567,7 +582,7 @@ class Compiler(types.NamedObject):
       if isinstance(dep, build):
         libs += dep.exported_syslibs
         if dep.type == 'library':
-          additional_input_files.append(dep.linkname_full or dep.outname_full)
+          additional_input_files.extend(dep.linkname_full or dep.outname_full)
           flags.extend(dep.linker_flags)
       elif isinstance(dep, prebuilt):
         libs += dep.syslibs
@@ -584,8 +599,10 @@ class Compiler(types.NamedObject):
 
   def set_target_outputs(self, trait, ctx):
     assert isinstance(trait, build)
-    trait.outname_full = macro.parse(trait.outname).eval(ctx, [])
-    trait.outname_full = path.join(trait.target.cell.build_directory, trait.outname_full)
+    outs = trait.outname if trait.is_foreach() else [trait.outname]
+    trait.outname_full = [macro.parse(x).eval(ctx, []) for x in outs]
+    trait.outname_full = [path.join(trait.target.cell.build_directory, x)
+        for x in trait.outname_full]
 
 
 def extmacro(without_version, with_version):
