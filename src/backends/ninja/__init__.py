@@ -51,6 +51,55 @@ def make_rule_name(graph, node):
   return re.sub('[^\d\w\-_\.]+', '_', node.name)
 
 
+def export_node(build_directory, writer, graph, node, non_explicit):
+  phony_name = make_rule_name(graph, node)
+  rule_name = 'rule_' + phony_name
+  if not node.explicit:
+    non_explicit.append(phony_name)
+
+  command = [
+    '$nodepy_exec_args',
+    str(require.resolve('craftr/main').filename),
+    '--build-directory', build_directory,
+    # Place the hash in the command string, so Ninja always knows when
+    # when the definition of the build node changed.
+    '--run-node', '{}^{}'.format(node.name, graph.hash(node))
+  ]
+  if node.foreach:
+    command += ['--run-node-index=$index']
+  command = ' '.join(quote(x, for_ninja=True) for x in command)
+
+  order_only = []
+  for dep in [graph[x] for x in node.deps]:
+    if not dep.output_files:
+      order_only.append(make_rule_name(graph, dep))
+    else:
+      order_only.extend(dep.output_files)
+
+  writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
+  if node.foreach:
+    assert len(node.input_files) == len(node.output_files), node.name
+    for index, (infiles, outfiles) in enumerate(zip(node.input_files, node.output_files)):
+      if isinstance(infiles, str): infiles = [infiles]
+      if isinstance(outfiles, str): outfiles = [outfiles]
+      writer.build(
+        outputs = outfiles,
+        rule = rule_name,
+        inputs = infiles,
+        order_only = order_only,
+        variables = {'index': str(index)}
+      )
+  else:
+    writer.build(
+      outputs = node.output_files or [phony_name],
+      rule = rule_name,
+      inputs = node.input_files,
+      order_only = order_only)
+
+  if node.output_files:
+    writer.build([phony_name], 'phony', node.output_files)
+
+
 def check_ninja_version(build_directory, download=False):
   # If there's a local ninja version, use it.
   local_ninja = os.path.join(build_directory, NINJA_FILENAME)
@@ -106,53 +155,11 @@ def prepare_build(build_directory, graph, args):
 
     non_explicit = []
     for node in sorted(graph.nodes(), key=lambda x: x.name):
-      phony_name = make_rule_name(graph, node)
-      rule_name = 'rule_' + phony_name
-      if not node.explicit:
-        non_explicit.append(phony_name)
-
-      command = [
-        '$nodepy_exec_args',
-        str(require.resolve('craftr/main').filename),
-        '--build-directory', build_directory,
-        # Place the hash in the command string, so Ninja always knows when
-        # when the definition of the build node changed.
-        '--run-node', '{}^{}'.format(node.name, graph.hash(node))
-      ]
-      if node.foreach:
-        command += ['--run-node-index=$index']
-      command = ' '.join(quote(x, for_ninja=True) for x in command)
-
-      order_only = []
-      for dep in [graph[x] for x in node.deps]:
-        if not dep.output_files:
-          order_only.append(make_rule_name(graph, dep))
-        else:
-          order_only.extend(dep.output_files)
-
-      writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
-      if node.foreach:
-        assert len(node.input_files) == len(node.output_files), node.name
-        for index, (infiles, outfiles) in enumerate(zip(node.input_files, node.output_files)):
-          if isinstance(infiles, str): infiles = [infiles]
-          if isinstance(outfiles, str): outfiles = [outfiles]
-          writer.build(
-            outputs = outfiles,
-            rule = rule_name,
-            inputs = infiles,
-            order_only = order_only,
-            variables = {'index': str(index)}
-          )
-      else:
-        writer.build(
-          outputs = node.output_files or [phony_name],
-          rule = rule_name,
-          inputs = node.input_files,
-          order_only = order_only)
-
-      if node.output_files:
-        writer.build([phony_name], 'phony', node.output_files)
-      writer.newline()
+      try:
+        export_node(build_directory, writer, graph, node, non_explicit)
+        writer.newline()
+      except Exception as e:
+        raise RuntimeError('error while exporting {!r}'.format(node.name)) from e
 
     if non_explicit:
       writer.default(non_explicit)
