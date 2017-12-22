@@ -103,6 +103,30 @@ def glob(patterns, parent=None, excludes=None):
   return path.glob(patterns, parent, excludes)
 
 
+def relocate_files(files, outdir, suffix, replace_suffix=True, parent=None):
+  """
+  Converts the list of filenames *files* so that they are placed under
+  *outdir* instead of *parent* and have the specified *suffix*. If
+  *replace_suffix* is #True (default), then the file's suffix will be
+  replaced, otherwise appended.
+
+  If *parent* is not specified, the directory of the current cell is used.
+  """
+
+  if parent is None:
+    parent = cell().directory
+  outdir = path.canonical(outdir)
+  parent = path.canonical(parent)
+
+  result = []
+  for filename in files:
+    filename = path.join(outdir, path.rel(path.canonical(filename), parent))
+    filename = path.addsuffix(filename, suffix, replace=replace_suffix)
+    result.append(filename)
+
+  return result
+
+
 class TargetFactory(object):
 
   def __init__(self, cls):
