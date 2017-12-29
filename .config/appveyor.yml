@@ -43,6 +43,12 @@ environment:
   - BUILD_MODULE: examples/cxx-shared
     BUILD_OPTIONS: :main_run --options cxx.compiler=mingw
 
+  - BUILD_MODULE: src/libs/sfml/example
+    BUILD_OPTIONS: :main_run
+
+  - BUILD_MODULE: src/libs/sfml/example
+    BUILD_OPTIONS: :main_run --options cxx.compiler=mingw
+
 matrix:
   allow_failures:
     - ALLOW_FAILURE: true
