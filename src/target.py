@@ -321,13 +321,12 @@ class Target:
         msg = 'Action deps must be Target or BuildAction, got {!r}'
         raise ValueError(msg.format(type(dep).__name__))
 
-    if output:
-      self.__output_actions.append(action)
-
     action = BuildAction(self.identifier(), name, commands, input_files,
         output_files, actual_deps, cwd, environ, foreach, self.explicit,
         self.console)
     self.__actions[name] = action
+    if output:
+      self.__output_actions.append(action)
     return action
 
   def action(self, name):

@@ -17,8 +17,8 @@ import tempfile
 import typing as t
 import path from '../utils/path'
 import sh from '../utils/sh'
-import {NamedObject} from '../utils/types'
-import craftr, {options} from '../index'
+import utils from 'craftr/utils'
+import craftr, {options} from 'craftr'
 
 import logging as log
 #import log from '../utils/log'
@@ -30,7 +30,7 @@ def get_arch():
   return arch
 
 
-class MsvcInstallation(NamedObject):
+class MsvcInstallation(utils.named):
   """
   Represents an MSVC installation directory.
   """
@@ -151,7 +151,7 @@ class AsDictJSONEncoder(json.JSONEncoder):
     return super().default(obj)
 
 
-class ClInfo(NamedObject):
+class ClInfo(utils.named):
 
   __annotations__ = [
     ('version', str),
@@ -216,7 +216,7 @@ class ClInfo(NamedObject):
     )
 
 
-class MsvcToolkit(NamedObject):
+class MsvcToolkit(utils.named):
   """
   Similar to a #MsvcInstallation, this class represents an MSVC
   installation, however it is fixed to a specific target architecture and

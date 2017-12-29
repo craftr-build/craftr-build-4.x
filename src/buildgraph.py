@@ -45,24 +45,25 @@ class BuildAction:
   @staticmethod
   def normalize_file_list(lst, foreach):
     """
-    Normalizes a list of filenames, matching the format for a foreach or
-    non-foreach build action. Foreach build actions use a list of lists of
-    filenames, where non=foreach build actions use only list of filenames.
+    Normalizes a list of filenames. This will result in a `List[List[str]]`.
+    If *foreach* is #False, there will be exactly one item in the returned
+    list, that matches the files in *lst*.
     """
 
-    result = []
+    result = [] if foreach else [[]]
     for item in lst:
       if foreach:
         if isinstance(item, str):
-          item = [str]
+          item = [item]
         if not isinstance(item, (list, tuple)):
           raise ValueError('expected List[^List[str]]-like, got {!r}'.format(item))
         if not all(isinstance(x, str) for x in item):
           raise ValueError('expected List[List[^str]], got {!r}'.format(item))
+        result.append(item)
       else:
         if not isinstance(item, str):
           raise ValueError('expected List[^str], got {}'.format(type(item).__name__))
-      result.append(item)
+        result[-1].append(item)
     return result
 
 
@@ -75,7 +76,7 @@ class BuildGraph:
 
   def __init__(self):
     self._actions = {}
-    self._scopes = collections.defaultdict(list)
+    self._scopes = {}
     self._selected = []
     self._mtime = time.time()
 
@@ -94,7 +95,7 @@ class BuildGraph:
 
     for action in actions:
       self._actions[action.identifier()] = action
-      self._scopes[action.scope].append(action)
+      self._scopes.setdefault(action.scope, []).append(action)
     return self
 
   def from_json(self, data):
@@ -185,7 +186,7 @@ class BuildGraph:
       elif action in self._actions:
         self._selected.append(action)
       elif action in self._scopes:
-        self._selected.extend(x.name for x in self._scopes[actions])
+        self._selected.extend(x.identifier() for x in self._scopes[action])
       else:
         raise ValueError(action)
 

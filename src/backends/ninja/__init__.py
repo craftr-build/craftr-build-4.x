@@ -11,6 +11,7 @@ import sys
 import zipfile
 
 import craftr from 'craftr'
+import utils, {stream.concat as concat} from 'craftr/utils'
 import {Writer as NinjaWriter} from './ninja_syntax'
 
 NINJA_FILENAME = 'ninja' + ('.exe' if os.name == 'nt' else '')
@@ -43,12 +44,12 @@ def quote(s, for_ninja=False):
 
 
 def make_rule_description(action):
-  commands = [' '.join(map(quote, x)) for x in action.commands]
+  commands = (' '.join(map(quote, x)) for x in action.commands)
   return ' && '.join(commands)
 
 
 def make_rule_name(graph, action):
-  return re.sub('[^\d\w\-_\.]+', '_', action.identifier())
+  return re.sub('[^\d\w_\.]+', '_', action.identifier())
 
 
 def export_action(build_directory, writer, graph, action, non_explicit):
@@ -71,17 +72,15 @@ def export_action(build_directory, writer, graph, action, non_explicit):
 
   order_only = []
   for dep in action.deps:
-    if not dep.output_files:
+    if not any(dep.output_files):
       order_only.append(make_rule_name(graph, dep))
     else:
-      order_only.extend(dep.output_files)
+      order_only.extend(concat(dep.output_files))
 
   writer.rule(rule_name, command, description=make_rule_description(action), pool = 'console' if action.console else None)
   if action.foreach:
     assert len(action.input_files) == len(action.output_files), action.identifier()
     for index, (infiles, outfiles) in enumerate(zip(action.input_files, action.output_files)):
-      if isinstance(infiles, str): infiles = [infiles]
-      if isinstance(outfiles, str): outfiles = [outfiles]
       writer.build(
         outputs = outfiles,
         rule = rule_name,
@@ -90,14 +89,16 @@ def export_action(build_directory, writer, graph, action, non_explicit):
         variables = {'index': str(index)}
       )
   else:
+    assert len(action.output_files) == 1
+    assert len(action.input_files) == 1
     writer.build(
-      outputs = action.output_files or [phony_name],
+      outputs = action.output_files[0] or [phony_name],
       rule = rule_name,
-      inputs = action.input_files,
+      inputs = action.input_files[0],
       order_only = order_only)
 
-  if action.output_files:
-    writer.build([phony_name], 'phony', action.output_files)
+  if any(action.output_files):
+    writer.build([phony_name], 'phony', list(concat(action.output_files)))
 
 
 def check_ninja_version(build_directory, download=False):

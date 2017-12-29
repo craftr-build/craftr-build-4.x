@@ -80,8 +80,7 @@ def relocate_files(files, outdir, suffix, replace_suffix=True, parent=None):
   return result
 
 
-@Factory
-class gentarget(Behaviour):
+class Gentarget(Behaviour):
 
   def init(self, commands, environ=None, cwd=None, input_files=(), output_files=()):
     self.commands = commands
@@ -103,3 +102,6 @@ class gentarget(Behaviour):
       None, self.commands, cwd=self.cwd, environ=self.environ,
       input_files=self.input_files, output_files=self.output_files
     )
+
+
+gentarget = Factory(Gentarget)

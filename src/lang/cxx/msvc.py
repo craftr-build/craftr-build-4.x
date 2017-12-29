@@ -4,10 +4,10 @@ import logging as log
 import craftr from 'craftr'
 import path from 'craftr/utils/path'
 import {MsvcToolkit} from 'craftr/tools/msvc'
-import base from './base'
+import {CompilerOptions, Compiler, extmacro} from '.'
 
 
-class MsvcCompilerOptions(base.CompilerOptions):
+class MsvcCompilerOptions(CompilerOptions):
 
   __annotations__ = [
     ('nodefaultlib', bool, False),
@@ -18,7 +18,7 @@ class MsvcCompilerOptions(base.CompilerOptions):
   ]
 
 
-class MsvcCompiler(base.Compiler):
+class MsvcCompiler(Compiler):
 
   name = 'msvc'
   options_class = MsvcCompilerOptions
@@ -41,19 +41,19 @@ class MsvcCompiler(base.Compiler):
 
   linker_c = ['link', '/nologo']
   linker_cpp = linker_c
-  linker_out = '/OUT:%ARG%'
+  linker_out = '/OUT:$out[0]'
   linker_shared = '/DLL'
   linker_exe = []
   linker_lib = '%ARG%.lib'
   linker_libpath = '/LIBPATH:%ARG%'
 
   archiver = ['lib', '/nologo']
-  archiver_out = '/OUT:%ARG%'
+  archiver_out = '/OUT:$out[0]'
 
   lib_macro = None
-  ext_lib_macro = base.extmacro('.lib', '.$(0).lib')
-  ext_dll_macro = base.extmacro('.dll', '.$(0).dll')
-  ext_exe_macro = base.extmacro('.exe', '.$(0).exe')
+  ext_lib_macro = extmacro('.lib', '.$(0).lib')
+  ext_dll_macro = extmacro('.dll', '.$(0).dll')
+  ext_exe_macro = extmacro('.exe', '.$(0).exe')
   obj_macro = '.obj'
 
   def __init__(self, toolkit):

@@ -3,15 +3,15 @@ from typing import List
 import logging as log
 import craftr from 'craftr'
 import path from 'craftr/utils/path'
-import base from './base'
+import {CompilerOptions, Compiler, extmacro} from '.'
 
 
-class GccCompilerOptions(base.CompilerOptions):
+class GccCompilerOptions(CompilerOptions):
 
   __annotations__ = []
 
 
-class GccCompiler(base.Compiler):
+class GccCompiler(Compiler):
 
   name = 'gcc'
   version = '??'  # TODO
@@ -20,7 +20,7 @@ class GccCompiler(base.Compiler):
   compiler_env = None
   compiler_c = 'gcc'
   compiler_cpp = 'g++'
-  compiler_out = ['-c', '-o', '%ARG%']
+  compiler_out = ['-c', '-o', '$out[0]']
 
   c_std = '-std=%ARG%'
   cpp_std = '-std=%ARG%'
@@ -45,12 +45,12 @@ class GccCompiler(base.Compiler):
 
   archiver = ['ar', 'rcs']
   archiver_env = None
-  archiver_out = '%ARG%'
+  archiver_out = '$out[0]'
 
   lib_macro = 'lib$(0)'
-  ext_lib_macro = base.extmacro('.a.1', '.a.$(0)')
-  ext_dll_macro = base.extmacro('.so.1', '.so.$(0)')
-  ext_exe_macro = base.extmacro('', '.$(0)')
+  ext_lib_macro = extmacro('.a.1', '.a.$(0)')
+  ext_dll_macro = extmacro('.so.1', '.so.$(0)')
+  ext_exe_macro = extmacro('', '.$(0)')
   obj_macro = '.o'
 
 

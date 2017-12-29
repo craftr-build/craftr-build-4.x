@@ -3,6 +3,7 @@ Command-line entry point for the Craftr build system.
 """
 
 import argparse
+import collections
 import contextlib
 import functools
 import json
@@ -17,9 +18,8 @@ import sys
 import toml
 
 import craftr from 'craftr'
-import utils, {plural} from 'craftr/utils'
+import utils, {plural, stream.concat as concat} from 'craftr/utils'
 
-concat = utils.stream.concat
 error = functools.partial(print, file=sys.stderr)
 
 
@@ -340,15 +340,14 @@ def set_options(options):
 
 
 def merge_options(*opts):
-  result = []
+  result = collections.OrderedDict()
   for option in concat(opts):
     key, sep, value = option.partition('=')
-    for other in result:
-      if other == key or other.startswith(key + '='):
-        break
+    if not sep:
+      result.pop(key, None)
     else:
-      result.append(option)
-  return result
+      result[key] = value
+  return [k + '=' + v for k, v in result.items()]
 
 
 def get_additional_args_for(action_name):
@@ -383,7 +382,7 @@ def substitute_inputs_outputs(command, inputs, outputs):
   """
 
   def expand(commands, var, files):
-    regexp = re.compile('\\${}\\b'.format(re.escape(var)))
+    regexp = re.compile('(\\${}\\b)(\[\d+\])?(\.[\w\d]+\\b)?'.format(re.escape(var)))
     offset = 0
     for i in range(len(commands)):
       i += offset
@@ -391,6 +390,12 @@ def substitute_inputs_outputs(command, inputs, outputs):
       if not match: continue
       prefix, suffix = commands[i][:match.start()], commands[i][match.end():]
       subst = [prefix + x + suffix for x in files]
+      index = match.group(2)
+      suffix = match.group(3)
+      if index:
+        subst = [subst[int(index[1:-1])]]
+      if suffix:
+        subst = [craftr.path.setsuffix(x, suffix) for x in subst]
       commands[i:i+1] = subst
       offset += len(subst) - 1
 
@@ -424,10 +429,10 @@ def run_build_action(graph, node_name, index):
 
   if node.foreach:
     input_files, output_files = node.input_files[index], node.output_files[index]
-    if isinstance(input_files, str): input_files = [input_files]
-    if isinstance(output_files, str): output_files = [output_files]
   else:
-    input_files, output_files = node.input_files, node.output_files
+    assert len(node.input_files) == 1
+    assert len(node.output_files) == 1
+    input_files, output_files = node.input_files[0], node.output_files[0]
 
   # TODO: The additional args feature should be explicitly supported by the
   #       build node, allowing it to specify a position where the additional
@@ -438,7 +443,7 @@ def run_build_action(graph, node_name, index):
 
   # Ensure that the output directories exist.
   created_dirs = set()
-  for directory in (os.path.dirname(x) for x in node.output_files):
+  for directory in (os.path.dirname(x) for x in output_files):
     if directory not in created_dirs:
       os.makedirs(directory, exist_ok=True)
       created_dirs.add(directory)
@@ -474,11 +479,11 @@ def run_build_action(graph, node_name, index):
       return code
 
   # Check if all output files have been produced by the commands.
-  missing_files = [x for x in node.output_files if not os.path.exists(x)]
+  missing_files = [x for x in output_files if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
     error('fatal: "{}" produced only {} of {} listed output files.'.format(node.name,
-        len(node.output_files) - len(missing_files), len(node.output_files)))
+        len(output_files) - len(missing_files), len(output_files)))
     error('The missing files are:')
     for x in missing_files:
       error('  -', x)
@@ -497,9 +502,9 @@ def show_build_action(graph, action_name):
   except KeyError:
     error('fatal: build action "{}" does not exist'.format(action_name))
     return 1
-  data = action._asdict()
+  data = action.as_json()
   data['hash'] = graph.hash(action)
-  json.dump(data, sys.stdout, indent=2)
+  json.dump(data, sys.stdout, sort_keys=True, indent=2)
   print()
   return 0
 
@@ -519,7 +524,7 @@ def dotviz_targets(targets, fp):
   fp.write('digraph "craftr-targets" {\n')
   for target in sorted(targets, key=lambda x: x.identifier()):
     fp.write('\t{} [label="{}" style="rounded" shape="box"];\n'.format(id(target), target.identifier()))
-    for dep in target.deps(transitive=False, children=False):
+    for dep in target.deps(transitive=False, children=False, parent=False):
       fp.write('\t\t{} -> {};\n'.format(id(dep), id(target)))
     for child in target.children:
       fp.write('\t\t{} -> {} [style="dashed" arrowhead="odiamond"];\n'.format(id(child), id(target)))
@@ -754,7 +759,7 @@ def main(argv=None):
     print('note: writing "{}"'.format(cache_file))
     os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     with open(cache_file, 'w') as fp:
-      json.dump(craftr.cache, fp)
+      json.dump(craftr.cache, fp, sort_keys=True, indent=2)
 
   # Load the build graph from file if we need it.
   if not build_graph and (args.prepare_build

@@ -2,8 +2,10 @@
 import argparse
 import collections
 import functools
+import hashlib
 import inspect
 import itertools
+import os
 import sys
 import textwrap
 
@@ -299,3 +301,49 @@ class ReindentHelpFormatter(argparse.HelpFormatter):
   def _fill_text(self, text, width, indent):
     # Called to format the description.
     return reindent(text, '  ')
+
+
+# Filesystem stuff
+
+def file_hash(filename, algorithm='sha1'):
+  h = hashlib.new(algorithm)
+  with open(filename, 'rb', buffering=0) as f:
+    for b in iter(lambda : f.read(128*1024), b''):
+      h.update(b)
+  return h.hexdigest()
+
+
+class SameContentKeepsTimestampFile:
+  """
+  If you can come up with a more concise name, let me know.
+  """
+
+  def __init__(self, name, *args, **kwargs):
+    try:
+      self.hash = file_hash(name)
+      self.time = os.path.getmtime(name)
+    except FileNotFoundError:
+      self.hash = None
+      self.time = None
+    self.name = name
+    self._fp = open(name, *args, **kwargs)
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *args):
+    self.close()
+
+  def close(self):
+    self._fp.close()
+    if self.hash is not None and self.hash == file_hash(self.name):
+      os.utime(self.name, (os.path.getatime(self.name), self.time))
+
+  def write(self, data):
+    return self._fp.write(data)
+
+  def tell(self):
+    return self._fp.tell()
+
+  def fileno(self):
+    return self._fp.fileno()

@@ -13,7 +13,7 @@ import craftr, {options} from 'craftr'
 import msvc from 'craftr/tools/msvc'
 import path from 'craftr/utils/path'
 import sh from 'craftr/utils/sh'
-import {NamedObject} from 'craftr/utils/types'
+import utils from 'craftr/utils'
 import nupkg from './nupkg'
 
 import logging as log
@@ -26,7 +26,7 @@ else:
 artifacts_dir = path.join(craftr.build_directory, '.nuget-artifacts')
 
 
-class CscInfo(NamedObject):
+class CscInfo(utils.named):
 
   __annotations__ = [
     ('impl', str),
@@ -156,8 +156,7 @@ class CscInfo(NamedObject):
     return csc
 
 
-@craftr.TargetFactory
-class build(craftr.TargetTrait):
+class CsharpBuild(craftr.Behaviour):
 
   # TODO: More features for the C# target.
   #platform: str = None
@@ -166,15 +165,8 @@ class build(craftr.TargetTrait):
   #warn
   #checked
 
-  def __init__(self,
-               srcs: t.List[str],
-               type: str,
-               dll_dir: str = None,
-               dll_name: str = None,
-               main: str = None,
-               csc: CscInfo = None,
-               extra_arguments: t.List[str] = None,
-               merge_assemblies: bool = False):
+  def init(self, srcs, type, dll_dir=None, dll_name=None, main=None, csc=None,
+           extra_arguments=None, merge_assemblies=False):
     assert type in ('appcontainerexe', 'exe', 'library', 'module', 'winexe', 'winmdobj')
     self.srcs = srcs
     self.type = type
@@ -185,10 +177,10 @@ class build(craftr.TargetTrait):
     self.extra_arguments = extra_arguments
     self.merge_assemblies = merge_assemblies
     if self.dll_dir:
-      self.dll_dir = canonicalize(self.dll_dir, self.target.cell.build_directory)
+      self.dll_dir = canonicalize(self.dll_dir, self.namespace.build_directory)
     else:
-      self.dll_dir = self.target.cell.build_directory
-    self.dll_name = self.dll_name or (self.target.cell.name.split('/')[-1] + '-' + self.target.name + '-' + self.target.cell.version)
+      self.dll_dir = self.namespace.build_directory
+    self.dll_name = self.dll_name or (self.namespace.name.split('/')[-1] + '-' + self.target.name + '-' + self.namespace.version)
     self.csc = self.csc or CscInfo.get()
 
   @property
@@ -215,14 +207,13 @@ class build(craftr.TargetTrait):
     # XXX Take C# libraries and maybe even other native libraries into account.
     modules = []
     references = []
-    for data in self.target.dep_traits():
-      if isinstance(data, build):
-        if data.type == 'module':
-          modules.append(data.dll_filename)
-        else:
-          references.append(data.dll_filename)
-      elif isinstance(data, prebuilt):
-        references.extend(data.dll_filenames)
+    for target in self.target.deps(with_behaviour=CsharpBuild):
+      if target.impl.type == 'module':
+        modules.append(target.impl.dll_filename)
+      else:
+        references.append(target.impl.dll_filename)
+    for target in self.target.deps(with_behaviour=CsharpPrebuilt):
+      references.extend(target.impl.dll_filenames)
 
     build_outfile = self._dll_filename(False)
     command = self.csc.program + ['-nologo', '-target:' + self.type]
@@ -237,42 +228,28 @@ class build(craftr.TargetTrait):
       command += self.extra_arguments
     command += self.srcs
 
-    build_action = craftr.BuildAction(
+    self.target.add_action(
       name = 'csc',
-      deps = ...,
       environ = self.csc.environ,
       commands = [command],
       input_files = self.srcs,
       output_files = [build_outfile]
     )
-    self.target.add_action(build_action)
 
     if self.merge_assemblies:
       command = self.csc.get_merge_tool(out=self.dll_filename, primary=build_outfile, assemblies=references)
-      self.target.add_action(craftr.BuildAction(
+      self.target.add_action(
         name = 'ilmerge',
-        deps = [build_action],
         environ = self.csc.environ,
         commands = [command],
         input_files = [build_outfile] + references,
         output_files = [self.dll_filename]
-      ))
+      )
 
 
-@craftr.TargetFactory
-class prebuilt(craftr.TargetTrait):
+class CsharpPrebuilt(craftr.Behaviour):
 
-  def __init__(self,
-               dll_filename: str = None,
-               dll_filenames: t.List[str] = None,
-               package: str = None,
-               packages: t.List[str] = None,
-               csc: CscInfo = None):
-    if dll_filename:
-      dll_filenames = [dll_filenames]
-    if package:
-      packages = [package]
-
+  def init(self, dll_filenames=None, packages=None, csc=None):
     self.packages_install_dir = artifacts_dir
     self.packages = [nupkg.Dependency.from_str(x) for x in (packages or [])]
     self.dll_filenames = [craftr.localpath(x) for x in (dll_filenames or [])]
@@ -312,13 +289,8 @@ class prebuilt(craftr.TargetTrait):
       if filename is not None:
         self.dll_filenames.append(filename)
 
-  def complete(self):
-    # Don't actually create actions here, but we need to install the
-    # dependencies and parse them.
-    self.install()
-
   def translate(self):
-    pass
+    self.install()
 
 
 def run(binary, *argv, name=None, csc=None, **kwargs):
@@ -327,7 +299,11 @@ def run(binary, *argv, name=None, csc=None, **kwargs):
   if name is None:
     name = target.name + '_run'
   if csc is None:
-    csc = target.trait.csc
-  command = csc.exec_args([target.trait.dll_filename] + list(argv))
+    csc = target.impl.csc
+  command = csc.exec_args([target.impl.dll_filename] + list(argv))
   return craftr.gentarget(name = name, deps = [target], commands = [command],
     environ=csc.environ, **kwargs)
+
+
+build = craftr.Factory(CsharpBuild)
+prebuilt = craftr.Factory(CsharpPrebuilt)
