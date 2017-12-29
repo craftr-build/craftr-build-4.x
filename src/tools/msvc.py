@@ -19,6 +19,7 @@ import path from '../utils/path'
 import sh from '../utils/sh'
 import utils from 'craftr/utils'
 import craftr, {options} from 'craftr'
+import {batchvars} from 'craftr/tools/batchvars'
 
 import logging as log
 #import log from '../utils/log'
@@ -72,26 +73,12 @@ class MsvcInstallation(utils.named):
     if arch == 'x86_64':
       arch = 'x86_amd64'
 
-    cmd = [self.vcvarsall, arch]
+    args = [arch]
     if platform_type:
-      cmd.append(platform_type)
+      args.append(platform_type)
     if sdk_version:
-      cmd.append(sdk_version)
-
-    key = 'JSONOUTPUTBEGIN:'
-    pyprint = 'import os, json; print("{}" + json.dumps(dict(os.environ)))'\
-      .format(key)
-
-    cmd = sh.join(cmd + [sh.safe('&&'), sys.executable, '-c', pyprint])
-    output = subprocess.check_output(cmd, shell=True).decode()
-
-    key = 'JSONOUTPUTBEGIN:'
-    env = json.loads(output[output.find(key) + len(key):])
-    if env == os.environ:
-      content = output[:output.find(key)]
-      raise ValueError('failed: ' + cmd + '\n\n' + content)
-
-    return env
+      args.append(sdk_version)
+    return batchvars(self.vcvarsall, *args)
 
   @classmethod
   @functools.lru_cache()
