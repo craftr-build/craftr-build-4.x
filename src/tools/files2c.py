@@ -34,10 +34,9 @@ def main(argv=None):
       with open(fname, 'rb') as src:
         data = src.read()
       dst.write('size_t {}_size = {};\n'.format(cname, len(data)))
-      dst.write('unsigned int {}[] = {{\n'.format(cname))
-      for bytes_ in grouper(data, 4, fillvalue=0):
-        num = struct.unpack('!I', struct.pack('BBBB', *bytes_))[0]
-        dst.write('{0:#08x}, '.format(num))
+      dst.write('unsigned char {}[] = {{\n'.format(cname))
+      for b in data:
+        dst.write('{0:#08x}, '.format(b))
       dst.write('\n};\n')
 
 

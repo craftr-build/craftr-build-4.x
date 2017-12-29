@@ -167,7 +167,7 @@ class BuildGraph:
 
     fp.write('digraph "craftr" {\n')
     for node in self.actions():
-      fp.write('\t{} [label="{}"];\n'.format(id(node), node.identifier()))
+      fp.write('\t{} [label="{}" shape="round" style="rounded"];\n'.format(id(node), node.identifier()))
       for dep in node.deps:
         fp.write('\t\t{} -> {};\n'.format(id(dep), id(node)))
     fp.write('}\n')

@@ -321,9 +321,13 @@ def main(argv=None):
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('--json', action='store_true', help='Output in JSON format.')
+  parser.add_argument('argv', nargs='...')
   args = parser.parse_args(argv)
 
   installs = MsvcInstallation.list()
+  if args.argv:
+    with sh.override_environ(installs[0].environ()):
+      return subprocess.call(args.argv)
 
   if args.json:
     result = {}

@@ -3,8 +3,10 @@ Finds MinGW installations on Windows.
 """
 
 import os
+import subprocess
 import sys
 import utils from 'craftr/utils'
+import sh from 'craftr/utils/sh'
 import winreg from 'craftr/utils/winreg'
 
 
@@ -58,11 +60,21 @@ class MingwInstallation(utils.named):
 
 
 def main(argv=None):
-  for i, inst in enumerate(MingwInstallation.list()):
-    print('- Location:'.format(i), inst.location)
-    print('  Use Options:', '--options cxx.compiler=mingw:{}'.format(i))
-    print('  Architecture:', 'x64' if inst.is_64 else 'x86')
-    print()
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument('argv', nargs='...')
+  args = parser.parse_args(argv)
+
+  if not args.argv:
+    for i, inst in enumerate(MingwInstallation.list()):
+      print('- Location:'.format(i), inst.location)
+      print('  Use Options:', '--options cxx.compiler=mingw:{}'.format(i))
+      print('  Architecture:', 'x64' if inst.is_64 else 'x86')
+      print()
+  else:
+    inst = MingwInstallation.list()[0]
+    with sh.override_environ(inst.environ()):
+      return subprocess.call(args.argv)
 
 
 if require.main == module:

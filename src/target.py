@@ -217,7 +217,10 @@ class Target:
         for other in targets:
           if transitive:
             yield from recursion(other.public_deps)
-          if children:
+          if children and other != self.__parent:
+            # A target may add itself to the dependencies of one of its
+            # child targets, in that case however we do not want to
+            # include it's children again.
             yield from recursion(other.children)
 
     stream = utils.stream.chain(
