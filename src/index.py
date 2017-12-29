@@ -2,6 +2,11 @@
 Public build-script API of the Craftr build system.
 """
 
+import requests
+import posixpath
+import tarfile
+import zipfile
+
 import {Configuration} from './utils/cfgparser'
 import path from './utils/path'
 
@@ -31,6 +36,7 @@ import {
   Factory
   } from './target'
 import {BuildGraph} from './buildgraph'
+import utils from './utils'
 
 
 def localpath(p):
@@ -78,6 +84,44 @@ def relocate_files(files, outdir, suffix, replace_suffix=True, parent=None):
     result.append(filename)
 
   return result
+
+
+def get_source_archive(url):
+  """
+  Downloads an archive from the specified *URL* and extracts it. Returns the
+  path to the unpacked directory.
+  """
+
+  archive_cache = cache.setdefault('get_source_archive', {})
+  directory = archive_cache.get(url)
+  if directory and path.isdir(directory):
+    return directory
+
+  filename = posixpath.basename(url)
+  response = requests.get(url, stream=True)
+  if 'Content-Disposition' in response.headers:
+    hdr = response.headers['Content-Disposition']
+    filename = re.findall("filename=(.+)", hdr)[0]
+
+  directory = path.join(build_directory, '.source-downloads', path.rmvsuffix(filename))
+
+  print('Downloading {} ...'.format(url))
+  response.raise_for_status()
+  with utils.tempfile(suffix=filename) as fp:
+    for chunk in response.iter_content(16*1024):
+      fp.write(chunk)
+    fp.close()
+    path.makedirs(directory)
+    print('Extracting to {} ...'.format(directory))
+    if filename.endswith('.zip'):
+      with zipfile.ZipFile(fp.name) as zipf:
+        zipf.extractall(directory)
+    else:
+      with tarfile.open(fp.name) as tarf:
+        tarf.extractall(directory)
+
+  archive_cache[url] = directory
+  return directory
 
 
 class Gentarget(Behaviour):

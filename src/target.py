@@ -91,10 +91,15 @@ class Namespace:
     self.targets[target.name] = target
 
   @classmethod
-  def from_package(cls, package):
-    name = '__main__' if not package else package.name
+  def from_module(cls, module):
+    package = module.package
+    name = getattr(module.namespace, 'namespace', None)
+    directory = getattr(module.namespace, 'project_directory', None)
+    if not name:
+      name = '__main__' if not package else package.name
     version = '1.0.0' if not package else package.payload.get('version', '1.0.0')
-    directory = require.main.directory if not package else str(package.directory)
+    if not directory:
+      directory = require.main.directory if not package else str(package.directory)
     namespace = cls(name, version, directory)
     return namespace
 
@@ -104,7 +109,7 @@ class Namespace:
     if not package and require.current != require.main:
       raise RuntimeError('can not create Namespace for non-main script '
                         'without an associated Node.py package')
-    namespace = cls.from_package(package)
+    namespace = cls.from_module(require.current)
     if create:
       return cls.NAMESPACES.setdefault(namespace.name, namespace)
     else:

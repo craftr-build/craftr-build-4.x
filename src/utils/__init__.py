@@ -7,6 +7,7 @@ import inspect
 import itertools
 import os
 import sys
+import tempfile as _tempfile
 import textwrap
 
 
@@ -350,3 +351,54 @@ class SameContentKeepsTimestampFile:
 
   def fileno(self):
     return self._fp.fileno()
+
+
+class tempfile:
+  """
+  A proper named temporary file that is only deleted when the context-manager
+  exits, not when the file is closed. Note that the file is also only opened
+  via the context-manager.
+  """
+
+  def __init__(self, suffix='', prefix='tmp', dir=None, text=False):
+    self._text = text
+    self._mktemp = lambda: _tempfile.mkstemp(suffix, prefix, dir, text)
+    self._fp = None
+    self._name = None
+
+  @property
+  def name(self):
+    return self._name
+
+  def __enter__(self):
+    fd, self._name = self._mktemp()
+    self._fp = os.fdopen(fd, 'w' if self._text else 'wb')
+    return self
+
+  def __exit__(self, *args):
+    self._fp.close()
+    try:
+      os.remove(self._name)
+    except FileNotFoundError:
+      pass
+
+  def writable(self):
+    return True
+
+  def write(self, data):
+    return self._fp.write(data)
+
+  def closed(self):
+    return self._fp.closed()
+
+  def close(self):
+    self._fp.close()
+
+  def tell(self):
+    return self._fp.tell()
+
+  def seekable(self):
+    return False
+
+  def readable(self):
+    return False

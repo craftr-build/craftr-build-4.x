@@ -51,6 +51,15 @@ class Configuration:
       else:
         self._data[key] = value
 
+  def __contains__(self, key):
+    try:
+      scope, name = parse_option_key(key)
+    except ValueError:
+      return False
+    if scope in self._data:
+      return name in self._data[scope]
+    return False
+
   def __getitem__(self, key):
     try:
       scope, name = parse_option_key(key)
@@ -80,6 +89,15 @@ class Configuration:
       del self._data[scope]
     else:
       del self._data[scope][name]
+
+  def setdefault(self, key, value):
+    try:
+      scope, name = parse_option_key(key)
+    except ValueError:
+      raise KeyError(key)
+    if scope not in self._data:
+      self._data[scope] = {}
+    return self._data[scope].setdefault(name, value)
 
   def get(self, key, default=None):
     try:

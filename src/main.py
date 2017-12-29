@@ -736,7 +736,7 @@ def main(argv=None):
     build_module = require.new('.').resolve(args.configure)
     with require.context.push_main(build_module):
       require.context.load_module(build_module)
-      craftr.cache['main_build_cell'] = craftr.Namespace.from_package(build_module.package).name
+      craftr.cache['main_build_cell'] = craftr.Namespace.from_module(build_module).name
     targets = list(concat(x.targets.values() for x in craftr.Namespace.all()))
 
     # Handle --dotviz-targets
