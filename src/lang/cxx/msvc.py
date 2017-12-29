@@ -117,7 +117,7 @@ class MsvcCompiler(Compiler):
     super().set_target_outputs(impl, ctx)
     if impl.is_sharedlib():
       impl.linkname_full = [path.setsuffix(x, '.lib') for x in impl.outname_full]
-    impl.additional_outputs.append(path.setsuffix(impl.outname_full[0], '.exp'))
+      impl.additional_outputs.append(path.setsuffix(impl.outname_full[0], '.exp'))
 
 
 def get_compiler(fragment):
