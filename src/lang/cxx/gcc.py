@@ -61,7 +61,7 @@ class GccCompiler(Compiler):
 
   def build_link_flags(self, build, outfile, additional_input_files):
     flags = super().build_link_flags(build, outfile, additional_input_files)
-    if build.options.gcc_static_runtime:
+    if build.options.gcc_static_runtime and not build.is_staticlib():
       flags += [self.gcc_static_libstdcpp] if build.has_cpp_sources() else [self.gcc_static_libc]
     return flags
 

@@ -327,45 +327,40 @@ class CxxEmbed(craftr.Behaviour):
   def init(self, files, names=None, cfile=None, compiler=None):
     if names is not None and len(names) != len(files):
       raise ValueError('len(names) must match len(files)')
+
+    if names is None:
+      names = []
+      for fn in files:
+        fn = path.rel(fn, self.namespace.directory)
+        names.append(re.sub('[^\w\d_]+', '_', fn))
+
+    if not cfile:
+      cfile = path.join(self.namespace.build_directory, self.target.name + '_embedd.c')
+
     self.files = files
     self.names = names
     self.cfile = cfile
     self.compiler = compiler
-    self.build_trait = None
-
-  def subtraits(self):
-    if self.build_trait:
-      yield self.build_trait
-
-  def complete(self):
-    if self.names is None:
-      self.names = []
-      for fn in self.files:
-        fn = path.rel(fn, self.namespace.build_directory)
-        self.names.append(re.sub('[^\w\d_]+', '_', fn))
-    if not self.cfile:
-      self.cfile = path.join(self.namespace.build_directory, self.target.name + '_embedd.c')
-    self.build_trait = build(
-      self.target,
+    self.build = library(
+      parent = self.target,
+      name = 'lib',
       srcs = [self.cfile],
-      type = 'library',
-      compiler = self.compiler,
+      deps = [self.target],
+      compiler = compiler,
       localize_srcs = False
     )
-    self.target.add_trait(self.build_trait)
 
   def translate(self):
-    command = nodepy.runtime.exec_args + [str(require.resolve('./tools/files2c').filename), '-o', self.cfile]
+    command = nodepy.runtime.exec_args + [str(require.resolve('craftr/tools/files2c').filename), '-o', self.cfile]
     for infile, cname in zip(self.files, self.names):
       command += ['{}:{}'.format(infile, cname)]
-    gen = craftr.BuildAction(
+    self.target.add_action(
       name = 'files2c',
       commands = [command],
       input_files = self.files,
       output_files = [self.cfile]
     )
-    self.target.add_action(gen)
-    self.build_trait.translate()
+    self.build.translate()
 
 
 class CompilerOptions(utils.named):
@@ -583,7 +578,7 @@ class Compiler(utils.named):
 
     flags += concat([self.expand(self.linker_libpath, x) for x in unique(libpath)])
     flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
-    return command + ['$in'] + flags + additional_input_files
+    return command + ['$in'] + flags #+ additional_input_files
 
   def set_target_outputs(self, build, ctx):
     assert isinstance(build, CxxBuild)
