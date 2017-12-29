@@ -207,7 +207,8 @@ class Target:
       self.__output_actions.append(action)
 
     action = BuildAction(self.identifier(), name, commands, input_files,
-        output_files, actual_deps, cwd, environ, foreach)
+        output_files, actual_deps, cwd, environ, foreach, self.explicit,
+        self.console)
     self.__actions[name] = action
     return action
 
@@ -357,7 +358,7 @@ class BuildAction:
   """
 
   def __init__(self, scope, name, commands, input_files, output_files, deps,
-               cwd, environ, foreach):
+               cwd, environ, foreach, explicit, console):
     self.scope = scope
     self.name = name
     self.commands = commands
@@ -367,6 +368,8 @@ class BuildAction:
     self.cwd = cwd
     self.environ = environ
     self.foreach = foreach
+    self.explicit = explicit
+    self.console = console
 
   def __repr__(self):
     return '<BuildAction {!r}>'.format(self.identifier())
