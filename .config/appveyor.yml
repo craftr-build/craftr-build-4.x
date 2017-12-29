@@ -50,4 +50,5 @@ build_script:
 - nodepy https://nodepy.org/install-pm develop
 - nodepy-pm install -PI
 - set PATH=.nodepy/bin;%PATH%
+- craftr -t mingw
 - craftr --configure %BUILD_MODULE% --build %BUILD_OPTIONS%
