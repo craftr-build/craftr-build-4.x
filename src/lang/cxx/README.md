@@ -6,7 +6,9 @@
   to use. If not specified, a legal value will be derived from the current
   platform. Additional information can be passed to the compiler by adding
   any additional data after a double-colon, eg. to select a specific MSVC
-  version, use `msvc:140`.
+  version, use `msvc:140`. A specific MinGW version can be selected by checking
+  the output of `craftr -t mingw` and using the index of the MinGW toolset
+  that has been found like `mingw:1`.
 * `cxx.link_style` (str) &ndash; Default value for the same-named
   `cxx.library()` parameter. Defaults to `static`.
 * `cxx.unity_build` (bool) &ndash; Default value for the same-named
