@@ -22,7 +22,7 @@
     "typing": ">=3.6.2"
   },
   "scripts": {
-    "test": "$ nodepy-nosetests src/utils",
+    "tests": "$ nodepy-nosetests tests/**/*.py",
     "docs": "$ yassg public"
   },
   "cfg(dev).dependencies": {

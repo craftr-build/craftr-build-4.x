@@ -1,7 +1,7 @@
 
 from nose.tools import *
 import stat
-import {chmod_repr, chmod_update} from './path'
+import {chmod_repr, chmod_update} from 'craftr/utils/path'
 
 
 def test_chmod():
