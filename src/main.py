@@ -468,7 +468,7 @@ def run_build_action(graph, node_name, index):
       cmd = cmd + additional_args
     try:
       code = subprocess.call(cmd)
-    except FileNotFoundError as e:
+    except OSError as e:
       error(e)
       code = 127
     if code != 0:

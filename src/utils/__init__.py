@@ -189,6 +189,9 @@ class stream:
   def slice(cls, iterable, *args, **kwargs):
     return cls(itertools.islice(iterable, *args, **kwargs))
 
+  def first(self):
+    return next(iter(self))
+
 
 class _named_meta(type):
   """

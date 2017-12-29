@@ -118,6 +118,7 @@ class CythonProject(craftr.Behaviour):
         additional_flags=None,
         # transpile main
         main=None,
+        main_outfile=None,
         # cxx build
         in_working_tree=False,
         defines=None,
@@ -162,32 +163,35 @@ class CythonProject(craftr.Behaviour):
       if in_working_tree:
         return path.rmvsuffix(filename)
       else:
-        return path.join(self.namespace.build_directory, 'cython-bin',
-            path.rel(path.rmvsuffix(filename), self.namespace.directory))
+        return path.join(self.namespace.build_directory, path.rel(path.rmvsuffix(filename), self.namespace.directory))
 
     cxx_build_options = cxx_build_options or {}
     cxx_build_options.setdefault('compiler', cxx.compiler)
 
     if self.compile_lib:
-      libfiles = [gen_libname(x)+ pyconf['SO'] for x in self.compile_lib.impl.srcs]
-      lib = cxx.library(
+      libfiles = [gen_libname(x) + pyconf['SO'] for x in self.compile_lib.impl.srcs]
+      self.link_lib = cxx.library(
         name = 'link_lib',
         parent = self.target,
         deps = [self.compile_lib, pylib],
         srcs = self.compile_lib.impl.output_files,
         outname = libfiles,
+        outdir = None,
         preferred_linkage = 'shared',
         defines = defines,
         localize_srcs = False,
         **cxx_build_options
       )
     if self.compile_main:
-      bin = cxx.binary(
+      if not main_outfile:
+        main_outfile = '{}$(ext)'.format(path.rmvsuffix(path.base(main)))
+      self.link_main = cxx.binary(
         name = 'link_main',
         parent = self.target,
-        deps = [self.compile_main, pylib],
+        deps = [self.compile_main, pylib] + ([self.link_lib] if self.link_lib else []),
         srcs = self.compile_main.impl.output_files,
-        #outname = ,
+        outname = main_outfile,
+        outdir = self.namespace.directory if in_working_tree else None,
         defines = defines,
         localize_srcs = False,
         **cxx_build_options
@@ -199,3 +203,11 @@ class CythonProject(craftr.Behaviour):
 
 compile = craftr.Factory(CythonCompile)
 project = craftr.Factory(CythonProject)
+
+
+def run(target, *args, **kwargs):
+  target = craftr.resolve_target(target)
+  kwargs.setdefault('name', target.name + '_run')
+  if isinstance(target.impl, CythonProject):
+    target = target.impl.link_main
+  return cxx.run(target, *args, **kwargs)

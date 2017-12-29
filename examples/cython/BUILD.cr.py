@@ -5,7 +5,8 @@ import cython from 'craftr/lang/cython'
 cython.project(
   name = 'main',
   srcs = craftr.glob('*.pyx', excludes = ['Main.pyx']),
-  main = 'Main.pyx'
+  main = 'Main.pyx',
+  in_working_tree = True
 )
 
-#cython.run(':main')
+cython.run(':main')

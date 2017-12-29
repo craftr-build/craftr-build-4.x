@@ -76,6 +76,7 @@ class CxxBuild(craftr.Behaviour):
         link_style: str = None,
         preferred_linkage: str = 'any',
         outname: str = '$(lib)$(name)$(ext)',
+        outdir: str = NotImplemented,
         unity_build: bool = None,
         compiler: 'Compiler' = None,
         options: Dict = None,
@@ -104,6 +105,8 @@ class CxxBuild(craftr.Behaviour):
     self.srcs = [craftr.localpath(x) for x in (srcs or [])] if localize_srcs else (srcs or [])
     if not self.srcs:
       raise ValueError('srcs must have minimum length 1')
+    if outdir is NotImplemented:
+      outdir = self.namespace.build_directory
     self.type = type
     self.debug = debug
     self.c_std = c_std
@@ -128,10 +131,11 @@ class CxxBuild(craftr.Behaviour):
     self.link_style = link_style
     self.preferred_linkage = preferred_linkage
     self.outname = outname
+    self.outdir = outdir
     self.unity_build = unity_build
     self.compiler = compiler
     self.options = options
-    self.compile_step_deps = []
+    self.additional_outputs = []
 
     if self.is_foreach():
       if len(outname) != len(self.srcs):
@@ -265,7 +269,7 @@ class CxxBuild(craftr.Behaviour):
       output = True,
       environ = self.compiler.linker_env,
       input_files = list(concat(obj_files)) + additional_input_files,
-      output_files = outputs
+      output_files = outputs + self.additional_outputs
     )
 
 
@@ -361,7 +365,6 @@ class CxxEmbed(craftr.Behaviour):
       output_files = [self.cfile]
     )
     self.target.add_action(gen)
-    self.build_trait.compile_step_deps.append(gen)
     self.build_trait.translate()
 
 
@@ -585,8 +588,8 @@ class Compiler(utils.named):
     assert isinstance(build, CxxBuild)
     outs = build.outname if build.is_foreach() else [build.outname]
     build.outname_full = [macro.parse(x).eval(ctx, []) for x in outs]
-    build.outname_full = [path.join(build.namespace.build_directory, x)
-        for x in build.outname_full]
+    if build.outdir:
+      build.outname_full = [path.join(build.outdir, x) for x in build.outname_full]
 
 
 def extmacro(without_version, with_version):
