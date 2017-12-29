@@ -25,13 +25,13 @@ def get_python_config(python_bin):
   return result
 
 
-def python_prebuilt(*, name=None, python_bin):
+def python_prebuilt(*, name=None, parent=None, python_bin):
   config = get_python_config(python_bin)
 
   if not name:
     name = 'python' + config['VERSION']
     try:
-      return craftr.cell().targets[name]
+      return craftr.Namespace().current().targets[name]
     except KeyError:
       pass
 
@@ -42,6 +42,7 @@ def python_prebuilt(*, name=None, python_bin):
 
   target = cxx.prebuilt(
     name = name,
+    parent = parent,
     includes = [config['INCLUDEPY']],
     libpath = [config['LIBDIR']],
     syslibs = [],
@@ -53,44 +54,32 @@ def python_prebuilt(*, name=None, python_bin):
   if 'LIBRARY' in config:
     lib = re.search('python\d\.\d(?:d|m|u){0,3}', config['LIBRARY'])
     if lib:
-      target.trait.syslibs.append(lib.group(0))
+      target.impl.syslibs.append(lib.group(0))
   elif os.name == 'nt':
     # This will make pyconfig.h nominate the correct .lib file.
-    target.trait.defines = ['MS_COREDLL']
+    target.impl.defines = ['MS_COREDLL']
 
   return target
 
 
-@craftr.TargetFactory
-class transpile(craftr.TargetTrait):
+class CythonCompile(craftr.Behaviour):
 
-  def __init__(self,
-               srcs,
-               python_bin=None,
-               py_version=None,
-               cpp=False,
-               embed=False,
-               fast_fail=False,
-               includes=None,
-               additional_flags=None):
+  def init(self, srcs, py_version=None, cpp=False, embed=False,
+           fast_fail=False, includes=None, additional_flags=None):
     self.srcs = [path.canonical(craftr.localpath(x)) for x in srcs]
-    self.python_bin = python_bin or globals()['python_bin']
     self.py_version = py_version
     self.cpp = cpp
     self.embed = embed
     self.fast_fail = fast_fail
     self.includes = includes or []
     self.additional_flags = additional_flags or []
-    self.pyconf = get_python_config(self.python_bin)
 
-    outdir = path.join(self.target.cell.build_directory, 'cython-src')
+    outdir = path.join(self.namespace.build_directory, 'cython-src')
     self.output_files = craftr.relocate_files(
         self.srcs, outdir, '.cpp' if self.cpp else '.c',
-        parent=self.target.cell.directory)
+        parent=self.namespace.directory)
 
   def translate(self):
-    if self.py_version is None:
-      self.py_version = int(get_python_config(self.python_bin)['VERSION'][0])
     if self.py_version not in (2, 3):
       raise ValueError('invalid py_version: {!r}'.format(self.py_version))
 
@@ -106,98 +95,107 @@ class transpile(craftr.TargetTrait):
       raise ValueError('cython.build.embed must be str or boolean, got {}'
           .format(type(self.embed).__name__))
     command += self.additional_flags
-    self.target.add_action(craftr.BuildAction(
+    self.target.add_action(
       name = 'cython',
       commands = [command],
       input_files = self.srcs,
       output_files = self.output_files,
       foreach = True
-    ))
-
-
-
-def project(*,
-            name,
-            # transpile
-            srcs,
-            python_bin=None,
-            py_version=None,
-            cpp=False,
-            #embed=False,
-            fast_fail=False,
-            includes=None,
-            additional_flags=None,
-            # transpile main
-            main=None,
-            # cxx build
-            in_working_tree=False,
-            defines=None,
-            cxx_build_options=None):
-  if srcs:
-    trns = transpile(
-      name = name + '_transpile',
-      srcs = srcs,
-      python_bin = python_bin,
-      py_version = py_version,
-      cpp = cpp,
-      embed = False,
-      fast_fail = fast_fail,
-      includes = includes,
-      additional_flags = additional_flags
-    )
-  if main:
-    trns_main = transpile(
-      name = name + '_transpile_main',
-      srcs = [main],
-      python_bin = python_bin,
-      py_version = py_version,
-      cpp = cpp,
-      embed = True,
-      fast_fail = fast_fail,
-      includes = includes,
-      additional_flags = additional_flags,
     )
 
-  cell = craftr.cell()
-  def gen_libname(filename):
-    if in_working_tree:
-      return path.rmvsuffix(filename)
-    else:
-      return path.join(cell.build_directory, 'cython-bin',
-          path.rel(path.rmvsuffix(filename), cell.directory))
 
-  cxx_build_options = cxx_build_options or {}
-  cxx_build_options.setdefault('compiler', cxx.compiler)
-  pyconf = trns.trait.pyconf
-  pylib = python_prebuilt(name = name + '_python_lib', python_bin = pyconf['_PYTHON_BIN'])
+class CythonProject(craftr.Behaviour):
 
-  if srcs:
-    libfiles = [gen_libname(x)+ pyconf['SO'] for x in trns.trait.srcs]
-    lib = cxx.library(
-      name = name + '_compile',
-      deps = [pylib, trns],
-      srcs = trns.trait.output_files,
-      outname = libfiles,
-      preferred_linkage = 'shared',
-      defines = defines,
-      localize_srcs = False,
-      **cxx_build_options
-    )
-  else:
-    lib = None
+  def init(self,
+        # transpile
+        srcs,
+        python_bin=None,
+        py_version=None,
+        cpp=False,
+        #embed=False,
+        fast_fail=False,
+        includes=None,
+        additional_flags=None,
+        # transpile main
+        main=None,
+        # cxx build
+        in_working_tree=False,
+        defines=None,
+        cxx_build_options=None):
+    self.compile_lib = None
+    self.compile_main = None
+    self.link_lib = None
+    self.link_main = None
+    python_bin = python_bin or globals()['python_bin']
 
-  if main:
-    bin = cxx.binary(
-      name = name + '_compile_main',
-      deps = [pylib, trns_main],
-      srcs = trns_main.trait.output_files,
-      #outname = ,
-      defines = defines,
-      localize_srcs = False,
-      **cxx_build_options
-    )
-  else:
-    bin = None
+    pyconf = get_python_config(python_bin)
+    pylib = python_prebuilt(name = 'python_lib', parent = self.target, python_bin = python_bin)
+    if not py_version:
+      py_version = int(pyconf['VERSION'][0])
 
-  return (lib, bin)
+    if srcs:
+      self.compile_lib = compile(
+        name = 'compile_lib',
+        parent = self.target,
+        srcs = srcs,
+        py_version = py_version,
+        cpp = cpp,
+        embed = False,
+        fast_fail = fast_fail,
+        includes = includes,
+        additional_flags = additional_flags
+      )
+    if main:
+      self.compile_main = compile(
+        name = 'compile_main',
+        parent = self.target,
+        srcs = [craftr.localpath(main)],
+        py_version = py_version,
+        cpp = cpp,
+        embed = True,
+        fast_fail = fast_fail,
+        includes = includes,
+        additional_flags = additional_flags
+      )
 
+    def gen_libname(filename):
+      if in_working_tree:
+        return path.rmvsuffix(filename)
+      else:
+        return path.join(self.namespace.build_directory, 'cython-bin',
+            path.rel(path.rmvsuffix(filename), self.namespace.directory))
+
+    cxx_build_options = cxx_build_options or {}
+    cxx_build_options.setdefault('compiler', cxx.compiler)
+
+    if self.compile_lib:
+      libfiles = [gen_libname(x)+ pyconf['SO'] for x in self.compile_lib.impl.srcs]
+      lib = cxx.library(
+        name = 'link_lib',
+        parent = self.target,
+        deps = [self.compile_lib, pylib],
+        srcs = self.compile_lib.impl.output_files,
+        outname = libfiles,
+        preferred_linkage = 'shared',
+        defines = defines,
+        localize_srcs = False,
+        **cxx_build_options
+      )
+    if self.compile_main:
+      bin = cxx.binary(
+        name = 'link_main',
+        parent = self.target,
+        deps = [self.compile_main, pylib],
+        srcs = self.compile_main.impl.output_files,
+        #outname = ,
+        defines = defines,
+        localize_srcs = False,
+        **cxx_build_options
+      )
+
+  def translate(self):
+    pass
+
+
+compile = craftr.Factory(CythonCompile)
+project = craftr.Factory(CythonProject)

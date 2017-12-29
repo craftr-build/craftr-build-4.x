@@ -631,6 +631,7 @@ compiler = _load_compiler()
 build = craftr.Factory(CxxBuild)
 library = functools.partial(build, type='library')
 binary = functools.partial(build, type='binary')
+prebuilt = craftr.Factory(CxxPrebuilt)
 embed = craftr.Factory(CxxEmbed)
 
 
