@@ -37,6 +37,12 @@ environment:
   - BUILD_MODULE: examples/cxx-shared
     BUILD_OPTIONS: :main_run
 
+  - BUILD_MODULE: examples/cxx
+    BUILD_OPTIONS: :main_run --options cxx.compiler=mingw
+
+  - BUILD_MODULE: examples/cxx-shared
+    BUILD_OPTIONS: :main_run --options cxx.compiler=mingw
+
 matrix:
   allow_failures:
     - ALLOW_FAILURE: true
@@ -50,5 +56,4 @@ build_script:
 - nodepy https://nodepy.org/install-pm develop
 - nodepy-pm install -PI
 - set PATH=.nodepy/bin;%PATH%
-- craftr -t mingw
 - craftr --configure %BUILD_MODULE% --build %BUILD_OPTIONS%
