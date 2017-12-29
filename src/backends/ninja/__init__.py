@@ -42,19 +42,19 @@ def quote(s, for_ninja=False):
   return s
 
 
-def make_rule_description(node):
-  commands = [' '.join(map(quote, x)) for x in node.commands]
+def make_rule_description(action):
+  commands = [' '.join(map(quote, x)) for x in action.commands]
   return ' && '.join(commands)
 
 
-def make_rule_name(graph, node):
-  return re.sub('[^\d\w\-_\.]+', '_', node.name)
+def make_rule_name(graph, action):
+  return re.sub('[^\d\w\-_\.]+', '_', action.identifier())
 
 
-def export_node(build_directory, writer, graph, node, non_explicit):
-  phony_name = make_rule_name(graph, node)
+def export_action(build_directory, writer, graph, action, non_explicit):
+  phony_name = make_rule_name(graph, action)
   rule_name = 'rule_' + phony_name
-  if not node.explicit:
+  if not action.explicit:
     non_explicit.append(phony_name)
 
   command = [
@@ -62,24 +62,24 @@ def export_node(build_directory, writer, graph, node, non_explicit):
     str(require.resolve('craftr/main').filename),
     '--build-directory', build_directory,
     # Place the hash in the command string, so Ninja always knows when
-    # when the definition of the build node changed.
-    '--run-node', '{}^{}'.format(node.name, graph.hash(node))
+    # when the definition of the build action changed.
+    '--run-action', '{}^{}'.format(action.identifier(), graph.hash(action))
   ]
-  if node.foreach:
-    command += ['--run-node-index=$index']
+  if action.foreach:
+    command += ['--run-action-index=$index']
   command = ' '.join(quote(x, for_ninja=True) for x in command)
 
   order_only = []
-  for dep in [graph[x] for x in node.deps]:
+  for dep in action.deps:
     if not dep.output_files:
       order_only.append(make_rule_name(graph, dep))
     else:
       order_only.extend(dep.output_files)
 
-  writer.rule(rule_name, command, description=make_rule_description(node), pool = 'console' if node.console else None)
-  if node.foreach:
-    assert len(node.input_files) == len(node.output_files), node.name
-    for index, (infiles, outfiles) in enumerate(zip(node.input_files, node.output_files)):
+  writer.rule(rule_name, command, description=make_rule_description(action), pool = 'console' if action.console else None)
+  if action.foreach:
+    assert len(action.input_files) == len(action.output_files), action.identifier()
+    for index, (infiles, outfiles) in enumerate(zip(action.input_files, action.output_files)):
       if isinstance(infiles, str): infiles = [infiles]
       if isinstance(outfiles, str): outfiles = [outfiles]
       writer.build(
@@ -91,13 +91,13 @@ def export_node(build_directory, writer, graph, node, non_explicit):
       )
   else:
     writer.build(
-      outputs = node.output_files or [phony_name],
+      outputs = action.output_files or [phony_name],
       rule = rule_name,
-      inputs = node.input_files,
+      inputs = action.input_files,
       order_only = order_only)
 
-  if node.output_files:
-    writer.build([phony_name], 'phony', node.output_files)
+  if action.output_files:
+    writer.build([phony_name], 'phony', action.output_files)
 
 
 def check_ninja_version(build_directory, download=False):
@@ -154,12 +154,12 @@ def prepare_build(build_directory, graph, args):
     writer.newline()
 
     non_explicit = []
-    for node in sorted(graph.nodes(), key=lambda x: x.name):
+    for action in sorted(graph.actions(), key=lambda x: x.name):
       try:
-        export_node(build_directory, writer, graph, node, non_explicit)
+        export_action(build_directory, writer, graph, action, non_explicit)
         writer.newline()
       except Exception as e:
-        raise RuntimeError('error while exporting {!r}'.format(node.name)) from e
+        raise RuntimeError('error while exporting {!r}'.format(action.identifier())) from e
 
     if non_explicit:
       writer.default(non_explicit)
@@ -171,7 +171,7 @@ def build(build_directory, graph, args):
     return 1
   command = [ninja, '-f', os.path.join(build_directory, 'build.ninja')]
   command += args.build_args
-  command += [make_rule_name(graph, node) for node in graph.selected()]
+  command += [make_rule_name(graph, action) for action in graph.selected()]
   return subprocess.call(command)
 
 
@@ -181,10 +181,10 @@ def clean(build_directory, graph, args):
     return 1
 
   if args.recursive:
-    targets = [make_rule_name(graph, node) for node in graph.selected()]
+    targets = [make_rule_name(graph, action) for action in graph.selected()]
   else:
     # Use -r and passing rules only cleans files that have been created by that rule.
-    targets = ['rule_' + make_rule_name(graph, node) for node in graph.selected()]
+    targets = ['rule_' + make_rule_name(graph, action) for action in graph.selected()]
     if targets:
       targets.insert(0, '-r')
 

@@ -17,14 +17,14 @@ import sys
 import toml
 
 import craftr from 'craftr'
-import {concat} from 'craftr/utils/it'
-import {plural, reindent, ReindentHelpFormatter} from 'craftr/utils/text'
+import utils, {plural} from 'craftr/utils'
 
+concat = utils.stream.concat
 error = functools.partial(print, file=sys.stderr)
 
 
 parser = argparse.ArgumentParser(
-  formatter_class=ReindentHelpFormatter,
+  formatter_class=utils.ReindentHelpFormatter,
   prog='craftr',
   description='''
     Craftr is a modular language-indepenent build system that is written in
@@ -196,33 +196,33 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--run-node',
+  '--run-action',
   metavar='NAME[^HASH]',
-  help='Execute the command for the specified build-node. Build nodes names '
-       'are formatted as `//<cell>:<target>#<node>`. This can be used '
+  help='Execute the command for the specified build-action. Build action names '
+       'are formatted as `//<cell>:<target>#<action>`. This can be used '
        'internally by build backends to implement deduplication. This option '
        'requires the --build-directory to be set.'
 )
 
 parser.add_argument(
-  '--run-node-index',
+  '--run-action-index',
   metavar='INDEX',
   type=int,
-  help='Use this option for nodes that are executed for each input/output '
-       'pair to specify the pair index. If a node is marked as "foreach" and '
+  help='Use this option for actions that are executed for each input/output '
+       'pair to specify the pair index. If a action is marked as "foreach" and '
        'this argument is not present, an error will be presented.'
 )
 
 parser.add_argument(
-  '--show-node',
+  '--show-action',
   metavar='NAME',
-  help='Show the information for the specified build node.'
+  help='Show the information for the specified build action.'
 )
 
 parser.add_argument(
-  '--list-nodes',
+  '--list-actions',
   action='store_true',
-  help='List all build nodes and exit.'
+  help='List all build actions and exit.'
 )
 
 parser.add_argument(
@@ -240,6 +240,16 @@ parser.add_argument(
   nargs='?',
   default=NotImplemented,
   help='Render a .dot graph file to the specified FILE or stdout and exit.'
+)
+
+parser.add_argument(
+  '--dotviz-targets',
+  metavar='FILE',
+  nargs='?',
+  default=NotImplemented,
+  help='Render a .dot graph file to the specified FILE or stdout and exit. '
+       'This option requires --configure as otherwise the target graph '
+       'is not available.'
 )
 
 parser.add_argument(
@@ -341,12 +351,12 @@ def merge_options(*opts):
   return result
 
 
-def get_additional_args_for(node_name):
+def get_additional_args_for(action_name):
   """
   In the --build step, a `craftr_additional_args.json` file may be present
   which specifies additional arguments passed to a target via the command-line.
-  This extracts the additional arguments for the specified *node_name*, falling
-  back to the node's target if such an entry exists.
+  This extracts the additional arguments for the specified *action_name*, falling
+  back to the action's target if such an entry exists.
   """
 
   additional_args_file = os.path.join(craftr.build_directory, 'craftr_additional_args.json')
@@ -355,10 +365,10 @@ def get_additional_args_for(node_name):
   with open(additional_args_file, 'r') as fp:
     additional_args = json.load(fp)
   try:
-    return shlex.split(additional_args[node_name])
+    return shlex.split(additional_args[action_name])
   except KeyError:
     pass
-  target_name = node_name.partition('#')[0]
+  target_name = action_name.partition('#')[0]
   try:
     return shlex.split(additional_args[target_name])
   except KeyError:
@@ -389,7 +399,7 @@ def substitute_inputs_outputs(command, inputs, outputs):
   return command
 
 
-def run_build_node(graph, node_name, index):
+def run_build_action(graph, node_name, index):
   if '^' in node_name:
     node_name, node_hash = node_name.split('^', 1)
   else:
@@ -404,7 +414,7 @@ def run_build_node(graph, node_name, index):
     return 1
 
   if node.foreach and index is None:
-    error('fatal: build node is marked "foreach" but --run-node-index is '
+    error('fatal: build node is marked "foreach" but --run-action-index is '
           'not specified.')
     return 1
 
@@ -479,25 +489,41 @@ def run_build_node(graph, node_name, index):
   return 0
 
 
-def show_build_node(graph, node_name):
-  if node_name.startswith(':'):
-    node_name = '//' + craftr.cache['main_build_cell'] + node_name
+def show_build_action(graph, action_name):
+  if action_name.startswith(':'):
+    action_name = '//' + craftr.cache['main_build_cell'] + action_name
   try:
-    node = graph[node_name]
+    action = graph[action_name]
   except KeyError:
-    error('fatal: build node "{}" does not exist'.format(node_name))
+    error('fatal: build action "{}" does not exist'.format(action_name))
     return 1
-  data = node._asdict()
-  data['hash'] = graph.hash(node)
+  data = action._asdict()
+  data['hash'] = graph.hash(action)
   json.dump(data, sys.stdout, indent=2)
   print()
   return 0
 
 
-def list_build_nodes(graph):
-  for node in sorted(graph.nodes(), key=lambda x: x.name):
-    print(node.name)
+def list_build_actions(graph):
+  for action in sorted(graph.actions(), key=lambda x: x.identifier()):
+    print(action.identifier())
   return 0
+
+
+def dotviz_targets(targets, fp):
+  if fp is None:
+    fp = sys.stdout
+  elif isinstance(fp, str):
+    with open(fp, 'w') as fp:
+      return dotviz_targets(targets, fp)
+  fp.write('digraph "craftr-targets" {\n')
+  for target in sorted(targets, key=lambda x: x.identifier()):
+    fp.write('\t{} [label="{}" style="rounded" shape="box"];\n'.format(id(target), target.identifier()))
+    for dep in target.deps(transitive=False, children=False):
+      fp.write('\t\t{} -> {};\n'.format(id(dep), id(target)))
+    for child in target.children:
+      fp.write('\t\t{} -> {} [style="dashed" arrowhead="odiamond"];\n'.format(id(child), id(target)))
+  fp.write('}\n')
 
 
 def prepare_target_list(targets):
@@ -567,26 +593,26 @@ def main(argv=None):
     finally:
       sys.argv[0] = old_arg0
 
-  # Handle --run-node if a --build-directory is explicitly specified.
+  # Handle --run-action if a --build-directory is explicitly specified.
   if (args.build is not NotImplemented or args.clean is not NotImplemented
       or args.configure is not NotImplemented or args.flush
-      or args.prepare_build) and args.run_node:
+      or args.prepare_build) and args.run_action:
     print(args)
-    error('fatal: --run-node can not be combined with other build steps.')
+    error('fatal: --run-action can not be combined with other build steps.')
     return 1
 
   craftr.build_directory = args.build_directory
-  if args.run_node and args.build_directory:
+  if args.run_action and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
-    return run_build_node(build_graph, args.run_node, args.run_node_index)
-  # Handle --show-node if --build-directory was not explicitly specified.
-  if args.show_node and args.build_directory:
+    return run_build_action(build_graph, args.run_action, args.run_action_index)
+  # Handle --show-action if --build-directory was not explicitly specified.
+  if args.show_action and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
-    return show_build_node(build_graph, args.show_node)
-  # Handle --list-nodes
-  if args.list_nodes and args.build_directory:
+    return show_build_action(build_graph, args.show_action)
+  # Handle --list-actions
+  if args.list_actions and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
-    return list_build_nodes(build_graph)
+    return list_build_actions(build_graph)
 
   tags = get_platform_tags()
   if not tags and not args.show_config_tags:
@@ -686,6 +712,12 @@ def main(argv=None):
   build_graph = None
   build_graph_file = os.path.join(craftr.build_directory, 'craftr_build_graph.json')
 
+  # Validate --dotviz-targets
+  if args.dotviz_targets is not NotImplemented:
+    if args.configure is NotImplemented:
+      error('fatal: --dotviz-targets requires --configure')
+      return 1
+
   # Handle --configure
   if args.configure is not NotImplemented:
     if not args.dry:
@@ -699,13 +731,17 @@ def main(argv=None):
     build_module = require.new('.').resolve(args.configure)
     with require.context.push_main(build_module):
       require.context.load_module(build_module)
-      craftr.cache['main_build_cell'] = craftr.BuildCell(build_module.package).name
-    targets = list(concat(x.targets.values() for x in craftr.cells.values()))
-    for target in targets:
-      target.complete()
+      craftr.cache['main_build_cell'] = craftr.Namespace.from_package(build_module.package).name
+    targets = list(concat(x.targets.values() for x in craftr.Namespace.all()))
+
+    # Handle --dotviz-targets
+    if args.dotviz_targets is not NotImplemented:
+      dotviz_targets(targets, args.dotviz_targets)
+      return 0
+
     for target in targets:
       target.translate()
-    actions = list(concat(x.actions.values() for x in targets))
+    actions = list(concat(x.actions() for x in targets))
     print('note: generated', len(actions), plural('action', len(actions)),
           'from', len(targets), plural('target', len(targets)))
     if not args.dry:
@@ -722,24 +758,24 @@ def main(argv=None):
 
   # Load the build graph from file if we need it.
   if not build_graph and (args.prepare_build
-      or args.run_node or args.show_node or args.list_nodes
+      or args.run_action or args.show_action or args.list_actions
       or args.dotviz is not NotImplemented or args.build is not NotImplemented
       or args.clean is not NotImplemented):
     if args.dotviz is NotImplemented:
       print('note: loading "{}"'.format(build_graph_file))
     build_graph = craftr.BuildGraph().read(build_graph_file)
 
-  # Handle --run-node if --build-directory was not explicitly specified.
-  if args.run_node:
-    return run_build_node(build_graph, args.run_node, args.run_node_index)
+  # Handle --run-action if --build-directory was not explicitly specified.
+  if args.run_action:
+    return run_build_action(build_graph, args.run_action, args.run_action_index)
 
-  # Handle --show-node if --build-directory was not explicitly specified.
-  if args.show_node:
-    return show_build_node(build_graph, args.show_node)
+  # Handle --show-action if --build-directory was not explicitly specified.
+  if args.show_action:
+    return show_build_action(build_graph, args.show_action)
 
-  # Handle --list-nodes if --build-directory was not explicitly specified.
-  if args.list_nodes:
-    return list_build_nodes(build_graph)
+  # Handle --list-actions if --build-directory was not explicitly specified.
+  if args.list_actions:
+    return list_build_actions(build_graph)
 
   # Handle --dotviz
   if args.dotviz is not NotImplemented:

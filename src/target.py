@@ -1,7 +1,122 @@
 
 import collections
 import re
+import craftr from './index'
 import utils from './utils'
+import path from './utils/path'
+import {BuildAction} from './buildgraph'
+
+
+def splitref(s):
+  """
+  Splits a target reference string into its namespace and target component.
+  A target reference must be of the format `//<namespace>:<target>` or
+  `:<target>`. For the latter form, the returned namespace will be #None.
+  """
+
+  if not isinstance(s, str):
+    raise TypeError('target-reference must be a string', s)
+  if ':' not in s:
+    raise ValueError('invalid target-reference string: {!r}'.format(s))
+  namespace, name = s.partition(':')[::2]
+  if namespace and not namespace.startswith('//'):
+    raise ValueError('invalid target-reference string: {!r}'.format(s))
+  if namespace:
+    namespace = namespace[2:]
+    if not namespace:
+      raise ValueError('invalid target-reference string: {!r}'.format(s))
+  return namespace or None, name
+
+
+def joinref(namespace, name):
+  if namespace:
+    return '//{}:{}'.format(namespace, name)
+  else:
+    return ':{}'.format(name)
+
+
+def resolve(target):
+  """
+  Resolve a target identifier string of the format `[//<namespace>]:target`.
+  If *target* is already a #Target instance, it is returned as-is.
+  """
+
+  if isinstance(target, Target):
+    return target
+  namespace, target = splitref(target)
+  namespace = Namespace.current() if not namespace else Namespace.get(namespace)
+  try:
+    return namespace.targets[target]
+  except KeyError:
+    msg = 'cell or target does not exist: {!r}'
+    raise ValueError(msg.format(joinref(namespace.name, target)))
+
+
+class Namespace:
+  """
+  The namespace represents a scope for targets and usually reflects a project
+  root directory on the filesystem.
+  """
+
+  NAMESPACES = {}
+
+  def __init__(self, name, version, directory, build_directory=None):
+    assert isinstance(name, str)
+    assert re.match('[A-z0-9@_\\-/]+', name), repr(name)
+
+    self.name = name
+    self.version = version
+    self.directory = directory
+    if not build_directory:
+      build_directory = path.join(craftr.build_directory, 'cells', self.name)
+    self.build_directory = build_directory
+    self.targets = {}
+
+  def __repr__(self):
+    return '<Namespace {!r} directory={!r} len(targets)={}>'.format(
+        self.name, self.directory, len(self.targets))
+
+  def add_target(self, target):
+    """
+    Adds a #Target to the namespace. This method is automatically called from
+    the #Target constructor, thus it does not need to be called explicitly.
+    """
+
+    if target.namespace is not self:
+      raise RuntimeError('Target "{}" is already in namespace "{}", can not '
+        'add to cell "{}"'.format(target.name, target.namespace.name, self.name))
+    if target.name in self.targets:
+      raise RuntimeError('Target "{}" already exists in namespace "{}"'
+        .format(target.name, self.name))
+    self.targets[target.name] = target
+
+  @classmethod
+  def from_package(cls, package):
+    name = '__main__' if not package else package.name
+    version = '1.0.0' if not package else package.payload.get('version', '1.0.0')
+    directory = require.main.directory if not package else str(package.directory)
+    namespace = cls(name, version, directory)
+    return namespace
+
+  @classmethod
+  def current(cls, create=True):
+    package = require.current.package
+    if not package and require.current != require.main:
+      raise RuntimeError('can not create Namespace for non-main script '
+                        'without an associated Node.py package')
+    namespace = cls.from_package(package)
+    if create:
+      return cls.NAMESPACES.setdefault(namespace.name, namespace)
+    else:
+      return cls.NAMESPACES[namespace.name]
+
+  @classmethod
+  def get(cls, name):
+    return cls.NAMESPACES[name]
+
+  @classmethod
+  def all(cls):
+    return cls.NAMESPACES.values()
 
 
 class Target:
@@ -27,8 +142,7 @@ class Target:
   """
 
   def __init__(self, namespace, name, impl_class=None, explicit=False, console=False):
-    assert isinstance(namespace, str) and len(namespace) > 0, repr(namespace)
-    assert re.match('[A-z0-9@_\\-/]+', namespace), repr(namespace)
+    assert isinstance(namespace, Namespace), type(namespace)
     assert isinstance(name, str) and len(name) > 0, repr(name)
     assert re.match('[A-z0-9@_\\-]+', name), repr(name)
 
@@ -42,8 +156,10 @@ class Target:
     self.__impl = impl_class(self) if impl_class is not None else None
     self.__actions = collections.OrderedDict()
     self.__output_actions = []
+    self.__is_translated = False
     self.explicit = explicit
     self.console = console
+    namespace.add_target(self)
 
   parent = utils.getter('_Target__parent')
   namespace = utils.getter('_Target__namespace')
@@ -80,9 +196,9 @@ class Target:
     return result
 
   def identifier(self):
-    return '//{}:{}'.format(self.namespace, self.long_name())
+    return '//{}:{}'.format(self.namespace.name, self.long_name())
 
-  def deps(self, transitive=False, children=True, with_behaviour=None):
+  def deps(self, transitive=True, children=True, parent=True, with_behaviour=None):
     """
     Returns an #utils.stream object that yields the dependencies of this
     target. This includes the private dependencies of *self*. If the
@@ -99,10 +215,12 @@ class Target:
           if children:
             yield from recursion(other.children)
 
-    stream = utils.stream.concat(
+    stream = utils.stream.chain(
       recursion(self.private_deps),
       recursion(self.public_deps)
     )
+    if parent and self.__parent:
+      stream = stream.chain(self.__parent.deps(transitive, children, False))
     if with_behaviour is not None:
       stream = stream.filter(lambda x: isinstance(x.impl, with_behaviour))
     return stream.unique()
@@ -122,7 +240,7 @@ class Target:
 
     stream = utils.stream(recursion(self.__dependents))
     if transitive and self.__parent:
-      stream = stream.concat(self.__parent.dependents(True))
+      stream = stream.chain(self.__parent.dependents(True))
     if with_behaviour is not None:
       stream = stream.filter(lambda x: isinstance(x.impl, with_behaviour))
     return stream.unique()
@@ -234,6 +352,21 @@ class Target:
     key = next(reversed(self.__actions))
     return self.__actions[key]
 
+  def translate(self):
+    if self.__is_translated:
+      return
+    if self.__parent:
+      self.__parent.translate()
+      if self.__is_translated:
+        return
+    for dep in self.deps(transitive=False, children=False):
+      dep.translate()
+    # Need to set the flag before Behaviour.translate() as when a sub-target's
+    # translate() method is called within Behaviour.translate(), we will get
+    # an infinite recursion.
+    self.__is_translated = True
+    self.impl.translate()
+
 
 class DependencyList:
   """
@@ -319,7 +452,13 @@ class Behaviour:
   def __init__(self, target):
     self.__target = target
 
-  target = utils.getter('_Behaviour__target')
+  @property
+  def target(self):
+    return self.__target
+
+  @property
+  def namespace(self):
+    return self.__target.namespace
 
   def __repr__(self):
     return '<{} of target {!r}>'.format(type(self).__name__, self.__target.identifier())
@@ -352,50 +491,35 @@ class Behaviour:
     raise NotImplementedError
 
 
-class BuildAction:
+class Factory:
   """
-  Represents a concrete sequence of system commands.
+  A factory wrapper for #Behaviour implementations that will automatically
+  register the target in the current or specified namespace and forward all
+  non-major target arguments to the #Behaviour.init() method.
   """
 
-  def __init__(self, scope, name, commands, input_files, output_files, deps,
-               cwd, environ, foreach, explicit, console):
-    self.scope = scope
-    self.name = name
-    self.commands = commands
-    self.input_files = input_files
-    self.output_files = output_files
-    self.deps = deps
-    self.cwd = cwd
-    self.environ = environ
-    self.foreach = foreach
-    self.explicit = explicit
-    self.console = console
+  def __init__(self, behaviour_class):
+    self.cls = behaviour_class
 
   def __repr__(self):
-    return '<BuildAction {!r}>'.format(self.identifier())
+    name = self.cls.__name__.lower().rstrip('behaviour')
+    return '<{}()>'.format(name)
 
-  def identifier(self):
-    return '{}#{}'.format(self.scope, self.name)
+  def __call__(self, *, name, namespace=None, deps=None, public_deps=None,
+               explicit=False, console=False, parent=None, **kwargs):
+    if namespace is None:
+      namespace = parent.namespace if parent else Namespace.current()
+    if not namespace:
+      require.breakpoint()
+    target = Target(namespace, name, self.cls, explicit, console)
+    for dep in (deps or ()):
+      target.private_deps.add(resolve(dep))
+    for dep in (public_deps or ()):
+      target.public_deps.add(resolve(dep))
+    if parent:
+      target.parent = parent
+    target.impl.init(**kwargs)
+    return target
 
-  @staticmethod
-  def normalize_file_list(lst, foreach):
-    """
-    Normalizes a list of filenames, matching the format for a foreach or
-    non-foreach build action. Foreach build actions use a list of lists of
-    filenames, where non=foreach build actions use only list of filenames.
-    """
-
-    result = []
-    for item in lst:
-      if foreach:
-        if isinstance(item, str):
-          item = [str]
-        if not isinstance(item, (list, tuple)):
-          raise ValueError('expected List[^List[str]]-like, got {!r}'.format(item))
-        if not all(isinstance(x, str) for x in item):
-          raise ValueError('expected List[List[^str]], got {!r}'.format(item))
-      else:
-        if not isinstance(item, str):
-          raise ValueError('expected List[^str], got {}'.format(type(item).__name__))
-      result.append(item)
-    return result
+  def __instancecheck__(self, other):
+    return isinstance(other, self.cls)

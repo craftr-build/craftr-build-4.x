@@ -6,13 +6,9 @@ import copy
 import nodepy
 import re
 import typing as t
-
 import craftr, {path, options} from 'craftr'
+import utils from 'craftr/utils'
 import maven from './maven'
-
-
-# TODO: Ensure consistent command-line arguments order
-
 
 ONEJAR_FILENAME = path.canonical(
   options.get('java.onejar',
@@ -62,80 +58,33 @@ def partition_sources(
   return result
 
 
-class JavaBase(craftr.TargetTrait):
-  """
-  jar_dir:
-    The directory where the jar will be created in.
+class _JarProducingMixin:
 
-  jar_name:
-    The name of the JAR file. Defaults to the target name. Note that the Java
-    JAR command does not support dots in the output filename, thus it will
-    be rendered to a temporary directory.
-
-  main_class:
-    A classname that serves as an entry point for the JAR archive. Note that
-    you should prefer to use `java_binary()` to create a JAR binary that
-    contains all its dependencies merged into one.
-
-  javac_jar:
-    The name of Java JAR command to use. If not specified, defaults to the
-    value of the `java.javac_jar` option or simply "jar".
-  """
-
-  def __init__(self, jar_dir: str = None,
-                     jar_name: str = None,
-                     main_class: str = None,
-                     javac_jar: str = None):
+  def init(self, jar_dir=None, jar_name=None, main_class=None, javac_jar=None):
     if jar_dir:
-      jar_dir = path.canonical(self.jar_dir, self.target.cell.build_directory)
+      jar_dir = path.canonical(self.jar_dir, self.namespace.build_directory)
     self.jar_dir = jar_dir
     self.jar_name = jar_name
     self.main_class = main_class
     self.javac_jar = javac_jar or options.get('java.javac_jar', 'jar')
     if not self.jar_dir:
-      self.jar_dir = self.target.cell.build_directory
+      self.jar_dir = self.namespace.build_directory
     if not self.jar_name:
-      self.jar_name = (self.target.cell.name.split('/')[-1] + '-' + self.target.name + '-' + self.target.cell.version)
+      self.jar_name = (self.namespace.name.split('/')[-1] + '-' + self.target.name + '-' + self.namespace.version)
 
   @property
   def jar_filename(self) -> str:
+    if path.isabs(self.jar_name):
+      return self.jar_name
     return path.join(self.jar_dir, self.jar_name) + '.jar'
 
 
-@craftr.TargetFactory
-class library(JavaBase):
-  """
-  The base target for compiling Java source code and creating a Java binary
-  or libary JAR file.
+class JavaLibrary(craftr.Behaviour, _JarProducingMixin):
 
-  # Parameters
-  srcs:
-    A list of source files. If `srcs_root` is not specified, the config option
-    `java.src_roots` to determine the root of the source files.
-
-  src_roots:
-    A list of source root directories. Defaults to `java.src_roots` config.
-    The default value for this configuration is `['src', 'java', 'javatest']`.
-
-  class_dir:
-    The directory where class files will be compiled to.
-
-  javac:
-    The name of Java compiler to use. If not specified, defaults to the value
-    of the `java.javac` option or simply "javac".
-
-  extra_arguments:
-    A list of additional arguments for the Java compiler. They will be
-    appended to the ones specified in the configuration.
-  """
-
-  def __init__(self, srcs: t.List[str],
-                     src_roots: t.List[str] = None,
-                     class_dir: str = None,
-                     javac: str = None,
-                     extra_arguments: t.List[str] = None,
-                     **kwargs):
-    super().__init__(**kwargs)
+  def init(self, srcs, src_roots=None, class_dir=None, javac=None,
+           extra_arguments=None, **kwargs):
+    kwargs = utils.call_with_signature(_JarProducingMixin.init, self, **kwargs)
+    utils.raise_unexpected_kwarg(kwargs)
 
     if src_roots is None:
       src_roots = options.get('java.src_roots', ['src', 'java', 'javatest'])
@@ -149,22 +98,21 @@ class library(JavaBase):
     self.extra_arguments = extra_arguments
     if not self.class_dir:
       self.class_dir = 'classes/' + self.target.name
-    self.class_dir = path.canonical(self.class_dir, self.target.cell.build_directory)
+    self.class_dir = path.canonical(self.class_dir, self.namespace.build_directory)
 
   def translate(self, jar_filename=None):
     jar_filename = jar_filename or self.jar_filename
     extra_arguments = options.get('java.extra_arguments', []) + (self.extra_arguments or [])
     classpath = []
 
-    for data in self.target.dep_traits():
-      if isinstance(data, library):
-        classpath.append(data.jar_filename)
-      elif isinstance(data, prebuilt):
-        classpath.extend(data.binary_jars)
+    for target in self.target.deps(with_behaviour=JavaLibrary):
+      classpath.append(target.impl.jar_filename)
+    for target in self.target.deps(with_behaviour=JavaPrebuilt):
+      classpath.extend(target.impl.binary_jars)
 
     # Calculate output files.
     classfiles = []
-    for base, sources in partition_sources(self.srcs, self.src_roots, self.target.cell.directory).items():
+    for base, sources in partition_sources(self.srcs, self.src_roots, self.namespace.directory).items():
       for src in sources:
         classfiles.append(path.join(self.class_dir, path.setsuffix(src, '.class')))
 
@@ -175,16 +123,12 @@ class library(JavaBase):
       command += self.srcs
       command += extra_arguments
 
-      javac = craftr.BuildAction(
+      self.target.add_action(
         name = 'javac',
-        deps = ...,
         commands = [command],
         input_files = classpath + self.srcs,
         output_files = classfiles
       )
-      self.target.add_action(javac)
-    else:
-      javac = None
 
     flags = 'cvf'
     if self.main_class:
@@ -195,17 +139,15 @@ class library(JavaBase):
       command.append(self.main_class)
     command += ['-C', self.class_dir, '.']
 
-    self.target.add_action(craftr.BuildAction(
+    self.target.add_action(
       name = 'jar',
-      deps = [javac or ...],
       commands = [command],
       input_files = classfiles,
       output_files = [jar_filename]
-    ))
+    )
 
 
-@craftr.TargetFactory
-class binary(library.cls):
+class JavaBinary(craftr.Behaviour, _JarProducingMixin):
   """
   Takes a list of Java dependencies and creates an executable JAR archive
   from them.
@@ -216,40 +158,40 @@ class binary(library.cls):
     is the value configured in `java.dist_type` (which defaults to `'merge'`).
   """
 
-  def __init__(self, main_class: str = None,
-                     dist_type: str = NotImplemented,
-                     **kwargs):
-    super().__init__(**kwargs)
+  def init(self, main_class=None, dist_type=NotImplemented, **kwargs):
+    kwargs = utils.call_with_signature(_JarProducingMixin.init, self, **kwargs)
+
     if not main_class:
       raise ValueError('missing value for "main_class"')
     if dist_type not in ('merge', 'onejar', None, NotImplemented):
       raise ValueError('invalid dist_type: {!r}'.format(dist_type))
     self.main_class = main_class
     self.dist_type = dist_type
+    self.library = None
 
-  def complete(self):
+    if kwargs.get('srcs'):
+      if self.dist_type is None:
+        kwargs['jar_name'] = self.jar_filename
+      else:
+        kwargs['jar_name'] = path.addtobase(self.jar_filename, '-classes')
+      self.library = library(name='lib', parent=self.target, **kwargs)
+
+  def translate(self):
     if self.dist_type is NotImplemented:
       self.dist_type = options.get('java.dist_type', 'merge')
 
-  def translate(self):
     inputs = []
-
-    if self.srcs:
-      if self.dist_type is None:
-        sub_jar = self.jar_filename
-      else:
-        sub_jar = path.addtobase(self.jar_filename, '-classes')
-      super().translate(jar_filename=sub_jar)
-      inputs.append(sub_jar)
+    if self.library:
+      self.library.translate()
+      inputs.append(self.library.impl.jar_filename)
 
     if self.dist_type is None:
       return
 
-    for data in self.target.dep_traits():
-      if isinstance(data, library):
-        inputs.append(data.jar_filename)
-      elif isinstance(data, prebuilt):
-        inputs.extend(data.binary_jars)
+    for target in self.target.deps(with_behaviour=JavaLibrary):
+      inputs.append(target.impl.jar_filename)
+    for target in self.target.deps(with_behaviour=JavaPrebuilt):
+      inputs.extend(target.impl.binary_jars)
 
     command = nodepy.runtime.exec_args + [str(require.resolve('./augjar').filename)]
     command += ['-o', self.jar_filename]
@@ -267,17 +209,15 @@ class binary(library.cls):
       for infile in inputs:
         command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
 
-    self.target.add_action(craftr.BuildAction(
+    self.target.add_action(
       name = self.dist_type,
-      deps = [self.target.actions.get('jar') or ...],
       commands = [command],
       input_files = inputs,
       output_files = [self.jar_filename]
-    ))
+    )
 
 
-@craftr.TargetFactory
-class prebuilt(craftr.TargetTrait):
+class JavaPrebuilt(craftr.Behaviour):
   """
   Represents a prebuilt JAR. If an artifact ID is specified, the artifact will
   be downloaded from Maven Central, or the configured maven repositories.
@@ -290,19 +230,11 @@ class prebuilt(craftr.TargetTrait):
     downloaded from Maven.
   """
 
-  def __init__(self,
-      binary_jar: str = None,
-      binary_jars: t.List[str] = None,
-      artifact: str = None,
-      artifacts: t.List[str] = None):
+  def init(self, binary_jars=None, artifacts=None):
     if not binary_jars:
       binary_jars = []
-    if binary_jar:
-      binary_jars.append(binary_jar)
     if not artifacts:
       artifacts = []
-    if artifact:
-      artifacts.append(artifact)
 
     self.artifacts = [maven.Artifact.from_id(x) for x in artifacts]
     self.binary_jars = [craftr.localpath(x) for x in binary_jars]
@@ -374,22 +306,17 @@ class prebuilt(craftr.TargetTrait):
         '--url', repo.get_artifact_uri(artifact, 'jar'),
         '--to', binary_jar
       ]
-      self.target.add_action(craftr.BuildAction(
+      self.target.add_action(
         name = str(artifact),
-        deps = ...,
         commands = [command],
         output_files = [binary_jar]
-      ))
-
-  def complete(self):
-    self.install()
+      )
 
   def translate(self):
-    pass
+    self.install()
 
 
-@craftr.TargetFactory
-class proguard(craftr.TargetTrait):
+class JavaProguard(craftr.Behaviour):
   """
   Run ProGuard on the JAR dependencies of this target. If the *pro_file*
   argument is specified, it must be the name of a response file that will
@@ -398,8 +325,7 @@ class proguard(craftr.TargetTrait):
   The *cwd* will default to the parent directory of *pro_file*, if specified.
   """
 
-  def __init__(self, pro_file=None, options=(), cwd=None, java=None,
-               outjars=None):
+  def init(self, pro_file=None, options=(), cwd=None, java=None, outjars=None):
     self.java = java or options.get('java.java', 'java')
     self.pro_file = craftr.localpath(pro_file) if pro_file else None
     if not cwd and self.pro_file:
@@ -410,11 +336,10 @@ class proguard(craftr.TargetTrait):
 
   def translate(self):
     injars = []
-    for data in self.target.traits():
-      if isinstance(data, prebuilt):
-        injars.append(data.binary_jar)
-      elif isinstance(data, (binary, library)):
-        injars.append(data.jar_filename)
+    for target in self.target.deps(with_behaviour=prebuilt):
+      injars.append(target.impl.binary_jar)
+    for target in self.target.deps(with_behaviour=library):
+      injars.append(target.impl.jar_filename)
 
     if self.outjars:
       outjars = self.outjars
@@ -431,13 +356,12 @@ class proguard(craftr.TargetTrait):
     args += ['-libraryjars', '<java.home>/lib/rt.jar']
     args += self.options
 
-    self.target.add_action(craftr.BuildAction(
-      deps = ...,
+    self.target.add_action(
       commands = [args],
       input_files = injars,
       output_files = outjars,
       cwd = self.cwd
-    ))
+    )
 
 
 def run(binary, *argv, name=None, java=None, jvm_args=(), **kwargs):
@@ -448,5 +372,11 @@ def run(binary, *argv, name=None, java=None, jvm_args=(), **kwargs):
     name = target.name + '_run'
   if java is None:
     java = options.get('java.java', 'java')
-  command = [java] + list(jvm_args) + ['-jar', target.trait.jar_filename] + list(argv)
+  command = [java] + list(jvm_args) + ['-jar', target.impl.jar_filename] + list(argv)
   return craftr.gentarget(name = name, deps = [target], commands = [command], **kwargs)
+
+
+library = craftr.Factory(JavaLibrary)
+binary = craftr.Factory(JavaBinary)
+prebuilt = craftr.Factory(JavaPrebuilt)
+proguard = craftr.Factory(JavaProguard)

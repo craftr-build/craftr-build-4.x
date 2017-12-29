@@ -1,8 +1,25 @@
 
+import argparse
 import collections
 import functools
+import inspect
 import itertools
 import sys
+import textwrap
+
+
+# Iteration/streaming and programming tools
+
+def call_with_signature(func, *args, **kwargs):
+  sig = inspect.signature(func)
+  pass_kwargs = {k: kwargs[k] for k in sig.parameters.keys() if k in kwargs}
+  func(*args, **pass_kwargs)
+  return {k: kwargs[k] for k in kwargs if k not in sig.parameters}
+
+
+def raise_unexpected_kwarg(kwargs):
+  for key in kwargs:
+    raise TypeError('unexpected keyword arguments {}'.format(key))
 
 
 def getter(name, key=None):
@@ -98,7 +115,19 @@ class stream:
     return cls(itertools.zip_longest(*[iter(iterable)] * n, fillvalue=fill))
 
   @dualmethod
-  def concat(cls, *iterables):
+  def concat(cls, iterables):
+    """
+    Similar to #itertools.chain.from_iterable().
+    """
+
+    def generator():
+      for it in iterables:
+        for element in it:
+          yield element
+    return cls(generator())
+
+  @dualmethod
+  def chain(cls, *iterables):
     """
     Similar to #itertools.chain.from_iterable().
     """
@@ -231,3 +260,42 @@ class named(metaclass=_named_meta):
 
   def asdict(self):
     return {k: getattr(self, k) for k in self.__annotations__}
+
+
+# Text tools
+
+def plural(word, number):
+  """
+  Creates the english plural for *word* if *number* is anything but the
+  value `1`, otherwise *word* is returned as-is.
+  """
+
+  if number == 1:
+    return word
+  return word + 's'  # TODO: special plurals
+
+
+def reindent(text, indent=''):
+  """
+  Uses #textwrap.dedent() to on *text*, then splits it by lines to add the
+  string *indent* before every line. Returns the new *text* with the new
+  indentation.
+  """
+
+  lines = textwrap.dedent(text).split('\n')
+  while lines and not lines[0].strip():
+    lines.pop(0)
+  while lines and not lines[-1].strip():
+    lines.pop()
+  return indent + ('\n' + indent).join(lines)
+
+
+class ReindentHelpFormatter(argparse.HelpFormatter):
+
+  def __init__(self, *a, **kw):
+    super().__init__(*a, **kw)
+    self._max_help_position = self._width // 2
+
+  def _fill_text(self, text, width, indent):
+    # Called to format the description.
+    return reindent(text, '  ')
