@@ -8,11 +8,14 @@ import {CompilerOptions, Compiler, extmacro} from '.'
 
 class GccCompilerOptions(CompilerOptions):
 
-  __annotations__ = []
+  __annotations__ = [
+    ('gcc_static_runtime', bool)
+  ]
 
 
 class GccCompiler(Compiler):
 
+  id = 'gcc'
   name = 'gcc'
   version = '??'  # TODO
   options_class = GccCompilerOptions
@@ -52,6 +55,15 @@ class GccCompiler(Compiler):
   ext_dll_macro = extmacro('.so.1', '.so.$(0)')
   ext_exe_macro = extmacro('', '.$(0)')
   obj_macro = '.o'
+
+  gcc_static_libc = '-static-libgcc'
+  gcc_static_libstdcpp = '-static-libstdc++'
+
+  def build_link_flags(self, build, outfile, additional_input_files):
+    flags = super().build_link_flags(build, outfile, additional_input_files)
+    if build.options.gcc_static_runtime:
+      flags += [self.gcc_static_libstdcpp] if build.has_cpp_sources() else [self.gcc_static_libc]
+    return flags
 
 
 def get_compiler(fragment):

@@ -399,6 +399,7 @@ class Compiler(utils.named):
   """
 
   __annotations__ = [
+    ('id', str),
     ('name', str),
     ('version', str),
     ('options_class', Type[CompilerOptions]),

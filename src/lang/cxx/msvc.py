@@ -20,6 +20,7 @@ class MsvcCompilerOptions(CompilerOptions):
 
 class MsvcCompiler(Compiler):
 
+  id = 'msvc'
   name = 'msvc'
   options_class = MsvcCompilerOptions
 
