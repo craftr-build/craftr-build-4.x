@@ -195,7 +195,7 @@ class CxxBuild(craftr.Behaviour):
     # Inherit static runtime property.
     if self.static_runtime is None:
       self.static_runtime = infer_bool(self.target, 'static_runtime',
-          craftr.options.get('cxx.static_runtime', False))
+          craftr.options.get('cxx.static_runtime', self.link_style == 'static'))
 
     # Inherit the optimize flag if it is not set.
     # XXX What do to on different values?
