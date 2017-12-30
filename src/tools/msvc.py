@@ -54,7 +54,6 @@ class MsvcInstallation(utils.named):
     else:
       return os.path.join(self.directory, 'VC', 'vcvarsall.bat')
 
-  @property
   def environ(self, arch=None, platform_type=None, sdk_version=None):
     """
     Executes the `vcvarsall.bat` of this installation with the specified
