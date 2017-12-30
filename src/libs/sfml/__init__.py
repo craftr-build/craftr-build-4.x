@@ -10,7 +10,7 @@ debug = craftr.options.get('sfml.debug', not craftr.is_release)
 
 if cxx.compiler.name in ('msvc', 'mingw'):
 
-  craftr.options.setdefault('msvc.runtime_library', 'dynamic')
+  craftr.options.setdefault('cxx.static_runtime', False)
 
   if not binary_dir:
     # Find the appropriate download URL.
