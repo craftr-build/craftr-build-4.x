@@ -3,6 +3,7 @@ Finds MinGW installations on Windows.
 """
 
 import os
+import re
 import subprocess
 import sys
 import utils from 'craftr/utils'
@@ -13,28 +14,34 @@ import winreg from 'craftr/utils/winreg'
 class MingwInstallation(utils.named):
 
   __annotations__ = [
-    ('location', str),
-    ('is_64', bool)
+    ('binpath', str),
+    ('_is_64', bool, None),
+    ('_gccinfo', dict, None),
+    ('_environ', dict, None),
   ]
 
   @property
-  def batfile(self):
-    if self.is_64:
-      return os.path.join(self.location, 'mingw-w64.bat')
-    else:
-      return os.path.join(self.location, 'mingw.bat')
+  def is_64(self):
+    if self._is_64 is not None:
+      return self._is_64
+    return '64' in self.gccinfo['target']
 
   @property
-  def binpath(self):
-    if self.is_64:
-      return os.path.join(self.location, 'mingw64', 'bin')
-    else:
-      return os.path.join(self.location, 'mingw', 'bin')
+  def gccinfo(self):
+    if self._gccinfo is None:
+      with sh.override_environ(self.environ):
+        output = sh.check_output(['gcc', '-v'], stderr=sh.STDOUT).decode()
+        target = re.search('Target:\s+(.*)$', output, re.M | re.I).group(1).strip()
+        version = re.search('\w+\s+version\s+([\d\.]+)', output, re.M | re.I).group(1)
+      self._gccinfo = {'target': target, 'version': version}
+    return self._gccinfo
 
+  @property
   def environ(self):
-    env = os.environ.copy()
-    env['PATH'] = self.binpath + os.pathsep + env['PATH']
-    return env
+    if self._environ is None:
+      self._environ = os.environ.copy()
+      self._environ['PATH'] = self.binpath + os.pathsep + self._environ['PATH']
+    return self._environ
 
   @classmethod
   def list(cls):
@@ -55,7 +62,12 @@ class MingwInstallation(utils.named):
             location = key.value('InstallLocation').data
           except FileNotFoundError:
             location = os.path.dirname(key.value('UninstallString').data)
-          results.append(cls(location, '64' in publisher))
+          is_64 = '64' in publisher
+          if is_64:
+            location = os.path.join(location, 'mingw64', 'bin')
+          else:
+            location = os.path.join(location, 'mingw', 'bin')
+          results.append(cls(location, is_64))
     return results
 
 
@@ -67,13 +79,15 @@ def main(argv=None):
 
   if not args.argv:
     for i, inst in enumerate(MingwInstallation.list()):
-      print('- Location:'.format(i), inst.location)
+      print('- Location:'.format(i), inst.binpath)
       print('  Use Options:', '--options cxx.compiler=mingw:{}'.format(i))
       print('  Architecture:', 'x64' if inst.is_64 else 'x86')
+      print('  Target:', inst.gccinfo['target'])
+      print('  Gcc Version:', inst.gccinfo['version'])
       print()
   else:
     inst = MingwInstallation.list()[0]
-    with sh.override_environ(inst.environ()):
+    with sh.override_environ(inst.environ):
       return subprocess.call(args.argv)
 
 

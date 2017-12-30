@@ -16,14 +16,22 @@ class MingwCompiler(GccCompiler):
 
 
 def get_compiler(fragment):
-  index = 0
   if fragment:
-    index = int(fragment)
-  inst = MingwInstallation.list()[index]
-  env = inst.environ()
+    try:
+      index = int(fragment)
+    except ValueError:
+      inst = MingwInstallation(fragment, None)
+    else:
+      inst = MingwInstallation.list()[index]
+  else:
+    inst = MingwInstallation().list()[0]
+
+  print('MinGW {} (gcc-{} v{}) @ {}'.format('x64' if inst.is_64 else 'x86',
+      inst.gccinfo['target'], inst.gccinfo['version'], inst.binpath))
+
   return MingwCompiler(
     inst,
-    compiler_env=inst.environ(),
-    linker_env=inst.environ(),
-    archiver_env=inst.environ()
+    compiler_env=inst.environ,
+    linker_env=inst.environ,
+    archiver_env=inst.environ
   )

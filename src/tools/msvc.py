@@ -36,13 +36,14 @@ class MsvcInstallation(utils.named):
   Represents an MSVC installation directory.
   """
 
+  _list = None
   __annotations__ = [
     ('version', int),
-    ('directory', str)
+    ('directory', str),
+    ('_environ', dict, None),
   ]
 
   @property
-  @functools.lru_cache()
   def vcvarsall(self):
     """
     Generates the path to the `vcvarsall.bat`.
@@ -53,7 +54,7 @@ class MsvcInstallation(utils.named):
     else:
       return os.path.join(self.directory, 'VC', 'vcvarsall.bat')
 
-  @functools.lru_cache()
+  @property
   def environ(self, arch=None, platform_type=None, sdk_version=None):
     """
     Executes the `vcvarsall.bat` of this installation with the specified
@@ -69,6 +70,9 @@ class MsvcInstallation(utils.named):
     is raised.
     """
 
+    if self._environ is not None:
+      return self._environ
+
     arch = get_arch()
     if arch == 'x86_64':
       arch = 'x86_amd64'
@@ -81,11 +85,13 @@ class MsvcInstallation(utils.named):
     return batchvars(self.vcvarsall, *args)
 
   @classmethod
-  @functools.lru_cache()
   def list(cls):
     """
     List all available MSVC installations.
     """
+
+    if cls._list is not None:
+      return cls._list
 
     # Check all VS_COMNTOOLS environment variables.
     results = []
@@ -125,7 +131,8 @@ class MsvcInstallation(utils.named):
 
     # TODO: Special handling for newer MSVC versions?
 
-    return sorted(results, key=operator.attrgetter('version'), reverse=True)
+    cls.list = sorted(results, key=operator.attrgetter('version'), reverse=True)
+    return cls.list
 
 
 class AsDictJSONEncoder(json.JSONEncoder):
@@ -326,7 +333,7 @@ def main(argv=None):
 
   installs = MsvcInstallation.list()
   if args.argv:
-    with sh.override_environ(installs[0].environ()):
+    with sh.override_environ(installs[0].environ):
       return subprocess.call(args.argv)
 
   if args.json:

@@ -5,6 +5,7 @@ import re
 import shlex
 
 from shutil import which
+from subprocess import PIPE, STDOUT, call, check_call, check_output
 
 
 class safe(str):
