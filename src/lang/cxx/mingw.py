@@ -24,7 +24,7 @@ def get_compiler(fragment):
     else:
       inst = MingwInstallation.list()[index]
   else:
-    inst = MingwInstallation().list()[0]
+    inst = MingwInstallation.list()[0]
 
   print('MinGW {} (gcc-{} v{}) @ {}'.format('x64' if inst.is_64 else 'x86',
       inst.gccinfo['target'], inst.gccinfo['version'], inst.binpath))
