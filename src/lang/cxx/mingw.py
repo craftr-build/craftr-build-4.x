@@ -4,15 +4,10 @@ import {GccCompiler} from './gcc'
 import {extmacro} from '.'
 
 
-class MingwCompilerOptions(GccCompiler.options_class):
-
-  gcc_static_runtime = True
-
 
 class MingwCompiler(GccCompiler):
 
   name = 'mingw'
-  options_class = MingwCompilerOptions
   ext_exe_macro = extmacro('.exe', '.$(0).exe')
 
   def __init__(self, mingw, **kwargs):

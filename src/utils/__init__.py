@@ -248,9 +248,14 @@ class named(metaclass=_named_meta):
     for key, ant in annotations.items():
       if key in kwargs:
         setattr(self, key, kwargs.pop(key))
-      elif not hasattr(self, key):
-        raise TypeError('{}() missing argument "{}"'
-          .format(type(self).__name__, key))
+      else:
+        try:
+          value = getattr(self, key)
+        except AttributeError:
+          raise TypeError('{}() missing argument "{}"'
+            .format(type(self).__name__, key))
+        if isinstance(value, named_initializer):
+          setattr(self, key, value.func())
 
     for key in kwargs.keys():
       raise TypeError('{}() unexpected keyword argument "{}"'
@@ -266,6 +271,17 @@ class named(metaclass=_named_meta):
 
   def asdict(self):
     return {k: getattr(self, k) for k in self.__annotations__}
+
+
+class named_initializer:
+  """
+  Use this for the default value of annotated fields to wrap a function that
+  will be called to retrieve the default value for the field. Works only with
+  #named as the base class.
+  """
+
+  def __init__(self, func):
+    self.func = func
 
 
 # Text tools

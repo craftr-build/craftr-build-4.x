@@ -8,9 +8,7 @@ import {CompilerOptions, Compiler, extmacro} from '.'
 
 class GccCompilerOptions(CompilerOptions):
 
-  __annotations__ = [
-    ('gcc_static_runtime', bool)
-  ]
+  __annotations__ = []
 
 
 class GccCompiler(Compiler):
@@ -45,6 +43,10 @@ class GccCompiler(Compiler):
   linker_exe = []
   linker_lib = '-l%ARG%'
   linker_libpath = '-L%ARG%'
+  linker_runtime = {
+    'c': {'static': '-static-libgcc', 'dynamic': []},
+    'cpp': {'static': '-static-libstdc++', 'dynamic': []}
+  }
 
   archiver = ['ar', 'rcs']
   archiver_env = None
@@ -59,11 +61,6 @@ class GccCompiler(Compiler):
   gcc_static_libc = '-static-libgcc'
   gcc_static_libstdcpp = '-static-libstdc++'
 
-  def build_link_flags(self, build, outfile, additional_input_files):
-    flags = super().build_link_flags(build, outfile, additional_input_files)
-    if build.options.gcc_static_runtime and not build.is_staticlib():
-      flags += [self.gcc_static_libstdcpp] if build.has_cpp_sources() else [self.gcc_static_libc]
-    return flags
 
 
 def get_compiler(fragment):

@@ -13,8 +13,7 @@ class MsvcCompilerOptions(CompilerOptions):
     ('nodefaultlib', bool, False),
     ('embedd_debug_symbols', bool, True),
     ('msvc_disable_warnings', List[str], None),
-    ('msvc_enabled_exceptions', bool, True),
-    ('msvc_runtime_library', str, None)
+    ('msvc_enabled_exceptions', bool, True)
   ]
 
 
@@ -47,6 +46,7 @@ class MsvcCompiler(Compiler):
   linker_exe = []
   linker_lib = '%ARG%.lib'
   linker_libpath = '/LIBPATH:%ARG%'
+  linker_runtime = {}  # Required flags will be added in build_compile_flags()
 
   archiver = ['lib', '/nologo']
   archiver_out = '/OUT:$out[0]'
@@ -66,10 +66,10 @@ class MsvcCompiler(Compiler):
     )
     self.toolkit = toolkit
 
-  def build_compile_flags(self, impl, language):
-    command = super().build_compile_flags(impl, language)
-    options = impl.options
-    if impl.debug:
+  def build_compile_flags(self, build, language):
+    command = super().build_compile_flags(build, language)
+    options = build.options
+    if build.debug:
       command += ['/Od', '/RTC1', '/FC']
       if not self.version or self.version >= '18':
         # Enable parallel writes to .pdb files.
@@ -83,41 +83,27 @@ class MsvcCompiler(Compiler):
     if options.msvc_enabled_exceptions and language == 'cpp':
       command += ['/EHsc']
 
-    # If not explicitly specified, determine whether we should link the
-    # MSVC runtime library statically or dynamically.
-    if not options.msvc_runtime_library:
-      options.msvc_runtime_library = craftr.options.get('msvc.runtime_library')
-    if not options.msvc_runtime_library:
-      if impl.link_style == 'static':
-        options.msvc_runtime_library = 'static'
-      elif impl.link_style == 'shared':
-        options.msvc_runtime_library = 'dynamic'
-      else:
-        assert False, impl.link_style
-
-    if options.msvc_runtime_library == 'static':
-      command += ['/MTd' if impl.debug else '/MT']
-    elif options.msvc_runtime_library == 'dynamic':
-      command += ['/MDd' if impl.debug else '/MD']
+    if build.static_runtime:
+      command += ['/MTd' if build.debug else '/MT']
     else:
-      assert False, options.msvc_runtime_library
+      command += ['/MDd' if build.debug else '/MD']
 
     return command
 
-  def build_link_flags(self, impl, outfile, additional_input_files):
-    command = super().build_link_flags(impl, outfile, additional_input_files)
-    options = impl.options
+  def build_link_flags(self, build, outfile, additional_input_files):
+    command = super().build_link_flags(build, outfile, additional_input_files)
+    options = build.options
     if options.nodefaultlib:
       command += ['/NODEFAULTLIB']
-    if impl.is_sharedlib():
+    if build.is_sharedlib():
       command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
     return command
 
-  def set_target_outputs(self, impl, ctx):
-    super().set_target_outputs(impl, ctx)
-    if impl.is_sharedlib():
-      impl.linkname_full = [path.setsuffix(x, '.lib') for x in impl.outname_full]
-      impl.additional_outputs.append(path.setsuffix(impl.outname_full[0], '.exp'))
+  def set_target_outputs(self, build, ctx):
+    super().set_target_outputs(build, ctx)
+    if build.is_sharedlib():
+      build.linkname_full = [path.setsuffix(x, '.lib') for x in build.outname_full]
+      build.additional_outputs.append(path.setsuffix(build.outname_full[0], '.exp'))
 
 
 def get_compiler(fragment):

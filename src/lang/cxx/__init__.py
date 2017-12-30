@@ -33,12 +33,12 @@ def infer_linkage(target):
   return preferred_linkage
 
 
-def infer_debug(target):
+def infer_bool(target, attr, default):
   for build in target.dependents(with_behaviour=CxxBuild).attr('impl'):
-    if build.debug:
+    if getattr(build, attr):
       return True
   else:
-    return not craftr.is_release
+    return default
 
 
 def infer_optimize(target):
@@ -75,6 +75,7 @@ class CxxBuild(craftr.Behaviour):
         exported_syslibs: List[str] = None,
         link_style: str = None,
         preferred_linkage: str = 'any',
+        static_runtime: bool = None,
         outname: str = '$(lib)$(name)$(ext)',
         outdir: str = NotImplemented,
         unity_build: bool = None,
@@ -130,6 +131,7 @@ class CxxBuild(craftr.Behaviour):
     self.exported_syslibs = exported_syslibs or []
     self.link_style = link_style
     self.preferred_linkage = preferred_linkage
+    self.static_runtime = static_runtime
     self.outname = outname
     self.outdir = outdir
     self.unity_build = unity_build
@@ -188,7 +190,12 @@ class CxxBuild(craftr.Behaviour):
     # Inherit the debug option if it is not set.
     # XXX What do to on different values?
     if self.debug is None:
-      self.debug = infer_debug(self.target)
+      self.debug = infer_bool(self.target, 'debug', not craftr.is_release)
+
+    # Inherit static runtime property.
+    if self.static_runtime is None:
+      self.static_runtime = infer_bool(self.target, 'static_runtime',
+          craftr.options.get('cxx.static_runtime', False))
 
     # Inherit the optimize flag if it is not set.
     # XXX What do to on different values?
@@ -424,6 +431,11 @@ class Compiler(utils.named):
     ('linker_exe', List[str]),               # Flag(s) to link an executable binary.
     ('linker_lib', List[str]),
     ('linker_libpath', List[str]),
+
+    # A dictionary for flags {lang: {static: [], dynamic: []}}
+    # Non-existing keys will have appropriate default values.
+    ('linker_runtime', Dict[str, Dict[str, List[str]]], utils.named_initializer(dict)),
+
     # XXX support MSVC /WHOLEARCHIVE
 
     ('archiver', List[str]),                 # Arguments to invoke the archiver.
@@ -575,6 +587,13 @@ class Compiler(utils.named):
         additional_input_files.extend(dep.static_libs)
       elif build.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
         additional_input_files.extend(dep.shared_libs)
+
+    lang = 'cpp' if build.has_cpp_sources() else 'c'
+    runtime = self.linker_runtime.get(lang, {})
+    if build.static_runtime:
+      flags += self.expand(runtime.get('static', []))
+    else:
+      flags += self.expand(runtime.get('dynamic', []))
 
     flags += concat([self.expand(self.linker_libpath, x) for x in unique(libpath)])
     flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
