@@ -36,7 +36,7 @@ def main(argv=None):
       dst.write('size_t {}_size = {};\n'.format(cname, len(data)))
       dst.write('unsigned char {}[] = {{\n'.format(cname))
       for b in data:
-        dst.write('{0:#08x}, '.format(b))
+        dst.write('{0:#02x}, '.format(b))
       dst.write('\n};\n')
 
 

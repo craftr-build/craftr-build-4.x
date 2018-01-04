@@ -342,7 +342,7 @@ def main(argv=None):
 
   installs = MsvcInstallation.list()
   if args.argv:
-    with sh.override_environ(installs[0].environ):
+    with sh.override_environ(installs[0].environ()):
       return subprocess.call(args.argv)
 
   if args.json:
