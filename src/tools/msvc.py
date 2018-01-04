@@ -130,7 +130,17 @@ class MsvcInstallation(utils.named):
 
     # TODO: Special handling for newer MSVC versions?
 
-    cls._list = sorted(results, key=operator.attrgetter('version'), reverse=True)
+    result = sorted(results, key=operator.attrgetter('version'), reverse=True)
+
+    # Special handling for explicitly defined MSVC install directory.
+    install_dir = options.get('msvc.install_dir')
+    if install_dir:
+      if not os.path.exists(install_dir):
+        log.warn('msvc.install_dir={!r} does not exist'.format(install_dir))
+      else:
+        result.insert(0, cls(-1, install_dir))
+
+    cls._list = result
     return cls._list
 
 
@@ -345,7 +355,10 @@ def main(argv=None):
       log.error('no MSVC installations could be detected.')
       return 1
     for inst in installs:
-      print('- %4d: %s' % (inst.version, inst.directory))
+      tk = MsvcToolkit.from_installation(inst)
+      print('- {}: {}'.format(inst.version, inst.directory))
+      print('  cl Version: {}'.format(tk.cl_info.version))
+      print()
 
 
 if require.main == module:
