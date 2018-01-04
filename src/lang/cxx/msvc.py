@@ -97,6 +97,8 @@ class MsvcCompiler(Compiler):
       command += ['/NODEFAULTLIB']
     if build.is_sharedlib():
       command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
+    if build.debug:
+      command += ['/DEBUG']
     return command
 
   def set_target_outputs(self, build, ctx):
