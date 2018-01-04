@@ -581,23 +581,6 @@ def main(argv=None):
       error('fatal: could not change to directory "{}" ({})'.format(args.cwd, e))
       return 1
 
-  # Handle --tool
-  if args.tool is not None:
-    if not args.tool:
-      error('fatal: --tool requires at least one argument')
-      return 1
-    try:
-      tool_module = require.try_('./tools/' + args.tool[0])
-    except require.TryResolveError:
-      error('fatal: no such tool:', args.tool[0])
-      return 1
-    try:
-      old_arg0 = sys.argv[0]
-      sys.argv[0] += ' --tool {}'.format(args.tool[0])
-      return tool_module.main(args.tool[1:])
-    finally:
-      sys.argv[0] = old_arg0
-
   # Handle --run-action if a --build-directory is explicitly specified.
   if (args.build is not NotImplemented or args.clean is not NotImplemented
       or args.configure is not NotImplemented or args.flush
@@ -650,6 +633,23 @@ def main(argv=None):
 
   # Handle --options
   set_options(concat(args.options))
+
+  # Handle --tool
+  if args.tool is not None:
+    if not args.tool:
+      error('fatal: --tool requires at least one argument')
+      return 1
+    try:
+      tool_module = require.try_('./tools/' + args.tool[0])
+    except require.TryResolveError:
+      error('fatal: no such tool:', args.tool[0])
+      return 1
+    try:
+      old_arg0 = sys.argv[0]
+      sys.argv[0] += ' --tool {}'.format(args.tool[0])
+      return tool_module.main(args.tool[1:])
+    finally:
+      sys.argv[0] = old_arg0
 
   # Determine the build directory.
   if not args.build_directory:
