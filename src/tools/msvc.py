@@ -130,8 +130,8 @@ class MsvcInstallation(utils.named):
 
     # TODO: Special handling for newer MSVC versions?
 
-    cls.list = sorted(results, key=operator.attrgetter('version'), reverse=True)
-    return cls.list
+    cls._list = sorted(results, key=operator.attrgetter('version'), reverse=True)
+    return cls._list
 
 
 class AsDictJSONEncoder(json.JSONEncoder):
@@ -337,14 +337,14 @@ def main(argv=None):
 
   if args.json:
     result = {}
-    for inst in MsvcInstallation.list():
+    for inst in installs:
       result[inst.version] = inst.directory
     print(json.dumps(result, indent=2))
   else:
     if not installs:
       log.error('no MSVC installations could be detected.')
       return 1
-    for inst in MsvcInstallation.list():
+    for inst in installs:
       print('- %4d: %s' % (inst.version, inst.directory))
 
 
