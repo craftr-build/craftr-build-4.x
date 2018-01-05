@@ -592,12 +592,13 @@ class Compiler(utils.named):
       elif build.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
         additional_input_files.extend(dep.shared_libs)
 
-    lang = 'cpp' if build.has_cpp_sources() else 'c'
-    runtime = self.linker_runtime.get(lang, {})
-    if build.static_runtime:
-      flags += self.expand(runtime.get('static', []))
-    else:
-      flags += self.expand(runtime.get('dynamic', []))
+    if not build.is_staticlib():
+      lang = 'cpp' if build.has_cpp_sources() else 'c'
+      runtime = self.linker_runtime.get(lang, {})
+      if build.static_runtime:
+        flags += self.expand(runtime.get('static', []))
+      else:
+        flags += self.expand(runtime.get('dynamic', []))
 
     flags += concat([self.expand(self.linker_libpath, x) for x in unique(libpath)])
     flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])

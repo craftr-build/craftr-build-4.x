@@ -62,6 +62,5 @@ class GccCompiler(Compiler):
   gcc_static_libstdcpp = '-static-libstdc++'
 
 
-
 def get_compiler(fragment):
   return GccCompiler()
