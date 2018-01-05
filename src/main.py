@@ -94,6 +94,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+  '--debug',
+  action='store_true',
+  help='Configure a debug build. Default'
+)
+
+parser.add_argument(
   '--release',
   action='store_true',
   help='Configure a release build. This option will set the `craftr.release` '
@@ -172,6 +178,17 @@ parser.add_argument(
   default=NotImplemented,
   help='Execute the build script and generate a JSON database file that '
        'contains all the build information.'
+)
+
+parser.add_argument(
+  '-rc', '--reconfigure',
+  metavar='BUILDSCRIPT',
+  nargs='?',
+  default=NotImplemented,
+  help='Same as --configure, only that previously defined options are '
+       'inherited, including the mode (--release or --debug) and the '
+       'BUILDSCRIPT if no other explicit value is specified. If there was '
+       'no previous configuration, acts like --configure.'
 )
 
 parser.add_argument(
@@ -290,11 +307,6 @@ def get_platform_tags():
         tags.add('wsl')
         tags.remove('linux')
   return tags
-
-
-def mark_build_root(build_root):
-  os.makedirs(build_root, exist_ok=True)
-  open(os.path.join(build_root, '.craftr_build_root'), 'w').close()
 
 
 def find_build_root():
@@ -556,6 +568,12 @@ def main(argv=None):
 
   args = parser.parse_args(argv)
 
+  # Validate some parameter combinations.
+  if (args.reconfigure is not NotImplemented and
+      args.configure is not NotImplemented):
+    error('fatal: --reconfigure and --configure are incompatible')
+    return 1
+
   # Handle --quickstart
   if args.quickstart:
     return quickstart(args.quickstart)
@@ -606,17 +624,6 @@ def main(argv=None):
   if not tags and not args.show_config_tags:
     print('note: unexpected platform "{}"'.format(sys.platform))
 
-  craftr.is_configure = True
-
-  # Handle --release
-  if args.release:
-    craftr.is_release = True
-    craftr.options['build.release'] = True
-    tags.add('release')
-  else:
-    craftr.is_release = False
-    tags.add('debug')
-
   # Initialize configuration platform properties.
   [craftr.options.add_cfg_property(x) for x in tags]
 
@@ -651,18 +658,51 @@ def main(argv=None):
     finally:
       sys.argv[0] = old_arg0
 
+  # Determine the build root directory.
+  if not args.build_root:
+    if args.build_directory:
+      args.build_root = args.build_directory
+    else:
+      args.build_root = craftr.options.get('build.directory', None)
+  if not args.build_root:
+    args.build_root = find_build_root()
+    if args.build_root and args.build_root != 'build':
+      print('note: automatically selected build root directory "{}"'.format(
+          args.build_root))
+  if not args.build_root:
+    args.build_root = 'build'
+
+  # Handle --reconfigure
+  build_root_file = os.path.join(args.build_root, '.craftr_build_root')
+  build_root_cache = {}
+  if args.reconfigure is not NotImplemented:
+    if os.path.isfile(build_root_file):
+      with open(build_root_file, 'r') as fp:
+        build_root_cache = json.load(fp)
+    if not args.release and not args.debug:
+      if build_root_cache.get('build_mode', 'debug') == 'release':
+        args.release = True
+      print('note: inheriting build mode:', 'release' if args.release else 'debug')
+    if args.reconfigure is None:
+      args.reconfigure = build_root_cache.get('build_script', None)
+      if args.reconfigure:
+        print('note: inheriting build script:', args.reconfigure)
+    args.configure = args.reconfigure
+
+  craftr.is_configure = True
+
+  # Handle --release
+  if args.release:
+    craftr.is_release = True
+    craftr.options['build.release'] = True
+    tags.add('release')
+  else:
+    args.debug = True
+    craftr.is_release = False
+    tags.add('debug')
+
   # Determine the build directory.
   if not args.build_directory:
-    if not args.build_root:
-      args.build_root = craftr.options.get('build.directory', None)
-    if not args.build_root:
-      args.build_root = find_build_root()
-      if args.build_root and args.build_root != 'build':
-        print('note: automatically selected build root directory "{}"'.format(
-            args.build_root))
-    if not args.build_root:
-      args.build_root = 'build'
-    mark_build_root(args.build_root)
     mode = 'release' if args.release else 'debug'
     args.build_directory = os.path.join(args.build_root, mode)
     craftr.build_directory = args.build_directory
@@ -687,8 +727,16 @@ def main(argv=None):
       except json.JSONDecodeError as e:
         print('warn: could not load cache from "{}"'.format(cache_file))
 
-  # Combine --options with the cached options, and set them again.
-  craftr.cache['options'] = merge_options(craftr.cache.get('options', []), concat(args.options))
+  # Handle --options (eventually combined with cached options).
+  if args.reconfigure is not NotImplemented:
+    # Combine --options with the cached options.
+    prev_options = craftr.cache.get('options', [])
+    if prev_options:
+      print('note: inheriting previous build options:', ' '.join(map(shlex.quote, prev_options)))
+    craftr.cache['options'] = merge_options(prev_options, concat(args.options))
+  else:
+    # Only use the new options.
+    craftr.cache['options'] = list(concat(args.options))
   no_such_options, invalid_options = set_options(craftr.cache['options'])
   if no_such_options:
     print('note: these options can not be removed:', no_such_options)
@@ -753,6 +801,11 @@ def main(argv=None):
       build_graph = craftr.BuildGraph().from_actions(actions)
       print('note: writing "{}"'.format(build_graph_file))
       build_graph.write(build_graph_file)
+
+    build_root_cache['build_mode'] = 'release' if craftr.is_release else 'debug'
+    build_root_cache['build_script'] = args.configure
+    with open(build_root_file, 'w') as fp:
+      json.dump(build_root_cache, fp, indent=2, sort_keys=True)
 
   # Handle --save-cache
   if args.save_cache:
