@@ -312,7 +312,7 @@ def get_platform_tags():
 def find_build_root():
   results = []
   for name in os.listdir('.'):
-    if os.path.isfile(os.path.join(name, '.craftr_build_root')):
+    if os.path.isfile(os.path.join(name, 'craftr_build_root.json')):
       results.append(name)
   if len(results) > 1:
     error('fatal: multiple candidates found for --build-root')
@@ -675,17 +675,18 @@ def main(argv=None):
   if not args.build_root:
     args.build_root = 'build'
 
-  # Handle --reconfigure
-  build_root_file = os.path.join(args.build_root, '.craftr_build_root')
+  # Read the build root cache.
+  build_root_file = os.path.join(args.build_root, 'craftr_build_root.json')
   build_root_cache = {}
-  if args.reconfigure is not NotImplemented:
-    if os.path.isfile(build_root_file):
-      with open(build_root_file, 'r') as fp:
+  if os.path.isfile(build_root_file):
+    with open(build_root_file, 'r') as fp:
+      try:
         build_root_cache = json.load(fp)
-    if not args.release and not args.debug:
-      if build_root_cache.get('build_mode', 'debug') == 'release':
-        args.release = True
-      print('note: inheriting build mode:', 'release' if args.release else 'debug')
+      except json.JSONDecodeError as e:
+        print('warn: could not load {!r}: {}'.format(build_root_file, e))
+
+  # Handle --reconfigure
+  if args.reconfigure is not NotImplemented:
     if args.reconfigure is None:
       args.reconfigure = build_root_cache.get('build_script', None)
       if args.reconfigure:
@@ -693,6 +694,12 @@ def main(argv=None):
     args.configure = args.reconfigure
 
   craftr.is_configure = True
+
+  # Fall back to --release or --debug from the build root cache.
+  if not args.release and not args.debug:
+    if build_root_cache.get('build_mode', 'debug') == 'release':
+      args.release = True
+    print('note: inheriting build mode:', 'release' if args.release else 'debug')
 
   # Handle --release
   if args.release:
