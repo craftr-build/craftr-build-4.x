@@ -1,6 +1,10 @@
 
 #include "argument_parser.hpp"
 #include <iostream>
+#include <string>
+
+extern "C" unsigned char BUILDSCRIPT[];
+extern "C" size_t BUILDSCRIPT_size;
 
 int main(int argc, char** argv) {
   argument_parser parser("craftr-examples-cxx");
@@ -17,6 +21,10 @@ int main(int argc, char** argv) {
   if (parser.has("hex")) {
     long value = std::stol(parser["hex"][0]);
     std::cout << std::hex << value << std::endl;
+    return 0;
   }
+
+  std::cout << "Build Script used to compile this program:\n\n";
+  std::cout << std::string((char*)BUILDSCRIPT, BUILDSCRIPT_size) << std::endl;
   return 0;
 }
