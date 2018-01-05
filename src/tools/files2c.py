@@ -23,7 +23,7 @@ def main(argv=None):
   args = parser.parse_args(argv)
   with open(args.output, 'w') as dst:
     print(args.output)
-    dst.write('#include <stdint.h>\n')
+    dst.write('#include <stddef.h>\n')
     for fname in args.files:
       drive, fname = os.path.splitdrive(fname)
       fname, sep, cname = fname.partition(':')
