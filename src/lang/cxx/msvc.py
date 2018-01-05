@@ -97,7 +97,7 @@ class MsvcCompiler(Compiler):
       command += ['/NODEFAULTLIB']
     if build.is_sharedlib():
       command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
-    if build.debug:
+    if build.debug and build.is_sharedlib():
       command += ['/DEBUG']
     return command
 

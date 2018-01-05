@@ -266,9 +266,12 @@ class CxxBuild(craftr.Behaviour):
 
     additional_input_files = []
     command = self.compiler.build_link_flags(self, '$out', additional_input_files)
+
     outputs = list(self.outname_full)
+    optional_outputs = []
     if self.linkname_full:
-      outputs.extend(self.linkname_full)
+      optional_outputs.extend(self.linkname_full)
+
     self.target.add_action(
       name = 'link',
       commands = [command],
@@ -276,7 +279,8 @@ class CxxBuild(craftr.Behaviour):
       output = True,
       environ = self.compiler.linker_env,
       input_files = list(concat(obj_files)) + additional_input_files,
-      output_files = outputs + self.additional_outputs
+      output_files = outputs,
+      optional_output_files = optional_outputs + self.additional_outputs,
     )
 
 
