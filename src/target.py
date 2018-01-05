@@ -106,7 +106,7 @@ class Namespace:
   @classmethod
   def current(cls, create=True):
     package = require.current.package
-    if not package and require.current != require.main:
+    if not package and require.current != require.main and not hasattr(require.current.namespace, 'namespace'):
       raise RuntimeError('can not create Namespace for non-main script '
                         'without an associated Node.py package')
     namespace = cls.from_module(require.current)
