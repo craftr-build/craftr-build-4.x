@@ -468,7 +468,7 @@ def run_build_action(graph, node_name, index):
 
   # Used to print the command-list on failure.
   def print_command_list(current=-1):
-    error('Command list:'.format(node.name))
+    error('Command list:'.format(node.identifier()))
     for i, cmd in enumerate(node.commands):
       error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
 
@@ -485,7 +485,7 @@ def run_build_action(graph, node_name, index):
       code = 127
     if code != 0:
       error('\n' + '-'*60)
-      error('fatal: "{}" exited with code {}.'.format(node.name, code))
+      error('fatal: "{}" exited with code {}.'.format(node.identifier(), code))
       print_command_list(i)
       error('-'*60 + '\n')
       return code
@@ -494,7 +494,7 @@ def run_build_action(graph, node_name, index):
   missing_files = [x for x in files.outputs if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
-    error('fatal: "{}" produced only {} of {} listed output files.'.format(node.name,
+    error('fatal: "{}" produced only {} of {} listed output files.'.format(node.identifier(),
         len(files.outputs) - len(missing_files), len(files.outputs)))
     error('The missing files are:')
     for x in missing_files:
