@@ -573,6 +573,9 @@ def main(argv=None):
       args.configure is not NotImplemented):
     error('fatal: --reconfigure and --configure are incompatible')
     return 1
+  if args.release and args.debug:
+    error('fatal: --release and --debug are incompatible')
+    return 1
 
   # Handle --quickstart
   if args.quickstart:
