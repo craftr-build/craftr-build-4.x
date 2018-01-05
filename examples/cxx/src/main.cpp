@@ -1,5 +1,6 @@
 
 #include "argument_parser.hpp"
+#include <cstdint>
 #include <iostream>
 #include <string>
 
