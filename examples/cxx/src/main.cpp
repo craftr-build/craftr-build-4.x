@@ -5,7 +5,7 @@
 #include <string>
 
 extern "C" unsigned char BUILDSCRIPT[];
-extern "C" size_t BUILDSCRIPT_size;
+extern "C" std::size_t BUILDSCRIPT_size;
 
 int main(int argc, char** argv) {
   argument_parser parser("craftr-examples-cxx");
