@@ -783,7 +783,7 @@ def main(argv=None):
     if os.path.isdir(args.configure):
       args.configure = posixpath.join(args.configure, 'BUILD.cr.py')
     if not os.path.isabs(args.configure):
-      args.configure = './' + args.configure
+      args.configure = './' + os.path.normpath(args.configure)
     build_module = require.new('.').resolve(args.configure)
     with require.context.push_main(build_module):
       require.context.load_module(build_module)
