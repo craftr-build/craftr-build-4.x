@@ -1,24 +1,138 @@
 
 import collections
 import hashlib
+import itertools
 import json
 import os
 import time
+import {stream.concat as concat} from 'craftr/utils'
+
+
+class IOFiles:
+  """
+  Represents a set of input, output and optional output files.
+  """
+
+  def __init__(self, inputs, outputs, optional_outputs):
+    self.inputs = inputs
+    self.outputs = outputs
+    self.optional_outputs = optional_outputs
+
+  def __repr__(self):
+    return '<IOFiles inputs={!r} outputs={!r} optional_outputs={!r}>'.format(
+      self.inputs, self.outputs, self.optional_outputs)
+
+  def as_json(self):
+    return {
+      'inputs': self.inputs,
+      'outputs': self.outputs,
+      'optional_outputs': self.optional_outputs
+    }
+
+  @classmethod
+  def from_json(cls, data):
+    return cls(**data)
 
 
 class BuildAction:
   """
   Represents a concrete sequence of system commands.
+
+  # Parameters
+  scope (str):
+    The scope of the action (this is usually the identifier of the target
+    that generated the action).
+  name (str):
+    The name of the action inside the scope.
+  commands (list of list of str):
+    A list of commands to execute in order. The variables `$in`, `$out` and
+    `$optionalout` are supported. Additionally, a specific index in the list of
+    in/out/optionalout files can be accessed using eg. `$out[0]`. The suffix
+    can be modified by appending it to the variable like `$out.d` or
+    `$out[0].d`.
+  deps (list of BuildAction):
+    A list of actions that need to be executed before this action. This
+    relationship should also roughly be represented by the input and output
+    files of the actions.
+  cwd (str):
+    The directory to execute the action in.
+  environ (dict of (str, str)):
+    An environment dictionary that will be merged on top of the current
+    environment before running the commands in the action.
+  foreach (bool):
+    If #True, the *commands* are run for every pair of input/output files
+    in the *files* list, otherwise the commands will be run once.
+  explicit (bool):
+    If #True, this action must be explicitly specified to be built or
+    required by another action to be run.
+  console (bool):
+    #True if the action needs to be run with the original stdin/stdout/stderr
+    attached.
+  input_files (list of str | list of list of str):
+    A list of input files or a list of lists of input files. The latter format
+    is required with *foreach* set to #True, otherwise the former format
+    should be used or the list should contain only one list of input files.
+    If this argument is used, it is used together with *output_files* and
+    *optional_output_files* to construct the *files* list.
+  output_files (list of str | list of list of str):
+    If *foreach* is #True, it must have the same length as *input_files*.
+  optional_output_files (list of str | list of list of str):
+    If *foreach* is #True, it must have the same length as *input_files*.
+  files (IOFiles | list of IOFiles):
+    A list of #IOFiles objects (required if *foreach* is #True) or a single
+    #IOFiles object (only if *foreach* is #False). Can not be mixed with
+    *input_files*, *output_files* or *optional_output_files*.
   """
 
-  def __init__(self, scope, name, commands, input_files, output_files, deps,
-               cwd, environ, foreach, explicit, console):
-    assert isinstance(scope, str), type(scope)
+  def __init__(self, scope, name, commands,
+               deps=None, cwd=None, environ=None, foreach=False,
+               explicit=False, console=False, input_files=None,
+               output_files=None, optional_output_files=None, files=None):
+    if not isinstance(scope, str):
+      raise TypeError('scope must be str, got {}'.format(type(scope).__name__))
+    if not isinstance(name, str):
+      raise TypeError('scope must be str, got {}'.format(type(name).__name__))
+    if not isinstance(commands, (list, tuple)):
+      raise TypeError('commands must be a list/tuple, got {}'.format(
+        type(commands).__name__))
+
+    if (input_files is not None or output_files is not None or
+        optional_output_files is not None):
+      if files is not None:
+        raise TypeError('files parameter can not be mixed with '
+          'input_files/output_files/optional_output_files')
+
+      input_files = self._normalize_file_list(input_files or [], foreach)
+      output_files = self._normalize_file_list(output_files or [], foreach)
+      optional_output_files = self._normalize_file_list(optional_output_files or [], foreach)
+      files = []
+
+      if foreach:
+        sizes = set(len(x) for x in (input_files, output_files, optional_output_files))
+        if 0 in sizes: sizes.remove(0)
+        if len(sizes) not in (0, 1):
+          raise ValueError('incompatible input_files ({}), output_files ({}) '
+              'optional_output_files ({}) lengths for foreach BuildAction'
+            .format(len(input_files), len(output_files),
+              len(optional_output_files))
+          )
+      files = [
+        IOFiles(a, b, c) for a, b, c in
+        itertools.zip_longest(
+          input_files, output_files, optional_output_files,
+          fillvalue=[])
+      ]
+    else:
+      if not foreach and not isinstance(files, (list, tuple)):
+        files = [files]
+      if not all(isinstance(x, IOFiles) for x in files):
+        raise TypeError('files must be a List[IOFiles] or IOFiles, got {}'
+          .format(set(type(x).__name__ for x in files)))
+
     self.scope = scope
     self.name = name
     self.commands = commands
-    self.input_files = input_files
-    self.output_files = output_files
+    self.files = files
     self.deps = deps
     self.cwd = cwd
     self.environ = environ
@@ -32,18 +146,24 @@ class BuildAction:
   def identifier(self):
     return '{}#{}'.format(self.scope, self.name)
 
+  def get_output_files(self):
+    return list(concat(x.outputs for x in self.files))
+
   def as_json(self):
     result = vars(self).copy()
     result['deps'] = [x.identifier() for x in self.deps]
+    result['files'] = [x.as_json() for x in self.files]
     return result
 
   @classmethod
-  def from_json(cls, data, nodes):
-    data['deps'] = [nodes[x] for x in data['deps']]
+  def from_json(cls, data, nodes=None):
+    if nodes is not None:
+      data['deps'] = [nodes[x] for x in data['deps']]
+    data['files'] = [IOFiles.from_json(x) for x in data['files']]
     return cls(**data)
 
   @staticmethod
-  def normalize_file_list(lst, foreach):
+  def _normalize_file_list(lst, foreach):
     """
     Normalizes a list of filenames. This will result in a `List[List[str]]`.
     If *foreach* is #False, there will be exactly one item in the returned
@@ -65,7 +185,6 @@ class BuildAction:
           raise ValueError('expected List[^str], got {}'.format(type(item).__name__))
         result[-1].append(item)
     return result
-
 
 
 class BuildGraph:
@@ -106,7 +225,7 @@ class BuildGraph:
     for key, value in data['actions'].items():
       value = value.copy()
       value['deps'] = []
-      action = BuildAction(**value)
+      action = BuildAction.from_json(value)
       self._actions[key] = action
     for key, value in data['actions'].items():
       self._actions[key].deps = [self._actions[x] for x in value['deps']]
@@ -143,7 +262,7 @@ class BuildGraph:
 
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as fp:
-      json.dump(self.as_json(), fp)
+      json.dump(self.as_json(), fp, indent=2, sort_keys=True)
 
   def actions(self):
     """

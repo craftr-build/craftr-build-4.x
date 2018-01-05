@@ -72,33 +72,33 @@ def export_action(build_directory, writer, graph, action, non_explicit):
 
   order_only = []
   for dep in action.deps:
-    if not any(dep.output_files):
-      order_only.append(make_rule_name(graph, dep))
+    output_files = dep.get_output_files()
+    if output_files:
+      order_only.extend(output_files)
     else:
-      order_only.extend(concat(dep.output_files))
+      order_only.append(make_rule_name(graph, dep))
 
   writer.rule(rule_name, command, description=make_rule_description(action), pool = 'console' if action.console else None)
   if action.foreach:
-    assert len(action.input_files) == len(action.output_files), action.identifier()
-    for index, (infiles, outfiles) in enumerate(zip(action.input_files, action.output_files)):
+    for index, files in enumerate(action.files):
       writer.build(
-        outputs = outfiles,
+        outputs = files.outputs + files.optional_outputs,
         rule = rule_name,
-        inputs = infiles,
+        inputs = files.inputs,
         order_only = order_only,
         variables = {'index': str(index)}
       )
   else:
-    assert len(action.output_files) == 1
-    assert len(action.input_files) == 1
+    assert len(action.files) == 1
     writer.build(
-      outputs = action.output_files[0] or [phony_name],
+      outputs = (action.files[0].outputs + action.files[0].optional_outputs) or [phony_name],
       rule = rule_name,
-      inputs = action.input_files[0],
+      inputs = action.files[0].inputs,
       order_only = order_only)
 
-  if any(action.output_files):
-    writer.build([phony_name], 'phony', list(concat(action.output_files)))
+  output_files = action.get_output_files()
+  if output_files:
+    writer.build([phony_name], 'phony', output_files)
 
 
 def check_ninja_version(build_directory, download=False):

@@ -269,8 +269,8 @@ class Target:
       target.__dependents.append(self)
 
   def add_action(self, name, commands, input_files=None, output_files=None,
-        input=None, deps=None, output=False, cwd=None, environ=None,
-        foreach=False):
+        optional_output_files=None, files=None, input=None, deps=None,
+        output=False, cwd=None, environ=None, foreach=False):
     """
     Creates a new action in the target that consists of one or more system
     commands and the specified *name*. Unless otherwise explicitly stated
@@ -301,12 +301,6 @@ class Target:
     assert all(isinstance(x, (list, tuple)) for x in commands)
     assert all(isinstance(x, str) for l in commands for x in l)
 
-    input_files = BuildAction.normalize_file_list(input_files or [], foreach)
-    output_files = BuildAction.normalize_file_list(output_files or [], foreach)
-    if foreach and len(input_files) != len(output_files):
-      raise ValueError('For-each action must have the same number of input '
-                       'files as output files.')
-
     if name is None:
       name = str(len(self.__actions))
     if name in self.__actions:
@@ -329,9 +323,18 @@ class Target:
         msg = 'Action deps must be Target or BuildAction, got {!r}'
         raise ValueError(msg.format(type(dep).__name__))
 
-    action = BuildAction(self.identifier(), name, commands, input_files,
-        output_files, actual_deps, cwd, environ, foreach, self.explicit,
-        self.console)
+    action = BuildAction(
+      self.identifier(), name, commands,
+      input_files=input_files,
+      output_files=output_files,
+      optional_output_files=optional_output_files,
+      files=files,
+      deps=actual_deps,
+      cwd=cwd,
+      environ=environ,
+      foreach=foreach,
+      explicit=self.explicit,
+      console=self.console)
     self.__actions[name] = action
     if output:
       self.__output_actions.append(action)

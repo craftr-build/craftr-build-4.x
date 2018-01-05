@@ -18,7 +18,7 @@ import sys
 import toml
 
 import craftr from 'craftr'
-import utils, {plural, stream.concat as concat} from 'craftr/utils'
+import utils, {plural, stream.concat as concat, stream.chain as chain} from 'craftr/utils'
 
 error = functools.partial(print, file=sys.stderr)
 
@@ -375,7 +375,7 @@ def get_additional_args_for(action_name):
   return []
 
 
-def substitute_inputs_outputs(command, inputs, outputs):
+def substitute_inputs_outputs(command, iofiles):
   """
   Substitutes the $in and $out references in *command* for the *inputs*
   and *outputs*.
@@ -399,8 +399,9 @@ def substitute_inputs_outputs(command, inputs, outputs):
       commands[i:i+1] = subst
       offset += len(subst) - 1
 
-  expand(command, 'in', inputs)
-  expand(command, 'out', outputs)
+  expand(command, 'in', iofiles.inputs)
+  expand(command, 'out', iofiles.outputs)
+  expand(command, 'optionalout', iofiles.optional_outputs)
   return command
 
 
@@ -419,20 +420,19 @@ def run_build_action(graph, node_name, index):
     return 1
 
   if node.foreach and index is None:
-    error('fatal: build node is marked "foreach" but --run-action-index is '
-          'not specified.')
+    error('fatal: --run-action-index is required for foreach action')
     return 1
+  if not node.foreach and index is not None:
+    error('fatal: --run-action-index is incompatible with non-foreach action')
+    return 1
+  if not node.foreach:
+    index = 0
 
   if node_hash is not None and node_hash != graph.hash(node):
     error('fatal: build node hash inconsistency, maybe try --prepare-build')
     return 1
 
-  if node.foreach:
-    input_files, output_files = node.input_files[index], node.output_files[index]
-  else:
-    assert len(node.input_files) == 1
-    assert len(node.output_files) == 1
-    input_files, output_files = node.input_files[0], node.output_files[0]
+  files = node.files[index]
 
   # TODO: The additional args feature should be explicitly supported by the
   #       build node, allowing it to specify a position where the additional
@@ -443,7 +443,7 @@ def run_build_action(graph, node_name, index):
 
   # Ensure that the output directories exist.
   created_dirs = set()
-  for directory in (os.path.dirname(x) for x in output_files):
+  for directory in (os.path.dirname(x) for x in chain(files.outputs, files.optional_outputs)):
     if directory not in created_dirs:
       os.makedirs(directory, exist_ok=True)
       created_dirs.add(directory)
@@ -462,7 +462,7 @@ def run_build_action(graph, node_name, index):
 
   # Execute the subcommands.
   for i, cmd in enumerate(node.commands):
-    cmd = substitute_inputs_outputs(cmd, input_files, output_files)
+    cmd = substitute_inputs_outputs(cmd, files)
     # Add the additional_args to the last command in the chain.
     if i == len(node.commands) - 1:
       cmd = cmd + additional_args
@@ -479,11 +479,11 @@ def run_build_action(graph, node_name, index):
       return code
 
   # Check if all output files have been produced by the commands.
-  missing_files = [x for x in output_files if not os.path.exists(x)]
+  missing_files = [x for x in files.outputs if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
     error('fatal: "{}" produced only {} of {} listed output files.'.format(node.name,
-        len(output_files) - len(missing_files), len(output_files)))
+        len(files.outputs) - len(missing_files), len(files.outputs)))
     error('The missing files are:')
     for x in missing_files:
       error('  -', x)
