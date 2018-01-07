@@ -13,7 +13,8 @@ class MsvcCompilerOptions(CompilerOptions):
     ('nodefaultlib', bool, False),
     ('embedd_debug_symbols', bool, True),
     ('msvc_disable_warnings', List[str], None),
-    ('msvc_enabled_exceptions', bool, True)
+    ('msvc_enabled_exceptions', bool, True),
+    ('msvc_resource_files', List[str], None)
   ]
 
 
@@ -63,9 +64,31 @@ class MsvcCompiler(Compiler):
       arch = toolkit.cl_info.target,
       compiler_env = toolkit.environ,
       linker_env = toolkit.environ,
-      archiver_env = toolkit.environ
+      archiver_env = toolkit.environ,
     )
     self.toolkit = toolkit
+
+  def on_target_created(self, build):
+    if build.options.msvc_resource_files and build.localize_srcs:
+      build.options.msvc_resource_files = [craftr.localpath(x) for x in build.options.msvc_resource_files]
+
+  def before_link(self, build):
+    result = []
+    options = build.options
+    obj_dir = path.join(build.namespace.build_directory, 'obj', build.target.name)
+    if options.msvc_resource_files:
+      outfiles = craftr.relocate_files(options.msvc_resource_files, obj_dir, '.res')
+      command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']
+      result.append(build.target.add_action(
+        name = 'rc',
+        commands = [command],
+        environ = self.toolkit.environ,
+        input_files = options.msvc_resource_files,
+        output_files = outfiles,
+        foreach=True
+      ))
+      build.additional_link_files.extend(outfiles)
+    return result
 
   def build_compile_flags(self, build, language):
     command = super().build_compile_flags(build, language)

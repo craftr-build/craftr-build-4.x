@@ -47,7 +47,7 @@ def localpath(p):
   """
 
   if path.isrel(p):
-    p = path.join(str(require.current.directory), p)
+    p = path.join(Namespace.current().directory, p)
   return path.canonical(p)
 
 

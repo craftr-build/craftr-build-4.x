@@ -138,6 +138,7 @@ class CxxBuild(craftr.Behaviour):
     self.compiler = compiler
     self.options = options
     self.additional_outputs = []
+    self.additional_link_files = []
     self.localize_srcs = localize_srcs
 
     if self.is_foreach():
@@ -164,6 +165,8 @@ class CxxBuild(craftr.Behaviour):
       log.warn('[{}]: Unknown compiler option(s): {}'.format(
         self.target.identifier(), ', '.join(self.options.__unknown_options__.keys())))
 
+    compiler.on_target_created(self)
+
   def is_foreach(self):
     return isinstance(self.outname, list)
 
@@ -183,6 +186,8 @@ class CxxBuild(craftr.Behaviour):
     return False
 
   def translate(self):
+    self.compiler.before_translate(self)
+
     # Update the preferred linkage of this target.
     if self.preferred_linkage == 'any':
       self.preferred_linkage = infer_linkage(self.target)
@@ -235,6 +240,8 @@ class CxxBuild(craftr.Behaviour):
             print('#include "{}"'.format(path.abs(filename)), file=fp)
         srcs[:] = [unity_filename]
 
+    before_compile_actions = self.compiler.before_compile(self) or []
+
     ctx = macro.Context()
     self.compiler.init_macro_context(self, ctx)
     self.compiler.set_target_outputs(self, ctx)
@@ -249,21 +256,21 @@ class CxxBuild(craftr.Behaviour):
     for lang, srcs in (('c', c_srcs), ('cpp', cpp_srcs)):
       if not srcs: continue
       # XXX Could result in clashing object file names!
-      output_files = [
-        path.join(obj_dir, path.base(path.rmvsuffix(x)) + obj_suffix)
-        for x in srcs
-      ]
+      output_files = craftr.relocate_files(srcs, obj_dir, obj_suffix)
       command = self.compiler.build_compile_flags(self, lang)
       obj_actions.append(self.target.add_action(
         name = 'compile_' + lang,
         commands = [command],
         input = True,
+        deps = before_compile_actions,
         environ = self.compiler.compiler_env,
         input_files = srcs,
         output_files = output_files,
         foreach = True
       ))
       obj_files.append(output_files)
+
+    before_link_actions = self.compiler.before_link(self) or []
 
     additional_input_files = []
     command = self.compiler.build_link_flags(self, '$out', additional_input_files)
@@ -276,10 +283,10 @@ class CxxBuild(craftr.Behaviour):
     self.target.add_action(
       name = 'link',
       commands = [command],
-      deps = obj_actions,
+      deps = obj_actions + before_link_actions,
       output = True,
       environ = self.compiler.linker_env,
-      input_files = list(concat(obj_files)) + additional_input_files,
+      input_files = list(concat(obj_files)) + additional_input_files + self.additional_link_files,
       output_files = outputs,
       optional_output_files = optional_outputs + self.additional_outputs,
     )
@@ -505,6 +512,30 @@ class Compiler(utils.named):
     if self.obj_macro:
       ctx.define('obj', self.obj_macro)
     ctx.define('name', build.target.name)
+
+  def on_target_created(self, build):
+    pass
+
+  def before_translate(self, build):
+    pass
+
+  def before_compile(self, build):
+    """
+    Calld before #build_compile_flags(). Allows you to create additional
+    build actions. Return a list of build actions that will be added as
+    deps to the compile step.
+    """
+
+    return None
+
+  def before_link(self, build):
+    """
+    Called before #build_link_flags(). Allows you to create additional
+    build actions. Return a list of build actions that will be added as
+    deps to the link step.
+    """
+
+    return None
 
   def build_compile_flags(self, build, language):
     """
