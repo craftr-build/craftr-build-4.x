@@ -2,6 +2,7 @@
 Public build-script API of the Craftr build system.
 """
 
+import re
 import requests
 import posixpath
 import tarfile
@@ -73,7 +74,7 @@ def relocate_files(files, outdir, suffix, replace_suffix=True, parent=None):
   """
 
   if parent is None:
-    parent = cell().directory
+    parent = Namespace.current().directory
   outdir = path.canonical(outdir)
   parent = path.canonical(parent)
 
