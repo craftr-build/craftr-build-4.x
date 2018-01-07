@@ -309,12 +309,12 @@ class Target:
     if name in self.__actions:
       raise ValueError('Action name already used: {!r}'.format(name))
 
-    if input and deps is not None:
-      raise ValueError('invalid combination of arguments (input~=True && deps!=None)')
+    deps_was_none = deps is None
+    deps = [] if deps is None else list(deps)
     if input or (input is None and not self.__actions):
-      deps = list(self.deps(transitive=True))
-    elif deps is None and self.__actions:
-      deps = [self.__last_action()]
+      deps += self.deps(transitive=True)
+    elif deps_was_none and self.__actions:
+      deps += [self.__last_action()]
 
     actual_deps = []
     for dep in deps:
