@@ -60,6 +60,7 @@ class MsvcCompiler(Compiler):
   def __init__(self, toolkit):
     super().__init__(
       version = toolkit.cl_version,
+      arch = toolkit.cl_info.target,
       compiler_env = toolkit.environ,
       linker_env = toolkit.environ,
       archiver_env = toolkit.environ

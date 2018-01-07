@@ -138,6 +138,7 @@ class CxxBuild(craftr.Behaviour):
     self.compiler = compiler
     self.options = options
     self.additional_outputs = []
+    self.localize_srcs = localize_srcs
 
     if self.is_foreach():
       if len(outname) != len(self.srcs):
@@ -161,7 +162,7 @@ class CxxBuild(craftr.Behaviour):
 
     if self.options.__unknown_options__:
       log.warn('[{}]: Unknown compiler option(s): {}'.format(
-        target.long_name, ', '.join(self.options.__unknown_options__.keys())))
+        self.target.identifier(), ', '.join(self.options.__unknown_options__.keys())))
 
   def is_foreach(self):
     return isinstance(self.outname, list)
@@ -408,6 +409,7 @@ class Compiler(utils.named):
     ('id', str),
     ('name', str),
     ('version', str),
+    ('arch', str),
     ('options_class', Type[CompilerOptions]),
 
     ('compiler_c', List[str]),               # Arguments to invoke the C compiler.
@@ -452,6 +454,14 @@ class Compiler(utils.named):
     ('ext_exe_macro', Union[str, Callable[[List[str]], str]], None),
     ('obj_macro', Union[str, Callable[[List[str]], str]], None)
   ]
+
+  @property
+  def is32bit(self):
+    return self.arch == 'x86'
+
+  @property
+  def is64bit(self):
+    return self.arch == 'x64'
 
   def __repr__(self):
     return '<{} name={!r} version={!r}>'.format(type(self).__name__, self.name, self.version)

@@ -14,6 +14,7 @@ if cxx.compiler.name in ('msvc', 'mingw'):
 
   if not binary_dir:
     # Find the appropriate download URL.
+    bit = 32 if cxx.compiler.is32bit else 64
     if cxx.compiler.name == 'msvc':
       if cxx.compiler.toolkit.version <= 110:
         vcv = 'vc11'
@@ -21,10 +22,8 @@ if cxx.compiler.name in ('msvc', 'mingw'):
         vcv = 'vc12'
       else:
         vcv = 'vc14'
-      bit = 32 if cxx.compiler.toolkit.cl_info.target == 'x86' else 64
       url = 'https://www.sfml-dev.org/files/SFML-{version}-windows-{vcv}-{bit}-bit.zip'
     else:
-      bit = 64 if cxx.compiler.mingw.is_64 else 32
       url = 'https://www.sfml-dev.org/files/SFML-{version}-windows-gcc-6.1.0-mingw-{bit}-bit.zip'
     url = url.format(**globals())
 
@@ -65,7 +64,7 @@ if cxx.compiler.name in ('msvc', 'mingw'):
   )
 
 else:
-  craftr.error('unsupported compiler: {!r}'.format(cxx.compiler.name))
+  raise EnvironmentError('unsupported compiler: {!r}'.format(cxx.compiler.name))
 
 
 #if os.name == 'nt':

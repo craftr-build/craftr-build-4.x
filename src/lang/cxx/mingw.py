@@ -11,6 +11,7 @@ class MingwCompiler(GccCompiler):
   ext_exe_macro = extmacro('.exe', '.$(0).exe')
 
   def __init__(self, mingw, **kwargs):
+    kwargs.setdefault('arch', 'x64' if mingw.is_64 else 'x86')
     super().__init__(**kwargs)
     self.mingw = mingw
 
