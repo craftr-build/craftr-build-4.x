@@ -20,6 +20,9 @@
 
 #include <Windows.h>
 
+extern "C" unsigned char KERNEL_CL[];
+extern "C" size_t KERNEL_CL_size;
+
 #define MAX_LOADSTRING 100
 
 // This is WIN32 bolierplate code
@@ -238,8 +241,9 @@ BOOL InitCL(int argc, const char** argv)
     GENERAL_API_CHECK((res == CL_SUCCESS && g_queue), "clCreateCommandQueue failed!");
     GENERAL_API_CHECK(CreateCLMemObject(), "Creating CL objects failed!");
 
-	std::vector<char> src;
-	readProgramFile(L"kernel.cl", src);
+    std::vector<char> src;
+    src.assign((char*)KERNEL_CL, ((char*)KERNEL_CL) + KERNEL_CL_size);
+    src.push_back(0);
 	g_program = createAndBuildProgram(src, g_context, 1, &g_device, std::string());
 
     //eModeBufferPBO and eModeBufferMap operate with the buffers, so both need buffer-based version of the kernel

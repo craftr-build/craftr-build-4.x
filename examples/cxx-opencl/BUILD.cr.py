@@ -6,9 +6,16 @@ import cxx from 'craftr/lang/cxx'
 import 'craftr/libs/glew'
 import 'craftr/libs/opencl'
 
+cxx.embed(
+  name = 'kernel',
+  files = [craftr.localpath('src/kernel.cl')],
+  names = ['KERNEL_CL']
+)
+
 cxx.binary(
   name = 'main',
   deps = [
+    ':kernel',
     '//craftr/libs/glew:glew',
     '//craftr/libs/opencl:opencl'
   ],
