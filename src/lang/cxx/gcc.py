@@ -14,8 +14,9 @@ class GccCompilerOptions(CompilerOptions):
 class GccCompiler(Compiler):
 
   id = 'gcc'
+  arch = 'x64' if sys.maxsize > (2**32-1) else 'x86'  # TOOD: Determine using gcc -v
   name = 'gcc'
-  version = '??'  # TODO
+  version = '??'  # TODO: Determine using gcc -v
   options_class = GccCompilerOptions
 
   compiler_env = None

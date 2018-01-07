@@ -712,3 +712,7 @@ def run(target, *argv, name=None, **kwargs):
     argv = argv,
     **kwargs
   )
+
+
+print('Selected compiler: {} ({}) {} for {}'.format(
+  compiler.name, compiler.id, compiler.version, compiler.arch))
