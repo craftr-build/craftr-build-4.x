@@ -471,7 +471,7 @@ void readFile (const std::wstring& file_name, vector<char>& data)
     // First, determine where file exists; look at two places:
     //   - current/default directory; also suitable for full paths
     //   - directory where executable is placed
-#ifdef __linux__
+#ifndef _MSC_VER
     //Store current locale and set default locale
     CTYPELocaleHelper locale_helper;
 
@@ -501,7 +501,7 @@ void readFile (const std::wstring& file_name, vector<char>& data)
 
         file.clear();
 
-#ifdef __linux__
+#ifndef _MSC_VER
         std::string dir = exe_dir();
         file.open(
             (dir + wstringToString(file_name)).c_str(),
