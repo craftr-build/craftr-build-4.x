@@ -511,8 +511,9 @@ class Factory:
   non-major target arguments to the #Behaviour.init() method.
   """
 
-  def __init__(self, behaviour_class):
+  def __init__(self, behaviour_class, **kwargs):
     self.cls = behaviour_class
+    self.kwargs = kwargs
 
   def __repr__(self):
     name = self.cls.__name__.lower().rstrip('behaviour')
@@ -531,7 +532,9 @@ class Factory:
       target.public_deps.add(resolve(dep))
     if parent:
       target.parent = parent
-    target.impl.init(**kwargs)
+    use_kwargs = self.kwargs.copy()
+    use_kwargs.update(kwargs)
+    target.impl.init(**use_kwargs)
     return target
 
   def __instancecheck__(self, other):

@@ -23,11 +23,7 @@ if vendor == 'intel':
   else:
     raise NotImplementedError('intel on {!r}'.format(sys.platform))
 elif vendor == 'nvidia':
-  sdk_dir = craftr.options.get('opencl.nvidia_sdk', None)
-  if not sdk_dir:
-    sdk_dir = os.environ.get('CUDA_PATH')
-    if not sdk_dir:
-      raise EnvironmentError('CUDA_PATH is not set')
+  import {sdk_dir} from 'craftr/lang/cuda'
   if os.name == 'nt':
     cxx.prebuilt(
       name = 'opencl',

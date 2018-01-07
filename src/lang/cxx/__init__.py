@@ -82,8 +82,7 @@ class CxxBuild(craftr.Behaviour):
         compiler: 'Compiler' = None,
         options: Dict = None,
         localize_srcs: bool = True):
-    if not compiler:
-      compiler = globals()['compiler']
+    assert compiler and isinstance(compiler, Compiler)
     if type not in ('library', 'binary'):
       raise ValueError('invalid type: {!r}'.format(type))
     if optimize not in (None, 'speed', 'size'):
@@ -343,7 +342,7 @@ class CxxEmbed(craftr.Behaviour):
   Embed one or more resource files into an executable or library.
   """
 
-  def init(self, files, names=None, cfile=None, compiler=None):
+  def init(self, files, names=None, cfile=None, library_factory=None):
     if names is not None and len(names) != len(files):
       raise ValueError('len(names) must match len(files)')
 
@@ -359,13 +358,11 @@ class CxxEmbed(craftr.Behaviour):
     self.files = files
     self.names = names
     self.cfile = cfile
-    self.compiler = compiler
-    self.build = library(
+    self.build = (library_factory or library)(
       parent = self.target,
       name = 'lib',
       srcs = [self.cfile],
       deps = [self.target],
-      compiler = compiler,
       localize_srcs = False
     )
 
@@ -642,7 +639,8 @@ class Compiler(utils.named):
         flags += self.expand(runtime.get('dynamic', []))
 
     flags += concat([self.expand(self.linker_libpath, x) for x in unique(libpath)])
-    flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
+    if not build.is_staticlib():
+      flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
     return command + ['$in'] + flags #+ additional_input_files
 
   def set_target_outputs(self, build, ctx):
@@ -692,7 +690,7 @@ def _load_compiler():
 
 
 compiler = _load_compiler()
-build = craftr.Factory(CxxBuild)
+build = craftr.Factory(CxxBuild, compiler=compiler)
 library = functools.partial(build, type='library')
 binary = functools.partial(build, type='binary')
 prebuilt = craftr.Factory(CxxPrebuilt)

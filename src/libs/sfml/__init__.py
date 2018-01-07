@@ -8,14 +8,14 @@ binary_dir = craftr.options.get('sfml.binary_dir', None)
 static = craftr.options.get('sfml.static', True)
 debug = craftr.options.get('sfml.debug', not craftr.is_release)
 
-if cxx.compiler.name in ('msvc', 'mingw'):
+if cxx.compiler.id in ('msvc', 'mingw'):
 
   craftr.options.setdefault('cxx.static_runtime', False)
 
   if not binary_dir:
     # Find the appropriate download URL.
     bit = 32 if cxx.compiler.is32bit else 64
-    if cxx.compiler.name == 'msvc':
+    if cxx.compiler.id == 'msvc':
       if cxx.compiler.toolkit.version <= 110:
         vcv = 'vc11'
       elif cxx.compiler.toolkit.version <= 120:

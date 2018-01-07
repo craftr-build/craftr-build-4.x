@@ -10,10 +10,10 @@ import {CompilerOptions, Compiler, extmacro} from '.'
 class MsvcCompilerOptions(CompilerOptions):
 
   __annotations__ = [
-    ('nodefaultlib', bool, False),
+    ('msvc_nodefaultlib', bool, False),
     ('embedd_debug_symbols', bool, True),
     ('msvc_disable_warnings', List[str], None),
-    ('msvc_enabled_exceptions', bool, True),
+    ('msvc_enable_exceptions', bool, True),
     ('msvc_resource_files', List[str], None)
   ]
 
@@ -21,7 +21,7 @@ class MsvcCompilerOptions(CompilerOptions):
 class MsvcCompiler(Compiler):
 
   id = 'msvc'
-  name = 'msvc'
+  name = 'Microsoft Visual C++'
   options_class = MsvcCompilerOptions
 
   compiler_c = ['cl', '/nologo']
@@ -104,7 +104,7 @@ class MsvcCompiler(Compiler):
         command += ['/Zi', '/Fd' + path.setsuffix(outfile, '.pdb')]
     if options.msvc_disable_warnings:
       command += ['/wd' + str(x) for x in options.msvc_disable_warnings]
-    if options.msvc_enabled_exceptions and language == 'cpp':
+    if options.msvc_enable_exceptions and language == 'cpp':
       command += ['/EHsc']
 
     if build.static_runtime:
@@ -117,8 +117,10 @@ class MsvcCompiler(Compiler):
   def build_link_flags(self, build, outfile, additional_input_files):
     command = super().build_link_flags(build, outfile, additional_input_files)
     options = build.options
-    if options.nodefaultlib:
+    if options.msvc_nodefaultlib is True:
       command += ['/NODEFAULTLIB']
+    elif options.msvc_nodefaultlib:
+      command += ['/NODEFAULTLIB:' + x for x in options.msvc_nodefaultlib]
     if build.is_sharedlib():
       command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
     if build.debug and build.is_sharedlib():

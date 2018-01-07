@@ -55,8 +55,8 @@ class GccCompiler(Compiler):
   archiver_out = '$out[0]'
 
   lib_macro = 'lib$(0)'
-  ext_lib_macro = extmacro('.a.1', '.a.$(0)')
-  ext_dll_macro = extmacro('.so.1', '.so.$(0)')
+  ext_lib_macro = extmacro('.a', '.a.$(0)')
+  ext_dll_macro = extmacro('.so', '.so.$(0)')
   ext_exe_macro = extmacro('', '.$(0)')
   obj_macro = '.o'
 

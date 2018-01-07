@@ -7,8 +7,11 @@ import {extmacro} from '.'
 
 class MingwCompiler(GccCompiler):
 
-  name = 'mingw'
+  id = 'mingw'
+  name = 'MinGW'
+
   ext_exe_macro = extmacro('.exe', '.$(0).exe')
+  ext_lib_macro = extmacro('.lib', '.$(0).lib')
 
   def __init__(self, mingw, **kwargs):
     kwargs.setdefault('arch', 'x64' if mingw.is_64 else 'x86')

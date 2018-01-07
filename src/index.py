@@ -40,14 +40,22 @@ import {BuildGraph} from './buildgraph'
 import utils from './utils'
 
 
-def localpath(p):
+def localpath(*p):
   """
   Returns the canonical representation of the path *p*. If *p* is a relative
   path, it will be considered relative to the current module's directory.
   """
 
+  p = path.join(*p)
   if path.isrel(p):
     p = path.join(Namespace.current().directory, p)
+  return path.canonical(p)
+
+
+def buildlocal(*p):
+  p = path.join(*p)
+  if path.isrel(p):
+    p = path.join(Namespace.current().build_directory, p)
   return path.canonical(p)
 
 
