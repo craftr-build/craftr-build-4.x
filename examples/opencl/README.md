@@ -17,7 +17,7 @@ When running the sample application, you may need to specify the `-p` argument
 to choose the platform to run the OpenCL kernel on. The default value is
 `"Intel"`. If you have an NVidia Graphics Card, you may need to use `-p NVIDIA`:
 
-    $ cr -c examples/cxx-opencl/ --options opencl.vendor=nvidia -b :main_run="-p NVIDIA"
+    $ cr -c examples/opencl/ --options opencl.vendor=nvidia -b :main_run="-p NVIDIA"
 
 __Screenshot__
 
