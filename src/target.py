@@ -93,12 +93,15 @@ class Namespace:
   @classmethod
   def from_module(cls, module):
     package = module.package
-    name = getattr(module.namespace, 'namespace', None)
-    directory = getattr(module.namespace, 'project_directory', None)
-    if not name:
+    if hasattr(module.namespace, 'namespace'):
+      name = module.namespace.namespace
+      version = getattr(module.namespace, 'project_version', '1.0.0')
+      directory = getattr(module.namespace, 'project_directory', None)
+      if not directory:
+        directory = str(module.directory)
+    else:
       name = '__main__' if not package else package.name
-    version = '1.0.0' if not package else package.payload.get('version', '1.0.0')
-    if not directory:
+      version = '1.0.0' if not package else package.payload.get('version', '1.0.0')
       directory = require.main.directory if not package else str(package.directory)
     namespace = cls(name, version, directory)
     return namespace
