@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import Union, List
 import logging as log
 import craftr from 'craftr'
 import path from 'craftr/utils/path'
@@ -10,10 +10,11 @@ import {CompilerOptions, Compiler, extmacro} from '.'
 class MsvcCompilerOptions(CompilerOptions):
 
   __annotations__ = [
-    ('msvc_nodefaultlib', bool, False),
+    ('msvc_nodefaultlib', Union[bool, List[str]], False),
     ('embedd_debug_symbols', bool, True),
     ('msvc_disable_warnings', List[str], None),
-    ('msvc_enable_exceptions', bool, True),
+    ('msvc_warnings_as_errors', List[str], None),
+    ('msvc_compile_flags', List[str], None),
     ('msvc_resource_files', List[str], None)
   ]
 
@@ -39,6 +40,9 @@ class MsvcCompiler(Compiler):
   warnings_as_errors_flag = '/WX'
   optimize_speed_flag = '/O2'
   optimize_size_flag = ['/O1', '/Os']
+  enable_exceptions = '/EHsc'
+  disable_exceptions = []
+  force_include = ['/FI', '%ARG%']
 
   linker_c = ['link', '/nologo']
   linker_cpp = linker_c
@@ -77,7 +81,7 @@ class MsvcCompiler(Compiler):
     options = build.options
     obj_dir = path.join(build.namespace.build_directory, 'obj', build.target.name)
     if options.msvc_resource_files:
-      outfiles = craftr.relocate_files(options.msvc_resource_files, obj_dir, '.res')
+      outfiles = craftr.relocate_files(options.msvc_resource_files, obj_dir, '.res', parent=build.namespace.directory)
       command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']
       result.append(build.target.add_action(
         name = 'rc',
@@ -104,13 +108,16 @@ class MsvcCompiler(Compiler):
         command += ['/Zi', '/Fd' + path.setsuffix(outfile, '.pdb')]
     if options.msvc_disable_warnings:
       command += ['/wd' + str(x) for x in options.msvc_disable_warnings]
-    if options.msvc_enable_exceptions and language == 'cpp':
-      command += ['/EHsc']
 
     if build.static_runtime:
       command += ['/MTd' if build.debug else '/MT']
     else:
       command += ['/MDd' if build.debug else '/MD']
+
+    if options.msvc_warnings_as_errors:
+      command += ['/we' + str(x) for x in options.msvc_warnings_as_errors]
+    if options.msvc_compile_flags:
+      command += options.msvc_compile_flags
 
     return command
 

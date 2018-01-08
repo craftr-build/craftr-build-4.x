@@ -36,6 +36,9 @@ class GccCompiler(Compiler):
   warnings_as_errors_flag = '-Werror'
   optimize_speed_flag = '-O3'
   optimize_size_flag = '-Os'
+  enable_exceptions = []
+  disable_exceptions = '-fno-exceptions'
+  force_include = ['-include', '%ARG%']
 
   linker_c = compiler_c
   linker_cpp = compiler_cpp

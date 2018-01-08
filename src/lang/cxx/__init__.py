@@ -59,6 +59,7 @@ class CxxBuild(craftr.Behaviour):
         warnings: bool = True,
         warnings_as_errors: bool = False,
         optimize: str = None,
+        exceptions: bool = None,
         static_defines: List[str] = None,
         exported_static_defines: List[str] = None,
         shared_defines: List[str] = None,
@@ -67,6 +68,8 @@ class CxxBuild(craftr.Behaviour):
         exported_includes: List[str] = None,
         defines: List[str] = None,
         exported_defines: List[str] = None,
+        forced_includes: List[str] = None,
+        exported_forced_includes: List[str] = None,
         compiler_flags: List[str] = None,
         exported_compiler_flags: List[str] = None,
         linker_flags: List[str] = None,
@@ -114,6 +117,7 @@ class CxxBuild(craftr.Behaviour):
     self.warnings = warnings
     self.warnings_as_errors = warnings_as_errors
     self.optimize = optimize
+    self.exceptions = exceptions
     self.static_defines = static_defines or []
     self.exported_static_defines = exported_static_defines or []
     self.shared_defines = shared_defines or []
@@ -122,6 +126,8 @@ class CxxBuild(craftr.Behaviour):
     self.exported_includes = [craftr.localpath(x) for x in (exported_includes or [])]
     self.defines = defines or []
     self.exported_defines = exported_defines or []
+    self.forced_includes = forced_includes or []
+    self.exported_forced_includes = exported_forced_includes or []
     self.compiler_flags = compiler_flags or []
     self.exported_compiler_flags = exported_compiler_flags or []
     self.linker_flags = linker_flags or []
@@ -210,6 +216,9 @@ class CxxBuild(craftr.Behaviour):
       raise RuntimeError('[{}] invalid optimize: {!r}'.format(
         self.target.long_name, self.optimize))
 
+    if self.exceptions is None:
+      self.exceptions = infer_bool(self.target, 'exceptions', True)
+
     # Separate C and C++ sources.
     c_srcs = []
     cpp_srcs = []
@@ -255,7 +264,7 @@ class CxxBuild(craftr.Behaviour):
     for lang, srcs in (('c', c_srcs), ('cpp', cpp_srcs)):
       if not srcs: continue
       # XXX Could result in clashing object file names!
-      output_files = craftr.relocate_files(srcs, obj_dir, obj_suffix)
+      output_files = craftr.relocate_files(srcs, obj_dir, obj_suffix, parent=self.namespace.directory)
       command = self.compiler.build_compile_flags(self, lang)
       obj_actions.append(self.target.add_action(
         name = 'compile_' + lang,
@@ -300,6 +309,7 @@ class CxxPrebuilt(craftr.Behaviour):
                shared_libs: List[str] = None,
                compiler_flags: List[str] = None,
                linker_flags: List[str] = None,
+               forced_includes: List[str] = None,
                syslibs: List[str] = None,
                libpath: List[str] = None,
                preferred_linkage: List[str] = 'any'):
@@ -311,6 +321,7 @@ class CxxPrebuilt(craftr.Behaviour):
     self.shared_libs = shared_libs or []
     self.compiler_flags = compiler_flags or []
     self.linker_flags = linker_flags or []
+    self.forced_includes = forced_includes or []
     self.syslibs = syslibs or []
     self.libpath = libpath or []
     self.preferred_linkage = preferred_linkage
@@ -432,6 +443,9 @@ class Compiler(utils.named):
     ('warnings_as_errors_flag', List[str]),  # Flag(s) to turn warnings into errors.
     ('optimize_speed_flag', List[str]),
     ('optimize_size_flag', List[str]),
+    ('enable_exceptions', List[str]),
+    ('disable_exceptions', List[str]),
+    ('force_include', List[str]),
 
     ('linker_c', List[str]),                 # Arguments to invoke the linker for C programs.
     ('linker_cpp', List[str]),               # Arguments to invoke the linker for C++/C programs.
@@ -551,9 +565,11 @@ class Compiler(utils.named):
 
     includes = list(build.includes) + list(build.exported_includes)
     flags = list(build.compiler_flags) + list(build.exported_compiler_flags)
+    forced_includes = list(build.forced_includes) + list(build.exported_forced_includes)
     for dep in build.target.deps(with_behaviour=CxxBuild).attr('impl'):
       includes.extend(dep.exported_includes)
       defines.extend(dep.exported_defines)
+      forced_includes.extend(dep.exported_forced_includes)
       flags.extend(dep.exported_compiler_flags)
       if dep.type == 'library' and dep.preferred_linkage == 'shared':
         defines.extend(dep.exported_shared_defines)
@@ -563,6 +579,7 @@ class Compiler(utils.named):
       includes.extend(dep.includes)
       defines.extend(dep.defines)
       flags.extend(dep.compiler_flags)
+      forced_includes.extend(dep.forced_includes)
 
     command = self.expand(getattr(self, 'compiler_' + language))
     command.append('$in')
@@ -583,8 +600,14 @@ class Compiler(utils.named):
       command.extend(self.expand(self.warnings_flag))
     if build.warnings_as_errors:
       command.extend(self.expand(self.warnings_as_errors))
+    if build.exceptions:
+      command.extend(self.expand(self.enable_exceptions))
+    else:
+      command.extend(self.expand(self.disable_exceptions))
     if not build.debug:
       command += self.expand(getattr(self, 'optimize_' + build.optimize + '_flag'))
+    if forced_includes:
+      command += concat(self.expand(self.force_include, x) for x in forced_includes)
 
     return command
 
