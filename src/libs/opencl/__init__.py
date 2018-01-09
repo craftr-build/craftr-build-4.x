@@ -4,12 +4,15 @@ namespace = 'craftr/libs/opencl'
 import os, sys
 import craftr, {path} from 'craftr'
 import cxx from 'craftr/lang/cxx'
+import {pkg_config} from 'craftr/tools/pkg-config'
 
 vendor = craftr.options.get('opencl.vendor', None)
-if not vendor:
+if not vendor and sys.platform.startswith('win32'):
   raise EnvironmentError('option not set: opencl.vendor')
 
-if vendor == 'intel':
+if not vendor:
+  pkg_config('OpenCL', 'opencl')
+elif vendor == 'intel':
   sdk_dir = craftr.options.get('opencl.intel_sdk', None)
   if not sdk_dir:
     sdk_dir = 'C:\\Intel\\OpenCL\\sdk'

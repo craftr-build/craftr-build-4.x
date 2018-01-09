@@ -1,14 +1,16 @@
 
 namespace = 'craftr/libs/glew'
 
+import os
 import craftr, {path} from 'craftr'
 import cxx from 'craftr/lang/cxx'
+import {pkg_config} from 'craftr/tools/pkg-config'
 
 version = craftr.options.get('glew.version', '2.1.0')
 binary_dir = craftr.options.get('glew.binary_dir', None)
 static = craftr.options.get('glew.static', True)
 
-if cxx.compiler.id in ('msvc', 'mingw'):
+if os.name == 'nt' and cxx.compiler.id in ('msvc', 'mingw', 'gcc'):
   if not binary_dir:
     url = 'https://github.com/nigels-com/glew/releases/download/glew-{version}/glew-{version}-win32.zip'
     url = url.format(version=version)
@@ -34,4 +36,4 @@ if cxx.compiler.id in ('msvc', 'mingw'):
   )
 
 else:
-  raise EnvironmentError('unsupported compiler: {!r}'.format(cxx.compiler.name))
+  pkg_config('glew')
