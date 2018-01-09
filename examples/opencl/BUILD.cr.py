@@ -9,7 +9,7 @@ import 'craftr/libs/opencl'
 cxx.embed(
   name = 'kernel',
   files = [craftr.localpath('src/kernel.cl')],
-  names = ['KERNEL_CL']
+  names = ['Kernel']
 )
 
 cxx.binary(
