@@ -1,5 +1,6 @@
 
 #pragma OPENCL_EXTENSION cl_khr_fp64 : enable
+#pragma OPENCL_EXTENSION cl_khr_gl_sharing : enable
 
 float2 multiply(float2 a, float2 b) {
     return (float2)(a.s0*b.s0-a.s1*b.s1, a.s1*b.s0+a.s0*b.s1);
