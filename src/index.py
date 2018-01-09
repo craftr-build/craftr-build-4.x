@@ -40,6 +40,47 @@ import {BuildGraph} from './buildgraph'
 import utils from './utils'
 
 
+def fmt(s, frame=None):
+  """
+  Formats the string *s* with the variables from the parent frame or the
+  specified frame-object *frame*.
+  """
+
+  import inspect
+  import gc
+  import types
+  class Resolver:
+    def __init__(self, frame):
+      self.frame = frame
+      self._func = NotImplemented
+    @property
+    def func(self):
+      if self._func is NotImplemented:
+        self._func = next(filter(lambda x: isinstance(x, types.FunctionType),
+            gc.get_referrers(self.frame.f_code)), None)
+      return self._func
+    def __getitem__(self, key):
+      # Try locals
+      try: return self.frame.f_locals[key]
+      except KeyError: pass
+      # Try non-locals
+      try:
+        index = self.frame.f_code.co_freevars.index(key)
+      except ValueError:
+        pass
+      else:
+        if self.func:
+          x = self.func.__closure__[index]
+          return x
+      # Try globals
+      try: return self.frame.f_globals[key]
+      except KeyError: pass
+
+  frame = frame or inspect.currentframe().f_back
+  vars = Resolver(frame)
+  return s.format_map(vars)
+
+
 def localpath(*p):
   """
   Returns the canonical representation of the path *p*. If *p* is a relative

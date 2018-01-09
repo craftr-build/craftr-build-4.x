@@ -49,7 +49,7 @@ class MsvcInstallation(utils.named):
     Generates the path to the `vcvarsall.bat`.
     """
 
-    if self.version >= 150:
+    if self.version >= 141:
       return os.path.join(self.directory, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
     else:
       return os.path.join(self.directory, 'VC', 'vcvarsall.bat')
@@ -117,7 +117,7 @@ class MsvcInstallation(utils.named):
 
     # Special handling for MSVC 2017.
     # TODO: Can MSVC 2017 be installed in an alternative location?
-    if 150 not in have_versions:
+    if 141 not in have_versions:
       programfiles = os.getenv('ProgramFiles(x86)', '') or os.getenv('ProgramFiles', '')
       if programfiles:
         vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Community')
@@ -126,7 +126,7 @@ class MsvcInstallation(utils.named):
         if not os.path.isdir(vspath):
           vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
         if os.path.isdir(vspath):
-          results.append(cls(150, vspath))
+          results.append(cls(141, vspath))
 
     # TODO: Special handling for newer MSVC versions?
 
@@ -290,6 +290,16 @@ class MsvcToolkit(utils.named):
   @property
   def key_info(self):
     return (self.version, self.arch, self.platform_type, self.sdk_version)
+
+  @property
+  def vs_year(self):
+    if self.version == 90: return 2008
+    elif self.version == 100: return 2010
+    elif self.version == 110: return 2012
+    elif self.version == 120: return 2013
+    elif self.version == 140: return 2015
+    elif self.version == 141: return 2017
+    else: raise ValueError('unknown MSVC version: {!r}'.format(self.version))
 
   @property
   def csc_version(self):
