@@ -26,9 +26,9 @@ unsigned char grayvalue(float n) {
 
 
 __kernel void mandelbrot(
-    __global unsigned char* output,
-    size_t width,
-    size_t height,
+    __write_only image2d_t out,
+    unsigned int width,
+    unsigned int height,
     float bound, /* = 2.0f */
     int bailout /* = 200 */
 ){
@@ -37,5 +37,8 @@ __kernel void mandelbrot(
 
     float2 c = (float2)(-2.5 + 3.5 * x, -1.25 + 2.5 * y);
     float count = boundedorbit((0,0), c, 2.0, bailout);
-    output[width * get_global_id(1) + get_global_id(0)] = grayvalue(count);
+    float value = grayvalue(count) / 255.0f;
+
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+    write_imagef(out, coord, (float4)(value, 0.0, 0.0, 1.0));
 }

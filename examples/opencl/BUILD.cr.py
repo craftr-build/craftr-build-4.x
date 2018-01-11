@@ -8,20 +8,28 @@ import 'craftr/libs/glfw'
 import 'craftr/libs/opencl'
 
 cxx.embed(
-  name = 'kernel',
-  files = [craftr.localpath('src/kernel.cl')],
-  names = ['Kernel']
+  name = 'files',
+  files = [craftr.localpath(x) for x in [
+    'src/kernel.cl',
+    'src/screen.vert',
+    'src/screen.frag'
+  ]],
+  names = [
+    'ClKernel',
+    'ScreenVert',
+    'ScreenFrag'
+  ]
 )
 
 cxx.binary(
   name = 'main',
   deps = [
-    ':kernel',
+    ':files',
     '//craftr/libs/glew:glew',
     '//craftr/libs/glfw:glfw',
     '//craftr/libs/opencl:opencl'
   ],
-  srcs = craftr.glob(['src/*.cpp', 'src/common/*.cpp']),
+  srcs = ['src/main.c'],
   includes = ['src/common']
 )
 
