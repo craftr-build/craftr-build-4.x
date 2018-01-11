@@ -1,5 +1,5 @@
 
-namespace = 'cxx-opencl'
+namespace = 'opencl'
 
 import craftr from 'craftr'
 import cxx from 'craftr/lang/cxx'
