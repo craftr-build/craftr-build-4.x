@@ -312,8 +312,6 @@ int main(int argc, char** argv) {
     fprintf(stderr, "error: Could not create OpenCL kernel: %d\n", error);
     return 1;
   }
-  float bound = 2.0f;
-  int bailout = 200;
 
   /* Create a command-queue. */
   cl_command_queue queue = clCreateCommandQueue(g_clContext, device, 0, &error);
@@ -370,6 +368,8 @@ int main(int argc, char** argv) {
   double zoom = 1.0;
   double offsetx = 0.0;
   double offsety = 0.0;
+  float bound = 2.0f;
+  int bailout = 200;
   float tstart = clock() / (float) CLOCKS_PER_SEC;
   while (glfwGetKey(g_window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
          glfwWindowShouldClose(g_window) == 0)
@@ -389,6 +389,12 @@ int main(int argc, char** argv) {
     if (glfwGetKey(g_window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
       offsetx += 0.1 * zoom;
     }
+    if (glfwGetKey(g_window, 'Q') == GLFW_PRESS) {
+      bailout += 1;
+    }
+    if (glfwGetKey(g_window, 'W') == GLFW_PRESS) {
+      bailout -= 1;
+    }
     if (glfwGetKey(g_window, 'X') == GLFW_PRESS) {
       zoom += 0.1 * zoom;
     }
@@ -399,6 +405,7 @@ int main(int argc, char** argv) {
       offsetx = 0.0;
       offsety = 0.0;
       zoom = 1.0;
+      bailout = 200;
     }
 
     /* Run the kernel to render the Mandelbrot into the OpenGL texture. */
