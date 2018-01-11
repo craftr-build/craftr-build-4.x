@@ -102,8 +102,11 @@ def define_from_source():
 
 
 if from_source:
+  print('Using GLFW3 from source')
   define_from_source()
 elif os.name == 'nt' and cxx.compiler.id in ('msvc', 'mingw'):
+  print('Using GLFW3 Windows Prebuilt')
   define_windows_prebuilt()
 else:
+  print('Using GLFW3 pkg-config')
   define_pkg_config()
