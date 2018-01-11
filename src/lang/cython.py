@@ -161,7 +161,7 @@ class CythonProject(craftr.Behaviour):
 
     def gen_libname(filename):
       if in_working_tree:
-        return path.rmvsuffix(filename)
+        return path.canonical(path.rmvsuffix(filename), self.namespace.build_directory)
       else:
         return path.join(self.namespace.build_directory, path.rel(path.rmvsuffix(filename), self.namespace.directory))
 
@@ -191,7 +191,7 @@ class CythonProject(craftr.Behaviour):
         deps = [self.compile_main, pylib] + ([self.link_lib] if self.link_lib else []),
         srcs = self.compile_main.impl.output_files,
         outname = main_outfile,
-        outdir = self.namespace.directory if in_working_tree else None,
+        outdir = self.namespace.directory if in_working_tree else NotImplemented,
         defines = defines,
         localize_srcs = False,
         **cxx_build_options

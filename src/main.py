@@ -456,7 +456,7 @@ def run_build_action(graph, node_name, index):
   # Ensure that the output directories exist.
   created_dirs = set()
   for directory in (os.path.dirname(x) for x in chain(files.outputs, files.optional_outputs)):
-    if directory not in created_dirs:
+    if directory not in created_dirs and directory:
       os.makedirs(directory, exist_ok=True)
       created_dirs.add(directory)
 
