@@ -1,7 +1,9 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
+#include <time.h>
 
 #include <GL/glew.h>
 #include <glfw3.h>
@@ -281,8 +283,10 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  static cl_uint const width = 1024;
-  static cl_uint const height = 1024;
+  int iwidth, iheight;
+  glfwGetWindowSize(g_window, &iwidth, &iheight);
+  cl_uint width = iwidth;
+  cl_uint height = iheight;
 
   /* Create an OpenGL texture. */
   printf("Creating OpenGL texture ...\n");
@@ -310,16 +314,6 @@ int main(int argc, char** argv) {
   }
   float bound = 2.0f;
   int bailout = 200;
-  error = clSetKernelArg(kernel, 0, sizeof(cltex), &cltex);
-  printf("%s\n", getErrorString(error));
-  error = clSetKernelArg(kernel, 1, sizeof(width), &width);
-  printf("%s\n", getErrorString(error));
-  error = clSetKernelArg(kernel, 2, sizeof(height), &height);
-  printf("%s\n", getErrorString(error));
-  error = clSetKernelArg(kernel, 3, sizeof(bound), &bound);
-  printf("%s\n", getErrorString(error));
-  error = clSetKernelArg(kernel, 4, sizeof(bailout), &bailout);
-  printf("%s\n", getErrorString(error));
 
   /* Create a command-queue. */
   cl_command_queue queue = clCreateCommandQueue(g_clContext, device, 0, &error);
@@ -327,15 +321,6 @@ int main(int argc, char** argv) {
     fprintf(stderr, "error: Could not create OpenCL command queue: %d\n", error);
     return 1;
   }
-  size_t global_work_offset[2] = {0, 0};
-  size_t global_work_size[2] = {width, height};
-  error = clEnqueueNDRangeKernel(queue, kernel, 2,
-    global_work_offset, global_work_size, NULL, 0, NULL, NULL);
-  if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: Could not queue kernel: %d\n", error);
-    return 1;
-  }
-  clFinish(queue);
 
   /* Create a buffer that contains the screen coordinates. */
   GLfloat screen[] = {0.0f, 0.0f, 100.0f, 0.0f, 100.0f, 100.0f, 0.0f, 100.0f};
@@ -363,44 +348,89 @@ int main(int argc, char** argv) {
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);
 
-  GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
+  /* VAO -- necessary for any rendering context. Multiple VAOs could
+   * be used to efficiently switch between states. */
+  GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
 
-  static const GLfloat g_vertex_buffer_data[] = {
+  /* Create a vertex buffer for a rectangle with screen coordinates .*/
+  static const GLfloat screenVertices[] = {
 		 1.0f, -1.0f, 0.0f,
 		 1.0f,  1.0f, 0.0f,
 		-1.0f, -1.0f, 0.0f,
 		-1.0f,  1.0f, 0.0f,
   };
-  GLuint vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+  GLuint screenVerticesBuffer;
+	glGenBuffers(1, &screenVerticesBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, screenVerticesBuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(screenVertices), screenVertices, GL_STATIC_DRAW);
 
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  while (glfwGetKey(g_window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-         glfwWindowShouldClose(g_window) == 0 )
+  /* Mainloop. */
+  double zoom = 1.0;
+  double offsetx = 0.0;
+  double offsety = 0.0;
+  float tstart = clock() / (float) CLOCKS_PER_SEC;
+  while (glfwGetKey(g_window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
+         glfwWindowShouldClose(g_window) == 0)
   {
-		// Clear the screen
-		glClear( GL_COLOR_BUFFER_BIT );
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Use our shader
+    if (glfwGetKey(g_window, GLFW_KEY_UP) == GLFW_PRESS) {
+      offsety += 0.1 * zoom;
+    }
+    if (glfwGetKey(g_window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+      offsety -= 0.1 * zoom;
+    }
+    if (glfwGetKey(g_window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+      offsetx -= 0.1 * zoom;
+    }
+    if (glfwGetKey(g_window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+      offsetx += 0.1 * zoom;
+    }
+    if (glfwGetKey(g_window, 'X') == GLFW_PRESS) {
+      zoom += 0.1 * zoom;
+    }
+    if (glfwGetKey(g_window, 'Z') == GLFW_PRESS) {
+      zoom -= 0.1 * zoom;
+    }
+    if (glfwGetKey(g_window, ' ') == GLFW_PRESS) {
+      offsetx = 0.0;
+      offsety = 0.0;
+      zoom = 1.0;
+    }
+
+    /* Run the kernel to render the Mandelbrot into the OpenGL texture. */
+    float ox = (float) offsetx;
+    float oy = (float) offsety;
+    float zo = (float) zoom;
+    clSetKernelArg(kernel, 0, sizeof(cltex), &cltex);
+    clSetKernelArg(kernel, 1, sizeof(width), &width);
+    clSetKernelArg(kernel, 2, sizeof(height), &height);
+    clSetKernelArg(kernel, 3, sizeof(float), &ox);
+    clSetKernelArg(kernel, 4, sizeof(float), &oy);
+    clSetKernelArg(kernel, 5, sizeof(float), &zo);
+    clSetKernelArg(kernel, 6, sizeof(bound), &bound);
+    clSetKernelArg(kernel, 7, sizeof(bailout), &bailout);
+    size_t global_work_offset[2] = {0, 0};
+    size_t global_work_size[2] = {width, height};
+    error = clEnqueueNDRangeKernel(queue, kernel, 2,
+      global_work_offset, global_work_size, NULL, 0, NULL, NULL);
+    if (error != CL_SUCCESS) {
+      fprintf(stderr, "error: Could not queue kernel: %d\n", error);
+      return 1;
+    }
+    clFinish(queue);
+
 		glUseProgram(shaderProgram);
 
-		// 1rst attribute buffer : vertices
+    /* Bind the screenspace vertices to the shader. */
 		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-		glVertexAttribPointer(
-			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
+		glBindBuffer(GL_ARRAY_BUFFER, screenVerticesBuffer);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-		// Draw the triangle !
+    /* Draw the rectangle. */
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // 3 indices starting at 0 -> 1 triangle
 
 		glDisableVertexAttribArray(0);
