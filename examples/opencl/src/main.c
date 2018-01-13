@@ -231,7 +231,7 @@ int main(int argc, char** argv) {
   printf("Looking for OpenCL device ...\n");
   cl_device_id device;
   cl_uint num_devices;
-  clGetDeviceIDs(platform, CL_DEVICE_TYPE_DEFAULT, 1, &device, &num_devices);
+  clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, &num_devices);
   if (num_devices == 0) {
     fprintf(stderr, "error: no OpenCL device available.\n");
     return 1;
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
   cl_int error = CL_SUCCESS;
   g_clContext = clCreateContext(props, 1, &device, NULL, NULL, &error);
   if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: OpenCL context could not be created: %d\n", error);
+    fprintf(stderr, "error: OpenCL context could not be created: %s\n", getErrorString(error));
     return 1;
   }
 
@@ -258,12 +258,12 @@ int main(int argc, char** argv) {
   cl_program program = clCreateProgramWithSource(
     g_clContext, 1, &kernelSource, &ClKernel_size, &error);
   if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: OpenCL program could not be created: %d\n", error);
+    fprintf(stderr, "error: OpenCL program could not be created: %s\n", getErrorString(error));
     return 1;
   }
   error = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
   if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: OpenCL program could not be built: %d\n", error);
+    fprintf(stderr, "error: OpenCL program could not be built: %s\n", getErrorString(error));
     size_t logSize = 0;
     clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
     char* data = calloc(logSize + 1, 1);
@@ -302,21 +302,21 @@ int main(int argc, char** argv) {
   printf("Creating OpenCL image from OpenGL texture ...\n");
   cl_mem cltex = clCreateFromGLTexture(g_clContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texture, &error);
   if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: OpenGL=>OpenCL image could not be created: %d\n", error);
+    fprintf(stderr, "error: OpenGL=>OpenCL image could not be created: %s\n", getErrorString(error));
     return 1;
   }
 
   /* Execute the OpenCL program in a kernel. */
   cl_kernel kernel = clCreateKernel(program, "mandelbrot", &error);
   if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: Could not create OpenCL kernel: %d\n", error);
+    fprintf(stderr, "error: Could not create OpenCL kernel: %s\n", getErrorString(error));
     return 1;
   }
 
   /* Create a command-queue. */
   cl_command_queue queue = clCreateCommandQueue(g_clContext, device, 0, &error);
   if (error != CL_SUCCESS) {
-    fprintf(stderr, "error: Could not create OpenCL command queue: %d\n", error);
+    fprintf(stderr, "error: Could not create OpenCL command queue: %s\n", getErrorString(error));
     return 1;
   }
 
@@ -425,7 +425,7 @@ int main(int argc, char** argv) {
     error = clEnqueueNDRangeKernel(queue, kernel, 2,
       global_work_offset, global_work_size, NULL, 0, NULL, NULL);
     if (error != CL_SUCCESS) {
-      fprintf(stderr, "error: Could not queue kernel: %d\n", error);
+      fprintf(stderr, "error: Could not queue kernel: %s\n", getErrorString(error));
       return 1;
     }
     clFinish(queue);
