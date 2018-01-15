@@ -635,32 +635,6 @@ def main(argv=None):
     print(','.join(sorted(tags)))
     return 0
 
-  # Handle --config
-  if not args.config and os.path.isfile('BUILD.cr.toml'):
-    craftr.options.read('BUILD.cr.toml')
-  elif args.config:
-    craftr.options.read(args.config)
-
-  # Handle --options
-  set_options(concat(args.options))
-
-  # Handle --tool
-  if args.tool is not None:
-    if not args.tool:
-      error('fatal: --tool requires at least one argument')
-      return 1
-    try:
-      tool_module = require.try_('./tools/' + args.tool[0])
-    except require.TryResolveError:
-      error('fatal: no such tool:', args.tool[0])
-      return 1
-    try:
-      old_arg0 = sys.argv[0]
-      sys.argv[0] += ' --tool {}'.format(args.tool[0])
-      return tool_module.main(args.tool[1:])
-    finally:
-      sys.argv[0] = old_arg0
-
   # Determine the build root directory.
   if not args.build_root:
     if args.build_directory:
@@ -684,6 +658,43 @@ def main(argv=None):
         build_root_cache = json.load(fp)
       except json.JSONDecodeError as e:
         print('warn: could not load {!r}: {}'.format(build_root_file, e))
+
+  # Handle --config
+  if not args.config:
+    if build_root_cache.get('build_config'):
+      args.config = build_root_cache['build_config']
+      if os.path.isfile(args.config):
+        print('note: inheriting build config:', args.config)
+      else:
+        args.config = None
+        print('note: can not inherit build config, file does not exist:', args.config)
+    if not args.config and os.path.isfile('BUILD.cr.toml'):
+      args.config = 'BUILD.cr.toml'
+  if args.config:
+    craftr.options.read(args.config)
+    have_read_config = True
+  else:
+    have_read_config = False
+
+  # Handle --options
+  set_options(concat(args.options))
+
+  # Handle --tool
+  if args.tool is not None:
+    if not args.tool:
+      error('fatal: --tool requires at least one argument')
+      return 1
+    try:
+      tool_module = require.try_('./tools/' + args.tool[0])
+    except require.TryResolveError:
+      error('fatal: no such tool:', args.tool[0])
+      return 1
+    try:
+      old_arg0 = sys.argv[0]
+      sys.argv[0] += ' --tool {}'.format(args.tool[0])
+      return tool_module.main(args.tool[1:])
+    finally:
+      sys.argv[0] = old_arg0
 
   # Handle --reconfigure
   if args.reconfigure is not NotImplemented:
@@ -791,6 +802,11 @@ def main(argv=None):
       args.configure = posixpath.join(args.configure, 'BUILD.cr.py')
     if not os.path.isabs(args.configure):
       args.configure = './' + os.path.normpath(args.configure)
+    if not have_read_config:
+      args.config = os.path.join(os.path.dirname(args.configure), 'BUILD.cr.toml')
+      if os.path.isfile(args.config):
+        craftr.options.read(args.config)
+        have_read_config = True
     build_module = require.new('.').resolve(args.configure)
     with require.context.push_main(build_module):
       require.context.load_module(build_module)
@@ -814,6 +830,7 @@ def main(argv=None):
 
     build_root_cache['build_mode'] = 'release' if craftr.is_release else 'debug'
     build_root_cache['build_script'] = args.configure
+    build_root_cache['build_config'] = args.config if have_read_config else None
     with open(build_root_file, 'w') as fp:
       json.dump(build_root_cache, fp, indent=2, sort_keys=True)
 
