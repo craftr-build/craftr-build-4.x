@@ -17,6 +17,9 @@ x11 = craftr.options.get('glfw.x11', True)
 wayland = craftr.options.get('glfw.wayland', True)
 
 
+def windows_syslibs():
+  return ['gdi32', 'shell32']
+
 def define_windows_prebuilt():
   global binary_dir
   global msvc_version
@@ -39,10 +42,7 @@ def define_windows_prebuilt():
     name = 'glfw',
     includes = [path.join(binary_dir, 'include', 'GLFW')],
     libpath = [path.join(binary_dir, libdir)],
-    syslibs = [
-      'glfw3' if static else 'glfw3dll',
-      'shell32'
-    ]
+    syslibs = ['glfw3' if static else 'glfw3dll'] + windows_syslibs()
   )
 
 
@@ -77,7 +77,7 @@ def define_from_source():
   if sys.platform.startswith('win32'):
     environ['_GLFW_WIN32'] = True
     sources += craftr.glob(['src/win32_*.c', 'src/wgl_context.c'], parent=source_dir)
-    syslibs += ['shell32']
+    syslibs += windows_syslibs()
   elif sys.platform.startswith('darwin'):
     environ['_GLFW_COCOA'] = True
   elif sys.platform.startswith('linux'):
