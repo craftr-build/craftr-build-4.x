@@ -237,7 +237,8 @@ class MsvcToolkit(utils.named):
     ('sdk_version', str, None),
     ('_csc_version', str, None),
     ('_vbc_version', str, None),
-    ('_cl_info', ClInfo, None)
+    ('_cl_info', ClInfo, None),
+    ('_deps_prefix', str, None)
   ]
 
   @classmethod
@@ -333,6 +334,52 @@ class MsvcToolkit(utils.named):
         output = subprocess.check_output(['vbc', '/version']).decode()
         self._vbc_version = output.strip()
     return self._vbc_version
+
+  @property
+  def deps_prefix(self):
+    """
+    Returns the string that is the prefix for the `/showIncludes` option
+    in the `cl` command.
+    """
+
+    if self._deps_prefix:
+      return self._deps_prefix
+
+    # Determine the msvc_deps_prefix by making a small test. The
+    # compilation will not succeed since no entry point is defined.
+    deps_prefix = None
+    with utils.tempfile(suffix='.cpp', text=True) as fp:
+      fp.write('#include <stddef.h>\n')
+      fp.close()
+      command = ['cl', '/Zs', '/showIncludes', fp.name, '/nologo']
+      try:
+        with sh.override_environ(self.environ):
+          output = sh.check_output(command).decode()
+      except OSError as exc:
+        deps_prefix = None
+      else:
+        # Find the "Note: including file:" in the current language. We
+        # assume that the structure is the same, only the words different.
+        # After the logo output follows the filename followed by the include
+        # notices.
+        for line in output.split('\n'):
+          if 'stddef.h' in line:
+            if 'C1083' in line or 'C1034' in line:
+              # C1083: can not open include file
+              # C1034: no include path sep
+              msg = 'MSVC can not compile a simple C program.\n  Program: {}\n  Output:\n\n{}'
+              raise EnvironmentError(msg.format(program, output))
+            match = re.search('[\w\s]+:[\w\s]+:', line)
+            if match:
+              deps_prefix = match.group(0)
+      finally:
+        os.remove(fp.name)
+
+    if not deps_prefix:
+      print('warn: unable to determine MSVC deps prefix')
+
+    self._deps_prefix = deps_prefix
+    return deps_prefix
 
   @classmethod
   @functools.lru_cache()

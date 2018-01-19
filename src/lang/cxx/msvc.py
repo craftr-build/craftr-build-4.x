@@ -69,6 +69,7 @@ class MsvcCompiler(Compiler):
       compiler_env = toolkit.environ,
       linker_env = toolkit.environ,
       archiver_env = toolkit.environ,
+      deps_prefix = toolkit.deps_prefix
     )
     self.toolkit = toolkit
 
@@ -119,6 +120,8 @@ class MsvcCompiler(Compiler):
     if options.msvc_compile_flags:
       command += options.msvc_compile_flags
 
+    if self.deps_prefix:
+      command += ['/showIncludes']
     return command
 
   def build_link_flags(self, build, outfile, additional_input_files):

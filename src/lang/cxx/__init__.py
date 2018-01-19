@@ -274,7 +274,9 @@ class CxxBuild(craftr.Behaviour):
         environ = self.compiler.compiler_env,
         input_files = srcs,
         output_files = output_files,
-        foreach = True
+        foreach = True,
+        depfile = self.compiler.depfile_name,
+        deps_prefix = self.compiler.deps_prefix
       ))
       obj_files.append(output_files)
 
@@ -446,6 +448,9 @@ class Compiler(utils.named):
     ('enable_exceptions', List[str]),
     ('disable_exceptions', List[str]),
     ('force_include', List[str]),
+    ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix
+    ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $in.
+    ('deps_prefix', str, None),              # The deps prefix (don't mix with depfile_name).
 
     ('linker_c', List[str]),                 # Arguments to invoke the linker for C programs.
     ('linker_cpp', List[str]),               # Arguments to invoke the linker for C++/C programs.

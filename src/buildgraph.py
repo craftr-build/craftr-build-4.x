@@ -82,12 +82,20 @@ class BuildAction:
     A list of #IOFiles objects (required if *foreach* is #True) or a single
     #IOFiles object (only if *foreach* is #False). Can not be mixed with
     *input_files*, *output_files* or *optional_output_files*.
+  deps_prefix (str): A string that represents the prefix of for lines
+    in the output of the command(s) that represent additional dependencies
+    to the action (eg. headers in the case of C/C++). Can not be mixed with
+    *depfile*.
+  depfile (str): A filename that is produced by the command(s) which lists
+    additional dependencies of the action. The file must be formatted like
+    a Makefile. Can not be mixed with *deps_prefix*.
   """
 
   def __init__(self, scope, name, commands,
                deps=None, cwd=None, environ=None, foreach=False,
                explicit=False, console=False, input_files=None,
-               output_files=None, optional_output_files=None, files=None):
+               output_files=None, optional_output_files=None, files=None,
+               deps_prefix=None, depfile=None):
     if not isinstance(scope, str):
       raise TypeError('scope must be str, got {}'.format(type(scope).__name__))
     if not isinstance(name, str):
@@ -129,6 +137,9 @@ class BuildAction:
         raise TypeError('files must be a List[IOFiles] or IOFiles, got {}'
           .format(set(type(x).__name__ for x in files)))
 
+    if depfile and deps_prefix:
+      raise ValueError('can not mix depfile and deps_prefix parameter')
+
     self.scope = scope
     self.name = name
     self.commands = commands
@@ -139,6 +150,8 @@ class BuildAction:
     self.foreach = foreach
     self.explicit = explicit
     self.console = console
+    self.deps_prefix = deps_prefix
+    self.depfile = depfile
 
   def __repr__(self):
     return '<BuildAction {!r}>'.format(self.identifier())

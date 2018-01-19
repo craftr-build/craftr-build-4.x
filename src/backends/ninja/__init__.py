@@ -78,7 +78,17 @@ def export_action(build_directory, writer, graph, action, non_explicit):
     else:
       order_only.append(make_rule_name(graph, dep))
 
-  writer.rule(rule_name, command, description=make_rule_description(action), pool = 'console' if action.console else None)
+  writer.rule(
+    rule_name,
+    command,
+    description=make_rule_description(action),
+    pool = 'console' if action.console else None,
+    depfile = action.depfile,
+    deps = 'gcc' if action.depfile else ('msvc' if action.deps_prefix else None)
+  )
+  if action.deps_prefix:
+    writer.variable('msvc_deps_prefix', action.deps_prefix, indent=1)
+
   if action.foreach:
     for index, files in enumerate(action.files):
       writer.build(

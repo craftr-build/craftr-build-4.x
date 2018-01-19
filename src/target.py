@@ -272,7 +272,7 @@ class Target:
 
   def add_action(self, name, commands, input_files=None, output_files=None,
         optional_output_files=None, files=None, input=None, deps=None,
-        output=False, cwd=None, environ=None, foreach=False):
+        output=False, cwd=None, environ=None, foreach=False, **kwargs):
     """
     Creates a new action in the target that consists of one or more system
     commands and the specified *name*. Unless otherwise explicitly stated
@@ -336,7 +336,8 @@ class Target:
       environ=environ,
       foreach=foreach,
       explicit=self.explicit,
-      console=self.console)
+      console=self.console,
+      **kwargs)
     self.__actions[name] = action
     if output:
       self.__output_actions.append(action)
