@@ -34,5 +34,5 @@ install:
 - export PATH="$(nodepy-pm bin):$PATH"
 
 script:
-- nodepy-pm run test
+#- nodepy-pm run test
 - craftr --configure ${BUILD_MODULE} --build $BUILD_OPTIONS

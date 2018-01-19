@@ -1,7 +1,6 @@
 
 import collections
 import re
-import craftr from './index'
 import utils from './utils'
 import path from './utils/path'
 import {BuildAction} from './buildgraph'
@@ -539,3 +538,6 @@ class Factory:
 
   def __instancecheck__(self, other):
     return isinstance(other, self.cls)
+
+
+import craftr from './index'
