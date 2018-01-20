@@ -1,16 +1,17 @@
 {
   "name": "craftr",
   "version": "3.0.0-dev",
-  "description": "Craftr is a domain-independent build system.",
   "license": "MIT",
-  "main": "./src/index",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Craftr is a domain-independent build system.",
   "resolve_root": "./src",
-  "bin": {
-    "craftr": "./src/main"
+  "main": "./src/index",
+  "bin": { "craftr": "./src/main" },
+  "scripts": {
+    "post-install": "scripts/post-install.py",
+    "tests": "$ nodepy-nosetests src/*_test.py src/**/*_test.py",
+    "docs": "$ yassg public"
   },
-  "authors": [
-    "rosensteinniklas@gmail.com"
-  ],
   "pip_dependencies": {
     "glob2": ">=0.6",
     "Werkzeug": ">=0.12.2",
@@ -20,10 +21,6 @@
     "nr": ">=1.4.8",
     "requests": ">=2.18.4",
     "typing": ">=3.6.2"
-  },
-  "scripts": {
-    "tests": "$ nodepy-nosetests src/*_test.py src/**/*_test.py",
-    "docs": "$ yassg public"
   },
   "cfg(dev).dependencies": {
     "nodepy-nosetests": "git+https://github.com/nodepy/nodepy-nosetests.git@v0.0.6",

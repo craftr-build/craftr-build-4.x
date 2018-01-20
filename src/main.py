@@ -581,7 +581,6 @@ def main(argv=None):
     return 0
 
   args = parser.parse_args(argv)
-  require.context.resolver.paths.append(module.directory.joinpath('../lib'))
 
   if os.environ.get('CRAFTR_VERBOSE', '').strip():
     args.verbose = True
