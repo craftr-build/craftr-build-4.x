@@ -1,7 +1,9 @@
 # Sample Craftr build script for C/C++ projects.
 
+namespace = 'cxx-shared'
+
 import craftr from 'craftr'
-import cxx from 'craftr/lang/cxx'
+import cxx from '@craftr/cxx'
 
 cxx.library(
   name = 'lib',

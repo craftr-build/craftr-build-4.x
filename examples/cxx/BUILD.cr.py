@@ -1,7 +1,9 @@
 # Sample Craftr build script for C/C++ projects.
 
+namespace = 'cxx'
+
 import craftr from 'craftr'
-import cxx from 'craftr/lang/cxx'
+import cxx from '@craftr/cxx'
 
 # Will be embedded into the executable, we can use this to print the build
 # script that was used to build the program (see main.cpp).

@@ -379,11 +379,11 @@ class CxxEmbed(craftr.Behaviour):
     )
 
   def translate(self):
-    command = nodepy.runtime.exec_args + [str(require.resolve('craftr/tools/files2c').filename), '-o', self.cfile]
+    command = nodepy.runtime.exec_args + [str(require.resolve('craftr/tools/bin2c').filename), '-o', self.cfile]
     for infile, cname in zip(self.files, self.names):
       command += ['{}:{}'.format(infile, cname)]
     self.target.add_action(
-      name = 'files2c',
+      name = 'bin2c',
       commands = [command],
       input_files = self.files,
       output_files = [self.cfile]
