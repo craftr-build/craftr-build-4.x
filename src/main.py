@@ -508,6 +508,15 @@ def run_build_action(graph, node_name, index):
     error('-'*60 + '\n')
     return 1
 
+  # Show a warning about missing optional output files.
+  missing_files = [x for x in files.optional_outputs if not os.path.exists(x)]
+  if missing_files:
+    error('\n' + '-'*60)
+    error('warning: missing optional output files')
+    for x in missing_files:
+      error('  -', x)
+    error('-'*60)
+
   return 0
 
 
