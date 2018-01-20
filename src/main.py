@@ -720,9 +720,12 @@ def main(argv=None):
 
   # Fall back to --release or --debug from the build root cache.
   if not args.release and not args.debug:
-    if build_root_cache.get('build_mode', 'debug') == 'release':
-      args.release = True
-    print('note: inheriting build mode:', 'release' if args.release else 'debug')
+    if args.reconfigure is not NotImplemented:
+      if build_root_cache.get('build_mode', 'debug') == 'release':
+        args.release = True
+      print('note: inheriting build mode:', 'release' if args.release else 'debug')
+    else:
+      args.debug = True
 
   # Handle --release
   if args.release:
