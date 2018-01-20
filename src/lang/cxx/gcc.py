@@ -39,6 +39,8 @@ class GccCompiler(Compiler):
   enable_exceptions = []
   disable_exceptions = '-fno-exceptions'
   force_include = ['-include', '%ARG%']
+  depfile_args = ['-MD', '-MP', '-MF', '$out.d']
+  depfile_name = '$out.d'
 
   linker_c = compiler_c
   linker_cpp = compiler_cpp

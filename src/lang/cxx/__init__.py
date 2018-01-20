@@ -448,8 +448,8 @@ class Compiler(utils.named):
     ('enable_exceptions', List[str]),
     ('disable_exceptions', List[str]),
     ('force_include', List[str]),
-    ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix
-    ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $in.
+    ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix.
+    ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $out.
     ('deps_prefix', str, None),              # The deps prefix (don't mix with depfile_name).
 
     ('linker_c', List[str]),                 # Arguments to invoke the linker for C programs.
@@ -613,6 +613,9 @@ class Compiler(utils.named):
       command += self.expand(getattr(self, 'optimize_' + build.optimize + '_flag'))
     if forced_includes:
       command += concat(self.expand(self.force_include, x) for x in forced_includes)
+
+    if self.depfile_args:
+      command += self.expand(self.depfile_args)
 
     return command
 

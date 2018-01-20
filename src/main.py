@@ -407,7 +407,7 @@ def substitute_inputs_outputs(command, iofiles):
       if index:
         subst = [subst[int(index[1:-1])]]
       if suffix:
-        subst = [craftr.path.setsuffix(x, suffix) for x in subst]
+        subst = [craftr.path.addsuffix(x, suffix) for x in subst]
       commands[i:i+1] = subst
       offset += len(subst) - 1
 
