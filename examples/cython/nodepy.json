@@ -1,8 +1,0 @@
-{
-  "publish": false,
-  "name": "craftr-example-cython",
-  "version": "1.0.0",
-  "cfg(dev).dependencies": {
-    "craftr": "git+https://github.com/craftr-build/craftr.git@master"
-  }
-}

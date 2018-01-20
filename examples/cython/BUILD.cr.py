@@ -1,6 +1,8 @@
 
+namespace = 'cython'
+
 import craftr from 'craftr'
-import cython from 'craftr/lang/cython'
+import cython from '@craftr/cython'
 
 cython.project(
   name = 'main',

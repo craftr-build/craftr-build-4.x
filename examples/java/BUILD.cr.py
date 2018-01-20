@@ -1,7 +1,9 @@
 # Sample Craftr build script for Java projects.
 
+namespace = 'java'
+
 import craftr from 'craftr'
-import java from 'craftr/lang/java'
+import java from '@craftr/java'
 
 java.prebuilt(
   name = 'libs',

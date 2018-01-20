@@ -139,7 +139,7 @@ class MsvcCompiler(Compiler):
   def set_target_outputs(self, build, ctx):
     super().set_target_outputs(build, ctx)
     if build.is_sharedlib():
-      build.linkname_full = [path.setsuffix(x, '.lib') for x in build.outname_full]
+      build.linkname_full = [path.addsuffix(x, '.lib') for x in build.outname_full]
       build.additional_outputs.append(path.setsuffix(build.outname_full[0], '.exp'))
 
 
