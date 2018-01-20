@@ -41,6 +41,8 @@ class MsvcCompiler(Compiler):
   optimize_size_flag = ['/O1', '/Os']
   enable_exceptions = '/EHsc'
   disable_exceptions = []
+  enable_rtti = '/GR'
+  disable_rtti = '/GR-'
   force_include = ['/FI', '%ARG%']
 
   linker_c = ['link', '/nologo']

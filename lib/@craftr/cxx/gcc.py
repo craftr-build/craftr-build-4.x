@@ -38,6 +38,8 @@ class GccCompiler(Compiler):
   optimize_size_flag = '-Os'
   enable_exceptions = []
   disable_exceptions = '-fno-exceptions'
+  enable_rtti = []
+  disable_rtti = '-fno-rtti'
   force_include = ['-include', '%ARG%']
   depfile_args = ['-MD', '-MP', '-MF', '$out.d']
   depfile_name = '$out.d'

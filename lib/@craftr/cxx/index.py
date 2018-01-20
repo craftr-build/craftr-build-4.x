@@ -59,6 +59,7 @@ class CxxBuild(craftr.Behaviour):
         warnings_as_errors: bool = False,
         optimize: str = None,
         exceptions: bool = None,
+        rtti: bool = True,
         static_defines: List[str] = None,
         exported_static_defines: List[str] = None,
         shared_defines: List[str] = None,
@@ -117,6 +118,7 @@ class CxxBuild(craftr.Behaviour):
     self.warnings_as_errors = warnings_as_errors
     self.optimize = optimize
     self.exceptions = exceptions
+    self.rtti = rtti
     self.static_defines = static_defines or []
     self.exported_static_defines = exported_static_defines or []
     self.shared_defines = shared_defines or []
@@ -446,6 +448,8 @@ class Compiler(utils.named):
     ('optimize_size_flag', List[str]),
     ('enable_exceptions', List[str]),
     ('disable_exceptions', List[str]),
+    ('enable_rtti', List[str]),
+    ('disable_rtti', List[str]),
     ('force_include', List[str]),
     ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix.
     ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $out.
@@ -604,10 +608,8 @@ class Compiler(utils.named):
       command.extend(self.expand(self.warnings_flag))
     if build.warnings_as_errors:
       command.extend(self.expand(self.warnings_as_errors))
-    if build.exceptions:
-      command.extend(self.expand(self.enable_exceptions))
-    else:
-      command.extend(self.expand(self.disable_exceptions))
+    command.extend(self.expand(self.enable_exceptions if build.exceptions else self.disable_exceptions))
+    command.extend(self.expand(self.enable_rtti if build.rtti else self.disable_rtti))
     if not build.debug:
       command += self.expand(getattr(self, 'optimize_' + build.optimize + '_flag'))
     if forced_includes:
