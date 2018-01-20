@@ -34,6 +34,12 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
+  '--version',
+  action='store_true',
+  help='Print the Craftr version and exit.'
+)
+
+parser.add_argument(
   '--quickstart',
   metavar='EXAMPLE',
   nargs='?',
@@ -581,6 +587,9 @@ def main(argv=None):
     return 0
 
   args = parser.parse_args(argv)
+  if args.version:
+    print('Craftr v{}'.format(module.package.payload['version']))
+    return 0
 
   if os.environ.get('CRAFTR_VERBOSE', '').strip():
     args.verbose = True
