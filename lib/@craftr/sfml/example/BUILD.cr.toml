@@ -1,6 +1,0 @@
-[sfml]
-directory = "C:/Users/niklas/Downloads/SFML-2.4.2-windows-vc14-64-bit/SFML-2.4.2/"
-static = true
-
-[msvc]
-runtime_library = "dynamic"
