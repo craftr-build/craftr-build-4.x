@@ -1,0 +1,11 @@
+{
+  "name": "@craftr/cython",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Build Cython projects with Craftr.",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/cxx": "*"
+  }
+}

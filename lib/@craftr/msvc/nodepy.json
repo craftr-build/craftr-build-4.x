@@ -1,0 +1,11 @@
+{
+  "name": "@craftr/msvc",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Detect MSVC installations on the current system (Windows only).",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/batchvars": "*"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@craftr/glfw",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Use GLFW in C/C++ projects.",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/cmake": "*",
+    "@craftr/cxx": "*",
+    "@craftr/pkg-config": "*"
+  }
+}

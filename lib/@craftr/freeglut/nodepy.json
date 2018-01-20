@@ -1,0 +1,12 @@
+{
+  "name": "@craftr/freeglut",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Use FreeGLUT in C/C++ projects.",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/cmake": "*",
+    "@craftr/cxx": "*"
+  }
+}

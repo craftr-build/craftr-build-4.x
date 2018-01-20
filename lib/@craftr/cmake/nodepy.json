@@ -1,0 +1,12 @@
+{
+  "name": "@craftr/cmake",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Build CMake projects from Craftr.",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/cxx": "*",
+    "@craftr/msvc": "*"
+  }
+}

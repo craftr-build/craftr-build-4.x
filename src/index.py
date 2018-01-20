@@ -10,6 +10,8 @@ import zipfile
 
 import {Configuration} from './utils/cfgparser'
 import path from './utils/path'
+import sh from './utils/sh'
+import utils from './utils'
 
 #: Verbose output enabled/disabled.
 verbose = False
@@ -40,7 +42,6 @@ import {
   Factory
   } from './target'
 import {BuildGraph} from './buildgraph'
-import utils from './utils'
 
 
 def fmt(s, frame=None):

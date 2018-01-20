@@ -572,6 +572,7 @@ def main(argv=None):
     return 0
 
   args = parser.parse_args(argv)
+  require.context.resolver.paths.append(module.directory.joinpath('../lib'))
 
   if os.environ.get('CRAFTR_VERBOSE', '').strip():
     args.verbose = True
@@ -696,7 +697,7 @@ def main(argv=None):
       error('fatal: --tool requires at least one argument')
       return 1
     try:
-      tool_module = require.try_('./tools/' + args.tool[0])
+      tool_module = require.try_('./tools/' + args.tool[0], '@craftr/' + args.tool[0])
     except require.TryResolveError:
       error('fatal: no such tool:', args.tool[0])
       return 1

@@ -1,0 +1,12 @@
+{
+  "name": "@craftr/cxx",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Build C/C++ projects with Craftr (MSVC, MinGW, GCC, Clang).",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/mingw": "*",
+    "@craftr/msvc": "*"
+  }
+}

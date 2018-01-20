@@ -1,0 +1,11 @@
+{
+  "name": "@craftr/csharp",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Build C# projects with Craftr.",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/msvc": "*"
+  }
+}
