@@ -2,10 +2,10 @@
 namespace = 'opencl'
 
 import craftr from 'craftr'
-import cxx from 'craftr/lang/cxx'
-import 'craftr/libs/glew'
-import 'craftr/libs/glfw'
-import 'craftr/libs/opencl'
+import cxx from '@craftr/cxx'
+import '@craftr/glew'
+import '@craftr/glfw'
+import '@craftr/opencl'
 
 cxx.embed(
   name = 'files',
@@ -25,9 +25,9 @@ cxx.binary(
   name = 'main',
   deps = [
     ':files',
-    '//craftr/libs/glew:glew',
-    '//craftr/libs/glfw:glfw',
-    '//craftr/libs/opencl:opencl'
+    '//@craftr/glew:glew',
+    '//@craftr/glfw:glfw',
+    '//@craftr/opencl:opencl'
   ],
   srcs = ['src/main.c'],
   includes = ['src/common']

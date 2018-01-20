@@ -24,7 +24,7 @@ elif vendor == 'intel':
   else:
     raise NotImplementedError('intel on {!r}'.format(sys.platform))
 elif vendor == 'nvidia':
-  import {sdk_dir} from 'craftr/lang/cuda'
+  import {sdk_dir} from '@craftr/cuda'
   if os.name == 'nt':
     cxx.prebuilt(
       name = 'opencl',

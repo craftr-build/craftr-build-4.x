@@ -3,7 +3,7 @@ import os, sys
 import craftr, {path, utils.stream.concat as concat} from 'craftr'
 import cxx from '@craftr/cxx'
 import gcc from '@craftr/cxx/gcc'
-import msvc from '@craftr/msvc'
+import msvc from '@craftr/cxx/msvc'
 
 sdk_dir = craftr.options.get('cuda.sdk_dir', os.environ.get('CUDA_PATH'))
 if not sdk_dir:
