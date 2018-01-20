@@ -67,7 +67,7 @@ class Namespace:
     self.version = version
     self.directory = directory
     if not build_directory:
-      build_directory = path.join(craftr.build_directory, 'cells', self.name)
+      build_directory = path.join(craftr.build_directory, self.name)
     self.build_directory = build_directory
     self.targets = {}
 
