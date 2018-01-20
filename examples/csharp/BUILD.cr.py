@@ -1,7 +1,7 @@
 # Sample Craftr build script for C# projects.
 
 import craftr from 'craftr'
-import csharp from 'craftr/lang/csharp'
+import csharp from '@craftr/csharp'
 
 csharp.prebuilt(
   name = 'Json.NET',
