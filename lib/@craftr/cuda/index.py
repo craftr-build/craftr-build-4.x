@@ -46,20 +46,35 @@ class NvccCompiler(gcc.GccCompiler):
     compiler_env['PATH'] = path.join(sdk_dir, 'bin') + os.pathsep + compiler_env['PATH']
     linker_env = compiler_env
     archiver_env = compiler_env
+    depfile_args = None
+    depfile_name = None
+    deps_prefix = cxx.compiler.deps_prefix
 
     for name in ('archiver', 'archiver_out', 'lib_macro', 'ext_lib_macro', 'ext_dll_macro', 'ext_exe_macro', 'obj_macro'):
       locals()[name] = getattr(msvc.MsvcCompiler, name)
 
-  def build_compile_flags(self, build, language):
-    compiler_options = []
-    if build.static_runtime:
-      compiler_options += ['/MTd' if build.debug else '/MT']
-    else:
-      compiler_options += ['/MDd' if build.debug else '/MD']
+    def build_compile_flags(self, build, language):
+      compiler_options = ['/showIncludes']
+      if build.static_runtime:
+        compiler_options += ['/MTd' if build.debug else '/MT']
+      else:
+        compiler_options += ['/MDd' if build.debug else '/MD']
 
-    flags = super().build_compile_flags(build, language)
-    flags += concat([('-Xcompiler', x) for x in compiler_options])
-    return flags
+      flags = super().build_compile_flags(build, language)
+      flags += concat([('-Xcompiler', x) for x in compiler_options])
+      return flags
+
+    def build_link_flags(self, build, outfile, additional_input_files):
+      # It appears as if CUDA, at least in a debug build, adds LIBCMT which
+      # will then conflict with LIBCMTD.
+      if build.static_runtime:
+        linker_options = ['/NODEFAULTLIB:LIBCMT'] if build.debug else ['/NODEFAULTLIB:LIBCMTD']
+      else:
+        linker_options = ['/NODEFAULTLIB:MSVCRT'] if build.debug else ['/NODEFAULTLIB:MSVCRTD']
+
+      flags = super().build_link_flags(build, outfile, additional_input_files)
+      flags += concat([('-Xlinker', x) for x in linker_options])
+      return flags
 
 
 compiler = NvccCompiler()

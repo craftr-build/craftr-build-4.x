@@ -1,16 +1,16 @@
 
-namespace = 'cuda-example'
+namespace = 'cuda'
 
 import craftr from 'craftr'
-import 'craftr/libs/freeglut'
-import 'craftr/libs/glew'
-import cuda from 'craftr/lang/cuda'
+import cuda from '@craftr/cuda'
+import '@craftr/freeglut'
+import '@craftr/glew'
 
 cuda.binary(
   name = 'main',
   deps = [
-    '//craftr/libs/glew:glew',
-    '//craftr/libs/freeglut:freeglut'
+    '//@craftr/glew:glew',
+    '//@craftr/freeglut:freeglut'
   ],
   srcs = craftr.glob(['src/*.cpp', 'src/*.cu']),
   includes = ['include']
