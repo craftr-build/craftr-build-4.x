@@ -7,9 +7,10 @@ import nodepy
 import re
 import sys
 
-import craftr, {path, macro,
+import craftr, {path, utils,
   utils.stream.concat as concat,
   utils.stream.unique as unique} from 'craftr'
+import macro from 'craftr/utils/macro'
 
 
 def infer_linkage(target):

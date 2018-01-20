@@ -102,6 +102,8 @@ class Namespace:
       name = '__main__' if not package else package.name
       version = '1.0.0' if not package else package.payload.get('version', '1.0.0')
       directory = require.main.directory if not package else str(package.directory)
+    if name.startswith('@craftr/'):
+      name = name[8:]
     namespace = cls(name, version, directory)
     return namespace
 
