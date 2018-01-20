@@ -154,7 +154,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--options',
+  '-o', '--options',
   metavar='KEY=VALUE',
   nargs='+',
   default=[],
@@ -164,11 +164,9 @@ parser.add_argument(
 )
 
 parser.add_argument(
-  '--flush',
+  '--verbose',
   action='store_true',
-  help='Flush existing build configuration files. Use this option if you '
-       'want to run the --configure step again without taking into options '
-       'saved from a previous run.'
+  help='Enable everything verbose. Can also be set via CRAFTR_VERBOSE.'
 )
 
 parser.add_argument(
@@ -466,17 +464,24 @@ def run_build_action(graph, node_name, index):
   if node.cwd:
     os.chdir(node.cwd)
 
+  # Generate the command list.
+  commands = [substitute_inputs_outputs(x, files) + additional_args
+              for x in node.commands]
+
   # Used to print the command-list on failure.
   def print_command_list(current=-1):
     error('Command list:'.format(node.identifier()))
-    for i, cmd in enumerate(node.commands):
+    for i, cmd in enumerate(commands):
       error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
 
+  if craftr.verbose:
+    print_command_list()
+
   # Execute the subcommands.
-  for i, cmd in enumerate(node.commands):
+  for i, cmd in enumerate(commands):
     cmd = substitute_inputs_outputs(cmd, files)
     # Add the additional_args to the last command in the chain.
-    if i == len(node.commands) - 1:
+    if i == len(commands) - 1:
       cmd = cmd + additional_args
     try:
       code = subprocess.call(cmd)
@@ -568,6 +573,12 @@ def main(argv=None):
 
   args = parser.parse_args(argv)
 
+  if os.environ.get('CRAFTR_VERBOSE', '').strip():
+    args.verbose = True
+  elif args.verbose:
+    os.environ['CRAFTR_VERBOSE'] = 'true'
+  craftr.verbose = args.verbose
+
   # Validate some parameter combinations.
   if (args.reconfigure is not NotImplemented and
       args.configure is not NotImplemented):
@@ -604,8 +615,8 @@ def main(argv=None):
 
   # Handle --run-action if a --build-directory is explicitly specified.
   if (args.build is not NotImplemented or args.clean is not NotImplemented
-      or args.configure is not NotImplemented or args.flush
-      or args.prepare_build) and args.run_action:
+      or args.configure is not NotImplemented or args.prepare_build) \
+      and args.run_action:
     print(args)
     error('fatal: --run-action can not be combined with other build steps.')
     return 1
@@ -732,12 +743,6 @@ def main(argv=None):
   if args.show_build_directory:
     print(craftr.build_directory)
     return 0
-
-  # Handle --flush
-  if args.flush and os.path.exists(craftr.build_directory):
-    msg = 'note: removing build directory "{}" (--flush)'
-    print(msg.format(craftr.build_directory))
-    shutil.rmtree(craftr.build_directory)
 
   # Read in the cache from the previous build.
   cache_file = os.path.join(craftr.build_directory, 'craftr_cache.json')

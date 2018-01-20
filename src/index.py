@@ -11,6 +11,9 @@ import zipfile
 import {Configuration} from './utils/cfgparser'
 import path from './utils/path'
 
+#: Verbose output enabled/disabled.
+verbose = False
+
 #: Set to True when `craftr --configure` is executed.
 is_configure = False
 
