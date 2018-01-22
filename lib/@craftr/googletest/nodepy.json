@@ -1,0 +1,11 @@
+{
+  "name": "@craftr/googletest",
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": ["rosensteinniklas@gmail.com"],
+  "description": "Use Google's Test suite to test your C++ projects.",
+  "dependencies": {
+    "craftr": "*",
+    "@craftr/cxx": "*"
+  }
+}
