@@ -16,6 +16,9 @@
 * `cxx.preferred_linkage` (str) &ndash; Default value for the same-named
   `cxx.library()` and `cxx.prebuilt()` parameter when there are no dependents
   that override the `link_style.`
+* `cxx.save_temps` (bool) &ndash; Save temporary files from the compilation
+  step (eg. `-save-temps` in GCC). Note that some compilers (eg. MSVC) may
+  currently not compile but only save the preprocessed files.
 
 ---
 

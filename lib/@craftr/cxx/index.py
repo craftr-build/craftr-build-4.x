@@ -93,6 +93,7 @@ class CxxBuild(craftr.Behaviour):
         outname: str = '$(lib)$(name)$(ext)',
         outdir: str = NotImplemented,
         unity_build: bool = None,
+        save_temps: bool = None,
         compiler: 'Compiler' = None,
         options: Dict = None,
         localize_srcs: bool = True):
@@ -154,6 +155,7 @@ class CxxBuild(craftr.Behaviour):
     self.outname = outname
     self.outdir = outdir
     self.unity_build = unity_build
+    self.save_temps = save_temps
     self.compiler = compiler
     self.options = options
     self.additional_outputs = []
@@ -236,6 +238,8 @@ class CxxBuild(craftr.Behaviour):
       self.c_stdlib = infer_first_not_none(self.target, 'c_stdlib', None)
     if self.cpp_stdlib is None:
       self.cpp_stdlib = infer_first_not_none(self.target, 'cpp_stdlib', None)
+    if self.save_temps is None:
+      self.save_temps = craftr.options.get('cxx.save_temps', False)
 
     # Separate C and C++ sources.
     c_srcs = []
@@ -470,6 +474,7 @@ class Compiler(utils.named):
     ('enable_rtti', List[str]),
     ('disable_rtti', List[str]),
     ('force_include', List[str]),
+    ('save_temps', List[str]),               # Flags to save temporary files during the compilation step.
     ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix.
     ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $out.
     ('deps_prefix', str, None),              # The deps prefix (don't mix with depfile_name).
@@ -611,6 +616,9 @@ class Compiler(utils.named):
     command = self.expand(getattr(self, 'compiler_' + language))
     command.append('$in')
     command.extend(self.expand(self.compiler_out, '$out'))
+
+    if build.save_temps:
+      command.extend(self.expand(self.save_temps))
 
     # c_std, cpp_std
     std_value = getattr(build, language + '_std')

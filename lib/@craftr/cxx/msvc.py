@@ -44,6 +44,7 @@ class MsvcCompiler(Compiler):
   enable_rtti = '/GR'
   disable_rtti = '/GR-'
   force_include = ['/FI', '%ARG%']
+  save_temps = ['/P', '/Fi$out.i']  # TODO: Prevents the compilation step. :(
 
   linker_c = ['link', '/nologo']
   linker_cpp = linker_c

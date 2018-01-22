@@ -43,6 +43,7 @@ class GccCompiler(Compiler):
   enable_rtti = []
   disable_rtti = '-fno-rtti'
   force_include = ['-include', '%ARG%']
+  save_temps = '-save-temps'
   depfile_args = ['-MD', '-MP', '-MF', '$out.d']
   depfile_name = '$out.d'
 
