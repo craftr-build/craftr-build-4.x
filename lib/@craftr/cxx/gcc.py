@@ -26,7 +26,9 @@ class GccCompiler(Compiler):
   compiler_out = ['-c', '-o', '$out[0]']
 
   c_std = '-std=%ARG%'
+  c_stdlib = '-stdlib=%ARG%'
   cpp_std = '-std=%ARG%'
+  cpp_stdlib = '-stdlib=%ARG%'
   pic_flag = '-fPIC'
   debug_flag = '-g'
   define_flag = '-D%ARG%'
@@ -66,9 +68,6 @@ class GccCompiler(Compiler):
   ext_dll_macro = extmacro('.so', '.so.$(0)')
   ext_exe_macro = extmacro('', '.$(0)')
   obj_macro = '.o'
-
-  gcc_static_libc = '-static-libgcc'
-  gcc_static_libstdcpp = '-static-libstdc++'
 
 
 def get_compiler(fragment):

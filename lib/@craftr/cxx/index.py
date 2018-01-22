@@ -40,6 +40,15 @@ def infer_bool(target, attr, default):
     return default
 
 
+def infer_first_not_none(target, attr, default):
+  for build in target.dependents(with_behaviour=CxxBuild).attr('impl'):
+    value = getattr(build, attr)
+    if value is not None:
+      return value
+  else:
+    return default
+
+
 def infer_optimize(target):
   for build in target.dependents(with_behaviour=CxxBuild).attr('impl'):
     if build.optimize:
@@ -53,7 +62,9 @@ class CxxBuild(craftr.Behaviour):
         type: str,
         srcs: List[str] = None,
         c_std = None,
+        c_stdlib = None,
         cpp_std = None,
+        cpp_stdlib = None,
         debug: bool = None,
         warnings: bool = True,
         warnings_as_errors: bool = False,
@@ -113,7 +124,9 @@ class CxxBuild(craftr.Behaviour):
     self.type = type
     self.debug = debug
     self.c_std = c_std
+    self.c_stdlib = c_stdlib
     self.cpp_std = cpp_std
+    self.cpp_stdlib = cpp_stdlib
     self.warnings = warnings
     self.warnings_as_errors = warnings_as_errors
     self.optimize = optimize
@@ -219,6 +232,10 @@ class CxxBuild(craftr.Behaviour):
 
     if self.exceptions is None:
       self.exceptions = infer_bool(self.target, 'exceptions', True)
+    if self.c_stdlib is None:
+      self.c_stdlib = infer_first_not_none(self.target, 'c_stdlib', None)
+    if self.cpp_stdlib is None:
+      self.cpp_stdlib = infer_first_not_none(self.target, 'cpp_stdlib', None)
 
     # Separate C and C++ sources.
     c_srcs = []
@@ -436,7 +453,9 @@ class Compiler(utils.named):
     ('compiler_out', List[str]),             # Specify the compiler object output file.
 
     ('c_std', List[str]),
+    ('c_stdlib', List[str], []),
     ('cpp_std', List[str]),
+    ('cpp_stdlib', List[str], []),
     ('pic_flag', List[str]),                 # Flag(s) to enable position independent code.
     ('debug_flag', List[str]),               # Flag(s) to enable debug symbols.
     ('define_flag', str),                    # Flag to define a preprocessor macro.
@@ -593,9 +612,15 @@ class Compiler(utils.named):
     command.append('$in')
     command.extend(self.expand(self.compiler_out, '$out'))
 
+    # c_std, cpp_std
     std_value = getattr(build, language + '_std')
     if std_value:
       command.extend(self.expand(getattr(self, language + '_std'), std_value))
+    # c_stdlib, cpp_stdlib
+    stdlib_value = getattr(build, language + '_stdlib')
+    if stdlib_value:
+      command.extend(self.expand(getattr(self, language + '_stdlib'), stdlib_value))
+
     for include in includes:
       command.extend(self.expand(self.include_flag, include))
     for define in defines:

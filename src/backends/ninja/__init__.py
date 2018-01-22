@@ -126,7 +126,7 @@ def check_ninja_version(build_directory, download=False):
   if ninja:
     ninja_version = subprocess.check_output([ninja, '--version']).decode().strip()
     if not ninja_version or ninja_version < NINJA_MIN_VERSION:
-      print('note: need at least ninja {} (have {} at "{}")'.format(NINJA_MIN_VERSION, out, ninja))
+      print('note: need at least ninja {} (have {} at "{}")'.format(NINJA_MIN_VERSION, ninja_version, ninja))
       ninja = None
       ninja_version = None
 
