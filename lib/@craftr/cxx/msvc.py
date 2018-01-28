@@ -1,7 +1,7 @@
 
 from typing import Union, List
 import logging as log
-import craftr, {path} from 'craftr'
+import craftr, {path, utils.stream.unique as unique} from 'craftr'
 import {MsvcToolkit} from '@craftr/msvc'
 import {CompilerOptions, Compiler, extmacro} from '.'
 
@@ -114,14 +114,14 @@ class MsvcCompiler(Compiler):
         command += ['/Z7']
       else:
         command += ['/Zi', '/Fd' + path.setsuffix(outfile, '.pdb')]
-    command += ['/wd' + str(x) for x in set(options.get_list(build.target, 'msvc_disable_warnings'))]
+    command += ['/wd' + str(x) for x in unique(options.get_list(build.target, 'msvc_disable_warnings'))]
 
     if build.static_runtime:
       command += ['/MTd' if build.debug else '/MT']
     else:
       command += ['/MDd' if build.debug else '/MD']
 
-    command += ['/we' + str(x) for x in set(options.get_list(build.target, 'msvc_warnings_as_errors'))]
+    command += ['/we' + str(x) for x in unique(options.get_list(build.target, 'msvc_warnings_as_errors'))]
     command += options.get_list(build.target, 'msvc_compile_flags')
 
     if self.deps_prefix:
@@ -133,7 +133,7 @@ class MsvcCompiler(Compiler):
     options = build.options
     command += [
       ('/NODEFAULTLIB:' + x) if x else '/NODEFAULTLIB'
-      for x in set(options.get_list(build.target, 'msvc_nodefaultlib'))
+      for x in unique(options.get_list(build.target, 'msvc_nodefaultlib'))
     ]
     if build.is_sharedlib():
       command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
