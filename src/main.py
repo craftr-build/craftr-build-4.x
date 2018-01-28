@@ -19,6 +19,7 @@ import toml
 
 import craftr from 'craftr'
 import utils, {plural, stream.concat as concat, stream.chain as chain} from 'craftr/utils'
+import {ActionServer, RemoteBuildGraph} from './actionserver'
 
 error = functools.partial(print, file=sys.stderr)
 
@@ -641,8 +642,16 @@ def main(argv=None):
 
   craftr.build_directory = args.build_directory
   if args.run_action and args.build_directory:
-    build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
-    return run_build_action(build_graph, args.run_action, args.run_action_index)
+    server_address = os.environ.get('CRAFTR_ACTION_SERVER')
+    if server_address:
+      build_graph = RemoteBuildGraph(server_address)
+    else:
+      print('note: reading craftr_build_graph.json, CRAFTR_ACTION_SERVER is not set.')
+      build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
+    try:
+      return run_build_action(build_graph, args.run_action, args.run_action_index)
+    finally:
+      if server_address: build_graph.end_connection()
   # Handle --show-action if --build-directory was not explicitly specified.
   if args.show_action and args.build_directory:
     build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
@@ -941,7 +950,9 @@ def main(argv=None):
 
     try:
       args.build_args = list(concat(map(shlex.split, args.build_args)))
-      res = backend.build(craftr.build_directory, build_graph, args)
+      with ActionServer(build_graph) as action_server:
+        os.environ['CRAFTR_ACTION_SERVER'] = '{}:{}'.format(*action_server.address())
+        res = backend.build(craftr.build_directory, build_graph, args)
     finally:
       with contextlib.suppress(FileNotFoundError):
         os.remove(additional_args_file)
