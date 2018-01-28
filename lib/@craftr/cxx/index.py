@@ -1,6 +1,7 @@
 
 
 from typing import List, Dict, Union, Callable, Type
+import collections
 import functools
 import logging as log
 import nodepy
@@ -56,7 +57,42 @@ def infer_optimize(target):
   return craftr.options.get('cxx.optimize', 'speed')
 
 
-class CxxBuild(craftr.Behaviour):
+class _WithCompiler:
+
+  def __init__(self, compiler, options, exported_options=NotImplemented):
+    if compiler is None:
+      compiler = globals()['compiler']
+
+    if options is None:
+      options = {}
+    if isinstance(options, dict):
+      options = compiler.options_class(**options)
+    if exported_options is None:
+      exported_options = {}
+    if isinstance(exported_options, dict):
+      exported_options = compiler.options_class(**exported_options)
+
+    if not isinstance(options, compiler.options_class):
+      raise TypeError('options must be None, dict or {}, got {} instead'
+        .format(compiler.options_class.__name__, type(options).__name__))
+    if exported_options is not NotImplemented and not isinstance(exported_options, compiler.options_class):
+      raise TypeError('export_options must be None, dict or {}, got {} instead'
+        .format(compiler.options_class.__name__, type(exported_options).__name__))
+
+    unknown_options = set(options.__unknown_options__)
+    if exported_options is not NotImplemented:
+      unknown_options |= set(exported_options.__unknown_options__)
+    if unknown_options:
+      log.warn('[{}]: Unknown compiler option(s): {}'.format(
+        self.target.identifier(), ', '.join(unknown_options)))
+
+    self.compiler = compiler
+    self.options = options
+    if exported_options is not NotImplemented:
+      self.exported_options = exported_options
+
+
+class CxxBuild(craftr.Behaviour, _WithCompiler):
 
   def init(self,
         type: str,
@@ -96,8 +132,8 @@ class CxxBuild(craftr.Behaviour):
         save_temps: bool = None,
         compiler: 'Compiler' = None,
         options: Dict = None,
+        exported_options: Dict = None,
         localize_srcs: bool = True):
-    assert compiler and isinstance(compiler, Compiler)
     if type not in ('library', 'binary'):
       raise ValueError('invalid type: {!r}'.format(type))
     if optimize not in (None, 'speed', 'size'):
@@ -110,13 +146,6 @@ class CxxBuild(craftr.Behaviour):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
     if isinstance(srcs, str):
       srcs = [srcs]
-    if options is None:
-      options = {}
-    if isinstance(options, dict):
-      options = compiler.options_class(**options)
-    if not isinstance(options, compiler.options_class):
-      raise TypeError('options must be None, dict or {}, got {} instead'
-        .format(compilre.options_class.__name__, type(options).__name__))
     self.srcs = [craftr.localpath(x) for x in (srcs or [])] if localize_srcs else (srcs or [])
     if not self.srcs:
       raise ValueError('srcs must have minimum length 1')
@@ -156,8 +185,6 @@ class CxxBuild(craftr.Behaviour):
     self.outdir = outdir
     self.unity_build = unity_build
     self.save_temps = save_temps
-    self.compiler = compiler
-    self.options = options
     self.additional_outputs = []
     self.additional_link_files = []
     self.localize_srcs = localize_srcs
@@ -182,10 +209,7 @@ class CxxBuild(craftr.Behaviour):
     # than the actual output DLL output file.
     self.linkname_full = None
 
-    if self.options.__unknown_options__:
-      log.warn('[{}]: Unknown compiler option(s): {}'.format(
-        self.target.identifier(), ', '.join(self.options.__unknown_options__.keys())))
-
+    _WithCompiler.__init__(self, compiler, options, exported_options)
     compiler.on_target_created(self)
 
   def is_foreach(self):
@@ -324,7 +348,7 @@ class CxxBuild(craftr.Behaviour):
     )
 
 
-class CxxPrebuilt(craftr.Behaviour):
+class CxxPrebuilt(craftr.Behaviour, _WithCompiler):
 
   def init(self,
                includes: List[str] = None,
@@ -336,7 +360,9 @@ class CxxPrebuilt(craftr.Behaviour):
                forced_includes: List[str] = None,
                syslibs: List[str] = None,
                libpath: List[str] = None,
-               preferred_linkage: List[str] = 'any'):
+               preferred_linkage: List[str] = 'any',
+               compiler: 'Compiler' = None,
+               options: Dict = None):
     if preferred_linkage not in ('any', 'static', 'shared'):
       raise ValueError('invalid preferred_linkage: {!r}'.format(preferred_linkage))
     self.includes = [craftr.localpath(x) for x in (includes or [])]
@@ -349,6 +375,7 @@ class CxxPrebuilt(craftr.Behaviour):
     self.syslibs = syslibs or []
     self.libpath = libpath or []
     self.preferred_linkage = preferred_linkage
+    _WithCompiler.__init__(self, compiler, options)
 
   def translate(self):
     pass
@@ -434,6 +461,50 @@ class CompilerOptions(utils.named):
   def __repr__(self):
     return '<{} ({} unknown option(s))>'.format(type(self).__name__,
       len(self.__unknown_options__))
+
+  @staticmethod
+  def iter_options(target):
+    yield target, target.impl.options
+    if isinstance(target.impl, CxxBuild):
+      yield target, target.impl.exported_options
+    for dep in target.deps():
+      if isinstance(dep.impl, CxxBuild):
+        yield dep, dep.impl.exported_options
+      elif isinstance(dep.impl, CxxPrebuilt):
+        yield dep, dep.impl.options
+
+  @classmethod
+  def get_bool(cls, target, member, default=False):
+    """
+    Uses all #CompilerOptions on the #CxxBuild or #CxxPrebuilt target
+    *target* and its dependencies to find the first value for *member* that
+    is not #None and returns it.
+    """
+
+    for target, options in cls.iter_options(target):
+      value = getattr(options, member, None)
+      if value is not None:
+        return bool(value)
+    return default
+
+  @classmethod
+  def get_list(cls, target, member):
+    """
+    Uses all #CompilerOptions on the #CxxBuild or #CxxPrebuilt target
+    *target* and its dependencies to join all lists of *member* into a
+    single list.
+    """
+
+    result = []
+    for target, options in cls.iter_options(target):
+      value = getattr(options, member, None)
+      if value is not None:
+        if isinstance(value, str) or not isinstance(value, collections.Sequence):
+          raise TypeError('[{}] {}.{} expected None or Sequence, got {}'
+            .format(target.identifier(), type(options).__name__,
+                    member, type(value).__name__))
+        result += value
+    return result
 
 
 class Compiler(utils.named):

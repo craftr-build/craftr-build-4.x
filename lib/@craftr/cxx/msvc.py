@@ -9,13 +9,18 @@ import {CompilerOptions, Compiler, extmacro} from '.'
 class MsvcCompilerOptions(CompilerOptions):
 
   __annotations__ = [
-    ('msvc_nodefaultlib', Union[bool, List[str]], False),
+    ('msvc_nodefaultlib', Union[bool, List[str]], None),
     ('embedd_debug_symbols', bool, True),
     ('msvc_disable_warnings', List[str], None),
     ('msvc_warnings_as_errors', List[str], None),
     ('msvc_compile_flags', List[str], None),
     ('msvc_resource_files', List[str], None)
   ]
+
+  def __init__(self, **kwargs):
+    if kwargs.get('msvc_nodefaultlib') == True:
+      kwargs['msvc_nodefaultlib'] = ['']
+    super().__init__(**kwargs)
 
 
 class MsvcCompiler(Compiler):
@@ -105,22 +110,19 @@ class MsvcCompiler(Compiler):
       if not self.version or self.version >= '18':
         # Enable parallel writes to .pdb files.
         command += ['/FS']
-      if options.embedd_debug_symbols:
+      if options.get_bool(build.target, 'embedd_debug_symbols'):
         command += ['/Z7']
       else:
         command += ['/Zi', '/Fd' + path.setsuffix(outfile, '.pdb')]
-    if options.msvc_disable_warnings:
-      command += ['/wd' + str(x) for x in options.msvc_disable_warnings]
+    command += ['/wd' + str(x) for x in set(options.get_list(build.target, 'msvc_disable_warnings'))]
 
     if build.static_runtime:
       command += ['/MTd' if build.debug else '/MT']
     else:
       command += ['/MDd' if build.debug else '/MD']
 
-    if options.msvc_warnings_as_errors:
-      command += ['/we' + str(x) for x in options.msvc_warnings_as_errors]
-    if options.msvc_compile_flags:
-      command += options.msvc_compile_flags
+    command += ['/we' + str(x) for x in set(options.get_list(build.target, 'msvc_warnings_as_errors'))]
+    command += options.get_list(build.target, 'msvc_compile_flags')
 
     if self.deps_prefix:
       command += ['/showIncludes']
@@ -129,10 +131,10 @@ class MsvcCompiler(Compiler):
   def build_link_flags(self, build, outfile, additional_input_files):
     command = super().build_link_flags(build, outfile, additional_input_files)
     options = build.options
-    if options.msvc_nodefaultlib is True:
-      command += ['/NODEFAULTLIB']
-    elif options.msvc_nodefaultlib:
-      command += ['/NODEFAULTLIB:' + x for x in options.msvc_nodefaultlib]
+    command += [
+      ('/NODEFAULTLIB:' + x) if x else '/NODEFAULTLIB'
+      for x in set(options.get_list(build.target, 'msvc_nodefaultlib'))
+    ]
     if build.is_sharedlib():
       command += ['/IMPLIB:$out.lib']  # set from set_target_outputs()
     if build.debug and build.is_sharedlib():
