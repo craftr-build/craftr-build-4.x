@@ -65,12 +65,7 @@ class RemoteBuildGraph:
     self._client.sendall(request)
     response_size = struct.unpack('!I', self._client.recv(4))[0]
     response_data = recvall(self._client, response_size).decode('utf8')
-    try:
-      response = json.loads(response_data)
-    except json.JSONDecodeError as e:
-      print('>>>>>>>>', e)
-      print(response_data)
-      raise
+    response = json.loads(response_data)
     if response.get('error') == 'DoesNotExist':
       return None
     elif 'error' in response:
