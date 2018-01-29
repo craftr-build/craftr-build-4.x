@@ -1,3 +1,2 @@
-.nodepy/
+.env/
 build/
-public/

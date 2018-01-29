@@ -1,0 +1,9 @@
+README.md
+craftr/__init__.py
+craftr/main.py
+craftr_build.egg-info/PKG-INFO
+craftr_build.egg-info/SOURCES.txt
+craftr_build.egg-info/dependency_links.txt
+craftr_build.egg-info/entry_points.txt
+craftr_build.egg-info/requires.txt
+craftr_build.egg-info/top_level.txt
