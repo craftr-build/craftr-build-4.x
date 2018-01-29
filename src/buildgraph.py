@@ -211,7 +211,13 @@ class BaseBuildGraph:
     Generate a hash for an action in the #BuildGraph.
     """
 
-    data = json.dumps(action.as_json(), sort_keys=True)
+    if isinstance(action, BuildAction):
+      data = action.as_json()
+    elif isinstance(action, dict):
+      data = action
+    else:
+      raise TypeError('expect BuildAction or dict')
+    data = json.dumps(data, sort_keys=True)
     return hashlib.sha1(data.encode('utf8')).hexdigest()[:12]
 
 

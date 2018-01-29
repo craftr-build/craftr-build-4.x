@@ -21,6 +21,7 @@ import {BuildAction, BaseBuildGraph} from './buildgraph'
 class ActionRequestHandler(socketserver.BaseRequestHandler):
 
   build_graph = None
+  additional_args = None
 
   def handle(self):
     try:
@@ -36,6 +37,8 @@ class ActionRequestHandler(socketserver.BaseRequestHandler):
           response_data = {'error': 'DoesNotExist', 'action': action_key}
         else:
           response_data = {'action': action_key, 'data': action.as_json()}
+          response_data['data']['hash'] = self.build_graph.hash(response_data['data'])
+          response_data['data']['additional_args'] = self._get_additional_args(action_key)
         response_data = json.dumps(response_data).encode('utf8')
         self.request.sendall(struct.pack('!I', len(response_data)))
         self.request.sendall(response_data)
@@ -43,11 +46,20 @@ class ActionRequestHandler(socketserver.BaseRequestHandler):
     except ConnectionResetError:
       pass
 
+  def _get_additional_args(self, action):
+    if action not in self.additional_args:
+      action = action.partition('#')[0]
+      if action not in self.additional_args:
+        return []
+    return shlex.split(self.additional_args[action])
+
+
 class ActionServer:
 
-  def __init__(self, build_graph):
+  def __init__(self, build_graph, additional_args=None):
     assert isinstance(build_graph, BaseBuildGraph)
     self._build_graph = build_graph
+    self._additional_args = additional_args or {}
     self._server = socketserver.ThreadingTCPServer(('localhost', 0), self._request_handler)
     self._server.timeout = 0.5
     self._thread = None
@@ -65,6 +77,7 @@ class ActionServer:
   def _request_handler(self, *args, **kwargs):
     handler = object.__new__(ActionRequestHandler)
     handler.build_graph = self._build_graph
+    handler.additional_args = self._additional_args
     handler.__init__(*args, **kwargs)
     #self._pool.submit(handler.__init__, *args, **kwargs)
 
@@ -81,46 +94,3 @@ class ActionServer:
     self._server.shutdown()
     if wait and self._thread:
       self._thread.join()
-
-
-class RemoteBuildGraph(BaseBuildGraph):
-  """
-  Represents a remote build graph server by an #ActionServer.
-  """
-
-  def __init__(self, server_address=None):
-    if server_address is None:
-      server_address = os.environ.get('CRAFTR_ACTION_SERVER')
-      if not server_address or server_address.count(':') != 1:
-        raise ValueError('CRAFTR_ACTION_SERVER not set or invalid')
-    if isinstance(server_address, str):
-      server_address = server_address.split(':', 1)
-      server_address[1] = int(server_address[1])
-    self._client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self._client.connect(tuple(server_address))
-    self._actions = {}
-
-  def __getitem__(self, key):
-    try:
-      action = self._actions[key]
-    except KeyError:
-      action = self._request(key)
-    if action is None:
-      raise KeyError(key)
-    return action
-
-  def _request(self, key):
-    if not isinstance(key, str): return None
-    request = json.dumps({'action': key}).encode('utf8')
-    self._client.sendall(struct.pack('!I', len(request)))
-    self._client.sendall(request)
-    response_size = struct.unpack('!I', self._client.recv(4))[0]
-    response = json.loads(self._client.recv(response_size).decode('utf8'))
-    if response.get('error') == 'DoesNotExist':
-      return None
-    elif 'error' in response:
-      raise RuntimeError(response['error'])
-    return BuildAction.from_json(response['data'])
-
-  def end_connection(self):
-    self._client.close()

@@ -59,9 +59,9 @@ def export_action(build_directory, writer, graph, action, non_explicit):
     non_explicit.append(phony_name)
 
   command = [
-    '$nodepy_exec_args',
-    str(require.resolve('craftr/main').filename),
-    '--build-directory', build_directory,
+    '$python',
+    str(require.resolve('craftr/buildslave').filename),
+    #'--build-directory', build_directory,
     # Place the hash in the command string, so Ninja always knows when
     # when the definition of the build action changed.
     '--run-action', '{}^{}'.format(action.identifier(), graph.hash(action))
@@ -161,6 +161,7 @@ def prepare_build(build_directory, graph, args):
 
     # writer.variable('msvc_deps_prefix')  # TODO
     writer.variable('builddir', build_directory)
+    writer.variable('python', ' '.join(map(quote, [sys.executable])))
     writer.variable('nodepy_exec_args', ' '.join(map(quote, nodepy.runtime.exec_args)))
     writer.newline()
 

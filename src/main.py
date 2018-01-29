@@ -19,7 +19,8 @@ import toml
 
 import craftr from 'craftr'
 import utils, {plural, stream.concat as concat, stream.chain as chain} from 'craftr/utils'
-import {ActionServer, RemoteBuildGraph} from './actionserver'
+import {ActionServer} from './actionserver'
+import {run_build_action, RemoteBuildGraph} from './buildslave'
 
 error = functools.partial(print, file=sys.stderr)
 
@@ -367,166 +368,6 @@ def merge_options(*opts):
   return [k + '=' + v for k, v in result.items()]
 
 
-def get_additional_args_for(action_name):
-  """
-  In the --build step, a `craftr_additional_args.json` file may be present
-  which specifies additional arguments passed to a target via the command-line.
-  This extracts the additional arguments for the specified *action_name*, falling
-  back to the action's target if such an entry exists.
-  """
-
-  additional_args_file = os.path.join(craftr.build_directory, 'craftr_additional_args.json')
-  if not os.path.isfile(additional_args_file):
-    return []
-  with open(additional_args_file, 'r') as fp:
-    additional_args = json.load(fp)
-  try:
-    return shlex.split(additional_args[action_name])
-  except KeyError:
-    pass
-  target_name = action_name.partition('#')[0]
-  try:
-    return shlex.split(additional_args[target_name])
-  except KeyError:
-    pass
-  return []
-
-
-def substitute_inputs_outputs(command, iofiles):
-  """
-  Substitutes the $in and $out references in *command* for the *inputs*
-  and *outputs*.
-  """
-
-  def expand(commands, var, files):
-    regexp = re.compile('(\\${}\\b)(\[\d+\])?(\.[\w\d]+\\b)?'.format(re.escape(var)))
-    offset = 0
-    for i in range(len(commands)):
-      i += offset
-      match = regexp.search(commands[i])
-      if not match: continue
-      prefix, suffix = commands[i][:match.start()], commands[i][match.end():]
-      subst = [prefix + x + suffix for x in files]
-      index = match.group(2)
-      suffix = match.group(3)
-      if index:
-        subst = [subst[int(index[1:-1])]]
-      if suffix:
-        subst = [craftr.path.addsuffix(x, suffix) for x in subst]
-      commands[i:i+1] = subst
-      offset += len(subst) - 1
-
-  expand(command, 'in', iofiles.inputs)
-  expand(command, 'out', iofiles.outputs)
-  expand(command, 'optionalout', iofiles.optional_outputs)
-  return command
-
-
-def run_build_action(graph, node_name, index):
-  if '^' in node_name:
-    node_name, node_hash = node_name.split('^', 1)
-  else:
-    node_hash = None
-  if node_name.startswith(':'):
-    node_name = '//' + craftr.cache['main_build_cell'] + node_name
-
-  try:
-    node = graph[node_name]
-  except KeyError:
-    error('fatal: build node "{}" does not exist'.format(node_name))
-    return 1
-
-  if node.foreach and index is None:
-    error('fatal: --run-action-index is required for foreach action')
-    return 1
-  if not node.foreach and index is not None:
-    error('fatal: --run-action-index is incompatible with non-foreach action')
-    return 1
-  if not node.foreach:
-    index = 0
-
-  if node_hash is not None and node_hash != graph.hash(node):
-    error('fatal: build node hash inconsistency, maybe try --prepare-build')
-    return 1
-
-  files = node.files[index]
-
-  # TODO: The additional args feature should be explicitly supported by the
-  #       build node, allowing it to specify a position where the additional
-  #       args will be rendered.
-  #       Usually, the option only makes sense for targets that run a single
-  #       command such as cxx.run(), java.run(), etc.
-  additional_args = get_additional_args_for(node_name)
-
-  # Ensure that the output directories exist.
-  created_dirs = set()
-  for directory in (os.path.dirname(x) for x in chain(files.outputs, files.optional_outputs)):
-    if directory not in created_dirs and directory:
-      os.makedirs(directory, exist_ok=True)
-      created_dirs.add(directory)
-
-  # Update the environment and working directory.
-  old_env = os.environ.copy()
-  os.environ.update(node.environ or {})
-  if node.cwd:
-    os.chdir(node.cwd)
-
-  # Generate the command list.
-  commands = [substitute_inputs_outputs(x, files) + additional_args
-              for x in node.commands]
-
-  # Used to print the command-list on failure.
-  def print_command_list(current=-1):
-    error('Command list:'.format(node.identifier()))
-    for i, cmd in enumerate(commands):
-      error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
-
-  if craftr.verbose:
-    print_command_list()
-
-  # Execute the subcommands.
-  for i, cmd in enumerate(commands):
-    cmd = substitute_inputs_outputs(cmd, files)
-    # Add the additional_args to the last command in the chain.
-    if i == len(commands) - 1:
-      cmd = cmd + additional_args
-    try:
-      code = subprocess.call(cmd)
-    except OSError as e:
-      error(e)
-      code = 127
-    if code != 0:
-      error('\n' + '-'*60)
-      error('fatal: "{}" exited with code {}.'.format(node.identifier(), code))
-      print_command_list(i)
-      error('-'*60 + '\n')
-      return code
-
-  # Check if all output files have been produced by the commands.
-  missing_files = [x for x in files.outputs if not os.path.exists(x)]
-  if missing_files:
-    error('\n' + '-'*60)
-    error('fatal: "{}" produced only {} of {} listed output files.'.format(node.identifier(),
-        len(files.outputs) - len(missing_files), len(files.outputs)))
-    error('The missing files are:')
-    for x in missing_files:
-      error('  -', x)
-    print_command_list()
-    error('-'*60 + '\n')
-    return 1
-
-  # Show a warning about missing optional output files.
-  missing_files = [x for x in files.optional_outputs if not os.path.exists(x)]
-  if missing_files:
-    error('\n' + '-'*60)
-    error('warning: missing optional output files')
-    for x in missing_files:
-      error('  -', x)
-    error('-'*60)
-
-  return 0
-
-
 def show_build_action(graph, action_name):
   if action_name.startswith(':'):
     action_name = '//' + craftr.cache['main_build_cell'] + action_name
@@ -649,7 +490,8 @@ def main(argv=None):
       print('note: reading craftr_build_graph.json, CRAFTR_ACTION_SERVER is not set.')
       build_graph = craftr.BuildGraph().read(os.path.join(args.build_directory, 'craftr_build_graph.json'))
     try:
-      return run_build_action(build_graph, args.run_action, args.run_action_index)
+      return run_build_action(build_graph, args.run_action, args.run_action_index,
+        main_build_cell=craftr.cache.get('main_build_cell'))
     finally:
       if server_address: build_graph.end_connection()
   # Handle --show-action if --build-directory was not explicitly specified.
@@ -887,7 +729,8 @@ def main(argv=None):
 
   # Handle --run-action if --build-directory was not explicitly specified.
   if args.run_action:
-    return run_build_action(build_graph, args.run_action, args.run_action_index)
+    return run_build_action(build_graph, args.run_action, args.run_action_index,
+      main_build_cell=craftr.cache.get('main_build_cell'))
 
   # Handle --show-action if --build-directory was not explicitly specified.
   if args.show_action:
@@ -939,23 +782,24 @@ def main(argv=None):
       build_graph.select(target)
 
     # Write the file, or ensure it does not exist.
-    additional_args_file = os.path.join(craftr.build_directory, 'craftr_additional_args.json')
-    if additional_args:
-      print('note: writing "{}"'.format(additional_args_file))
-      with open(additional_args_file, 'w') as fp:
-        json.dump(additional_args, fp)
-    else:
-      with contextlib.suppress(FileNotFoundError):
-        os.remove(additional_args_file)
+    #additional_args_file = os.path.join(craftr.build_directory, 'craftr_additional_args.json')
+    #if additional_args:
+    #  print('note: writing "{}"'.format(additional_args_file))
+    #  with open(additional_args_file, 'w') as fp:
+    #    json.dump(additional_args, fp)
+    #else:
+    #  with contextlib.suppress(FileNotFoundError):
+    #    os.remove(additional_args_file)
 
     try:
       args.build_args = list(concat(map(shlex.split, args.build_args)))
-      with ActionServer(build_graph) as action_server:
+      with ActionServer(build_graph, additional_args) as action_server:
         os.environ['CRAFTR_ACTION_SERVER'] = '{}:{}'.format(*action_server.address())
         res = backend.build(craftr.build_directory, build_graph, args)
     finally:
-      with contextlib.suppress(FileNotFoundError):
-        os.remove(additional_args_file)
+      pass
+      #with contextlib.suppress(FileNotFoundError):
+      #  os.remove(additional_args_file)
     if res not in (0, None):
       return res
 
