@@ -109,7 +109,7 @@ class PropertySet:
 
   def properties(self, scope=None):
     if scope is not None:
-      return self._properties.get(scope, {}).values()
+      yield from self._properties[scope].values()
     else:
       for props in self._properties.values():
         yield from props.values()
