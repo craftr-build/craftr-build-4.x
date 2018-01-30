@@ -238,8 +238,10 @@ def test_target():
   assert_equals(len(list(module.targets())), 2)
   target = next(module.targets())
   assert_equals(target.name(), 'lib')
+  assert_equals(target.is_exported(), False)
   target = list(module.targets())[1]
   assert_equals(target.name(), 'main')
+  assert_equals(target.is_exported(), True)
   assert_equals(target, module.target('main'))
   assert_equals(list(target.target_handlers()), [cxx_handler])
   assert_equals(target.get_property('this.pool'), 'link')
