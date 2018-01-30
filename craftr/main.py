@@ -8,10 +8,11 @@ from . import builtins, dsl
 
 class Context(dsl.Context):
 
-  def __init__(self):
+  def __init__(self, build_mode='debug'):
     self.path = ['.', os.path.join(os.path.dirname(__file__), 'lib')]
     self.options = {}
     self.modules = {}
+    self.build_mode = build_mode
 
   def get_option(self, module_name, option_name):
     return self.options[module_name + '.' + option_name]
@@ -38,11 +39,14 @@ class Context(dsl.Context):
     ns = module.eval_namespace()
     for key in builtins.__all__:
       setattr(ns, key, getattr(builtins, key))
+    ns.BUILD = builtins.BuildInfo(self.build_mode)
 
 
 def get_argument_parser():
   parser = argparse.ArgumentParser(prog='craftr')
   parser.add_argument('-f', '--file', default='build.craftr', help='The Craftr build script to execute.')
+  parser.add_argument('--debug', action='store_true', help='Produce a debug build (default).')
+  parser.add_argument('--release', action='store_true', help='Produce a release build.')
   return parser
 
 
@@ -50,11 +54,21 @@ def _main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
 
-  context = Context()
-  context.options['myproject.foo'] = '32'
+  # Validate options.
+  if args.debug and args.release:
+    parser.error('--debug and --release are incompatible options.')
+
+  # Create the build context.
+  context = Context(build_mode='release' if args.release else 'debug')
+
+  # Load the main build script.
   with open(args.file) as fp:
     project = dsl.Parser().parse(fp.read())
   module = dsl.Interpreter(context, args.file)(project)
+
+  # TODO: Target translation step
+  # TODO: Build step
+
   return 0
 
 

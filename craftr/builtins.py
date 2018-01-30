@@ -1,8 +1,23 @@
 
-__all__ = ['error', 'fmt', 'glob']
+__all__ = ['OS', 'error', 'fmt', 'glob']
 
+import collections
+import os
+import platform
 import sys
 from . import core, dsl, path
+
+OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
+
+class BuildInfo(collections.namedtuple('_BuildInfo', 'mode')):
+
+  @property
+  def debug(self):
+    return self.mode == 'debug'
+
+  @property
+  def release(self):
+    return self.mode == 'release'
 
 
 def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
@@ -71,3 +86,16 @@ def glob(patterns, parent=None, excludes=None):
     obj = get_call_context(dependency=False)
     parent = obj.directory()
   return path.glob(patterns, parent, excludes)
+
+
+if sys.platform.startswith('win32'):
+  OS = OsInfo('windows', 'win32', os.name, 'x64' if os.environ.get('ProgramFiles(x86)') else 'x86')
+elif sys.platform.startswith('darwin'):
+  OS = OsInfo('macos', 'darwin', 'posix', 'x64' if sys.maxsize > 2**32 else 'x86')
+elif sys.platform.startswith('linux'):
+  OS = OsInfo('linux', 'linux', 'posix', 'x64' if sys.maxsize > 2**32 else 'x86')
+else:
+  raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
+
+
+# Note: The `BUILD` built-in is explicitly added by the DSL context.
