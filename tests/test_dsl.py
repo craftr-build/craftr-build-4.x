@@ -215,8 +215,9 @@ def test_target():
     def setup_dependency(self, dep):
       dep.define_property('cxx.link', 'Bool')
 
+  cxx_handler = CxxHandler()
   cxx = core.Module('cxx', '1.0.0', '.')
-  cxx.register_target_handler(CxxHandler())
+  cxx.register_target_handler(cxx_handler)
   context.modules['cxx'] = cxx
   somelib = core.Module('somelib', '1.0.0', '.')
   t1 = somelib.add_target('lib', export=True)
@@ -233,6 +234,7 @@ def test_target():
   target = next(module.targets())
   assert_equals(target.name(), 'main')
   assert_equals(target, module.target('main'))
+  assert_equals(list(target.target_handlers()), [cxx_handler])
   assert_equals(target.get_property('this.pool'), 'link')
   assert_equals(target.get_property('cxx.srcs'), ['src/main.cpp'])
   assert_equals(target.get_property('cxx.includes'), ['include', 'somelib/include'])
