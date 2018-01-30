@@ -196,8 +196,13 @@ def test_target():
   source = textwrap.dedent('''
     project "myproject"
     pool "link" 4
-    target "main":
+    target "lib":
       dependency "cxx"
+      export:
+        cxx.includes = ['lib/include']
+    export target "main":
+      dependency "cxx"
+      dependency "@lib"
       dependency "somelib":
         cxx.link = False
       dependency "someotherlib"
@@ -230,21 +235,26 @@ def test_target():
   project = dsl.Parser().parse(source)
   module = dsl.Interpreter(context, '<test_target>')(project)
 
-  assert_equals(len(list(module.targets())), 1)
+  assert_equals(len(list(module.targets())), 2)
   target = next(module.targets())
+  assert_equals(target.name(), 'lib')
+  target = list(module.targets())[1]
   assert_equals(target.name(), 'main')
   assert_equals(target, module.target('main'))
   assert_equals(list(target.target_handlers()), [cxx_handler])
   assert_equals(target.get_property('this.pool'), 'link')
   assert_equals(target.get_property('cxx.srcs'), ['src/main.cpp'])
-  assert_equals(target.get_property('cxx.includes'), ['include', 'somelib/include'])
-  assert_equals(len(list(target.dependencies())), 3)
+  assert_equals(target.get_property('cxx.includes'), ['include', 'lib/include', 'somelib/include'])
+  assert_equals(len(list(target.dependencies())), 4)
   dep = next(target.dependencies())
   assert_equals(dep.module(), cxx)
   dep = list(target.dependencies())[1]
+  assert_equals(dep.module(), module)
+  assert_equals(dep.target(), next(module.targets()))
+  dep = list(target.dependencies())[2]
   assert_equals(dep.module(), somelib)
   assert_equals(dep.get_property('cxx.link'), False)
-  dep = list(target.dependencies())[2]
+  dep = list(target.dependencies())[3]
   assert_equals(dep.module(), someotherlib)
   assert_equals(dep.get_property('cxx.link'), None)
   assert_equals(dep.get_property('cxx.link', False), False)
