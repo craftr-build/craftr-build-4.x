@@ -453,6 +453,8 @@ class Interpreter:
         self._target(node, module)
       elif isinstance(node, Assignment):
         self._assignment(node, module)
+      elif isinstance(node, Export):
+        self._export_block(node, module)
       else:
         assert False, node
 
@@ -502,18 +504,25 @@ class Interpreter:
         self._assignment(node, target)
       elif isinstance(node, Dependency):
         self._dependency(node, target)
+      elif isinstance(node, Export):
+        self._export_block(node, target)
       else:
         assert False, node
 
   def _dependency(self, node, parent_target):
     if node.name.startswith('@'):
-      obj = parent_target.module.target(node.name[1:])
+      obj = parent_target.module().target(node.name[1:])
     else:
       obj = self.context.get_module(node.name)
     dep = parent_target.add_dependency(obj, node.export)
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
+
+  def _export_block(self, node, propset):
+    assert propset.supports_exported_members(), propset
+    for assign in node.assignments:
+      self._assignment(assign, propset)
 
 
 class RunError(Exception):
