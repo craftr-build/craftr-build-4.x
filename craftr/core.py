@@ -39,8 +39,8 @@ class Module(PropertySet):
     self._name = name
     self._version = version
     self._directory = directory
-    self._targets = {}
-    self._pools = {}
+    self._targets = collections.OrderedDict()
+    self._pools = collections.OrderedDict()
     self._options = Options()
     self._target_handlers = []
     self._eval_namespace = Namespace('module "{}"'.format(name))
