@@ -72,7 +72,7 @@ class Module(PropertySet):
       raise RuntimeError('target already defined: {!r}'.format(self._name + ':' + target.name))
     for handler in self.target_handlers():
       handler.setup_target(target)
-    self._targets[target.name] = target
+    self._targets[target.name()] = target
     return target
 
   def add_pool(self, name, depth):
@@ -159,7 +159,7 @@ class Target(PropertySet):
       module, target = None, obj
     else:
       raise TypeError('expected Module or Target object')
-    dep = Dependency(module, target, export)
+    dep = Dependency(self, module, target, export)
     for handler in self.target_handlers():
       handler.setup_dependency(dep)
     if module:
@@ -221,7 +221,7 @@ class Dependency(PropertySet):
   `requires` statement or block.
   """
 
-  def __init__(self, module=None, target=None, export=False):
+  def __init__(self, parent, module=None, target=None, export=False):
     super().__init__()
     if bool(module) == bool(target):
       raise ValueError('either module OR target must be specified')
@@ -229,14 +229,21 @@ class Dependency(PropertySet):
       raise TypeError('module must be Module object')
     if target and not isinstance(target, Target):
       raise TypeError('target must be Target object')
+    self._parent = parent
     self._module = module
     self._target = target
     self._export = export
+    self._eval_namespace = duplicate_namespace(parent.eval_namespace(), 'dependency "{}"'.format(self))
     self.define_property('this.select', 'StringList', [])
 
   def __repr__(self):
-    s = ("@"+ self._target.name()) if self._target else self._module.name()
-    return 'Dependency({!r})'.format(s)
+    return 'Dependency({})'.format(s)
+
+  def __str__(self):
+    return ("@"+ self._target.name()) if self._target else self._module.name()
+
+  def parent(self):
+    return self._parent
 
   def module(self):
     if self._target:
@@ -259,6 +266,9 @@ class Dependency(PropertySet):
       else:
         for name in select:
           yield self._module.target(name)
+
+  def eval_namespace(self):
+    return self._eval_namespace
 
 
 class TargetHandler:
