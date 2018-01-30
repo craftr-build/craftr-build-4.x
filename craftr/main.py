@@ -53,6 +53,8 @@ class Context(dsl.Context):
         project = dsl.Parser().parse(fp.read())
       module = dsl.Interpreter(self, filename)(project)
       self.modules[module_name] = module
+    else:
+      module = self.modules[module_name]
     return module
 
   def init_module(self, module):
