@@ -451,7 +451,7 @@ class Interpreter:
       if isinstance(node, Eval):
         self._exec(node.loc.lineno, node.source, module.eval_namespace())
       elif isinstance(node, Load):
-        self._load(node.loc.lineno, node.filename, module)
+        self._load(node.loc.lineno, node.filename, module.eval_namespace())
       elif isinstance(node, Options):
         for key, (type, value, loc) in node.options.items():
           try:
@@ -480,9 +480,12 @@ class Interpreter:
   def _load(self, lineno, filename, namespace):
     if not os.path.isabs(filename):
       filename = os.path.join(self.directory, filename)
+    filename = os.path.normpath(filename)
     with open(filename) as fp:
       code = compile(fp.read(), filename, 'exec')
+      namespace.__file__ = filename
       exec(code, vars(namespace))
+      del namespace.__file__
 
   def _exec(self, lineno, source, namespace):
     source = '\n' * (lineno-1) + source

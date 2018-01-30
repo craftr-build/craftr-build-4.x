@@ -178,14 +178,14 @@ class PropertySet:
 class Namespace:
 
   def __init__(self, scope_name):
-    self._scope_name = scope_name
+    self.__name__ = scope_name
 
   def __repr__(self):
-    return 'Namespace({})'.format(self._scope_name)
+    return 'Namespace({})'.format(self.__name__)
 
 
 def duplicate_namespace(ns, scope_name=None):
-  new = Namespace(scope_name or ns._scope_name)
+  new = Namespace(scope_name or ns.__name__)
   for key, value in vars(ns).items():
     if not key.startswith('_'):
       setattr(new, key, value)
