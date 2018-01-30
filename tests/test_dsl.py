@@ -2,7 +2,7 @@
 import io
 import textwrap
 from nose.tools import *
-from craftr import dsl
+from craftr import core, dsl
 
 
 class AssignedScopeDoesNotExist(Exception):
@@ -16,11 +16,17 @@ class AssignedPropertyDoesNoteExist(Exception):
 class Context(dsl.Context):
 
   def __init__(self, strict=False):
+    self.modules = {}
     self.options = {}
     self.strict = strict
 
   def get_option(self, module_name, option_name):
     return self.options[module_name + '.' + option_name]
+
+  def get_module(self, module_name):
+    if module_name in self.modules:
+      return self.modules[module_name]
+    raise dsl.ModuleNotFoundError(module_name)
 
   def assigned_scope_does_not_exist(self, filename, loc, scope, propset):
     if self.strict:
@@ -65,7 +71,7 @@ def test_dsl_parser():
   project = dsl.Parser().parse(source)
   project.render(fp, 0)
 
-  assert_equal(fp.getvalue().strip().split('\n'), source.split('\n'))
+  assert_equals(fp.getvalue().strip().split('\n'), source.split('\n'))
 
 
 def test_options():
@@ -184,3 +190,60 @@ def test_module_global_assignment():
   module.define_property('foo.bar', 'String')
   ip.eval_module(project, module)
   assert_equals(module.get_property('foo.bar'), 'bazinga')
+
+
+def test_target():
+  source = textwrap.dedent('''
+    project "myproject"
+    pool "link" 4
+    target "main":
+      dependency "cxx"
+      dependency "somelib":
+        cxx.link = False
+      dependency "someotherlib"
+      this.pool = "link"
+      cxx.srcs = ['src/main.cpp']
+      export cxx.includes = ['include']
+  ''')
+
+  context = Context(strict=True)
+
+  class CxxHandler(core.TargetHandler):
+    def setup_target(self, target):
+      target.define_property('cxx.srcs', 'StringList')
+      target.define_property('cxx.includes', 'StringList')
+    def setup_dependency(self, dep):
+      dep.define_property('cxx.link', 'Bool')
+
+  cxx = core.Module('cxx', '1.0.0', '.')
+  cxx.register_target_handler(CxxHandler())
+  context.modules['cxx'] = cxx
+  somelib = core.Module('somelib', '1.0.0', '.')
+  t1 = somelib.add_target('lib', export=True)
+  t1.add_dependency(cxx)
+  t1['cxx'].includes = ['somelib/include']
+  context.modules['somelib'] = somelib
+  someotherlib = core.Module('someotherlib', '1.0.0', '.')
+  context.modules['someotherlib'] = someotherlib
+
+  project = dsl.Parser().parse(source)
+  module = dsl.Interpreter(context, '<test_target>')(project)
+
+  assert_equals(len(list(module.targets())), 1)
+  target = next(module.targets())
+  assert_equals(target.name(), 'main')
+  assert_equals(target, module.target('main'))
+  assert_equals(target.get_property('this.pool'), 'link')
+  assert_equals(target.get_property('cxx.srcs'), ['src/main.cpp'])
+  assert_equals(target.get_property('cxx.includes'), ['include', 'somelib/include'])
+  assert_equals(len(list(target.dependencies())), 3)
+  dep = next(target.dependencies())
+  assert_equals(dep.module(), cxx)
+  dep = list(target.dependencies())[1]
+  assert_equals(dep.module(), somelib)
+  assert_equals(dep.get_property('cxx.link'), False)
+  dep = list(target.dependencies())[2]
+  assert_equals(dep.module(), someotherlib)
+  assert_equals(dep.get_property('cxx.link'), None)
+  assert_equals(dep.get_property('cxx.link', False), False)
+  assert_equals(dep.get_property('cxx.link', True), True)

@@ -399,6 +399,9 @@ class Context:
   def get_option(self, module_name, option_name):
     raise NotImplementedError
 
+  def get_module(self, module_name):
+    raise ModuleNotFoundError(module_name)
+
   def assigned_scope_does_not_exist(self, filename, loc, scope, propset):
     print('warn: {}:{}:{}: scope {} does not exist'.format(
       filename, loc.lineno, loc.colno, scope))
@@ -450,6 +453,8 @@ class Interpreter:
         self._target(node, module)
       elif isinstance(node, Assignment):
         self._assignment(node, module)
+      else:
+        assert False, node
 
   def _exec(self, lineno, source, namespace):
     source = '\n' * (lineno-1) + source
@@ -488,6 +493,28 @@ class Interpreter:
         raise InvalidAssignmentError(propset, node.loc, str(exc))
     setattr(scope, node.propname, value)
 
+  def _target(self, node, module):
+    target = module.add_target(node.name, node.export)
+    for node in node.children:
+      if isinstance(node, Eval):
+        self._exec(node.loc.lineno, node.source, target.eval_namespace())
+      elif isinstance(node, Assignment):
+        self._assignment(node, target)
+      elif isinstance(node, Dependency):
+        self._dependency(node, target)
+      else:
+        assert False, node
+
+  def _dependency(self, node, parent_target):
+    if node.name.startswith('@'):
+      obj = parent_target.module.target(node.name[1:])
+    else:
+      obj = self.context.get_module(node.name)
+    dep = parent_target.add_dependency(obj, node.export)
+    for assign in node.assignments:
+      assert isinstance(assign, Assignment), assign
+      self._assignment(assign, dep)
+
 
 class RunError(Exception):
   pass
@@ -525,3 +552,7 @@ class InvalidAssignmentError(RunError):
   def __str__(self):
     return '{} ({}:{}): {}'.format(self.propset, self.loc.lineno,
       self.loc.colno, self.message)
+
+
+class ModuleNotFoundError(RunError):
+  pass
