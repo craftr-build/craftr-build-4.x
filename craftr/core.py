@@ -16,6 +16,9 @@ def validate_target_name(name):
     raise ValueError('invalid target name: {!r}'.format(name))
 
 
+Pool = collections.namedtuple('Pool', 'name depth')
+
+
 class Options(PropertySet):
   """
   Represents options.
@@ -37,6 +40,7 @@ class Module(PropertySet):
     self._version = version
     self._directory = directory
     self._targets = {}
+    self._pools = {}
     self._options = Options()
     self._target_handlers = []
     self._eval_namespace = Namespace('module "{}"'.format(name))
@@ -70,6 +74,12 @@ class Module(PropertySet):
       handler.setup_target(target)
     self._targets[target.name] = target
     return target
+
+  def add_pool(self, name, depth):
+    self._pools[name] = Pool(name, depth)
+
+  def pool(self, name):
+    return self._pools[name]
 
   def register_target_handler(self, handler):
     if not isinstance(handler, TargetHandler):

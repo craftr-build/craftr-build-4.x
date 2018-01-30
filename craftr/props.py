@@ -87,6 +87,9 @@ class PropertySet:
   def __getitem__(self, key):
     return self.namespace(key)
 
+  def supports_exported_members(self):
+    return self._supports_exported_members
+
   def define_property(self, name, type, default=None, readonly=False):
     prop = Property(name, type)
     self._properties.setdefault(prop.scope, {})[prop.name] = prop
@@ -109,6 +112,18 @@ class PropertySet:
     else:
       for props in self._properties.values():
         yield from props.values()
+
+  def property(self, prop_name):
+    scope, name = prop_name.split('.')
+    try:
+      props = self._properties[scope]
+    except KeyError:
+      # TODO: Raise scope does not exist
+      raise KeyError(prop_name)
+    try:
+      return props[name]
+    except KeyError:
+      raise KeyError(prop_name)
 
   def scopes(self):
     return self._properties.keys()

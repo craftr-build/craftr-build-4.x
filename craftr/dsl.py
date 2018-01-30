@@ -4,7 +4,7 @@ import os
 import string
 import textwrap
 
-from .core import Module
+from . import core
 from nr.parse import strex
 
 
@@ -130,9 +130,10 @@ class Target(Node):
 
 class Assignment(Node):
 
-  def __init__(self, loc, name, expression, export):
+  def __init__(self, loc, scope, propname, expression, export):
     super().__init__(loc)
-    self.name = name
+    self.scope = scope
+    self.propname = propname
     self.expression = expression
     self.export = export
 
@@ -140,7 +141,7 @@ class Assignment(Node):
     fp.write('  ' * depth)
     if self.export:
       fp.write('export ')
-    fp.write('{} = '.format(self.name))
+    fp.write('{} = '.format(self.scope + '.' + self.propname))
     self.render_expression(fp, depth+1, self.expression)
 
   @staticmethod
@@ -271,7 +272,7 @@ class Parser:
     lexer.next('=')
     value = self._parse_expression(lexer, parent_indent)
     lexer.next('nl', 'eof')
-    return Assignment(loc, scope + '.' + propname, value, export)
+    return Assignment(loc, scope, propname, value, export)
 
   def _parse_expression(self, lexer, parent_indent):
     if lexer.scanner.colno == 0:
@@ -398,6 +399,14 @@ class Context:
   def get_option(self, module_name, option_name):
     raise NotImplementedError
 
+  def assigned_scope_does_not_exist(self, filename, loc, scope, propset):
+    print('warn: {}:{}:{}: scope {} does not exist'.format(
+      filename, loc.lineno, loc.colno, scope))
+
+  def assigned_property_does_not_exist(self, filename, loc, prop_name, propset):
+    print('warn: {}:{}:{}: property {} does not exist'.format(
+      filename, loc.lineno, loc.colno, prop_name))
+
 
 class Interpreter:
   """
@@ -415,7 +424,7 @@ class Interpreter:
     return module
 
   def create_module(self, project):
-    return Module(project.name, project.version, self.directory)
+    return core.Module(project.name, project.version, self.directory)
 
   def eval_module(self, project, module):
     for node in project.children:
@@ -435,6 +444,12 @@ class Interpreter:
             raise InvalidOptionError(module.name(), key, str(exc))
           # Publish the option value to the module's namespace.
           setattr(module.eval_namespace(), key, has_value)
+      elif isinstance(node, Pool):
+        module.add_pool(node.name, node.depth)
+      elif isinstance(node, Target):
+        self._target(node, module)
+      elif isinstance(node, Assignment):
+        self._assignment(node, module)
 
   def _exec(self, lineno, source, namespace):
     source = '\n' * (lineno-1) + source
@@ -445,6 +460,33 @@ class Interpreter:
     source = '\n' * (lineno-1) + source
     code = compile(source, self.filename, 'eval')
     return eval(code, vars(namespace))
+
+  def _assignment(self, node, propset):
+    assert isinstance(propset, (core.Module, core.Target, core.Dependency))
+    if node.export and not propset.supports_exported_members():
+      raise RuntimeError('{} in a propset that does not supported exported members ({})'
+        .format(node, propset))
+    try:
+      scope = propset.namespace(node.scope)
+    except KeyError:
+      self.context.assigned_scope_does_not_exist(self.filename, node.loc, node.scope, propset)
+      return
+    if node.export:
+      scope = scope.__exported__
+    prop_name = node.scope + '.' + node.propname
+    try:
+      prop = propset.property(prop_name)
+    except KeyError:
+      prop = None
+      self.context.assigned_property_does_not_exist(self.filename, node.loc, prop_name, propset)
+      # Set property value anyway, maybe it is used later in the evaluation.
+    value = self._eval(node.loc.lineno, node.expression, propset.eval_namespace())
+    if prop:
+      try:
+        value = prop.typecheck(value)
+      except (TypeError, ValueError) as exc:
+        raise InvalidAssignmentError(propset, node.loc, str(exc))
+    setattr(scope, node.propname, value)
 
 
 class RunError(Exception):
@@ -471,3 +513,15 @@ class MissingRequiredOptionError(OptionError):
 
 class InvalidOptionError(OptionError):
   pass
+
+
+class InvalidAssignmentError(RunError):
+
+  def __init__(self, propset, loc, message):
+    self.propset = propset
+    self.loc = loc
+    self.message = message
+
+  def __str__(self):
+    return '{} ({}:{}): {}'.format(self.propset, self.loc.lineno,
+      self.loc.colno, self.message)
