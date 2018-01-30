@@ -208,6 +208,10 @@ class Target(PropertySet):
   def eval_namespace(self):
     return self._eval_namespace
 
+  def finalize(self):
+    for handler in self.target_handlers():
+      handler.finalize_target(self)
+
   # PropertySet overrides
 
   def _inherited_propsets(self):
@@ -236,13 +240,13 @@ class Dependency(PropertySet):
     self._module = module
     self._target = target
     self._export = export
-    self._eval_namespace = duplicate_namespace(parent.eval_namespace(), 'dependency "{}"'.format(self))
+    self._eval_namespace = duplicate_namespace(parent.eval_namespace(), 'dependency "{}"'.format(self._refstring()))
     self.define_property('this.select', 'StringList', [])
 
   def __repr__(self):
-    return 'Dependency({})'.format(s)
+    return 'Dependency({} of {})'.format(self._refstring(), self._parent)
 
-  def __str__(self):
+  def _refstring(self):
     return ("@"+ self._target.name()) if self._target else self._module.name()
 
   def parent(self):
@@ -273,6 +277,10 @@ class Dependency(PropertySet):
   def eval_namespace(self):
     return self._eval_namespace
 
+  def finalize(self):
+    for handler in self._parent.target_handlers():
+      handler.finalize_dependency(self)
+
 
 class TargetHandler:
   """
@@ -284,7 +292,14 @@ class TargetHandler:
   def setup_target(self, target):
     pass
 
-  def setup_dependency(self, target):
+  def setup_dependency(self, dependency):
     pass
 
-  # TODO: Translation step
+  def finalize_target(self, target):
+    pass
+
+  def finalize_dependency(self, dependency):
+    pass
+
+  def translate_target(self, target):
+    pass

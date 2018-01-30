@@ -549,6 +549,7 @@ class Interpreter:
         self._export_block(node, target)
       else:
         assert False, node
+    target.finalize()
 
   def _dependency(self, node, parent_target):
     if node.name.startswith('@'):
@@ -560,6 +561,7 @@ class Interpreter:
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
+    dep.finalize()
 
   def _export_block(self, node, propset):
     assert propset.supports_exported_members(), propset
