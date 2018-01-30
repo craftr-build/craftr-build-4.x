@@ -78,3 +78,27 @@ def test_options():
   context.options['myproject.input'] = 'foobar'
   with assert_raises(dsl.InvalidOptionError):
     dsl.Interpreter(context, '<test_options>')(project)
+
+
+def test_options_default():
+  source = textwrap.dedent('''
+    project "myproject"
+    eval import sys
+    options:
+      str input = (
+          sys.executable * 3
+        )
+    eval
+      response['answer'] = input
+  ''')
+  project = dsl.Parser().parse(source)
+  context = Context()
+  response = {}
+
+  ip = dsl.Interpreter(context, '<test_options>')
+  module = ip.create_module(project)
+  module.eval_namespace().response = response
+  ip.eval_module(project, module)
+
+  import sys
+  assert_equals(response['answer'], sys.executable*3)

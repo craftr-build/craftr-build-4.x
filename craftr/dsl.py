@@ -438,6 +438,11 @@ class Interpreter:
     code = compile(source, self.filename, 'exec')
     exec(code, vars(namespace), vars(namespace))
 
+  def _eval(self, lineno, source, namespace):
+    source = '\n' * (lineno-1) + source
+    code = compile(source, self.filename, 'eval')
+    return eval(code, vars(namespace))
+
 
 class RunError(Exception):
   pass
