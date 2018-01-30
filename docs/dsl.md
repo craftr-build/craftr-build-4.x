@@ -26,8 +26,8 @@ eval:
 pool "myPool" 4
 
 export target "lib":
-  export requires "cxx"
-  export requires "cxx/libs/curl":
+  export dependency "cxx"
+  export dependency "cxx/libs/curl":
     cxx.link = True  # That's the default
 
   this.pool = "myPool"
@@ -42,7 +42,7 @@ export target "lib":
     cxx.includePaths = includes
 
 target "main":
-  requires "@lib"
+  dependency "@lib"
   cxx.srcs = ['./src/main.cpp']
 ```
 
@@ -79,19 +79,19 @@ This statement can only be used inside, or as a prefix to, a `target` block.
 It is the single-line form of the `export` block and can be added before a
 variable assignment to export that variable to targets that depend on it.
 
-Additionall, an `export` can be prepended to a `requires` block or statement
+Additionall, an `export` can be prepended to a `dependency` block or statement
 to export the dependency to other targets.
 
 Exported targets are visible to targets in other modules using when depending
-on a module with `requires`.
+on a module with `dependency`.
 
-#### Statement `requires`
+#### Statement `dependency`
 
-This statement is the single-line form of the `requires` block. It can only be
+This statement is the single-line form of the `dependency` block. It can only be
 used inside a `target` block and accepts exactly one string literal as argument
 that is used as the name of the dependency.
 
-    <requires> := "requires" + <str> | "export" + "requires" + <str>
+    <dependency> := "dependency" + <str> | "export" + "dependency" + <str>
 
 #### Statement `pool`
 
@@ -124,7 +124,7 @@ dependencies. Example:
 
 ```python
 target "main":
-  requires "cxx"
+  dependency "cxx"
   eval:
     if cxx.compiler_id == 'msvc':
       error('Can not be compiled with MSVC.')
@@ -135,10 +135,10 @@ target "main":
 #### Block `target`
 
 This block defines a new build target. A target is usually only useful with a
-`requires` statement or block inside that loads a module which implements the
+`dependency` statement or block inside that loads a module which implements the
 ability to build your target (like the `"cpp"` module).
 
-Inside target blocks, there can be `requires` or `export` statements and
+Inside target blocks, there can be `dependency` or `export` statements and
 blocks as well as assignments in the form of `<key> = <python_expr>`. If the
 `<key>` is not a registered target property (either a standard property or
 registered by one of the target's dependencies), a warning will be printed
@@ -151,9 +151,9 @@ when assigning the key.
 | `this.explicit` | bool | Do not build this target unless it is required by another target or it is explicitly specified on the command-line. |
 | `this.directory`| str  | The directory to consider relative paths relative to. A relative path will still be considered relative to the original path. |
 
-#### Block `requires`
+#### Block `dependency`
 
-Similar to a `requires` statement, only that the block form allows you to
+Similar to a `dependency` statement, only that the block form allows you to
 supply properties on this dependency. These properties will influence the
 way the dependency is treated.  
 
@@ -163,11 +163,11 @@ dependency are considered (or all, if no targets are exported).
 
 ```python
 target "main":
-  requires "cpp"
-  requires "niklasrosenstein/maxon.c4d":
+  dependency "cpp"
+  dependency "niklasrosenstein/maxon.c4d":
     this.select = ['c4d_legacy', 'python']
 ```
 
-The string value that is passed to the `requires` statement or block may be
+The string value that is passed to the `dependency` statement or block may be
 prefixed with an `@` (at) sign to indicate that the target does not require
 another module, but a target from the same build script.

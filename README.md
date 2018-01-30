@@ -24,16 +24,16 @@ other build backends.
 project "myproject"
 
 target "curlpp":
-  requires "cxx"
-  requires export "cxx/libs/curl"
+  dependency "cxx"
+  export dependency "cxx/libs/curl"
   this.directory = "vendor/curlpp"
   cxx.type = 'library'
   cxx.srcs = glob('src/*.cpp')
   export cxx.includes = ['include']
 
 target "main":
-  requires "cxx"
-  requires "@curlpp"
+  dependency "cxx"
+  dependency "@curlpp"
   cxx.srcs = glob('src/*.cpp')
   cxx.includes = ['include']
 ```
