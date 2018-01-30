@@ -1,8 +1,8 @@
 
-__all__ = ['fmt', 'glob']
+__all__ = ['error', 'fmt', 'glob']
 
 import sys
-from . import core, path
+from . import core, dsl, path
 
 
 def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
@@ -19,6 +19,10 @@ def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
   elif module and isinstance(scope.get('module'), core.Module):
     return scope['module']
   raise RuntimeError('Call context could not be determined')
+
+
+def error(*message):
+  raise dsl.ExplicitRunError(' '.join(map(str, message)))
 
 
 def fmt(s, frame=None):

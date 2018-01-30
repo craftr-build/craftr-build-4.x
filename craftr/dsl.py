@@ -607,3 +607,7 @@ class InvalidAssignmentError(RunError):
 
 class ModuleNotFoundError(RunError):
   pass
+
+
+class ExplicitRunError(RunError):
+  pass

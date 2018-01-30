@@ -9,5 +9,6 @@
 | `MODE` | str | The build mode, either `"debug"` or `"release"`. |
 | `DEBUG` | bool | True when the build mode is `"debug"`. |
 | `RELEASE` | bool | True when the build mode is `"release"`. |
-| `glob(patterns, excludes=[], parent=None)` | function | Match glob patterns relative to `parent`. If `parent` is omitted, defaults to the parent directory of the build script. |
 | `error(message)` | function | Raise a build error with the specified message. |
+| `fmt(format)` | function | Expects a Python `str.format()` string that will be substituted in the context of the current global and local variables. |
+| `glob(patterns, excludes=[], parent=None)` | function | Match glob patterns relative to `parent`. If `parent` is omitted, defaults to the parent directory of the build script. |
