@@ -9,10 +9,29 @@ from . import dsl
 class Context(dsl.Context):
 
   def __init__(self):
+    self.path = ['.', os.path.join(os.path.dirname(__file__), 'lib')]
     self.options = {}
+    self.modules = {}
 
   def get_option(self, module_name, option_name):
     return self.options[module_name + '.' + option_name]
+
+  def get_module(self, module_name):
+    if module_name not in self.modules:
+      for path in self.path:
+        filename = os.path.join(path, module_name + '.craftr')
+        if os.path.isfile(filename):
+          break
+        filename = os.path.join(path, module_name, 'build.craftr')
+        if os.path.isfile(filename):
+          break
+      else:
+        raise dsl.ModuleNotFoundError(module_name)
+      with open(filename) as fp:
+        project = dsl.Parser().parse(fp.read())
+      module = dsl.Interpreter(self, filename)(project)
+      self.modules[module_name] = module
+    return module
 
 
 def get_argument_parser():
