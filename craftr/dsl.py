@@ -68,9 +68,12 @@ class Options(Node):
     super().__init__(loc)
     self.options = collections.OrderedDict()
 
+  def add(self, loc, key, type, default=None):
+    self.options[key] = (type, default, loc)
+
   def render(self, fp, depth):
     fp.write('options:\n')
-    for key, (type, value) in self.options.items():
+    for key, (type, value, loc) in self.options.items():
       fp.write('  {} {}'.format(type, key))
       if value:
         fp.write(' = ')
@@ -317,7 +320,7 @@ class Parser:
         value = self._parse_expression(lexer, loc.colno)
       else:
         value = None
-      options.options[name] = (dtype, value)
+      options.add(loc, name, dtype, value)
       lexer.next('nl', 'eof')
     if not options.options:
       raise ParseError(lexer.token.cursor, 'expected at least one indented statement')
@@ -419,13 +422,13 @@ class Interpreter:
       if isinstance(node, Eval):
         self._exec(node.loc.lineno, node.source, module.eval_namespace())
       elif isinstance(node, Options):
-        for key, (type, value) in node.options.items():
+        for key, (type, value, loc) in node.options.items():
           try:
             has_value = self.context.get_option(module.name(), key)
           except KeyError:
             if value is None:
               raise MissingRequiredOptionError(module.name(), key)
-            has_value = self._eval(node.loc.lineno, value, module.eval_namespace())
+            has_value = self._eval(loc.lineno, value, module.eval_namespace())
           try:
             has_value = Options.adapt(type, has_value)
           except ValueError as exc:

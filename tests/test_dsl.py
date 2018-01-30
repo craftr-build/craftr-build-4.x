@@ -116,6 +116,6 @@ def test_options_syntax_error():
     ip(project)
   except SyntaxError as exc:
     assert_equals(exc.filename, '<test_options_syntax_error>')
-    assert_equals(exc.lineno, 3)
+    assert_equals(exc.lineno, 4)
   else:
     assert False, 'SyntaxError not raised'
