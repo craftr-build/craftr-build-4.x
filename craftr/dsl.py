@@ -1,4 +1,5 @@
 
+import collections
 import string
 import textwrap
 from nr.parse import strex
@@ -45,7 +46,7 @@ class Options(Node):
 
   def __init__(self, loc):
     super().__init__(loc)
-    self.options = {}
+    self.options = collections.OrderedDict()
 
   def render(self, fp, depth):
     fp.write('options:\n')
