@@ -14,6 +14,9 @@ class Context(dsl.Context):
     self.modules = {}
     self.build_mode = build_mode
 
+  def option_default(self, name, value):
+    return self.options.setdefault(name, value)
+
   def get_option(self, module_name, option_name):
     return self.options[module_name + '.' + option_name]
 
@@ -40,6 +43,7 @@ class Context(dsl.Context):
     for key in builtins.__all__:
       setattr(ns, key, getattr(builtins, key))
     ns.BUILD = builtins.BuildInfo(self.build_mode)
+    ns.option_default = self.option_default
 
 
 def get_argument_parser():
