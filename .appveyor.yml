@@ -1,6 +1,12 @@
+environment:
+  matrix:
+    - PYTHON: "C:\\Python33-x64"
+    - PYTHON: "C:\\Python34-x64"
+    - PYTHON: "C:\\Python35-x64"
+    - PYTHON: "C:\\Python36-x64"
+
 build_script:
-- set PATH=C:\Python36-x64;C:\Python36-x64\Scripts;%PATH%;%ADD_PATH%
+- set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 - pip install .
 - pip install nose
-- nosetests tests/*
-
+- nosetests
