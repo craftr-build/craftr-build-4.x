@@ -1,7 +1,10 @@
 
 import collections
+import os
 import string
 import textwrap
+
+from .core import Module
 from nr.parse import strex
 
 
@@ -38,11 +41,28 @@ class Project(Node):
 
 class Options(Node):
 
-  DATATYPES = {
-    'int': 'Int',
-    'bool': 'Bool',
-    'str': 'String'
-  }
+  DATATYPES = set(['int', 'bool', 'str'])
+
+  @staticmethod
+  def adapt(type_name, value):
+    if type_name == 'int':
+      if isinstance(value, str):
+        return int(value)
+      elif isinstance(value, int):
+        return value
+    elif type_name == 'bool':
+      if isinstance(value, str):
+        value = value.lower().strip()
+        if value in ('1', 'true', 'on', 'yes'):
+          return True
+        elif value in ('0', 'false', 'off', 'no'):
+          return False
+      elif isinstance(value, bool):
+        return value
+    elif type_name == 'str':
+      if isinstance(value, str):
+        return value
+    raise TypeError('expected {}, got {}'.format(type_name, type(value).__name__))
 
   def __init__(self, loc):
     super().__init__(loc)
@@ -368,3 +388,78 @@ class ParseError(Exception):
 
   def __str__(self):
     return 'line {}, col {}: {}'.format(self.loc.lineno, self.loc.colno, self.message)
+
+
+class Context:
+
+  def get_option(self, module_name, option_name):
+    raise NotImplementedError
+
+
+class Interpreter:
+  """
+  Interpreter for projects.
+  """
+
+  def __init__(self, context, filename):
+    self.context = context
+    self.filename = filename
+    self.directory = os.path.dirname(filename)
+
+  def __call__(self, project):
+    module = self.create_module(project)
+    self.eval_module(project, module)
+    return module
+
+  def create_module(self, project):
+    return Module(project.name, project.version, self.directory)
+
+  def eval_module(self, project, module):
+    for node in project.children:
+      if isinstance(node, Eval):
+        self._exec(node.loc.lineno, node.source, module.eval_namespace())
+      elif isinstance(node, Options):
+        for key, (type, value) in node.options.items():
+          try:
+            has_value = self.context.get_option(module.name(), key)
+          except KeyError:
+            if value is None:
+              raise MissingRequiredOptionError(module.name(), key)
+            has_value = self._eval(node.loc.lineno, value, module.eval_namespace())
+          try:
+            has_value = Options.adapt(type, has_value)
+          except ValueError as exc:
+            raise InvalidOptionError(module.name(), key, str(exc))
+          # Publish the option value to the module's namespace.
+          setattr(module.eval_namespace(), key, has_value)
+
+  def _exec(self, lineno, source, namespace):
+    source = '\n' * (lineno-1) + source
+    code = compile(source, self.filename, 'exec')
+    exec(code, vars(namespace), vars(namespace))
+
+
+class RunError(Exception):
+  pass
+
+
+class OptionError(RunError):
+
+  def __init__(self, module_name, option_name, message=None):
+    self.module_name = module_name
+    self.option_name = option_name
+    self.message = message
+
+  def __str__(self):
+    result = '{}.{}'.format(self.module_name, self.option_name)
+    if self.message:
+      result += ': ' + str(self.message)
+    return result
+
+
+class MissingRequiredOptionError(OptionError):
+  pass
+
+
+class InvalidOptionError(OptionError):
+  pass

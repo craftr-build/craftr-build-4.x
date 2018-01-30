@@ -2,7 +2,17 @@
 import io
 import textwrap
 from nose.tools import *
-from craftr.dsl import Parser
+from craftr import dsl
+
+
+class Context(dsl.Context):
+
+  def __init__(self):
+    self.options = {}
+
+  def get_option(self, module_name, option_name):
+    return self.options[module_name + '.' + option_name]
+
 
 def test_dsl_parser():
   source = textwrap.dedent('''
@@ -33,10 +43,38 @@ def test_dsl_parser():
         if OSNAME == 'windows':
           print("Shicey!")
     ''').strip()
-  parser = Parser()
-  project = parser.parse(source)
 
   fp = io.StringIO()
+  project = dsl.Parser().parse(source)
   project.render(fp, 0)
 
   assert_equal(fp.getvalue().strip().split('\n'), source.split('\n'))
+
+
+def test_options():
+  source = textwrap.dedent('''
+    project "myproject"
+    options:
+      int input
+    eval
+      response['answer'] = input
+  ''')
+  project = dsl.Parser().parse(source)
+  context = Context()
+  context.options['myproject.input'] = 42
+  response = {}
+
+  ip = dsl.Interpreter(context, '<test_options>')
+  module = ip.create_module(project)
+  module.eval_namespace().response = response
+  ip.eval_module(project, module)
+
+  assert_equals(response['answer'], 42)
+
+  del context.options['myproject.input']
+  with assert_raises(dsl.MissingRequiredOptionError):
+    dsl.Interpreter(context, '<test_options>')(project)
+
+  context.options['myproject.input'] = 'foobar'
+  with assert_raises(dsl.InvalidOptionError):
+    dsl.Interpreter(context, '<test_options>')(project)

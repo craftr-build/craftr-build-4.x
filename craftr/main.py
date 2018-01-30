@@ -3,44 +3,16 @@ import argparse
 import os
 import sys
 
-from .dsl import Parser
+from . import dsl
 
 
-class Session:
-  """
-  Implements searching for modules and caching them.
-  """
+class Context(dsl.Context):
 
   def __init__(self):
-    self.path = ['.', os.path.join(os.path.dirname(__file__), 'lib')]
-    self.parsed_modules = {}
-    self.loaded_modules = {}
+    self.options = {}
 
-  def find_module(self, name):
-    if name in self.parsed_modules:
-      return self.parsed_modules[name]
-    for path in self.path:
-      filename = os.path.join(path, name + '.craftr')
-      if os.path.isfile(filename):
-        break
-      filename = os.path.join(path, name, 'build.craftr')
-      if os.path.isfile(filename):
-        break
-    else:
-      raise ValueError("Unable to find module {!r}".format(name))
-    with open(filename) as fp:
-      project = Parser().parse(fp.read())
-    if project.name != name:
-      raise RuntimeError('project name ({}) does not match path which it was found in ({})'
-        .format(project.name, name))
-    self.parsed_modules[name] = project
-    return project
-
-  def load_module(self, name):
-    if name in self.loaded_modules:
-      return self.loaded_modules[name]
-    project = self.find_module(name)
-    raise NotImplementedError
+  def get_option(self, module_name, option_name):
+    return self.options[module_name + '.' + option_name]
 
 
 def get_argument_parser():
@@ -53,10 +25,11 @@ def _main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
 
+  context = Context()
+  context.options['myproject.foo'] = '32'
   with open(args.file) as fp:
-    project = Parser().parse(fp.read())
-  project.render(sys.stdout, 0)
-
+    project = dsl.Parser().parse(fp.read())
+  module = dsl.Interpreter(context, args.file)(project)
   return 0
 
 

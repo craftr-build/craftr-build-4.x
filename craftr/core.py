@@ -3,7 +3,7 @@ import collections
 import os
 import re
 
-from .props import PropertySet
+from .props import PropertySet, Namespace, duplicate_namespace
 
 
 def validate_module_name(name):
@@ -39,6 +39,8 @@ class Module(PropertySet):
     self._targets = {}
     self._options = Options()
     self._target_handlers = []
+    self._eval_namespace = Namespace('module "{}"'.format(name))
+    self._eval_namespace.module = self
 
   def __repr__(self):
     return 'Module({!r} v{})'.format(self._name, self._version)
@@ -77,6 +79,9 @@ class Module(PropertySet):
   def target_handlers(self):
     return iter(self._target_handlers)
 
+  def eval_namespace(self):
+    return self._eval_namespace
+
 
 class Target(PropertySet):
   """
@@ -94,6 +99,8 @@ class Target(PropertySet):
     self._directory = directory
     self._dependencies = []
     self._outputs = []
+    self._eval_namespace = duplicate_namespace(module.eval_namespace(), 'target "{}"'.format(name))
+    self._eval_namespace.target = self
     self.define_property('this.pool', 'String', None)
     self.define_property('this.syncio', 'Bool', False)
     self.define_property('this.explicit', 'Bool', False)
@@ -185,9 +192,17 @@ class Target(PropertySet):
       raise TypeError('expected str for tag')
     self._outputs += [self.TaggedFile(tag, name) for name in outputs]
 
+  def eval_namespace(self):
+    return self._eval_namespace
+
+  # PropertySet overrides
+
   def _inherited_propsets(self):
     for dep in self.transitive_dependencies():
       yield from dep.targets()
+
+  def _on_new_namespace(self, scope, ns):
+    setattr(self._eval_namespace, scope, ns)
 
 
 class Dependency(PropertySet):

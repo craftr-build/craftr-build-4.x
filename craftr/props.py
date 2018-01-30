@@ -79,12 +79,6 @@ class Property:
 
 class PropertySet:
 
-  class _Namespace:
-    def __init__(self, scope_name):
-      self._scope_name = scope_name
-    def __repr__(self):
-      return 'namespace({})'.format(self._scope_name)
-
   def __init__(self, supports_exported_members=False):
     self._properties = {}
     self._namespaces = {}
@@ -97,12 +91,14 @@ class PropertySet:
     prop = Property(name, type)
     self._properties.setdefault(prop.scope, {})[prop.name] = prop
     if prop.scope not in self._namespaces:
-      ns = self._Namespace(prop.scope)
+      ns = Namespace(prop.scope)
       if self._supports_exported_members:
-        ns.__exported__ = self._Namespace(prop.scope + '[export]')
+        ns.__exported__ = Namespace(prop.scope + '[export]')
+      self._on_new_namespace(prop.scope, ns)
       self._namespaces[prop.scope] = ns
     else:
       ns = self._namespaces[prop.scope]
+    self._on_new_property(prop, ns)
     setattr(ns, prop.name, default)
     if self._supports_exported_members:
       setattr(ns.__exported__, prop.name, None)
@@ -156,6 +152,29 @@ class PropertySet:
 
   def _inherited_propsets(self):
     return; yield
+
+  def _on_new_namespace(self, scope, ns):
+    pass
+
+  def _on_new_property(self, prop, ns):
+    pass
+
+
+class Namespace:
+
+  def __init__(self, scope_name):
+    self._scope_name = scope_name
+
+  def __repr__(self):
+    return 'Namespace({})'.format(self._scope_name)
+
+
+def duplicate_namespace(ns, scope_name=None):
+  new = Namespace(scope_name or ns._scope_name)
+  for key, value in vars(ns).items():
+    if not key.startswith('_'):
+      setattr(new, key, value)
+  return new
 
 
 class InvalidPropertyValue(ValueError):
