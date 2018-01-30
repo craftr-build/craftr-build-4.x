@@ -95,10 +95,27 @@ def test_options_default():
   context = Context()
   response = {}
 
-  ip = dsl.Interpreter(context, '<test_options>')
+  ip = dsl.Interpreter(context, '<test_options_default>')
   module = ip.create_module(project)
   module.eval_namespace().response = response
   ip.eval_module(project, module)
 
   import sys
   assert_equals(response['answer'], sys.executable*3)
+
+
+def test_options_syntax_error():
+  source = textwrap.dedent('''
+    project "myproject"
+    options:
+      str input = 42 foo
+  ''')
+  project = dsl.Parser().parse(source)
+  ip = dsl.Interpreter(Context(), '<test_options_syntax_error>')
+  try:
+    ip(project)
+  except SyntaxError as exc:
+    assert_equals(exc.filename, '<test_options_syntax_error>')
+    assert_equals(exc.lineno, 3)
+  else:
+    assert False, 'SyntaxError not raised'
