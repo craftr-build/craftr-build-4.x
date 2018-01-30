@@ -89,11 +89,11 @@ def glob(patterns, parent=None, excludes=None):
 
 
 if sys.platform.startswith('win32'):
-  OS = OsInfo('windows', 'win32', os.name, 'x64' if os.environ.get('ProgramFiles(x86)') else 'x86')
+  OS = OsInfo('windows', 'win32', os.name, 'x86_64' if os.environ.get('ProgramFiles(x86)') else 'x86')
 elif sys.platform.startswith('darwin'):
-  OS = OsInfo('macos', 'darwin', 'posix', 'x64' if sys.maxsize > 2**32 else 'x86')
+  OS = OsInfo('macos', 'darwin', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
 elif sys.platform.startswith('linux'):
-  OS = OsInfo('linux', 'linux', 'posix', 'x64' if sys.maxsize > 2**32 else 'x86')
+  OS = OsInfo('linux', 'linux', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
 else:
   raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 

@@ -3,7 +3,7 @@
 
 | Name | Type | Description |
 | - | - | - |
-| `OS` | `OsInfo` | An `OsInfo` object that contains the name, id, type and arch of the current operating system. Possible names are `windows`, `macos` and `linux`. Possible IDs are `win32`, `darwin` and `linux`. Possible types are `nt` and `posix`. Note that on Windows Cygwin, the type will also be `posix`.  Possible architectures are `x64` and `x86`. |
+| `OS` | `OsInfo` | An `OsInfo` object that contains the name, id, type and arch of the current operating system. Possible names are `windows`, `macos` and `linux`. Possible IDs are `win32`, `darwin` and `linux`. Possible types are `nt` and `posix`. Note that on Windows Cygwin, the type will also be `posix`.  Possible architectures are `x86_64` and `x86`. |
 | `BUILD` | `BuildInfo` | A `BuildInfo` object that tells you whether this is a release or debug build. Members of this object are `mode`, `debug` and `release`. |
 | `error(message)` | function | Raise an error (`craftr.dsl.ExplicitRunError`) with the specified message. |
 | `fmt(format)` | function | Expects a Python `str.format()` string that will be substituted in the context of the current global and local variables. |
