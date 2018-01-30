@@ -2,5 +2,5 @@ build_script:
 - set PATH=C:\Python36-x64;C:\Python36-x64\Scripts;%PATH%;%ADD_PATH%
 - pip install .
 - pip install nose
-- nosetests tests/
+- nosetests tests/*
 
