@@ -82,6 +82,16 @@ class Options(Node):
         fp.write('\n')
 
 
+class Load(Node):
+
+  def __init__(self, loc, filename):
+    self.loc = loc
+    self.filename = filename
+
+  def render(self, fp, depth):
+    fp.write('load "{}"\n'.format(self.filename))
+
+
 class Eval(Node):
 
   def __init__(self, loc, source):
@@ -201,7 +211,7 @@ class Parser:
     strex.Charset('ws', '\t ', skip=True),
   ]
 
-  KEYWORDS = ['project', 'options', 'eval', 'pool', 'export', 'target', 'dependency']
+  KEYWORDS = ['project', 'options', 'load', 'eval', 'pool', 'export', 'target', 'dependency']
 
   def parse(self, source):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
@@ -327,6 +337,13 @@ class Parser:
       raise ParseError(lexer.token.cursor, 'expected at least one indented statement')
     return options
 
+  def _parse_load(self, lexer, parent_indent, export):
+    assert export is False
+    loc = lexer.token.cursor
+    filename = lexer.next('string').value.group(1)
+    lexer.next('nl', 'eof')
+    return Load(loc, filename)
+
   def _parse_eval(self, lexer, parent_indent, export):
     assert not export
     loc = lexer.token.cursor
@@ -433,6 +450,8 @@ class Interpreter:
     for node in project.children:
       if isinstance(node, Eval):
         self._exec(node.loc.lineno, node.source, module.eval_namespace())
+      elif isinstance(node, Load):
+        self._load(node.loc.lineno, node.filename, module)
       elif isinstance(node, Options):
         for key, (type, value, loc) in node.options.items():
           try:
@@ -457,6 +476,13 @@ class Interpreter:
         self._export_block(node, module)
       else:
         assert False, node
+
+  def _load(self, lineno, filename, namespace):
+    if not os.path.isabs(filename):
+      filename = os.path.join(self.directory, filename)
+    with open(filename) as fp:
+      code = compile(fp.read(), filename, 'exec')
+      exec(code, vars(namespace))
 
   def _exec(self, lineno, source, namespace):
     source = '\n' * (lineno-1) + source
