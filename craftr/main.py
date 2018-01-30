@@ -17,6 +17,24 @@ class Context(dsl.Context):
   def option_default(self, name, value):
     return self.options.setdefault(name, value)
 
+  def translate_targets(self, module):
+    seen = set()
+    def translate(target):
+      for dep in target.dependencies():
+        if dep.target():
+          translate(dep.target())
+        else:
+          for target in dep.module().targets():
+            translate(target)
+      if target not in seen:
+        seen.add(target)
+        for handler in target.target_handlers():
+          handler.translate_target(target)
+    for target in module.targets():
+      translate(target)
+
+  # dsl.Context
+
   def get_option(self, module_name, option_name):
     return self.options[module_name + '.' + option_name]
 
@@ -70,7 +88,10 @@ def _main(argv=None):
     project = dsl.Parser().parse(fp.read())
   module = dsl.Interpreter(context, args.file)(project)
 
-  # TODO: Target translation step
+  # Translate targets.
+  context.translate_targets(module)
+
+  # TODO: Export step
   # TODO: Build step
 
   return 0
