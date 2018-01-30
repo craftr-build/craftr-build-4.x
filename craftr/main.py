@@ -3,7 +3,7 @@ import argparse
 import os
 import sys
 
-from . import dsl
+from . import builtins, dsl
 
 
 class Context(dsl.Context):
@@ -32,6 +32,12 @@ class Context(dsl.Context):
       module = dsl.Interpreter(self, filename)(project)
       self.modules[module_name] = module
     return module
+
+  def init_module(self, module):
+    super().init_module(module)
+    ns = module.eval_namespace()
+    for key in builtins.__all__:
+      setattr(ns, key, getattr(builtins, key))
 
 
 def get_argument_parser():

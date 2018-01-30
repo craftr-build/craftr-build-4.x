@@ -427,6 +427,15 @@ class Context:
     print('warn: {}:{}:{}: property {} does not exist'.format(
       filename, loc.lineno, loc.colno, prop_name))
 
+  def init_module(self, module):
+    module.eval_namespace().context = self
+
+  def init_target(self, target):
+    target.eval_namespace().context = self
+
+  def init_dependency(self, dep):
+    dep.eval_namespace().context = self
+
 
 class Interpreter:
   """
@@ -444,7 +453,9 @@ class Interpreter:
     return module
 
   def create_module(self, project):
-    return core.Module(project.name, project.version, self.directory)
+    module = core.Module(project.name, project.version, self.directory)
+    self.context.init_module(module)
+    return module
 
   def eval_module(self, project, module):
     for node in project.children:
@@ -526,6 +537,7 @@ class Interpreter:
 
   def _target(self, node, module):
     target = module.add_target(node.name, node.export)
+    self.context.init_target(target)
     for node in node.children:
       if isinstance(node, Eval):
         self._exec(node.loc.lineno, node.source, target.eval_namespace())
@@ -544,6 +556,7 @@ class Interpreter:
     else:
       obj = self.context.get_module(node.name)
     dep = parent_target.add_dependency(obj, node.export)
+    self.context.init_dependency(dep)
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)

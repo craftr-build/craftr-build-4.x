@@ -55,6 +55,9 @@ class Module(PropertySet):
   def version(self):
     return self._version
 
+  def directory(self):
+    return self._directory
+
   def targets(self, exported_only=False):
     for target in self._targets.values():
       if not exported_only or target.is_exported():
