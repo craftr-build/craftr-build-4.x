@@ -29,7 +29,7 @@ class Context(dsl.Context):
       if target not in seen:
         seen.add(target)
         for handler in target.target_handlers():
-          handler.translate_target(target)
+          handler.translate_target(target, target.handler_data(handler))
     for target in module.targets():
       translate(target)
 

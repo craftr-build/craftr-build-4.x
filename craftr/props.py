@@ -18,13 +18,14 @@ class Namespace:
 
 class Property:
 
-  def __init__(self, name, type, default=None, readonly=False):
+  def __init__(self, name, type, default=None, readonly=False, inheritable=True):
     if not hasattr(self, '_typecheck_' + type):
       raise ValueError('invalid property type: {}'.format(type))
     self.scope, self.name = name.split('.')
     self.type = type
     self.default = default
     self.readonly = readonly
+    self.inheritable = inheritable
 
     if type == 'StringList' and default is None:
       self.default = ()
@@ -32,6 +33,10 @@ class Property:
   def __repr__(self):
     return 'Property(name={!r}, type={!r}, readonly={!r})'.format(
       self.name, self.type, self.readonly)
+
+  @property
+  def fullname(self):
+    return self.scope + '.' + self.name
 
   def typecheck(self, value):
     if value is None:
@@ -107,8 +112,8 @@ class PropertySet:
   def supports_exported_members(self):
     return self._supports_exported_members
 
-  def define_property(self, name, type, default=None, readonly=False):
-    prop = Property(name, type)
+  def define_property(self, name, type, default=None, readonly=False, inheritable=True):
+    prop = Property(name, type, readonly, inheritable)
     self._properties.setdefault(prop.scope, {})[prop.name] = prop
     if prop.scope not in self._namespaces:
       ns = Namespace(prop.scope)
@@ -152,7 +157,7 @@ class PropertySet:
     for scope in self.scopes():
       yield scope, self._namespaces[scope]
 
-  def get_property(self, property, default=None, inherit=True):
+  def get_property(self, property, default=None):
     scope, name = property.split('.')
     if scope not in self._properties:
       raise KeyError('scope does not exist: {}'.format(scope))
@@ -176,11 +181,21 @@ class PropertySet:
           yield propset.get_property(property, inherit=False)
         except KeyError:
           pass
-    if inherit:
+    if prop.inheritable:
       value = prop.inherit(value, iter_inheritance())
     if value is None:
       value = default
     return value
+
+  def get_properties(self, scope):
+    """
+    Fills a #props.Namespace with all property values defined in that scope.
+    """
+
+    ns = Namespace(scope + ' [resolved]')
+    for prop in self._properties[scope].values():
+      setattr(ns, prop.name, self.get_property(prop.fullname))
+    return ns
 
   def _inherited_propsets(self):
     return; yield

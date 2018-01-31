@@ -140,6 +140,7 @@ class Target(props.PropertySet):
     self._directory = directory
     self._dependencies = []
     self._outputs = {}
+    self._handler_data = {}
     self._eval_namespace = props.duplicate_namespace(
       module.eval_namespace(), 'target "{}"'.format(name))
     self._eval_namespace.target = self
@@ -247,7 +248,10 @@ class Target(props.PropertySet):
 
   def finalize(self):
     for handler in self.target_handlers():
-      handler.finalize_target(self)
+      common_scope = handler.get_common_property_scope()
+      data = self.get_properties(common_scope) if common_scope else props.Namespace()
+      handler_data = handler.finalize_target(self, data) or data
+      self._handler_data[handler] = handler_data
 
   def handler_data(self, handler):
     return self._handler_data.get(handler)
@@ -320,7 +324,9 @@ class Dependency(props.PropertySet):
 
   def finalize(self):
     for handler in self._parent.target_handlers():
-      handler.finalize_dependency(self)
+      common_scope = handler.get_common_property_scope()
+      data = self.get_properties(common_scope) if common_scope else props.Namespace()
+      handler.finalize_dependency(self, data)
 
 
 class TargetHandler:
@@ -330,17 +336,47 @@ class TargetHandler:
   create build actions based on these properties.
   """
 
+  def get_common_property_scope(self):
+    """
+    If this returns something other than #None, the *data* argument to the
+    #finalize_target() and #finalize_dependency() methods will be filled
+    with the property values of this scope.
+    """
+
+    return None
+
   def setup_target(self, target):
     pass
 
   def setup_dependency(self, dependency):
     pass
 
-  def finalize_target(self, target):
+  def finalize_target(self, target, data):
+    """
+    Called after the target has been created and fully initialized by the
+    DSL interpreter. This method is supposed to add output files to the
+    target that may need to be considered by other targets that depend
+    on this one.
+
+    During the process, information may be retrieved that would also be
+    needed in #translate_target(). This information can be filled into the
+    *data* #props.Namespace object, or into a custom object that needs to
+    be returned.
+
+    If #get_common_property_scope() is implemented, the #props.Namespace
+    *data* object will be filled with the scope's property values.
+    """
+
     pass
 
-  def finalize_dependency(self, dependency):
+  def finalize_dependency(self, dependency, data):
     pass
 
-  def translate_target(self, target):
+  def translate_target(self, target, data):
+    """
+    Called after a build script has been loaded to translate the target into
+    concrete build actions. The *data* parameter is the value returned by
+    the #finalize_target() method.
+    """
+
     pass
