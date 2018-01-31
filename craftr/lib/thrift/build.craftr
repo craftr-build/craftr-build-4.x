@@ -1,0 +1,8 @@
+project "thrift" v1.0.0
+
+eval import os
+
+options:
+  str thriftBin = os.environ.get('THRIFT', 'thrift')
+
+load "./thrift.py"

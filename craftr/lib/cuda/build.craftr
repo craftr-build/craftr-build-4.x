@@ -1,0 +1,9 @@
+project "cuda" v1.0.0
+
+eval import os
+
+options:
+  str sdkDir = os.environ.get('CUDA_PATH') or error('CUDA_PATH not set')
+  bool static = True
+
+load "./cuda.py"

@@ -1,0 +1,8 @@
+project "vala" v1.0.0
+
+eval import os
+
+options:
+  str valaBin = os.environ.get('VALAC', 'vala')
+
+load "./vala.py"
