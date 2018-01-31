@@ -1,4 +1,21 @@
 
+def duplicate_namespace(ns, scope_name=None):
+  new = Namespace(scope_name or ns.__name__)
+  for key, value in vars(ns).items():
+    if not key.startswith('_'):
+      setattr(new, key, value)
+  return new
+
+
+class Namespace:
+
+  def __init__(self, scope_name=None):
+    self.__name__ = scope_name
+
+  def __repr__(self):
+    return 'Namespace({})'.format(self.__name__ or '<unnamed>')
+
+
 class Property:
 
   def __init__(self, name, type, default=None, readonly=False):
@@ -173,23 +190,6 @@ class PropertySet:
 
   def _on_new_property(self, prop, ns):
     pass
-
-
-class Namespace:
-
-  def __init__(self, scope_name):
-    self.__name__ = scope_name
-
-  def __repr__(self):
-    return 'Namespace({})'.format(self.__name__)
-
-
-def duplicate_namespace(ns, scope_name=None):
-  new = Namespace(scope_name or ns.__name__)
-  for key, value in vars(ns).items():
-    if not key.startswith('_'):
-      setattr(new, key, value)
-  return new
 
 
 class InvalidPropertyValue(ValueError):
