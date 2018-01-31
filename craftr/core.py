@@ -2,8 +2,9 @@
 import collections
 import os
 import re
+import sys
 
-from .props import PropertySet, Namespace, duplicate_namespace
+from . import path, props
 
 
 def validate_module_name(name):
@@ -19,7 +20,36 @@ def validate_target_name(name):
 Pool = collections.namedtuple('Pool', 'name depth')
 
 
-class Options(PropertySet):
+class TaggedFile:
+  """
+  Represents a file attached with zero or more tags.
+
+  This class interns all tag strings.
+  """
+
+  def __init__(self, name, tags=()):
+    self._name = path.canonical(name)
+    self._tags = set(sys.intern(x) for x in tags)
+
+  def __repr__(self):
+    return 'TaggedFile(name={!r}, tags={{{!r}}})'.format(self.name, ','.join(self.tags))
+
+  def has_tag(self, tag):
+    return tag in self._tags
+
+  def add_tags(self, tags):
+    self._tags |= set(sys.intern(x) for x in tags)
+
+  @property
+  def name(self):
+    return self._name
+
+  @property
+  def tags(self):
+    return set(self._tags)
+
+
+class Options(props.PropertySet):
   """
   Represents options.
   """
@@ -28,7 +58,7 @@ class Options(PropertySet):
     return 'Options()'
 
 
-class Module(PropertySet):
+class Module(props.PropertySet):
   """
   Represents a module.
   """
@@ -43,7 +73,7 @@ class Module(PropertySet):
     self._pools = collections.OrderedDict()
     self._options = Options()
     self._target_handlers = []
-    self._eval_namespace = Namespace('module "{}"'.format(name))
+    self._eval_namespace = props.Namespace('module "{}"'.format(name))
     self._eval_namespace.module = self
 
   def __repr__(self):
@@ -96,12 +126,10 @@ class Module(PropertySet):
     return self._eval_namespace
 
 
-class Target(PropertySet):
+class Target(props.PropertySet):
   """
   Represents a target. A target is added to a project using the `target` block.
   """
-
-  TaggedFile = collections.namedtuple('TaggedFile', 'name tag')
 
   def __init__(self, module, name, export, directory):
     super().__init__(True)
@@ -111,8 +139,9 @@ class Target(PropertySet):
     self._export = export
     self._directory = directory
     self._dependencies = []
-    self._outputs = []
-    self._eval_namespace = duplicate_namespace(module.eval_namespace(), 'target "{}"'.format(name))
+    self._outputs = {}
+    self._eval_namespace = props.duplicate_namespace(
+      module.eval_namespace(), 'target "{}"'.format(name))
     self._eval_namespace.target = self
     self.define_property('this.pool', 'String', None)
     self.define_property('this.syncio', 'Bool', False)
@@ -194,16 +223,24 @@ class Target(PropertySet):
 
   def outputs(self, tag=None):
     if tag is not None:
-      return (x.name for x in self._outputs if x.tag == tag)
+      return filter(TaggedFile.has_tag, self._outputs.values())
     else:
-      return iter(self._outputs)
+      return self._outputs.values()
 
-  def add_outputs(self, tag, outputs):
-    if not isinstance(outputs, list):
-      raise TypeError('expected list for outputs')
-    if not isinstance(tag, str):
-      raise TypeError('expected str for tag')
-    self._outputs += [self.TaggedFile(tag, name) for name in outputs]
+  def add_output(self, name, tags=()):
+    name = path.canonical(name)
+    # We build the hash table using the case-insensitive canonical name.
+    name_lower = name.lower()
+    obj = self._outputs.get(name_lower)
+    if obj is None:
+      obj = TaggedFile(name, tags)
+    else:
+      obj.add_tags(tags)
+    return obj
+
+  def get_output(self, name):
+    name = path.canonical(name)
+    return self._outputs.get(name.lower())
 
   def eval_namespace(self):
     return self._eval_namespace
@@ -212,7 +249,10 @@ class Target(PropertySet):
     for handler in self.target_handlers():
       handler.finalize_target(self)
 
-  # PropertySet overrides
+  def handler_data(self, handler):
+    return self._handler_data.get(handler)
+
+  # props.PropertySet overrides
 
   def _inherited_propsets(self):
     for dep in self.transitive_dependencies():
@@ -222,7 +262,7 @@ class Target(PropertySet):
     setattr(self._eval_namespace, scope, ns)
 
 
-class Dependency(PropertySet):
+class Dependency(props.PropertySet):
   """
   Represents a dependency. A dependency is added to a target using a
   `requires` statement or block.
@@ -240,7 +280,8 @@ class Dependency(PropertySet):
     self._module = module
     self._target = target
     self._export = export
-    self._eval_namespace = duplicate_namespace(parent.eval_namespace(), 'dependency "{}"'.format(self._refstring()))
+    self._eval_namespace = props.duplicate_namespace(
+      parent.eval_namespace(), 'dependency "{}"'.format(self._refstring()))
     self.define_property('this.select', 'StringList', [])
 
   def __repr__(self):
