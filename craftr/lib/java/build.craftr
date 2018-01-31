@@ -1,0 +1,13 @@
+project "java" v1.0.0
+
+eval import os
+
+options:
+  str onejar = os.path.join(module.directory(), "one-jar-boot-0.97.jar")
+  str javac = "java"
+  str javacJar = "jar"
+  str compilerFlags = ""
+  str distType = "merge"
+  str mavenRepos = ""
+
+load "./java.py"

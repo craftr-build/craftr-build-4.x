@@ -1,0 +1,7 @@
+project "cython" v1.0.0
+
+options:
+  str cythonBin = "cython"
+  str pythonBin = "python"
+
+load "./cython.py"

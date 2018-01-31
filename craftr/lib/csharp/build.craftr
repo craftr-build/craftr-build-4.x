@@ -1,0 +1,9 @@
+project "csharp" v1.0.0
+
+options:
+  str impl = 'net' if OS.type == 'nt' else 'mono'
+  str csc = 'csc'
+  str monoArch = OS.arch  # Used to determine the Mono installation path. Must be either x64 or x86
+  str mergeTool = 'ILMerge' if OS.type == 'nt' else 'ILRepack'  # The name of the tool to merge assemblies.
+
+load "./csharp.py"
