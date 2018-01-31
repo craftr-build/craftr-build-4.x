@@ -86,6 +86,9 @@ def _main(argv=None):
   context = Context(build_mode='release' if args.release else 'debug')
 
   # Load the main build script.
+  if args.file.endswith('/') or args.file.endswith('\\') or \
+      os.path.isdir(args.file):
+    args.file = os.path.join(args.file, 'build.craftr')
   with open(args.file) as fp:
     project = dsl.Parser().parse(fp.read())
   module = dsl.Interpreter(context, args.file)(project)
