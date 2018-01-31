@@ -2,6 +2,29 @@
 import os
 import glob2
 
+from os import (
+  sep,
+  pathsep,
+  curdir,
+  pardir,
+  getcwd as cwd,
+  listdir
+)
+from os.path import (
+  expanduser,
+  normpath as norm,
+  isabs,
+  isfile,
+  isdir,
+  exists,
+  join,
+  split,
+  dirname as dir,
+  basename as base,
+  getatime,
+  getmtime
+)
+
 
 def canonical(path, parent=None):
   if not os.path.isabs(path):
@@ -9,6 +32,53 @@ def canonical(path, parent=None):
       path = os.path.join(parent, path)
     path = os.path.abspath(path)
   return os.path.normpath(path)
+
+
+def abs(path: str, parent: str = None) -> str:
+  if not isabs(path):
+    return join(parent or cwd(), path)
+  return path
+
+
+def rel(path: str, parent: str = None, par: bool = False) -> str:
+  """
+  Takes *path* and computes the relative path from *parent*. If *parent* is
+  omitted, the current working directory is used.
+
+  If *par* is #True, a relative path is always created when possible.
+  Otherwise, a relative path is only returned if *path* lives inside the
+  *parent* directory.
+  """
+
+  try:
+    res = os.path.relpath(path, parent)
+  except ValueError:
+    # Raised eg. on Windows for differing drive letters.
+    if not par:
+      return abs(path)
+    raise
+  else:
+    if not issub(res):
+      return abs(path)
+    return res
+
+
+def isrel(path: str) -> bool:
+  return not isabs(path)
+
+
+def issub(path: str) -> bool:
+  """
+  Returns #True if *path* is a relative path that does not point outside
+  of its parent directory or is equal to its parent directory (thus, this
+  function will also return False for a path like `./`).
+  """
+
+  if isabs(path):
+    return False
+  if path.startswith(curdir + sep) or path.startswith(pardir + sep):
+    return False
+  return True
 
 
 def isglob(path):
@@ -82,3 +152,141 @@ def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
             raise ValueError('{} ({})'.format(exc, pattern))
 
   return result
+
+
+def addtobase(subject, base_suffix):
+  """
+  Adds the string *base_suffix* to the basename of *subject*.
+  """
+
+  if not base_suffix:
+    return subject
+  base, ext = os.path.splitext(subject)
+  return base + base_suffix + ext
+
+
+def addprefix(subject, prefix):
+  """
+  Adds the specified *prefix* to the last path element in *subject*.
+  If *prefix* is a callable, it must accept exactly one argument, which
+  is the last path element, and return a modified value.
+  """
+
+  if not prefix:
+    return subject
+  dir_, base = split(subject)
+  if callable(prefix):
+    base = prefix(base)
+  else:
+    base = prefix + base
+  return join(dir_, base)
+
+
+def addsuffix(subject, suffix, replace=False):
+  """
+  Adds the specified *suffix* to the *subject*. If *replace* is True, the
+  old suffix will be removed first. If *suffix* is callable, it must accept
+  exactly one argument and return a modified value.
+  """
+
+  if not suffix and not replace:
+    return subject
+  if replace:
+    subject = rmvsuffix(subject)
+  if suffix and callable(suffix):
+    subject = suffix(subject)
+  elif suffix:
+    subject += suffix
+  return subject
+
+
+def setsuffix(subject, suffix):
+  """
+  Synonymous for passing the True for the *replace* parameter in #addsuffix().
+  """
+
+  return addsuffix(subject, suffix, replace=True)
+
+
+def rmvsuffix(subject):
+  """
+  Remove the suffix from *subject*.
+  """
+
+  index = subject.rfind('.')
+  if index > subject.replace('\\', '/').rfind('/'):
+    subject = subject[:index]
+  return subject
+
+
+def getsuffix(subject):
+  """
+  Returns the suffix of a filename. If the file has no suffix, returns None.
+  Can return an empty string if the filenam ends with a period.
+  """
+
+  index = subject.rfind('.')
+  if index > subject.replace('\\', '/').rfind('/'):
+    return subject[index+1:]
+  return None
+
+
+def makedirs(path, exist_ok=True):
+  """
+  Like #os.makedirs(), with *exist_ok* defaulting to #True.
+  """
+
+  os.makedirs(path, exist_ok=exist_ok)
+
+
+def chmod_update(flags, modstring):
+  """
+  Modifies *flags* according to *modstring*.
+  """
+
+  mapping = {
+    'r': (stat.S_IRUSR, stat.S_IRGRP, stat.S_IROTH),
+    'w': (stat.S_IWUSR, stat.S_IWGRP, stat.S_IWOTH),
+    'x': (stat.S_IXUSR, stat.S_IXGRP, stat.S_IXOTH)
+  }
+
+  target, direction = 'a', None
+  for c in modstring:
+    if c in '+-':
+      direction = c
+      continue
+    if c in 'ugoa':
+      target = c
+      direction = None  # Need a - or + after group specifier.
+      continue
+    if c in 'rwx' and direction in '+-':
+      if target == 'a':
+        mask = functools.reduce(operator.or_, mapping[c])
+      else:
+        mask = mapping[c]['ugo'.index(target)]
+      if direction == '-':
+        flags &= ~mask
+      else:
+        flags |= mask
+      continue
+    raise ValueError('invalid chmod: {!r}'.format(modstring))
+
+  return flags
+
+
+def chmod_repr(flags):
+  """
+  Returns a string representation of the access flags *flags*.
+  """
+
+  template = 'rwxrwxrwx'
+  order = (stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR,
+           stat.S_IRGRP, stat.S_IWGRP, stat.S_IXGRP,
+           stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH)
+  return ''.join(template[i] if flags&x else '-'
+                 for i, x in enumerate(order))
+
+
+def chmod(path, modstring):
+  flags = chmod_update(os.stat(path).st_mode, modstring)
+  os.chmod(path, flags)
