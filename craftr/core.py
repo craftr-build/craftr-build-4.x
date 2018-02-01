@@ -232,7 +232,10 @@ class Target(props.PropertySet):
     return self._actions.values()
 
   def __previous_action(self):
-    return self._actions[next(reversed(self._actions))]
+    for key in reversed(self._actions):
+      action = self._actions[key]
+      if action.is_output is not False:
+        return action
 
   def output_actions(self):
     """
@@ -298,7 +301,10 @@ class Target(props.PropertySet):
       if self._output_actions:
         deps.append(self._output_actions[-1])
       else:
-        deps.append(self.__previous_action())
+        # Could be None, if output was set to False
+        action = self.__previous_action()
+        if action:
+          deps.append(action)
 
     # TODO: Assign the action to the pool specified in the target.
     kwargs.setdefault('explicit', self.get_property('this.explicit'))
