@@ -282,12 +282,12 @@ class JavaTargetHandler(craftr.TargetHandler):
     if data.bundleFilename and data.mainClass:
       # An action to execute the bundled JAR.
       command = list(data.runPrefix or ['java'])
-      if data.nobundleBinaryJars:
+      if not data.nobundleBinaryJars:
         command += ['-jar', data.bundleFilename]
       else:
         classpath = data.nobundleBinaryJars + [data.bundleFilename]
         command += ['-cp', path.pathsep.join(classpath)]
-        command += [data.mainClass]
+        command += ['com.simontuffs.onejar.Boot' if data.bundleType == 'onejar' else data.mainClass]
       action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
