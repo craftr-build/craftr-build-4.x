@@ -4,8 +4,8 @@
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square"></a>
 <img src="https://img.shields.io/badge/version-3.0.0--dev-blue.svg?style=flat-square"/>
-<a href="https://travis-ci.org/craftr-build/craftr"><img src="https://travis-ci.org/craftr-build/craftr.svg?branch=develop"></a>
-<a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr/branch/develop"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik/branch/develop?svg=true"></a>
+<a href="https://travis-ci.org/craftr-build/craftr"><img src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"></a>
+<a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr/branch/master"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik/branch/master?svg=true"></a>
 
 Craftr is a modular build system inspired by [Buck], [CMake], [QBS] and
 previous versions of Craftr itself. It combines a declarative syntax
@@ -13,10 +13,20 @@ with the ability to evaluate Python code in the build script. The backbone
 for the build process is [Ninja], however, extensions can be used to target
 other build backends.
 
+Craftr runs on CPython 3.3 or higher.
+
   [Buck]: https://buckbuild.com/
   [CMake]: https://cmake.org/
   [QBS]: https://bugreports.qt.io/projects/QBS/summary
   [Ninja]: https://github.com/ninja-build/ninja.git
+  [PyPI]: https://pypi.python.org/pypi
+
+### Installation
+
+Craftr 3 is in alpha and not currently available on [PyPI]. You can however
+install it directly from the Git repository.
+
+    pip3 install git+https://github.com/craftr-build/craftr.git@master
 
 ### Examples
 
