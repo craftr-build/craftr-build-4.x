@@ -33,7 +33,7 @@ def check_ninja_version(build_directory, download=False):
   local_ninja = os.path.join(build_directory, NINJA_FILENAME)
   if os.path.isfile(local_ninja):
     ninja = local_ninja
-  elif not local:
+  elif not options.local:
     # Otherwise, check if there's a ninja version installed.
     ninja = shutil.which('ninja')
   else:

@@ -1,10 +1,11 @@
 
 import copy
 import craftr
+import shlex
 import sys
 from craftr import path
 
-ONEJAR_FILENAME = path.join(path.dir(__file__), 'tools', 'one-jar-boot-0.97.jar')
+ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')
 DOWNLOAD_TOOL = path.join(path.dir(__file__), 'tools', 'download.py')
 maven = load('./tools/maven.py')
@@ -223,11 +224,11 @@ class JavaTargetHandler(craftr.TargetHandler):
   def translate_target(self, target, data):
     if data.srcs and data.classFiles:
       # Generate the action to compile the Java source files.
-      command = [javac, '-d', data.classDir]
+      command = [options.javac, '-d', data.classDir]
       if data.binaryJars:
         command += ['-classpath', path.pathsep.join(data.binaryJars)]
       command += ['$in']
-      command += data.compilerFlags
+      command += shlex.split(options.compilerFlags) + data.compilerFlags
       action = target.add_action('java.javac', commands=[command],
         input=True, deps=data.artifactActions)
       build = action.add_buildset()
@@ -238,7 +239,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       flags = 'cvf'
       if data.mainClass:
         flags += 'e'
-      command = [javacJar, flags, '$out']
+      command = [options.javacJar, flags, '$out']
       if data.mainClass:
         command += [data.mainClass]
       command += ['-C', data.classDir, '.']
