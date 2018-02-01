@@ -157,7 +157,7 @@ class PropertySet:
     for scope in self.scopes():
       yield scope, self._namespaces[scope]
 
-  def get_property(self, property, default=None):
+  def get_property(self, property, default=None, inherit=None):
     scope, name = property.split('.')
     if scope not in self._properties:
       raise KeyError('scope does not exist: {}'.format(scope))
@@ -181,7 +181,8 @@ class PropertySet:
           yield propset.get_property(property, inherit=False)
         except KeyError:
           pass
-    if prop.inheritable:
+    if inherit is None: inherit = prop.inheritable
+    if inherit:
       value = prop.inherit(value, iter_inheritance())
     if value is None:
       value = default
