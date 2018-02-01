@@ -14,7 +14,7 @@ def with_plural(x, noun):
 
 
 def validate_module_name(name):
-  if not re.match('^[\w\d_\-/]+$', name):
+  if not re.match('^[\w\d_\-/\.]+$', name):
     raise ValueError('invalid module name: {!r}'.format(name))
 
 
