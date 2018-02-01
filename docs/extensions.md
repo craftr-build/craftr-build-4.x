@@ -30,14 +30,20 @@ class CxxTargetHandler(craftr.TargetHandler):
   def setup_requires(self, requires):
     requires.define_property('cpp.link', bool, True)
 
-  def translate_target(self, target):
-    srcs = target.get_property('cpp.srcs')
-    for dep in target.requires():
-      if dep.get_property('cpp.link'):
-        for file in dep.output_files():
-          if file.tag in ('c', 'cpp'):
-            srcs.append(file.name)
-    # TODO ..
+  def finalize_target(self, target, data):
+    if not data.srcs:
+      return
+    data.objfiles = [path.setsuffix(x, '.o') for x in data.srcs]
+    target.outputs().add(data.objfiles, ['cpp.obj'])
+
+  def translate_target(self, target, data):
+    command = ['gcc', '-c', '-o', '$out', '$in']
+    action = target.add_action('cpp.compile')
+    for infile, outfile in zip(data.srcs, data.objfiles):
+      build = action.add_buildset()
+      build.files.add(infile, ['in'])
+      build.files.add(outfile, ['out'])
+    # etc ...
 
 project.register_target_handler(CxxTargetHandler)
 ```
