@@ -9,6 +9,7 @@ class Context(dsl.BaseDslContext):
   def __init__(self, build_directory, build_mode='debug', backend_name=None):
     self.path = ['.', path.join(path.dir(__file__), 'lib')]
     self.options = {}
+    self.cache = {}
     self.modules = {}
     self.build_directory = build_directory
     self.build_mode = build_mode
@@ -61,6 +62,7 @@ class Context(dsl.BaseDslContext):
     root['directory'] = self.build_directory
     root['options'] = None  # TODO: Include options specified via the command-line.
     root['graph'] = self.build_graph.to_json()
+    root['cache'] = self.cache
     return root
 
   def from_json(self, root):
@@ -71,6 +73,7 @@ class Context(dsl.BaseDslContext):
       print('warning: stored build directory does not match current build directory')
     # TODO: Read options
     self.build_graph.from_json(root['graph'])
+    self.cache.update(root.get('cache', {}))
 
   def serialize(self):
     path.makedirs(self.build_directory)
