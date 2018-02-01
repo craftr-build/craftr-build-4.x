@@ -120,8 +120,9 @@ class Eval(Node):
     if '\n' in self.source:
       fp.write('  ' * depth + 'eval:\n')
       for line in self.source.split('\n'):
-        fp.write('  ' * (depth+1))
-        fp.write(line)
+        if line:
+          fp.write('  ' * (depth+1))
+          fp.write(line)
         fp.write('\n')
     else:
       fp.write('  ' * depth + 'eval ')
@@ -308,26 +309,33 @@ class Parser:
     else:
       first_line = lexer.scanner.readline()
     sub_lines = []
-    min_indent = 10*3
     while True:
       loc = lexer.scanner.cursor
-      match = lexer.scanner.match('[\t ]+')
+      match = lexer.scanner.match('[\t ]*')
       if lexer.scanner.char and lexer.scanner.char in '#\n':
-        # Skip empty lines and lines with comments.
-        lexer.scanner.readline()
+        # Simply read in empty lines, but make sure we keep their
+        # indentation as otherwise the dedentation doesn't work.
+        indent = max(len(match.group(0)), parent_indent)
+        sub_lines.append(' ' * indent + lexer.scanner.readline())
         continue
-      if not match or len(match.group(0)) <= parent_indent:
+      if len(match.group(0)) <= parent_indent:
         lexer.scanner.restore(loc)
         break
       sub_lines.append(match.group(0) + lexer.scanner.readline())
-      min_indent = min(min_indent, len(match.group(0)))
     # Restore the last new-line, as it serves as statement delimiter.
     if (not sub_lines and first_line and first_line.endswith('\n')) or \
         (sub_lines and sub_lines[-1].endswith('\n')):
       lexer.scanner.seek(-1, 'cur')
-    result = textwrap.dedent(''.join(sub_lines))
+    # Strip lines that are only comments/newlines.
+    while sub_lines:
+      line = sub_lines[-1].lstrip()
+      if line.startswith('#') or line.startswith('\n') or not line:
+        sub_lines.pop(-1)
+      else:
+        break
+    result = textwrap.dedent(''.join(x for x in sub_lines))
     if first_line:
-      result = first_line.lstrip() + result
+      result = first_line.strip() + '\n' + result
     return result
 
   def _parse_options(self, lexer, parent_indent, export):

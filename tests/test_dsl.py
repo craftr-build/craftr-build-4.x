@@ -54,9 +54,11 @@ def test_dsl_parser():
       dependency "cpp"
       export cpp.includes = ['include']
     eval:
-    # Here's an eval block with a newline in between. This originally
-    # caused an "unexpected indent" error. Parser._parse_expression()
-    # must take empty newlines into account.
+      #! Here's an eval block with a newline in between. This originally
+      #! caused an "unexpected indent" error. Parser._parse_expression()
+      #! must take empty newlines into account.
+      #! Note that the eval block is parsed as an expression and keeps
+      #! keeps its comments.
       print('Hello')
 
       print('Bar')
@@ -83,10 +85,9 @@ def test_dsl_parser():
   project = dsl.Parser().parse(source)
   project.render(fp, 0)
 
-  # Remove the comments, they will not be in the re-formatted output.
-  source = re.sub('^\s*#.*$\n', '', source, 0, re.M)
-  # Also remove multiple successive newlines.
-  source = re.sub('\n+', '\n', source)
+  # Remove comments that will not be kept.
+  source = re.sub('^\s*#[^!].*\n', '', source, 0, re.M)
+
   assert_equals(fp.getvalue().strip().split('\n'), source.split('\n'))
 
 
