@@ -215,7 +215,8 @@ class JavaTargetHandler(craftr.TargetHandler):
         command += ['-classpath', path.pathsep.join(data.binaryJars)]
       command += ['$in']
       command += data.compilerFlags
-      action = target.add_action('java.javac', commands=[command], deps=data.artifactActions)
+      action = target.add_action('java.javac', commands=[command],
+        input=True, deps=data.artifactActions)
       build = action.add_buildset()
       build.files.add(data.srcs, ['in'])
       build.files.add(data.classFiles, ['out'])
@@ -257,7 +258,7 @@ class JavaTargetHandler(craftr.TargetHandler):
     if data.jarFilename or data.bundleFilename:
       # An action to execute the JAR file.
       command = (data.runPrefix or ['java']) + ['-jar', data.bundleFilename or data.jarFilename]
-      action = target.add_action('java.run', commands=[command], explicit=True, syncio=True)
+      action = target.add_action('java.run', commands=[command], explicit=True, syncio=True, output=False)
       action.add_buildset()
 
 

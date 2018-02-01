@@ -433,11 +433,13 @@ class Action:
   syncio (bool):
     #True if the action needs to be run with the original stdin/stdout/stderr
     attached.
-  deps_prefix (str): A string that represents the prefix of for lines
+  deps_prefix (str):
+    A string that represents the prefix of for lines
     in the output of the command(s) that represent additional dependencies
     to the action (eg. headers in the case of C/C++). Can not be mixed with
     *depfile*.
-  depfile (str): A filename that is produced by the command(s) which lists
+  depfile (str):
+    A filename that is produced by the command(s) which lists
     additional dependencies of the action. The file must be formatted like
     a Makefile. Can not be mixed with *deps_prefix*.
 
