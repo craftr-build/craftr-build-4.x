@@ -34,6 +34,11 @@ class Context(dsl.Context):
     for target in module.targets():
       translate(target)
 
+  def load_module_file(self, filename):
+    with open(filename) as fp:
+      project = dsl.Parser().parse(fp.read())
+    return dsl.Interpreter(self, filename)(project)
+
   # dsl.Context
 
   def get_option(self, module_name, option_name):
@@ -92,9 +97,7 @@ def _main(argv=None):
   if args.file.endswith('/') or args.file.endswith('\\') or \
       os.path.isdir(args.file):
     args.file = os.path.join(args.file, 'build.craftr')
-  with open(args.file) as fp:
-    project = dsl.Parser().parse(fp.read())
-  module = dsl.Interpreter(context, args.file)(project)
+  module = context.load_module_file(args.file)
 
   # Translate targets.
   context.translate_targets(module)
