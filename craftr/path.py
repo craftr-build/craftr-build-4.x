@@ -1,6 +1,7 @@
 
 import os
 import glob2
+import stat
 
 from os import (
   sep,

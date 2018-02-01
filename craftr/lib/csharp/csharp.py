@@ -2,12 +2,17 @@
 import craftr
 import functools
 import os
+import re
+import requests
 import subprocess
 from craftr import path, sh, utils
 
-msvc = load('tools.msvc')
+if OS.name == 'nt':
+  msvc = load('tools.msvc')
+else:
+  msvc = None
+
 nupkg = load('./tools/nupkg.py')
-toolkit = msvc.MsvcToolkit.from_config()
 artifacts_dir = path.join(context.build_directory, 'csharp', 'nuget')
 
 
@@ -98,7 +103,7 @@ class CscInfo(utils.named):
       csc = CscInfo(options.impl, [program], toolkit.environ, toolkit.csc_version)
     else:
       environ = {}
-      if platform == 'windows':
+      if OS.type == 'nt':
         # Also, just make sure that we can find some standard installation
         # of Mono.
         arch = options.monoArch

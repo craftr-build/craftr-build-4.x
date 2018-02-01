@@ -2,7 +2,7 @@ project "csharp" v1.0.0
 
 options:
   str impl = 'net' if OS.type == 'nt' else 'mono'
-  str csc = 'csc'
+  str csc = 'csc' if OS.type == 'nt' else 'mcs'
   str monoArch = OS.arch  # Used to determine the Mono installation path. Must be either x64 or x86
   str mergeTool = ''  # The name of the tool to merge assemblies.
 
