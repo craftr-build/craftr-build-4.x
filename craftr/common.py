@@ -1,12 +1,13 @@
 
 import collections
+import re
 import sys
 from . import path
 
 
 def match_tag(tag, tags):
   if tag[0] == '!':
-    return tag[1:] in tags
+    return tag[1:] not in tags
   return tag in tags
 
 
@@ -169,4 +170,18 @@ class BuildSet:
     files or variables in this buildset.
     """
 
-    return cmd # TODO
+    expr = re.compile(r'^(.*)(?:\$\{([^\}]+)\}|\$(\w+))(.*)$')
+    result = []
+    for string in cmd:
+      match = expr.match(string)
+      if match:
+        px, sx = match.group(1), match.group(4)
+        id = match.group(2) or match.group(3)
+        tags = [x for x in id.split('&') if x]
+        files = list(self.files.tagged(*tags))
+        result += [px+x+sx for x in self.files.tagged(*id.split('&'))]
+        if len(tags) == 1 and tags[0] in self.vars:
+          result += [px+x+sx for x in self.vars[tags[0]]]
+      else:
+        result.append(string)
+    return result
