@@ -457,10 +457,10 @@ class Action:
     self.builds.append(buildset)
     return buildset
 
-  def get_output_files(self):
+  def all_files_tagged(self, *tags):
     files = []
     for build in self.builds:
-      files += build.files.tagged('out')
+      files += build.files.tagged(*tags)
     return files
 
   def to_json(self):
