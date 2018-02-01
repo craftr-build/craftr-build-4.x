@@ -3,7 +3,7 @@ import argparse
 import os
 import sys
 
-from . import builtins, dsl
+from . import dsl, path, props
 
 
 class Context(dsl.BaseDslContext):
@@ -14,6 +14,10 @@ class Context(dsl.BaseDslContext):
     self.modules = {}
     self.build_directory = build_directory
     self.build_mode = build_mode
+
+    self.builtins = props.Namespace('builtins')
+    self.builtins.context = self
+    self.load_file(path.join(path.dir(__file__), 'builtins.py'), self.builtins)
 
   def translate_targets(self, module):
     seen = set()
@@ -63,9 +67,8 @@ class Context(dsl.BaseDslContext):
   def init_module(self, module):
     super().init_module(module)
     ns = module.eval_namespace()
-    for key in builtins.__all__:
-      setattr(ns, key, getattr(builtins, key))
-    ns.BUILD = builtins.BuildInfo(self.build_mode)
+    for key in self.builtins.__all__:
+      setattr(ns, key, getattr(self.builtins, key))
 
 
 def get_argument_parser():

@@ -1,14 +1,19 @@
+# This file is loaded by the craftr.main.Context where the `context`
+# variable is available.
 
-__all__ = ['OS', 'error', 'fmt', 'glob', 'load', 'option_default']
+assert 'context' in globals(), 'this file should not be with Python'
+
+__all__ = ['BUILD', 'OS', 'error', 'fmt', 'glob', 'load', 'option_default']
 
 import collections
 import os
 import platform
 import sys
 
-from . import core, dsl, path, props
+from craftr import core, dsl, path, props
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
+
 
 class BuildInfo(collections.namedtuple('_BuildInfo', 'mode')):
 
@@ -99,14 +104,12 @@ def load(filename):
   parent_globals = sys._getframe(1).f_globals
   filename = path.canonical(filename, path.dir(parent_globals['__file__']))
   ns.__file__ = filename
-  context = parent_globals['context'].load_file(filename, ns)
+  context.load_file(filename, ns)
   return ns
 
 
 def option_default(name, value):
-  context = sys._getframe(1).f_globals['context']
   return context.options.setdefault(name, value)
-
 
 
 if sys.platform.startswith('win32'):
@@ -119,4 +122,4 @@ else:
   raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 
 
-# Note: The `BUILD` built-in is explicitly added by the DSL context.
+BUILD = BuildInfo(context.build_mode)
