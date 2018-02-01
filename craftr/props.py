@@ -157,7 +157,7 @@ class PropertySet:
     for scope in self.scopes():
       yield scope, self._namespaces[scope]
 
-  def get_property(self, property, default=None, inherit=None):
+  def get_property(self, property, default=None, inherit=None, export=False):
     scope, name = property.split('.')
     if scope not in self._properties:
       raise KeyError('scope does not exist: {}'.format(scope))
@@ -166,22 +166,32 @@ class PropertySet:
       raise KeyError('property does not exist: {}'.format(property))
     prop = props[name]
     namespace = self._namespaces[scope]
+    if export and self._supports_exported_members:
+      if inherit:
+        raise RuntimeError('inherit must be false when using export=True')
+      namespace = namespace.__exported__
+
+    # Retrieve the value and perform a type check.
+    value = getattr(namespace, name)
     try:
-      value = prop.typecheck(getattr(namespace, name))
+      value = prop.typecheck(value)
     except ValueError as exc:
       raise InvalidPropertyValue(self, str(exc))
+
+    # Iterator that yields inherited property values -- #Property.inherit()
+    # will receive this iterator and may choose to use it or not. Currently,
+    # this is used for merging lists.
     def iter_inheritance():
       if self._supports_exported_members:
-        try:
-          yield prop.typecheck(getattr(namespace.__exported__, name))
-        except ValueError as exc:
-          raise InvalidPropertyValue(self, '[export] ' + str(exc))
+        yield self.get_property(property, inherit=False, export=True)
       for propset in self._inherited_propsets():
         try:
-          yield propset.get_property(property, inherit=False)
+          yield propset.get_property(property, inherit=False, export=True)
         except KeyError:
           pass
-    if inherit is None: inherit = prop.inheritable
+
+    if inherit is None:
+      inherit = False if export else prop.inheritable
     if inherit:
       value = prop.inherit(value, iter_inheritance())
     if value is None:
