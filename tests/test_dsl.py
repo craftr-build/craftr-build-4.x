@@ -97,7 +97,7 @@ def test_options():
     options:
       int input
     eval
-      response['answer'] = input
+      response['answer'] = options.input
   ''')
   project = dsl.Parser().parse(source)
   context = Context()
@@ -128,8 +128,10 @@ def test_options_default():
       str input = (
           sys.executable * 3
         )
+    options:
+      bool foo = False
     eval
-      response['answer'] = input
+      response['answer'] = (options.input, options.foo)
   ''')
   project = dsl.Parser().parse(source)
   context = Context()
@@ -141,7 +143,7 @@ def test_options_default():
   ip.eval_module(project, module)
 
   import sys
-  assert_equals(response['answer'], sys.executable*3)
+  assert_equals(response['answer'], (sys.executable*3, False))
 
 
 def test_options_syntax_error():

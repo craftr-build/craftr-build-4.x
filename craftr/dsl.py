@@ -565,7 +565,7 @@ class Interpreter:
 
   def _options(self, node, module):
     ns = module.eval_namespace()
-    ns.options = props.Namespace('options')
+    ns.options = getattr(ns, 'options', props.Namespace('options'))
     for key, (type, value, loc) in node.options.items():
       try:
         has_value = self.context.get_option(module.name(), key)
