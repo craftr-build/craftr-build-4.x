@@ -27,11 +27,7 @@ from os.path import (
 
 
 def canonical(path, parent=None):
-  if not os.path.isabs(path):
-    if parent:
-      path = os.path.join(parent, path)
-    path = os.path.abspath(path)
-  return os.path.normpath(path)
+  return norm(abs(path, parent))
 
 
 def abs(path: str, parent: str = None) -> str:

@@ -1,11 +1,29 @@
 
 import collections
+import contextlib
 import os
 import string
 import textwrap
 
 from . import core
 from nr.parse import strex
+
+
+@contextlib.contextmanager
+def override_member(obj, member, value):
+  try:
+    old_value = getattr(obj, member)
+    has_member = True
+  except AttributeError:
+    has_member = False
+  setattr(obj, member, value)
+  try:
+    yield
+  finally:
+    if has_member:
+      setattr(obj, member, old_value)
+    else:
+      delattr(obj, member)
 
 
 class Node:
@@ -437,6 +455,12 @@ class BaseDslContext:
   def init_dependency(self, dep):
     dep.eval_namespace().context = self
 
+  def load_file(self, filename, namespace):
+    with open(filename) as fp:
+      code = compile(fp.read(), filename, 'exec')
+      namespace.__file__ = filename
+      exec(code, vars(namespace))
+
 
 class Interpreter:
   """
@@ -456,6 +480,7 @@ class Interpreter:
   def create_module(self, project):
     module = core.Module(project.name, project.version, self.directory)
     self.context.init_module(module)
+    module.eval_namespace().__file__ = self.filename
     return module
 
   def eval_module(self, project, module):
@@ -493,11 +518,8 @@ class Interpreter:
     if not os.path.isabs(filename):
       filename = os.path.join(self.directory, filename)
     filename = os.path.normpath(filename)
-    with open(filename) as fp:
-      code = compile(fp.read(), filename, 'exec')
-      namespace.__file__ = filename
-      exec(code, vars(namespace))
-      del namespace.__file__
+    with override_member(namespace, '__file__', filename):
+      self.context.load_file(filename, namespace)
 
   def _exec(self, lineno, source, namespace):
     source = '\n' * (lineno-1) + source
