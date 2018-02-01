@@ -10,8 +10,12 @@ own inner grammar. Not all blocks can be nested inside each other.
 ```python
 project "myproject" v1.6.4
 
+configure:
+  [myproject]
+  option1 = 42
+
 options:
-  int option1 = 42
+  int option1
   str option2 = "Hello, World"
   bool option3 = False
 
