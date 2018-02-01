@@ -28,8 +28,9 @@ project "java_helloworld"
 target "main":
   dependency "java"
   java.srcs = glob('src/**/*.java')
+  java.artifacts = ['org.tensorflow:tensorflow:1.4.0']
   java.mainClass = 'Main'
-  java.bundleType = 'onejar'  # Can also be 'merge'
+  java.bundleType = 'merge'  # Or 'onejar'
 ```
 
 ---
