@@ -23,7 +23,7 @@ eval print('This is a single line of Python code!')
 
 eval:
   print('This is a block of Python code!')
-  print('The options you chose are:', option1, option2, option3)
+  print('The options you chose are:', options.option1, options.option2, options.option3)
   print('You are on', OSNAME)
   includes = ['./include']
 
@@ -117,7 +117,7 @@ dependency), use `export configure`.
 
 This block can be used once in a build script and specifies the options that
 will be automatically parsed from the command-line and configuration files and
-made available to the build script's scope.
+made available to the build script's scope under an object named `options`.
 
 The `options` block has a special inner grammar.
 

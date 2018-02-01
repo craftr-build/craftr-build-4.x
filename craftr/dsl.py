@@ -6,7 +6,7 @@ import string
 import textwrap
 import toml
 
-from . import core
+from . import core, props
 from nr.parse import strex
 
 
@@ -548,19 +548,7 @@ class Interpreter:
       elif isinstance(node, Load):
         self._load(node.loc.lineno, node.filename, module.eval_namespace())
       elif isinstance(node, Options):
-        for key, (type, value, loc) in node.options.items():
-          try:
-            has_value = self.context.get_option(module.name(), key)
-          except KeyError:
-            if value is None:
-              raise MissingRequiredOptionError(module.name(), key)
-            has_value = self._eval(loc.lineno, value, module.eval_namespace())
-          try:
-            has_value = Options.adapt(type, has_value)
-          except ValueError as exc:
-            raise InvalidOptionError(module.name(), key, str(exc))
-          # Publish the option value to the module's namespace.
-          setattr(module.eval_namespace(), key, has_value)
+        self._options(node, module)
       elif isinstance(node, Pool):
         module.add_pool(node.name, node.depth)
       elif isinstance(node, Target):
@@ -574,6 +562,23 @@ class Interpreter:
           self.context.update_config(node.data)
       else:
         assert False, node
+
+  def _options(self, node, module):
+    ns = module.eval_namespace()
+    ns.options = props.Namespace('options')
+    for key, (type, value, loc) in node.options.items():
+      try:
+        has_value = self.context.get_option(module.name(), key)
+      except KeyError:
+        if value is None:
+          raise MissingRequiredOptionError(module.name(), key)
+        has_value = self._eval(loc.lineno, value, module.eval_namespace())
+      try:
+        has_value = Options.adapt(type, has_value)
+      except ValueError as exc:
+        raise InvalidOptionError(module.name(), key, str(exc))
+      # Publish the option value to the module's namespace.
+      setattr(ns.options, key, has_value)
 
   def _load(self, lineno, filename, namespace):
     if not os.path.isabs(filename):
