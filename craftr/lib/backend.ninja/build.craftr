@@ -1,0 +1,11 @@
+project "backend.ninja" v1.0.0
+
+options:
+  # Force a local installation of Ninja -- automatically downloading an
+  # appropriate version from the GitHub releases page. If Ninja is not
+  # present on the current system or the version is not matching the Craftr
+  # requirements, it will be downloaded anyway.
+  bool local = False
+
+eval:
+  new_backend = load('./backend.py').NinjaBackend
