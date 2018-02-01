@@ -201,7 +201,7 @@ def export_action(build_directory, writer, graph, action, non_explicit):
 
   for index, build in enumerate(action.builds):
     writer.build(
-      outputs = list(build.files.tagged('out')),
+      outputs = list(build.files.tagged('out')) or [phony_name],
       rule = rule_name,
       inputs = list(build.files.tagged('in', '!optional')),
       implicit = implicit_deps + list(build.files.tagged('in', 'optional')),

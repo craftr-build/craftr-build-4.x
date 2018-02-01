@@ -562,11 +562,11 @@ class BuildGraph:
 
   def select(self, action_name):
     if action_name not in self._actions:
-      raise action_name
+      raise KeyError(action_name)
     self._selected.add(action_name)
 
   def selected(self):
-    return self._selected
+    return (self._actions[x] for x in self._selected)
 
   def to_json(self):
     root = {}

@@ -52,9 +52,9 @@ def _main(argv=None):
     parser.error('-r: use --reconfigure or combine with -c, --configure')
   if args.debug and args.release:
     parser.error('--debug: can not be combined with --release')
-  if (not args.clean or not args.build) and args.targets:
+  if not (args.clean or args.build) and args.targets:
     parser.error('TARGET: can only be specified with --clean and/or --build')
-  if (not args.clean or not args.build) and args.backend_args:
+  if not (args.clean or args.build) and args.backend_args:
     parser.error('--backend-args: can only be specified with --clean and/or --build')
   if not (args.configure or args.reconfigure) and args.file:
     parser.error('--file: can only be specified with --configure or --reconfigure')
@@ -110,6 +110,8 @@ def _main(argv=None):
 
   if not (args.debug or args.release):
     args.debug = True
+  mode = 'release' if args.release else 'debug'
+  build_directory = os.path.join('build', mode)
 
   if args.configure:
     # TODO: Handle --reconfigure by reading previously define build
@@ -124,8 +126,6 @@ def _main(argv=None):
       args.file = os.path.join(args.file, 'build.craftr')
 
     # Load the build script.
-    mode = 'release' if args.release else 'debug'
-    build_directory = os.path.join('build', mode)
     context = Context(build_directory, mode, args.backend)
     set_options(context, args.options)
     module = context.load_module_file(args.file)
@@ -145,16 +145,21 @@ def _main(argv=None):
     backend_args += x
   backend = backend_factory(context, module, backend_args)
 
-  # Write the root cache back.
-  root_cache['mode'] = 'debug' if args.debug else 'release'
-  root_cache['options'] = args.options
-  root_cache['file'] = args.file
-  path.makedirs(args.build_root)
-  with open(path.join(args.build_root, 'CraftrBuildRoot.json'), 'w') as fp:
-    json.dump(root_cache, fp)
-
   if args.configure:
+    # Write the root cache back.
+    root_cache['main'] = module.name()
+    root_cache['mode'] = 'debug' if args.debug else 'release'
+    root_cache['options'] = args.options
+    root_cache['file'] = args.file
+    path.makedirs(args.build_root)
+    with open(path.join(args.build_root, 'CraftrBuildRoot.json'), 'w') as fp:
+      json.dump(root_cache, fp)
     backend.export()
+
+  for target in args.targets:
+    if '/' not in target:
+      target = root_cache['main'] + '/' + target
+    context.build_graph.select(target)
 
   if args.clean:
     backend.clean()
