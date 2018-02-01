@@ -1,0 +1,5 @@
+project "csharp_helloworld"
+
+target "main":
+  dependency "csharp"
+  csharp.srcs = glob('src/*.cs')

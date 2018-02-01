@@ -23,7 +23,7 @@ other build backends.
 #### Java
 
 ```python
-# craftr --configure --build main:java.run
+# craftr --configure --build main:java.runBundle
 project "java_helloworld"
 target "main":
   dependency "java"
@@ -31,6 +31,16 @@ target "main":
   java.artifacts = ['org.tensorflow:tensorflow:1.4.0']
   java.mainClass = 'Main'
   java.bundleType = 'merge'  # Or 'onejar'
+```
+
+#### C#
+
+```python
+# craftr --configure --build main:csharp.run
+project "csharp_helloworld"
+target "main":
+  dependency "csharp"
+  csharp.srcs = glob('src/*.cs')
 ```
 
 ---
