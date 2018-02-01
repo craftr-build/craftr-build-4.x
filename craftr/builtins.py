@@ -1,11 +1,12 @@
 
-__all__ = ['OS', 'error', 'fmt', 'glob']
+__all__ = ['OS', 'error', 'fmt', 'glob', 'load']
 
 import collections
 import os
 import platform
 import sys
-from . import core, dsl, path
+
+from . import core, dsl, path, props
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
 
@@ -86,6 +87,20 @@ def glob(patterns, parent=None, excludes=None):
     obj = get_call_context(dependency=False)
     parent = obj.directory()
   return path.glob(patterns, parent, excludes)
+
+
+def load(filename):
+  """
+  Simmilar to the `load` statement in the Craftr build file, only that it
+  returns a new namespace for the file.
+  """
+
+  ns = props.Namespace(filename)
+  parent_globals = sys._getframe(1).f_globals
+  filename = path.canonical(filename, path.dir(parent_globals['__file__']))
+  ns.__file__ = filename
+  context = parent_globals['context'].load_file(filename, ns)
+  return ns
 
 
 if sys.platform.startswith('win32'):
