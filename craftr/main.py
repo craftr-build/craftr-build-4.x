@@ -74,7 +74,7 @@ class Context(dsl.BaseDslContext):
 
 def get_argument_parser():
   parser = argparse.ArgumentParser(prog='craftr')
-  parser.add_argument('-f', '--file', default='build.craftr', help='The Craftr build script to execute. Onlt with --configure. Can be omitted when the configure step was peformed once and then --reconfigure is used.')
+  parser.add_argument('-f', '--file', default=None, help='The Craftr build script to execute. Onlt with --configure. Can be omitted when the configure step was peformed once and then --reconfigure is used.')
   parser.add_argument('-c', '--configure', action='store_true', help='Enable the configure step. This causes the build scripts to be executed and the files for the build step to be generated.')
   parser.add_argument('-r', action='store_true', help='Enable re-configuration, only with -c, --configure.')
   parser.add_argument('--reconfigure', action='store_true', help='Enable re-configureation, inheriting all options from the previous configure step. Implies --configure.')
@@ -103,24 +103,39 @@ def _main(argv=None):
     parser.error('--backend-args: can only be specified with --clean and/or --build')
   if not (args.configure or args.reconfigure) and args.file:
     parser.error('--file: can only be specified with --configure or --reconfigure')
+  if not (args.configure or args.reconfigure) and args.backend:
+    parser.error('--backend: can only be specified with --configure or --reconfigure')
+  if not (args.configure or args.reconfigure or args.clean or args.build):
+    parser.print_usage()
+    return 0
 
-  # Turn a directory-like file or one that actually points to a directory
-  # point to the directories' build.craftr file instead.
-  if args.file.endswith('/') or args.file.endswith('\\') or \
-      os.path.isdir(args.file):
-    args.file = os.path.join(args.file, 'build.craftr')
+  if args.configure or args.reconfigure:
+    if not args.file:
+      args.file = 'build.craftr'
+    # Turn a directory-like file or one that actually points to a directory
+    # point to the directories' build.craftr file instead.
+    elif args.file.endswith('/') or args.file.endswith('\\') or \
+        os.path.isdir(args.file):
+      args.file = os.path.join(args.file, 'build.craftr')
 
-  # Load the build script.
-  mode = 'release' if args.release else 'debug'
-  build_directory = os.path.join('build', mode)
-  context = Context(build_directory, mode)
-  module = context.load_module_file(args.file)
+    # Load the build script.
+    mode = 'release' if args.release else 'debug'
+    build_directory = os.path.join('build', mode)
+    context = Context(build_directory, mode)
+    module = context.load_module_file(args.file)
 
-  # Translate targets.
-  context.translate_targets(module)
+    # Translate targets.
+    context.translate_targets(module)
 
-  # TODO: Export step
-  # TODO: Build step
+    # TODO: Export step
+
+  if args.clean:
+    # TODO: Clean step
+    pass
+
+  if args.build:
+    # TODO: Build step
+    pass
 
   return 0
 
