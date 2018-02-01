@@ -1,5 +1,6 @@
 
 import argparse
+import json
 import os
 import sys
 
@@ -27,6 +28,7 @@ def set_options(context, options):
 
 def get_argument_parser():
   parser = argparse.ArgumentParser(prog='craftr')
+  parser.add_argument('--build-root', default='build', help='The build root directory. Defaults to build/')
   parser.add_argument('-f', '--file', default=None, help='The Craftr build script to execute. Onlt with --configure. Can be omitted when the configure step was peformed once and then --reconfigure is used.')
   parser.add_argument('-c', '--configure', action='store_true', help='Enable the configure step. This causes the build scripts to be executed and the files for the build step to be generated.')
   parser.add_argument('-r', action='store_true', help='Enable re-configuration, only with -c, --configure.')
@@ -62,7 +64,54 @@ def _main(argv=None):
     parser.print_usage()
     return 0
 
-  if args.configure or args.reconfigure:
+  # Assign flag implications.
+  if args.r:
+    args.configure = True
+    args.reconfigure = True
+  if args.reconfigure:
+    args.configure = True
+  if not args.options:
+    args.options = []
+
+  # Load the cache file from the build root directory, if it exists.
+  root_cachefile = path.join(args.build_root, 'CraftrBuildRoot.json')
+  if os.path.isfile(root_cachefile):
+    with open(root_cachefile) as fp:
+      try:
+        root_cache = json.load(fp)
+      except json.JSONDecodeError as exc:
+        print('warning: {} is can not be loaded ({})'.format(
+          root_cachefile, exc))
+        root_cache = {}
+  else:
+    root_cache = {}
+
+  # In a reconfiguration, we want to inherit the build mode, build file
+  # and command-line options, if not already specified.
+  if args.reconfigure:
+    inherited_flags = []
+    if 'mode' in root_cache and not (args.debug or args.release):
+      # Inherit --debug or --release.
+      if root_cache['mode'] == 'debug':
+        inherited_flags.append('--debug')
+        args.debug = True
+      elif root_cache['mode'] == 'release':
+        inherited_flags.append('--release')
+        args.release = True
+    if root_cache.get('options'):
+      inherited_flags.append('--options')
+      inherited_flags += root_cache['options']
+      args.options = root_cache['options'] + args.options
+    if 'file' in root_cache and not args.file:
+      args.file = root_cache['file']
+      inherited_flags += ['--file', args.file]
+    if inherited_flags:
+      print('note: inherited', ' '.join(inherited_flags))
+
+  if not (args.debug or args.release):
+    args.debug = True
+
+  if args.configure:
     # TODO: Handle --reconfigure by reading previously define build
     #       mode and options.
 
@@ -96,7 +145,15 @@ def _main(argv=None):
     backend_args += x
   backend = backend_factory(context, module, backend_args)
 
-  if args.configure or args.reconfigure:
+  # Write the root cache back.
+  root_cache['mode'] = 'debug' if args.debug else 'release'
+  root_cache['options'] = args.options
+  root_cache['file'] = args.file
+  path.makedirs(args.build_root)
+  with open(path.join(args.build_root, 'CraftrBuildRoot.json'), 'w') as fp:
+    json.dump(root_cache, fp)
+
+  if args.configure:
     backend.export()
 
   if args.clean:
