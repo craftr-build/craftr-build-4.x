@@ -74,9 +74,18 @@ class Context(dsl.BaseDslContext):
 
 def get_argument_parser():
   parser = argparse.ArgumentParser(prog='craftr')
-  parser.add_argument('-f', '--file', default='build.craftr', help='The Craftr build script to execute.')
-  parser.add_argument('--debug', action='store_true', help='Produce a debug build (default).')
-  parser.add_argument('--release', action='store_true', help='Produce a release build.')
+  parser.add_argument('-f', '--file', default='build.craftr', help='The Craftr build script to execute. Onlt with --configure. Can be omitted when the configure step was peformed once and then --reconfigure is used.')
+  parser.add_argument('-c', '--configure', action='store_true', help='Enable the configure step. This causes the build scripts to be executed and the files for the build step to be generated.')
+  parser.add_argument('-r', action='store_true', help='Enable re-configuration, only with -c, --configure.')
+  parser.add_argument('--reconfigure', action='store_true', help='Enable re-configureation, inheriting all options from the previous configure step. Implies --configure.')
+  parser.add_argument('-D', '--debug', action='store_true', help='Produce a debug build (default if --reconfigure is NOT used).')
+  parser.add_argument('-R', '--release', action='store_true', help='Produce a release build.')
+  parser.add_argument('-o', '--options', nargs='+', metavar='OPTION', help='Specify one or more options in the form of [<project>].<option>[=<value>]. Successive options may omitt the [<project>] part.')
+  parser.add_argument('--backend', help='The build backend to use. This option can only be used during the configure step.')
+  parser.add_argument('--backend-args', action='append', metavar='ARGS', help='A string with additional command-line arguments for the build backend. Can be used multiple times. Only with --clean and/or --build.')
+  parser.add_argument('--clean', action='store_true', help='Enable the clean step. This step is always executed after the configure step and before the build step, if either are enabled.')
+  parser.add_argument('-b', '--build', action='store_true', help='Enable the build step. This step is always executed after the configure step, if it is also enabled.')
+  parser.add_argument('targets', nargs='*', metavar='TARGET', help='Zero or more targets to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   return parser
 
 
@@ -84,19 +93,27 @@ def _main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
 
-  # Validate options.
+  if args.r and not args.configure:
+    parser.error('-r: use --reconfigure or combine with -c, --configure')
   if args.debug and args.release:
-    parser.error('--debug and --release are incompatible options.')
+    parser.error('--debug: can not be combined with --release')
+  if (not args.clean or not args.build) and args.targets:
+    parser.error('TARGET: can only be specified with --clean and/or --build')
+  if (not args.clean or not args.build) and args.backend_args:
+    parser.error('--backend-args: can only be specified with --clean and/or --build')
+  if not (args.configure or args.reconfigure) and args.file:
+    parser.error('--file: can only be specified with --configure or --reconfigure')
 
-  # Create the build context.
-  mode = 'release' if args.release else 'debug'
-  build_directory = os.path.join('build', mode)
-  context = Context(build_directory, mode)
-
-  # Load the main build script.
+  # Turn a directory-like file or one that actually points to a directory
+  # point to the directories' build.craftr file instead.
   if args.file.endswith('/') or args.file.endswith('\\') or \
       os.path.isdir(args.file):
     args.file = os.path.join(args.file, 'build.craftr')
+
+  # Load the build script.
+  mode = 'release' if args.release else 'debug'
+  build_directory = os.path.join('build', mode)
+  context = Context(build_directory, mode)
   module = context.load_module_file(args.file)
 
   # Translate targets.
