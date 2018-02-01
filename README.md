@@ -3,7 +3,7 @@
 ## The Craftr build system
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square"></a>
-<img src="https://img.shields.io/badge/version-3.0.0--dev-blue.svg?style=flat-square"/>
+<img src="https://img.shields.io/badge/version-3.0.1--dev-blue.svg?style=flat-square"/>
 <a href="https://travis-ci.org/craftr-build/craftr"><img src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"></a>
 <a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr/branch/master"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik/branch/master?svg=true"></a>
 
