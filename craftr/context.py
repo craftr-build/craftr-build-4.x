@@ -46,7 +46,7 @@ class Context(dsl.BaseDslContext):
 
   def load_module_file(self, filename, is_main=False):
     with open(filename) as fp:
-      project = dsl.Parser().parse(fp.read())
+      project = dsl.Parser().parse(fp.read(), filename)
     if project.name in self.modules:
       raise RuntimeError('modules {!r} already loaded'.format(project.name))
     module = dsl.Interpreter(self, filename, is_main)(project)
@@ -99,7 +99,7 @@ class Context(dsl.BaseDslContext):
       else:
         raise dsl.ModuleNotFoundError(module_name)
       with open(filename) as fp:
-        project = dsl.Parser().parse(fp.read())
+        project = dsl.Parser().parse(fp.read(), filename)
       module = dsl.Interpreter(self, filename)(project)
       self.modules[module_name] = module
     else:

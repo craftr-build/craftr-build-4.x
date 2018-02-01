@@ -253,15 +253,18 @@ class Parser:
   KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
               'export', 'target', 'dependency']
 
-  def parse(self, source):
+  def parse(self, source, filename='<input>'):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
     # TODO: Catch TokenizationError, UnexpectedTokenError
     try:
       return self._parse_project(lexer)
+    except ParseError as e:
+      e.filename = filename
+      raise
     except strex.TokenizationError as e:
-      raise ParseError(e.token.cursor, repr(e.token.value))
+      raise ParseError(e.token.cursor, repr(e.token.value), filename)
     except strex.UnexpectedTokenError as e:
-      raise ParseError(e.token.cursor, 'unexpected token "{}"'.format(e.token.type))
+      raise ParseError(e.token.cursor, 'unexpected token "{}"'.format(e.token.type), filename)
 
   def _skip(self, lexer):
     while lexer.accept('nl'):
@@ -462,12 +465,15 @@ class Parser:
 
 class ParseError(Exception):
 
-  def __init__(self, loc, message):
+  def __init__(self, loc, message, filename='<input>'):
+    assert isinstance(loc, strex.Cursor)
     self.loc = loc
     self.message = message
+    self.filename = filename
 
   def __str__(self):
-    return 'line {}, col {}: {}'.format(self.loc.lineno, self.loc.colno, self.message)
+    return '{}: line {}, col {}: {}'.format(self.filename,
+      self.loc.lineno, self.loc.colno, self.message)
 
 
 class BaseDslContext:
