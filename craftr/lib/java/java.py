@@ -18,7 +18,12 @@ class ArtifactResolver:
   def __init__(self):
     self.poms = {}
     self.repos = []
-    self.repos.append(maven.MavenRepository('default', 'http://repo1.maven.org/maven2/'))
+
+    repo_config = context.options.get('java', {}).get('repos', {})
+    if 'default' not in repo_config:
+      self.repos.append(maven.MavenRepository('default', 'http://repo1.maven.org/maven2/'))
+    for key, value in repo_config.items():
+      self.repos.append(maven.MavenRepository(key, value))
 
   def resolve(self, artifacts):
     """
@@ -255,10 +260,21 @@ class JavaTargetHandler(craftr.TargetHandler):
       build.files.add(inputs, ['in'])
       build.files.add(data.bundleFilename, ['out'])
 
-    if data.jarFilename or data.bundleFilename:
-      # An action to execute the JAR file.
-      command = (data.runPrefix or ['java']) + ['-jar', data.bundleFilename or data.jarFilename]
-      action = target.add_action('java.run', commands=[command], explicit=True, syncio=True, output=False)
+    if data.jarFilename and data.mainClass:
+      # An action to execute the library JAR (with the proper classpath).
+      command = list(data.runPrefix or ['java'])
+      classpath = data.binaryJars + [data.jarFilename]
+      command += ['-cp', path.pathsep.join(classpath)]
+      command += [data.mainClass]
+      action = target.add_action('java.run', commands=[command],
+        explicit=True, syncio=True, output=False)
+      action.add_buildset()
+
+    if data.bundleFilename and data.mainClass:
+      # An action to execute the bundled JAR.
+      command = list(data.runPrefix or ['java']) + ['-jar', data.bundleFilename]
+      action = target.add_action('java.runBundle', commands=[command],
+        explicit=True, syncio=True, output=False)
       action.add_buildset()
 
 
