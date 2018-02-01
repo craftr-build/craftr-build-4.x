@@ -27,11 +27,13 @@ class ArtifactResolver:
     objects.
     """
 
-    queue = [(0, x) for x in reversed(artifacts)]
-    result = []
+
+    artifacts = [maven.Artifact.from_id(x) if isinstance(x, str) else x
+                 for x in artifacts]
+    queue = [(0, x, None) for x in reversed(artifacts)]
 
     while queue:
-      depth, artifact = queue.pop()
+      depth, artifact, parent_deps = queue.pop()
       if isinstance(artifact, str):
         artifact = maven.Artifact.from_id(artifact)
       if artifact.scope != 'compile' or artifact.type != 'jar':
@@ -41,7 +43,8 @@ class ArtifactResolver:
       # different versions, instead only the first version that we find.
       artifact_id = '{}:{}'.format(artifact.group, artifact.artifact)
       if artifact_id in self.poms:
-        result.append((artifacts, self.poms[artifact_id][2]))
+        if parent_deps is not None:
+          parent_deps.append(artifact_id)
         continue
 
       # Try to find a POM manifest for the artifact.
@@ -62,13 +65,29 @@ class ArtifactResolver:
 
       # Cache the POM and add its dependencies so we can "recursively"
       # resolve them.
-      self.poms[artifact_id] = (artifact, pom, repo)
-      result.append((artifact, repo))
-      queue.extend([(depth+1, x) for x in reversed(maven.pom_eval_deps(pom))])
+      if parent_deps is not None:
+        parent_deps.append(artifact_id)
+      deps = []
+      self.poms[artifact_id] = (artifact, pom, repo, deps)
+      queue.extend([(depth+1, x, deps) for x in reversed(maven.pom_eval_deps(pom))])
 
       # Print dependency info.
       indent = '| ' * depth
       print('  {}{} ({})'.format('| ' * depth, artifact, repo.name))
+
+    seen = set()
+    result = []
+    def recurse_add(artifact_id):
+      if artifact_id in seen:
+        return
+      seen.add(artifact_id)
+      artifact, pom, repo, deps = self.poms[artifact_id]
+      result.append((artifact, repo))
+      for artifact_id in deps:
+        recurse_add(artifact_id)
+    for a in artifacts:
+      artifact_id = '{}:{}'.format(a.group, a.artifact)
+      recurse_add(artifact_id)
 
     return result
 
@@ -93,7 +112,7 @@ def partition_sources(sources, src_roots, parent):
         break
     else:
       raise ValueError('could not find relative path for {!r} given the '
-        'specified root dirs:\n  '.format(source) + '\n  '.join(base_dirs))
+        'specified root dirs:\n  '.format(source) + '\n  '.join(src_roots))
     result.setdefault(rel_root, []).append(rel_source)
   return result
 
@@ -125,6 +144,7 @@ class JavaTargetHandler(craftr.TargetHandler):
     target.define_property('java.embed', 'Bool')
 
   def finalize_target(self, target, data):
+    src_dir = path.abs(target.directory())
     build_dir = path.join(context.build_directory, target.module().name())
     cache_dir = path.join(context.build_directory, module.name(), 'artifacts')
 
@@ -149,12 +169,14 @@ class JavaTargetHandler(craftr.TargetHandler):
             str(artifact).replace(':', '_'), commands=[command])
           build = action.add_buildset()
           build.files.add(binary_jar, ['out'])
+          self.artifact_actions[binary_jar] = action
           data.artifactActions.append(action)
         data.binaryJars.append(binary_jar)
 
     # Determine all the information necessary to build a java library,
     # and optionally a bundle.
     if data.srcs:
+      data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       if not data.srcRoots:
         data.srcRoots = ['src', 'java', 'javatest']
       if not data.jarName:
@@ -179,6 +201,11 @@ class JavaTargetHandler(craftr.TargetHandler):
       target.outputs().add(data.jarFilename, ['java.library'])
       if data.bundleFilename:
         target.outputs().add(data.bundleFilename, ['java.bundle'])
+
+      # Add to the binaryJars the Java libraries from dependencies.
+      for dep in target.transitive_dependencies():
+        for target in dep.targets():
+          data.binaryJars += target.outputs().tagged('java.library')
 
   def translate_target(self, target, data):
     if data.srcs and data.classFiles:
