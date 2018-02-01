@@ -21,6 +21,9 @@ class Context(dsl.BaseDslContext):
     self.build_graph = core.BuildGraph()
 
   def translate_targets(self, module):
+    for module in self.modules.values():
+      for handler in module.target_handlers():
+        handler.translate_begin()
     seen = set()
     def translate(target):
       for dep in target.dependencies():
@@ -36,6 +39,8 @@ class Context(dsl.BaseDslContext):
     for target in module.targets():
       translate(target)
     for module in self.modules.values():
+      for handler in module.target_handlers():
+        handler.translate_end()
       for target in module.targets():
         self.build_graph.add_actions(target.actions())
 

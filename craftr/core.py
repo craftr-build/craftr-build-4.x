@@ -523,6 +523,9 @@ class TargetHandler:
   def finalize_dependency(self, dependency, data):
     pass
 
+  def translate_begin(self):
+    pass
+
   def translate_target(self, target, data):
     """
     Called after a build script has been loaded to translate the target into
@@ -530,6 +533,9 @@ class TargetHandler:
     the #finalize_target() method.
     """
 
+    pass
+
+  def translate_end(self):
     pass
 
 
