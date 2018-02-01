@@ -12,7 +12,7 @@ class Context(dsl.BaseDslContext):
     self.modules = {}
     self.build_directory = build_directory
     self.build_mode = build_mode
-    self.backend_name = backend_name or 'backend.ninja'
+    self.backend_name = backend_name or 'backends.ninja'
 
     self.builtins = props.Namespace('builtins')
     self.builtins.context = self

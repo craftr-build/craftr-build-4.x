@@ -1,4 +1,4 @@
-project "backend.ninja" v1.0.0
+project "backends.ninja" v1.0.0
 
 options:
   # Force a local installation of Ninja -- automatically downloading an
