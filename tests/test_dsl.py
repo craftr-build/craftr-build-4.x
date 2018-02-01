@@ -252,6 +252,11 @@ def test_target():
   project = dsl.Parser().parse(source)
   module = dsl.Interpreter(context, '<test_target>')(project)
 
+  tlib = module.target('lib')
+  assert_equals(tlib.get_property('cxx.includes'), ['lib/include'])
+  assert_equals(tlib.namespace('cxx').includes, None)
+  assert_equals(tlib.namespace('cxx').__exported__.includes, ['lib/include'])
+
   assert_equals(len(list(module.targets())), 2)
   target = next(module.targets())
   assert_equals(target.name(), 'lib')
@@ -263,7 +268,7 @@ def test_target():
   assert_equals(list(target.target_handlers()), [cxx_handler])
   assert_equals(target.get_property('this.pool'), 'link')
   assert_equals(target.get_property('cxx.srcs'), ['src/main.cpp'])
-  assert_equals(target.get_property('cxx.includes'), ['include', 'lib/include', 'somelib/include'])
+  assert_equals(target.get_property('cxx.includes'), ['include', 'lib/include'])
   assert_equals(len(list(target.dependencies())), 4)
   dep = next(target.dependencies())
   assert_equals(dep.module(), cxx)
