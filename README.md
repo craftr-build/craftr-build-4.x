@@ -18,24 +18,17 @@ other build backends.
   [QBS]: https://bugreports.qt.io/projects/QBS/summary
   [Ninja]: https://github.com/ninja-build/ninja.git
 
-### Example
+### Examples
+
+#### Java
 
 ```python
-project "myproject"
-
-target "curlpp":
-  dependency "cxx"
-  export dependency "cxx/libs/curl"
-  this.directory = "vendor/curlpp"
-  cxx.type = 'library'
-  cxx.srcs = glob('src/*.cpp')
-  export cxx.includes = ['include']
-
+# craftr --configure --build main:java.run
+project "java_helloworld"
 target "main":
-  dependency "cxx"
-  dependency "@curlpp"
-  cxx.srcs = glob('src/*.cpp')
-  cxx.includes = ['include']
+  dependency "java"
+  java.srcs = glob('src/**/*.java')
+  java.mainClass = 'Main'
 ```
 
 ---
