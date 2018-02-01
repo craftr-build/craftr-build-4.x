@@ -7,6 +7,12 @@ import sys
 from . import path, props
 
 
+def with_plural(x, noun):
+  if x != 1:
+    noun += 's'
+  return '{} {}'.format(x, noun)
+
+
 def validate_module_name(name):
   if not re.match('^[\w\d_\-/]+$', name):
     raise ValueError('invalid module name: {!r}'.format(name))
@@ -15,6 +21,11 @@ def validate_module_name(name):
 def validate_target_name(name):
   if not re.match('^[\w\d_\-]+$', name):
     raise ValueError('invalid target name: {!r}'.format(name))
+
+
+def validate_action_name(name):
+  if not re.match('^[\w\d_\-\.]+$', name):
+    raise ValueError('invalid action name: {!r}'.format(name))
 
 
 Pool = collections.namedtuple('Pool', 'name depth')
@@ -28,7 +39,7 @@ class TaggedFile:
   """
 
   def __init__(self, name, tags=()):
-    self._name = path.canonical(name)
+    self._name = name
     self._tags = set(sys.intern(x) for x in tags)
 
   def __repr__(self):
@@ -47,6 +58,54 @@ class TaggedFile:
   @property
   def tags(self):
     return set(self._tags)
+
+
+class FileSet:
+  """
+  Represents a collection of #TaggedFile objects. Additionally, the #FileSet
+  may contain additional variables with lists of strings a values. These may
+  not be useful in all contexts.
+  """
+
+  def __init__(self):
+    self._files = collections.OrderedDict()
+
+  def __repr__(self):
+    v = ('{!r}: {!r}'.format(k, v.tags) for k, v in self._files.items())
+    return 'FileSet({{{0}}})'.format(', '.join(v))
+
+  def __getitem__(self, name):
+    name = path.canonical(name)
+    return self._files[name.lower()]
+
+  def __delitem__(self, name):
+    name = path.canonical(name)
+    del self._files[name]
+
+  def name(self):
+    return self._name
+
+  def add(self, names, tags=()):
+    if isinstance(names, str):
+      names = [names]
+    result = []
+    for name in names:
+      name = path.canonical(name)
+      # We build the hash table using the case-insensitive canonical name.
+      name_lower = name.lower()
+      obj = self._files.get(name_lower)
+      if obj is None:
+        obj = TaggedFile(name, tags)
+        self._files[name_lower] = obj
+      else:
+        obj.add_tags(tags)
+      result.append(obj)
+    return result
+
+  def files(self, tags=None):
+    for tf in self._files.values():
+      if tags is None or all(x in tf.tags for x in tags):
+        yield tf
 
 
 class Options(props.PropertySet):
@@ -139,15 +198,17 @@ class Target(props.PropertySet):
     self._export = export
     self._directory = directory
     self._dependencies = []
-    self._outputs = {}
+    self._outputs = FileSet()
     self._handler_data = {}
+    self._actions = collections.OrderedDict()
+    self._output_actions = []
     self._eval_namespace = props.duplicate_namespace(
       module.eval_namespace(), 'target "{}"'.format(name))
     self._eval_namespace.target = self
-    self.define_property('this.pool', 'String', None)
-    self.define_property('this.syncio', 'Bool', False)
-    self.define_property('this.explicit', 'Bool', False)
-    self.define_property('this.directory', 'String', None)
+    self.define_property('this.pool', 'String', None, inheritable=False)
+    self.define_property('this.syncio', 'Bool', False, inheritable=False)
+    self.define_property('this.explicit', 'Bool', False, inheritable=False)
+    self.define_property('this.directory', 'String', None, inheritable=False)
 
   def __repr__(self):
     return 'Target({!r} of {})'.format(self._name, self._module)
@@ -157,6 +218,9 @@ class Target(props.PropertySet):
 
   def name(self):
     return self._name
+
+  def identifier(self):
+    return '{}/{}'.format(self._module.name(), self._name)
 
   def is_exported(self):
     return self._export
@@ -223,25 +287,7 @@ class Target(props.PropertySet):
           seen.add(handler)
 
   def outputs(self, tag=None):
-    if tag is not None:
-      return filter(TaggedFile.has_tag, self._outputs.values())
-    else:
-      return self._outputs.values()
-
-  def add_output(self, name, tags=()):
-    name = path.canonical(name)
-    # We build the hash table using the case-insensitive canonical name.
-    name_lower = name.lower()
-    obj = self._outputs.get(name_lower)
-    if obj is None:
-      obj = TaggedFile(name, tags)
-    else:
-      obj.add_tags(tags)
-    return obj
-
-  def get_output(self, name):
-    name = path.canonical(name)
-    return self._outputs.get(name.lower())
+    return self._outputs
 
   def eval_namespace(self):
     return self._eval_namespace
@@ -255,6 +301,69 @@ class Target(props.PropertySet):
 
   def handler_data(self, handler):
     return self._handler_data.get(handler)
+
+  def actions(self):
+    return self._actions.values()
+
+  def output_actions(self):
+    return iter(self._output_actions)
+
+  def add_action(self, name=None, *, input=None, output=False, deps=None, **kwargs):
+    """
+    Creates a new action in the target that consists of one or more system
+    commands. Unless otherwise explicitly set with the *input* or *deps*
+    parameters, the first action that is being created for a target will have
+    the *input* parameter default to #True, in which case it will be connected
+    to all outputs of the dependencies of this target.
+
+    Dependencies can also be specified explicitly by passing a list of #Action
+    objects to the *deps* parameter.
+
+    Otherwise, actions created after the first will receive the previously
+    created action as dependency.
+
+    Passing #True for *output* will mark the action as an output action,
+    which will be connected with the actions generated by the dependents of
+    this target (unless they explicitly specifiy the dependencies).
+
+    All other arguments are forwarded to the #Action constructor.
+    """
+
+    if name is None:
+      # TODO: Automatically add the name of the program in the first command.
+      name = str(len(self._actions))
+    validate_action_name(name)
+    if name in self._actions:
+      raise ValueError('action name already used: {!r}'.format(name))
+
+    if input is None:
+      input = not self._actions
+    if deps is None:
+      deps_was_unset = True
+      deps = []
+    else:
+      deps_was_unset = False
+      deps = list(deps)
+    if input:
+      for dep in self.transitive_dependencies():
+        for target in dep.targets():
+          deps += target.output_actions()
+    elif deps_was_unset and self._actions:
+      if self._output_actions:
+        deps.append(self._output_actions[-1])
+      else:
+        # The last added action.
+        assert isinstance(self._actions, collections.OrderedDict)
+        deps.append(self._actions[next(reversed(self._actions))])
+
+    # TODO: Assign the action to the pool specified in the target.
+    kwargs.setdefault('explicit', self.get_property('this.explicit'))
+    kwargs.setdefault('syncio', self.get_property('this.syncio'))
+    action = Action(self, name, deps=deps, **kwargs)
+    self._actions[name] = action
+    if output:
+      self._output_actions.append(action)
+    return action
 
   # props.PropertySet overrides
 
@@ -286,7 +395,7 @@ class Dependency(props.PropertySet):
     self._export = export
     self._eval_namespace = props.duplicate_namespace(
       parent.eval_namespace(), 'dependency "{}"'.format(self._refstring()))
-    self.define_property('this.select', 'StringList', [])
+    self.define_property('this.select', 'StringList', [], inheritable=False)
 
   def __repr__(self):
     return 'Dependency({} of {})'.format(self._refstring(), self._parent)
@@ -312,7 +421,7 @@ class Dependency(props.PropertySet):
     if self._target:
       yield self._target
     else:
-      select = self.get_property('this.select', inherit=False)
+      select = self.get_property('this.select')
       if not select:
         yield from self._module.targets(exported_only=True)
       else:
@@ -327,6 +436,134 @@ class Dependency(props.PropertySet):
       common_scope = handler.get_common_property_scope()
       data = self.get_properties(common_scope) if common_scope else props.Namespace()
       handler.finalize_dependency(self, data)
+
+
+class Action:
+  """
+  Represents an action that translates a set of input files to a set of
+  output files. Actions can be used to execute the *commands* multiple
+  times for different sets of input/output files. Every action needs at
+  least one set of input/output files.
+
+  # Variables
+  Every file in an action has a tag associated with it. Files can then be
+  accessed by filtering with these tags. To reference files that have a tag,
+  use the `$tag` or `${tag}` syntax inside the command list. Multiple tags
+  can be separated by `&` characters. Files need all tags specified in a
+  variable to match, eg. `${out&dll}` will be expanded to all files that are
+  tagged as `out` and `dll`.
+
+  Note that an argument in the command-list will be multiplied for every
+  file matching the variable, eg. an argument "-I${include}" may expand to
+  multiple arguments like `-Iinclude`, `-Ivendor/optional/include` if there
+  are multiple files with the tag `include`.
+
+  Note that only files tagged with `in` and `out` will be considered mandatory
+  input and output files for an action. Additionally, the tag `optional` may
+  be combined with any of the two tags to specify an optional input or output
+  file.
+
+  # Parameters
+  target (Target):
+    The #Target that this action is generated for. Note that in a session
+    where the build graph is loaded from a file and the build modules have
+    not been executed, this may be a proxy target with no valid properties.
+  name (str):
+    The name of the action inside the target.
+  commands (list of list of str):
+    A list of commands to execute in order. The strings in this list may
+    contain variables are described above.
+  deps (list of Action):
+    A list of actions that need to be executed before this action. This
+    relationship should also roughly be represented by the input and output
+    files of the actions.
+  cwd (str):
+    The directory to execute the action in.
+  environ (dict of (str, str)):
+    An environment dictionary that will be merged on top of the current
+    environment before running the commands in the action.
+  explicit (bool):
+    If #True, this action must be explicitly specified to be built or
+    required by another action to be run.
+  syncio (bool):
+    #True if the action needs to be run with the original stdin/stdout/stderr
+    attached.
+  deps_prefix (str): A string that represents the prefix of for lines
+    in the output of the command(s) that represent additional dependencies
+    to the action (eg. headers in the case of C/C++). Can not be mixed with
+    *depfile*.
+  depfile (str): A filename that is produced by the command(s) which lists
+    additional dependencies of the action. The file must be formatted like
+    a Makefile. Can not be mixed with *deps_prefix*.
+
+  # Members
+  builds (list of BuildSet):
+    A list of files this action depends on or produces and variables. Both
+    are available for variable expansion in the *commands* strings.
+  """
+
+  class ActionVariables:
+    """
+    A container for variables that must be lists of strings. Used in an
+    action's build step together with a #FileSet.
+    """
+
+    def __init__(self):
+      self._variables = collections.OrderedDict()
+
+    def __repr__(self):
+      v = ('{!r}: {!r}'.format(k, v) for k, v in self._variables.items())
+      return 'ActionVariables({{{}}})'.format(', '.join(v))
+
+    def __getitem__(self, key):
+      return self._variables[key]
+
+    def __setitem__(self, key, value):
+      if not isinstance(value, (list, tuple)):
+        raise TypeError('expected List/Tuple, got {}'.format(type(value).__name__))
+      if not all(isinstance(x, str) for x in value):
+        raise TypeError('expected item to be str')
+      self._variables[key] = list(value)
+
+    def __delitem__(self, key):
+      del self._variables[key]
+
+    def __contains__(self, key):
+      return key in self._variables
+
+    def get(self, key, default=None):
+      return self._variables.get(key, default)
+
+  BuildSet = collections.namedtuple('BuildSet', 'name files vars')
+
+  def __init__(self, target, name, deps, commands, cwd=None, environ=None,
+               explicit=False, syncio=False, deps_prefix=None, depfile=None):
+    validate_action_name(name)
+    assert isinstance(target, Target)
+    assert all(isinstance(x, Action) for x in deps)
+    self.target = target
+    self.name = name
+    self.deps =deps
+    self.commands = commands
+    self.cwd = cwd
+    self.environ = environ
+    self.explicit = explicit
+    self.syncio = syncio
+    self.deps_prefix = deps_prefix
+    self.depfile = depfile
+    self.builds = []
+
+  def __repr__(self):
+    return 'Action({!r} with {})'.format(
+      self.identifier(), with_plural(len(self.builds), 'buildset'))
+
+  def identifier(self):
+    return '{}:{}'.format(self.target.identifier(), self.name)
+
+  def add_buildset(self, name=None):
+    buildset = self.BuildSet(name, FileSet(), self.ActionVariables())
+    self.builds.append(buildset)
+    return buildset
 
 
 class TargetHandler:
