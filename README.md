@@ -29,6 +29,7 @@ target "main":
   dependency "java"
   java.srcs = glob('src/**/*.java')
   java.mainClass = 'Main'
+  java.bundleType = 'onejar'  # Can also be 'merge'
 ```
 
 ---
