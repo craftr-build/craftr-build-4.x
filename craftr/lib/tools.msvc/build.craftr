@@ -1,0 +1,10 @@
+project "tools.msvc"
+
+options:
+  str installDir = ''
+  str version = ''
+  str arch = 'x86_amd64' if OS.arch == 'x64' else 'x86'
+  str platformType = ''
+  str sdkVersion = ''
+
+load "./msvc.py"
