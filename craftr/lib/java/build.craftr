@@ -11,3 +11,6 @@ options:
   str mavenRepos = ""
 
 load "./java.py"
+
+export target "artifacts":
+  eval pass
