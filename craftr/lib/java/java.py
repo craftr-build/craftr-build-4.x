@@ -141,8 +141,8 @@ class JavaTargetHandler(craftr.TargetHandler):
     target.define_property('java.bundleType', 'String')  # The bundle type for applications, can be `none`, `onejar` or `merge`.
     target.define_property('java.binaryJars', 'StringList')
     target.define_property('java.artifacts', 'StringList')
-    target.define_property('java.runPrefix', 'StringList', inheritable=False)
-    target.define_property('java.run', 'StringList', inheritable=False)
+    target.define_property('java.runArgsPrefix', 'StringList', inheritable=False)
+    target.define_property('java.runArgs', 'StringList', inheritable=False)
 
   def setup_dependency(self, target):
     # Whether to include the library in a bundle.
@@ -271,23 +271,24 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     if data.jarFilename and data.mainClass:
       # An action to execute the library JAR (with the proper classpath).
-      command = list(data.runPrefix or ['java'])
+      command = list(data.runArgsPrefix or ['java'])
       classpath = data.binaryJars + [data.jarFilename]
       command += ['-cp', path.pathsep.join(classpath)]
-      command += [data.mainClass]
+      command += [data.mainClass] + data.runArgs
       action = target.add_action('java.run', commands=[command],
         deps=[jar_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
 
     if data.bundleFilename and data.mainClass:
       # An action to execute the bundled JAR.
-      command = list(data.runPrefix or ['java'])
+      command = list(data.runArgsPrefix or ['java'])
       if not data.nobundleBinaryJars:
         command += ['-jar', data.bundleFilename]
       else:
         classpath = data.nobundleBinaryJars + [data.bundleFilename]
         command += ['-cp', path.pathsep.join(classpath)]
         command += ['com.simontuffs.onejar.Boot' if data.bundleType == 'onejar' else data.mainClass]
+      command += data.runArgs
       action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
