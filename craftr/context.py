@@ -44,12 +44,12 @@ class Context(dsl.BaseDslContext):
       for target in module.targets():
         self.build_graph.add_actions(target.actions())
 
-  def load_module_file(self, filename):
+  def load_module_file(self, filename, is_main=False):
     with open(filename) as fp:
       project = dsl.Parser().parse(fp.read())
     if project.name in self.modules:
       raise RuntimeError('modules {!r} already loaded'.format(project.name))
-    module = dsl.Interpreter(self, filename)(project)
+    module = dsl.Interpreter(self, filename, is_main)(project)
     self.modules[module.name()] = module
     return module
 
@@ -105,6 +105,10 @@ class Context(dsl.BaseDslContext):
     else:
       module = self.modules[module_name]
     return module
+
+  def update_config(self, config):
+    # TODO: Merge fields?
+    self.options.update(config)
 
   def init_namespace(self, ns):
     super().init_namespace(ns)

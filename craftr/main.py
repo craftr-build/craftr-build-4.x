@@ -131,7 +131,7 @@ def _main(argv=None):
     # Load the build script.
     context = Context(build_directory, mode, args.backend)
     set_options(context, args.options)
-    module = context.load_module_file(args.file)
+    module = context.load_module_file(args.file, is_main=True)
     context.translate_targets(module)
     context.serialize()
 

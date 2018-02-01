@@ -4,6 +4,7 @@ import contextlib
 import os
 import string
 import textwrap
+import toml
 
 from . import core
 from nr.parse import strex
@@ -55,6 +56,25 @@ class Project(Node):
     fp.write('\n')
     for child in self.children:
       child.render(fp, depth)
+
+
+class Configure(Node):
+
+  def __init__(self, loc, export):
+    self.loc = loc
+    self.data = collections.OrderedDict()
+    self.export = export
+
+  def loads(self, source):
+    self.data = toml.loads(source, _dict=collections.OrderedDict)
+
+  def render(self, fp, depth):
+    assert depth == 0
+    if self.export:
+      fp.write('export ')
+    fp.write('configure:\n')
+    for line in toml.dumps(self.data).split('\n'):
+      fp.write('  ' + line)
 
 
 class Options(Node):
@@ -230,7 +250,8 @@ class Parser:
     strex.Charset('ws', '\t ', skip=True),
   ]
 
-  KEYWORDS = ['project', 'options', 'load', 'eval', 'pool', 'export', 'target', 'dependency']
+  KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
+              'export', 'target', 'dependency']
 
   def parse(self, source):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
@@ -285,6 +306,7 @@ class Parser:
       if export:
         raise ParseError(loc, 'unexpected keyword "export"')
       sub_keywords = []
+      if 'configure' in keywords: sub_keywords.append('configure')
       if 'target' in keywords: sub_keywords.append('target')
       if 'dependency' in keywords: sub_keywords.append('dependency')
       return self._parse_stmt_or_block(lexer, sub_keywords, parent_indent, export=True)
@@ -337,6 +359,12 @@ class Parser:
     if first_line:
       result = first_line.strip() + '\n' + result
     return result
+
+  def _parse_configure(self, lexer, parent_indent, export):
+    block = Configure(lexer.token.cursor, export=export)
+    lexer.next(':')
+    block.loads(self._parse_expression(lexer, parent_indent))
+    return block
 
   def _parse_options(self, lexer, parent_indent, export):
     assert not export
@@ -450,6 +478,9 @@ class BaseDslContext:
   def get_module(self, module_name):
     raise ModuleNotFoundError(module_name)
 
+  def update_config(self, config):
+    raise NotImplementedError
+
   def assigned_scope_does_not_exist(self, filename, loc, scope, propset):
     print('warn: {}:{}:{}: scope {} does not exist'.format(
       filename, loc.lineno, loc.colno, scope))
@@ -487,10 +518,11 @@ class Interpreter:
   Interpreter for projects.
   """
 
-  def __init__(self, context, filename):
+  def __init__(self, context, filename, is_main=False):
     self.context = context
     self.filename = filename
     self.directory = os.path.dirname(filename)
+    self.is_main = is_main
 
   def __call__(self, project):
     module = self.create_module(project)
@@ -531,6 +563,9 @@ class Interpreter:
         self._assignment(node, module)
       elif isinstance(node, Export):
         self._export_block(node, module)
+      elif isinstance(node, Configure):
+        if self.is_main:
+          self.context.update_config(node.data)
       else:
         assert False, node
 

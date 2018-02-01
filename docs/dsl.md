@@ -101,6 +101,14 @@ Note that maybe not all build backends support this option.
 
     <pool> := "pool" + <str> + <num>`
 
+#### Block `configure`
+
+This block is parsed as TOML and augments the build context's options. It has
+the same effect to using a Craftr configuration file. Note that by default,
+only `configure` blocks in the main build script are evaluated. To make sure
+a `configure` block is always evaluated (eg. when it is listed as a
+dependency), use `export configure`.
+
 #### Block `options`
 
 This block can be used once in a build script and specifies the options that
