@@ -166,7 +166,7 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
       return code
 
   # Check if all output files have been produced by the commands.
-  outputs = build.files.tagged('out', '!optional')
+  outputs = list(build.files.tagged('out', '!optional'))
   missing_files = [x for x in outputs if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
@@ -181,7 +181,7 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
     return 1
 
   # Show a warning about missing optional output files.
-  outputs = build.files.tagged('out', 'optional')
+  outputs = list(build.files.tagged('out', 'optional'))
   missing_files = [x for x in outputs if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
