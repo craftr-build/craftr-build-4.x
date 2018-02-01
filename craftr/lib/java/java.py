@@ -144,9 +144,8 @@ class JavaTargetHandler(craftr.TargetHandler):
     target.define_property('java.run', 'StringList', inheritable=False)
 
   def setup_dependency(self, target):
-    # Whether to embedd the library when combining JARs. Defaults
-    # to True for applicaton JARs, False to library JARs.
-    target.define_property('java.embed', 'Bool')
+    # Whether to include the library in a bundle.
+    target.define_property('java.bundle', 'Bool')
 
   def finalize_target(self, target, data):
     src_dir = path.abs(target.directory())
@@ -155,6 +154,8 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     data.jarFilename = None
     data.bundleFilename = None
+    data.nobundleBinaryJars = []
+    data.bundleBinaryJars = data.binaryJars[:]
 
     # Add actions that download the artifacts.
     data.artifactActions = []
@@ -177,6 +178,7 @@ class JavaTargetHandler(craftr.TargetHandler):
           self.artifact_actions[binary_jar] = action
           data.artifactActions.append(action)
         data.binaryJars.append(binary_jar)
+        data.bundleBinaryJars.append(binary_jar)
 
     # Determine all the information necessary to build a java library,
     # and optionally a bundle.
@@ -209,8 +211,14 @@ class JavaTargetHandler(craftr.TargetHandler):
 
       # Add to the binaryJars the Java libraries from dependencies.
       for dep in target.transitive_dependencies():
+        depData = dep.handler_data(self)
         for target in dep.targets():
-          data.binaryJars += target.outputs().tagged('java.library')
+          libs = target.outputs().tagged('java.library')
+          data.binaryJars += libs
+          if depData.bundle:
+            data.bundleBinaryJars += libs
+          else:
+            data.nobundleBinaryJars += libs
 
   def translate_target(self, target, data):
     if data.srcs and data.classFiles:
@@ -243,7 +251,7 @@ class JavaTargetHandler(craftr.TargetHandler):
     # so specified in the target.
     if data.bundleType and data.bundleFilename:
       command = [sys.executable, AUGJAR_TOOL, '-o', '$out']
-      inputs = [data.jarFilename] + data.binaryJars
+      inputs = [data.jarFilename] + data.bundleBinaryJars
       if data.bundleType == 'merge':
         command += [inputs[0], '-s', 'Main-Class=' + data.mainClass]
         for infile in inputs[1:]:
@@ -272,7 +280,13 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     if data.bundleFilename and data.mainClass:
       # An action to execute the bundled JAR.
-      command = list(data.runPrefix or ['java']) + ['-jar', data.bundleFilename]
+      command = list(data.runPrefix or ['java'])
+      if data.nobundleBinaryJars:
+        command += ['-jar', data.bundleFilename]
+      else:
+        classpath = data.nobundleBinaryJars + [data.bundleFilename]
+        command += ['-cp', path.pathsep.join(classpath)]
+        command += [data.mainClass]
       action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
