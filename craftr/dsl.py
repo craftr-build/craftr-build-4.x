@@ -314,6 +314,7 @@ class Parser:
     lexer.next(':')
     lexer.next('nl')
     while True:
+      self._skip(lexer)
       token = lexer.next('name', 'eof')
       if token.type == 'eof' or token.cursor.colno <= parent_indent:
         lexer.scanner.restore(token.cursor)

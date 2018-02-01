@@ -1,5 +1,6 @@
 
 import io
+import re
 import textwrap
 from nose.tools import *
 from craftr import core, dsl
@@ -41,11 +42,15 @@ def test_dsl_parser():
   source = textwrap.dedent('''
     project "myproject" v1.5.3
     options:
+      # This is a comment.
       int optionA
       bool optionB = (OSNAME == 'windows')
       str optionC = OSARCH
+    # This is a comment.
     pool "link" 42
     target "lib":
+      # This is a comment.
+      # This is a comment.
       dependency "cpp"
       export cpp.includes = ['include']
     export target "kazing":
@@ -71,6 +76,8 @@ def test_dsl_parser():
   project = dsl.Parser().parse(source)
   project.render(fp, 0)
 
+  # Remove the comments, they will not be in the re-formatted output.
+  source = re.sub('^\s*#.*$\n', '', source, 0, re.M)
   assert_equals(fp.getvalue().strip().split('\n'), source.split('\n'))
 
 
