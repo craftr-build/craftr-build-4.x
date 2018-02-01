@@ -551,9 +551,10 @@ class Interpreter:
     code = compile(source, self.filename, 'eval')
     return eval(code, vars(namespace))
 
-  def _assignment(self, node, propset):
+  def _assignment(self, node, propset, override_export=False):
     assert isinstance(propset, (core.Module, core.Target, core.Dependency))
-    if node.export and not propset.supports_exported_members():
+    export = override_export or node.export
+    if export and not propset.supports_exported_members():
       raise RuntimeError('{} in a propset that does not supported exported members ({})'
         .format(node, propset))
     try:
@@ -561,7 +562,7 @@ class Interpreter:
     except KeyError:
       self.context.assigned_scope_does_not_exist(self.filename, node.loc, node.scope, propset)
       return
-    if node.export:
+    if export:
       scope = scope.__exported__
     prop_name = node.scope + '.' + node.propname
     try:
@@ -609,7 +610,7 @@ class Interpreter:
   def _export_block(self, node, propset):
     assert propset.supports_exported_members(), propset
     for assign in node.assignments:
-      self._assignment(assign, propset)
+      self._assignment(assign, propset, override_export=True)
 
 
 class RunError(Exception):
