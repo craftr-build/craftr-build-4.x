@@ -1,9 +1,8 @@
 
 class BuildBackend:
 
-  def __init__(self, context, module, args):
+  def __init__(self, context, args):
     self.context = context
-    self.module = module
     self.args = args
 
   def export(self):

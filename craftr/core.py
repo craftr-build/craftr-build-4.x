@@ -303,7 +303,7 @@ class Target(props.PropertySet):
     # TODO: Assign the action to the pool specified in the target.
     kwargs.setdefault('explicit', self.get_property('this.explicit'))
     kwargs.setdefault('syncio', self.get_property('this.syncio'))
-    action = Action(self, name, deps=deps, **kwargs)
+    action = Action(self.identifier(), name, deps=deps, **kwargs)
     self._actions[name] = action
     if output:
       self._output_actions.append(action)
@@ -452,7 +452,7 @@ class Action:
   def __init__(self, target, name, deps, commands, cwd=None, environ=None,
                explicit=False, syncio=False, deps_prefix=None, depfile=None):
     validate_action_name(name)
-    assert isinstance(target, Target)
+    assert isinstance(target, str)
     assert all(isinstance(x, Action) for x in deps)
     self.target = target
     self.name = name
@@ -471,7 +471,7 @@ class Action:
       self.identifier(), with_plural(len(self.builds), 'buildset'))
 
   def identifier(self):
-    return '{}:{}'.format(self.target.identifier(), self.name)
+    return '{}:{}'.format(self.target, self.name)
 
   def add_buildset(self, name=None):
     buildset = BuildSet(name)
@@ -486,8 +486,7 @@ class Action:
 
   def to_json(self):
     return {
-      'module': self.target.module().name(),
-      'target': self.target.name(),
+      'target': self.target,
       'name': self.name,
       'deps': [x.identifier() for x in self.deps],
       'commands': self.commands,
@@ -499,6 +498,13 @@ class Action:
       'depfile': self.depfile,
       'builds': [x.to_json() for x in self.builds]
     }
+
+  @classmethod
+  def from_json(cls, data):
+    builds = data.pop('builds')
+    action = cls(**data)
+    action.builds = [BuildSet.from_json(x) for x in builds]
+    return action
 
 
 class TargetHandler:
@@ -599,6 +605,19 @@ class BuildGraph:
     root = {}
     root['actions'] = {a.identifier(): a.to_json() for a in self._actions.values()}
     return root
+
+  def from_json(self, root):
+    deps = {}
+    for action in root['actions'].values():
+      action_deps = action.pop('deps')
+      action['deps'] = []
+      action = Action.from_json(action)
+      self._actions[action.identifier()] = action
+      deps[action.identifier()] = action_deps
+    # Re-establish links between actions.
+    for action in self._actions.values():
+      for dep in deps[action.identifier()]:
+        action.deps.append(self._actions[dep])
 
   def set_mtime(self, mtime):
     self._mtime = mtime

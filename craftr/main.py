@@ -143,7 +143,7 @@ def _main(argv=None):
   backend_args = []
   for x in (args.backend_args or ()):
     backend_args += x
-  backend = backend_factory(context, module, backend_args)
+  backend = backend_factory(context, backend_args)
 
   if args.configure:
     # Write the root cache back.
