@@ -7,6 +7,24 @@ from . import dsl, path, props
 from .context import Context
 
 
+def set_options(context, options):
+  prev_scope = None
+  for item in options:
+    name, assign, value = item.partition('=')
+    scope, name = name.rpartition('.')[::2]
+    if not scope: scope = prev_scope
+    if not scope or not name:
+      parser.error('--options: invalid argument: {}'.format(item))
+    if not assign:
+      value = 'true'
+    if assign and not value:
+      # TODO: Unset the option.
+      context.options.pop('{}.{}'.format(scope, name))
+    else:
+      context.options['{}.{}'.format(scope, name)] = value
+    prev_scope = scope
+
+
 def get_argument_parser():
   parser = argparse.ArgumentParser(prog='craftr')
   parser.add_argument('-f', '--file', default=None, help='The Craftr build script to execute. Onlt with --configure. Can be omitted when the configure step was peformed once and then --reconfigure is used.')
@@ -60,6 +78,7 @@ def _main(argv=None):
     mode = 'release' if args.release else 'debug'
     build_directory = os.path.join('build', mode)
     context = Context(build_directory, mode, args.backend)
+    set_options(context, args.options)
     module = context.load_module_file(args.file)
     context.translate_targets(module)
     context.serialize()
@@ -67,6 +86,7 @@ def _main(argv=None):
   elif (args.clean or args.build):
     context = Context(build_directory, None)
     context.deserialize()
+    set_options(context, args.options)
 
   # Load the backend module.
   backend_module = context.get_module(context.backend_name)
