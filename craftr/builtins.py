@@ -94,29 +94,36 @@ def glob(patterns, parent=None, excludes=None):
   return path.glob(patterns, parent, excludes)
 
 
-def load(filename):
+def load(name):
   """
-  Simmilar to the `load` statement in the Craftr build file, only that it
-  returns a new namespace for the file.
+  Similar to the `load` statement in the Craftr build file, but it can be
+  used to load a Python script into a new namespace (not the build scripts
+  eval namespace).
+
+  Can also be used to load another Craftr build script (if no relative or
+  absolute filename is specified). Will return the module's eval namespace.
   """
 
+  if name.startswith('./') or name.startswith('.\\') \
+      or path.isabs(name):
+    ns = props.Namespace(name)
+    parent_globals = sys._getframe(1).f_globals
+    name = path.canonical(name, path.dir(parent_globals['__file__']))
 
-  ns = props.Namespace(filename)
-  parent_globals = sys._getframe(1).f_globals
-  filename = path.canonical(filename, path.dir(parent_globals['__file__']))
+    # Initialize the builtins for the namespace.
+    context.init_namespace(ns)
 
-  # Initialize the builtins for the namespace.
-  context.init_namespace(ns)
+    # Inherit the eval namespace of the evaluating Module/Target/Dependency.
+    obj = get_call_context().eval_namespace()
+    vars(ns).update(vars(obj))
 
-  # Inherit the eval namespace of the evaluating Module/Target/Dependency.
-  obj = get_call_context().eval_namespace()
-  vars(ns).update(vars(obj))
+    # Make sure the namespace's file is set correctly.
+    ns.__file__ = name
 
-  # Make sure the namespace's file is set correctly.
-  ns.__file__ = filename
-
-  context.load_file(filename, ns)
-  return ns
+    context.load_file(name, ns)
+    return ns
+  else:
+    return context.get_module(name).eval_namespace()
 
 
 def option_default(name, value):
