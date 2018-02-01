@@ -53,6 +53,13 @@ def test_dsl_parser():
       # This is a comment.
       dependency "cpp"
       export cpp.includes = ['include']
+    eval:
+    # Here's an eval block with a newline in between. This originally
+    # caused an "unexpected indent" error. Parser._parse_expression()
+    # must take empty newlines into account.
+      print('Hello')
+
+      print('Bar')
     export target "kazing":
       export dependency "@lib"
       dependency "cpp"
@@ -78,6 +85,8 @@ def test_dsl_parser():
 
   # Remove the comments, they will not be in the re-formatted output.
   source = re.sub('^\s*#.*$\n', '', source, 0, re.M)
+  # Also remove multiple successive newlines.
+  source = re.sub('\n+', '\n', source)
   assert_equals(fp.getvalue().strip().split('\n'), source.split('\n'))
 
 

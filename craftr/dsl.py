@@ -312,13 +312,17 @@ class Parser:
     while True:
       loc = lexer.scanner.cursor
       match = lexer.scanner.match('[\t ]+')
+      if lexer.scanner.char and lexer.scanner.char in '#\n':
+        # Skip empty lines and lines with comments.
+        lexer.scanner.readline()
+        continue
       if not match or len(match.group(0)) <= parent_indent:
         lexer.scanner.restore(loc)
         break
       sub_lines.append(match.group(0) + lexer.scanner.readline())
       min_indent = min(min_indent, len(match.group(0)))
     # Restore the last new-line, as it serves as statement delimiter.
-    if (not sub_lines and first_line.endswith('\n')) or \
+    if (not sub_lines and first_line and first_line.endswith('\n')) or \
         (sub_lines and sub_lines[-1].endswith('\n')):
       lexer.scanner.seek(-1, 'cur')
     result = textwrap.dedent(''.join(sub_lines))
