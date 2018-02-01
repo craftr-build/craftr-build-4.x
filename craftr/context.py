@@ -74,7 +74,7 @@ class Context(dsl.BaseDslContext):
 
   def deserialize(self):
     with open(path.join(self.build_directory, 'CraftrBuildGraph.json')) as fp:
-      root = json.load(fp)
+      root = json.load(fp, object_pairs_hook=collections.OrderedDict)
     self.from_json(root)
 
   # dsl.Context
