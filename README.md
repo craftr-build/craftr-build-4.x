@@ -36,11 +36,13 @@ target "main":
 #### C#
 
 ```python
-# craftr --configure --build main:csharp.run
+# craftr --configure --build main:csharp.runBundle
 project "csharp_helloworld"
 target "main":
   dependency "csharp"
   csharp.srcs = glob('src/*.cs')
+  csharp.packages = ['Newtonsoft.JSON:10.0.3']
+  csharp.bundle = True
 ```
 
 ---

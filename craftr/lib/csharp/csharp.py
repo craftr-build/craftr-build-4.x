@@ -6,11 +6,9 @@ import subprocess
 from craftr import path, sh, utils
 
 msvc = load('tools.msvc')
+nupkg = load('./tools/nupkg.py')
 toolkit = msvc.MsvcToolkit.from_config()
 artifacts_dir = path.join(context.build_directory, 'csharp', 'nuget')
-
-# TODO: Install packages via NuGet.
-# TODO: Add runtime search paths for csharp.run and csharp.runBundle actions.
 
 
 class CscInfo(utils.named):
@@ -165,79 +163,81 @@ class CsharpTargetHandler(craftr.TargetHandler):
     target.define_property('csharp.bundle', 'Bool', True)
 
   def finalize_target(self, target, data):
-    if not data.srcs:
-      return
-
     build_dir = path.join(context.build_directory, target.module().name())
 
-    if data.type in ('appcontainerexe', 'exe', 'winexe'):
-      suffix = '.exe'
-    elif data.type == 'winmdobj':
-      suffix = '.winmdobj'
-    elif data.type == 'module':
-      suffix = '.netmodule'
-    elif data.type == 'library':
-      suffix = '.dll'
-    else:
-      raise ValueError('invalid csharp.type: {!r}'.format(data.type))
+    # Install artifacts.
+    data.dynamicLibraries += self.__install(data.packages)
 
-    if not data.productName:
-      data.productName = target.name() + '-' + target.module().version()
-    data.productFilename = path.join(build_dir, data.productName + suffix)
-    data.bundleFilename = None
-    if data.bundle:
-      data.bundleFilename = path.addtobase(data.productFilename, '-bundle')
+    # Prepare information for compiling a product.
+    if data.srcs:
+      if data.type in ('appcontainerexe', 'exe', 'winexe'):
+        suffix = '.exe'
+      elif data.type == 'winmdobj':
+        suffix = '.winmdobj'
+      elif data.type == 'module':
+        suffix = '.netmodule'
+      elif data.type == 'library':
+        suffix = '.dll'
+      else:
+        raise ValueError('invalid csharp.type: {!r}'.format(data.type))
 
-    target.outputs().add(data.productFilename, ['csharp.' + data.type])
-    if data.bundleFilename:
-      target.outputs().add(data.bundleFilename, ['csharp.' + data.type + 'Bundle'])
+      if not data.productName:
+        data.productName = target.name() + '-' + target.module().version()
+      data.productFilename = path.join(build_dir, data.productName + suffix)
+      data.bundleFilename = None
+      if data.bundle:
+        data.bundleFilename = path.addtobase(data.productFilename, '-bundle')
+
+      target.outputs().add(data.productFilename, ['csharp.' + data.type])
+      if data.bundleFilename:
+        target.outputs().add(data.bundleFilename, ['csharp.' + data.type + 'Bundle'])
 
   def translate_target(self, target, data):
-    if not data.srcs:
-      return
+    if data.srcs:
+      bundleModules = []
+      modules = []
+      bundleReferences = list(data.dynamicLibraries)
+      references = []
+      for dep in target.transitive_dependencies():
+        depData = dep.handler_data(self)
+        for target in dep.targets():
+          files = target.outputs().tagged('csharp.module')
+          if depData.bundle: bundleModules += files
+          else: modules += files
+          files = target.outputs().tagged('!csharp.module', 'csharp.*')
+          if depData.bundle: bundleReferences += files
+          else: references += files
 
-    bundleModules = []
-    modules = []
-    bundleReferences = []
-    references = []
-    for dep in target.transitive_dependencies():
-      depData = dep.handler_data(self)
-      for target in dep.targets():
-        files = target.outputs().tagged('csharp.module')
-        if depData.bundle: bundleModules += files
-        else: modules += files
-        files = target.outputs().tagged('!csharp.module', 'csharp.*')
-        if depData.bundle: bundleReferences += files
-        else: references += files
+      # Action to compile the C# sources into the target product type.
+      command = self.csc.program + ['-nologo', '-target:' + data.type]
+      command += ['-out:$out']
+      if data.main:
+        command += ['-main:' + data.main]
+      if modules or bundleModules:
+        command.append('-addmodule:' + ';'.join(modules + bundleModules))
+      if references or bundleReferences:
+        command += ['-reference:' + x for x in (references + bundleReferences)]
+      if data.compilerFlags:
+        command += data.compilerFlags
+      command += ['$in']
+      action = target.add_action('csharp.compile', commands=[command],
+        environ=self.csc.environ)
+      build = action.add_buildset()
+      build.files.add(data.srcs, ['in'])
+      build.files.add(data.productFilename, ['out'])
 
-    # Action to compile the C# sources into the target product type.
-    command = self.csc.program + ['-nologo', '-target:' + data.type]
-    command += ['-out:$out']
-    if data.main:
-      command += ['-main:' + data.main]
-    if modules or bundleModules:
-      command.append('-addmodule:' + ';'.join(modules + bundleModules))
-    if references or bundleReferences:
-      command += ['-reference:' + x for x in (references + bundleReferences)]
-    if data.compilerFlags:
-      command += data.compilerFlags
-    command += ['$in']
-    action = target.add_action('csharp.compile', commands=[command],
-      environ=self.csc.environ)
-    build = action.add_buildset()
-    build.files.add(data.srcs, ['in'])
-    build.files.add(data.productFilename, ['out'])
-
-    # Action to run the product.
-    command = list(data.runArgsPrefix or self.csc.exec_args([]))
-    command += [data.productFilename]
-    command += data.runArgs
-    action = target.add_action('csharp.run', commands=[command], explicit=True,
-      syncio=True, output=False)
-    action.add_buildset()
+      # Action to run the product.
+      command = list(data.runArgsPrefix or self.csc.exec_args([]))
+      command += [data.productFilename]
+      command += data.runArgs
+      # TODO: Seems like there is no option or environment variable to
+      #       allow the .NET runtime to find the assemblies in other directories?
+      action = target.add_action('csharp.run', commands=[command], explicit=True,
+        syncio=True, output=False)
+      action.add_buildset()
 
     # Action to merge the generated references into one file.
-    if data.bundle:
+    if data.bundleFilename and data.bundle:
       command = self.csc.get_merge_tool(out='$out', primary='$in',
         assemblies=references + bundleReferences)
       action = target.add_action('csharp.bundle', commands=[command])
@@ -252,6 +252,37 @@ class CsharpTargetHandler(craftr.TargetHandler):
       action = target.add_action('csharp.runBundle', commands=[command],
         explicit=True, syncio=True, output=False)
       action.add_buildset()
+
+  def __install(self, packages):
+    packages = [nupkg.Dependency.from_str(x) for x in packages]
+    deps = set()
+    result = []
+    path.makedirs(artifacts_dir, exist_ok=True)
+    for dep in packages:
+      deps.add(dep)
+
+      # Only install if the .nupkg file does not already exists.
+      nupkg_file = dep.nupkg(artifacts_dir)
+      if not path.isfile(nupkg_file):
+        command = self.csc.get_nuget() + ['install', dep.id, '-Version', dep.version]
+        subprocess.check_call(command, cwd=artifacts_dir)
+
+      # Parse the .nuspec for this package's dependencies.
+      specdom = nupkg.get_nuspec(nupkg_file)
+      if not specdom:
+        log.warn('Could not read .nuspec from "{}"'.format(nupkg_file))
+        continue
+
+      # XXX determine target_framework, None includes ALL dependencies (which is bad)
+      target_framework = None
+      for dep in nupkg.nuspec_eval_deps(specdom, target_framework):
+        deps.add(dep)
+
+    for dep in deps:
+      filename = dep.resolve(artifacts_dir, framework=self.csc.netversion)
+      if filename is not None:
+        result.append(filename)
+    return result
 
 
 csc = CscInfo.get()
