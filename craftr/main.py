@@ -39,6 +39,7 @@ def get_argument_parser():
   parser.add_argument('--backend', help='The build backend to use. This option can only be used during the configure step.')
   parser.add_argument('--backend-args', action='append', metavar='ARGS', help='A string with additional command-line arguments for the build backend. Can be used multiple times. Only with --clean and/or --build.')
   parser.add_argument('--clean', action='store_true', help='Enable the clean step. This step is always executed after the configure step and before the build step, if either are enabled.')
+  parser.add_argument('--recursive', action='store_true', help='Enable recursive target cleanup. Only with --clean')
   parser.add_argument('-b', '--build', action='store_true', help='Enable the build step. This step is always executed after the configure step, if it is also enabled.')
   parser.add_argument('targets', nargs='*', metavar='TARGET', help='Zero or more targets to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   return parser
@@ -60,6 +61,8 @@ def _main(argv=None):
     parser.error('--file: can only be specified with --configure or --reconfigure')
   if not (args.configure or args.reconfigure) and args.backend:
     parser.error('--backend: can only be specified with --configure or --reconfigure')
+  if args.recursive and not args.clean:
+    parser.error('--recursive: can only be specified with --clean')
   if not (args.configure or args.reconfigure or args.clean or args.build):
     parser.print_usage()
     return 0
@@ -162,7 +165,9 @@ def _main(argv=None):
     context.build_graph.select(target)
 
   if args.clean:
-    backend.clean()
+    res = backend.clean(args.recursive)
+    if res not in (0, None):
+      return res
 
   if args.build:
     # TODO: Build step

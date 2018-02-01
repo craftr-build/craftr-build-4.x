@@ -98,7 +98,7 @@ class NinjaBackend(craftr.BuildBackend):
       if non_explicit:
         writer.default(non_explicit)
 
-  def clean(self):
+  def clean(self, recursive):
     build_directory = self.context.build_directory
     graph = self.context.build_graph
 
@@ -106,7 +106,6 @@ class NinjaBackend(craftr.BuildBackend):
     if not ninja:
       return 1
 
-    recursive = True  # TODO: As option to backend
     if recursive:
       targets = [make_rule_name(graph, action) for action in graph.selected()]
     else:

@@ -8,7 +8,7 @@ class BuildBackend:
   def export(self):
     raise NotImplementedError
 
-  def clean(self):
+  def clean(self, recursive):
     raise NotImplementedError
 
   def build(self):
