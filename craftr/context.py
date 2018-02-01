@@ -27,8 +27,8 @@ class Context(dsl.BaseDslContext):
         if dep.target():
           translate(dep.target())
         else:
-          for target in dep.module().targets():
-            translate(target)
+          for other_target in dep.module().targets():
+            translate(other_target)
       if target not in seen:
         seen.add(target)
         for handler in target.target_handlers():
