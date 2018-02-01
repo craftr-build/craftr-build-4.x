@@ -93,47 +93,45 @@ class JavaTargetHandler(craftr.TargetHandler):
       target.outputs().add(data.bundleFilename, ['java.app'])
 
   def translate_target(self, target, data):
-    if not data.classFiles:
-      return
+    if data.srcs and data.classFiles:
+      # Generate the action to compile the Java source files.
+      command = [javac, '-d', data.classDir]
+      if data.binaryJars:
+        command += ['-classpath', path.pathsep.join(data.binaryJars)]
+      command += ['$in']
+      command += data.compilerFlags
+      action = target.add_action('java.javac', commands=[command], deps=data.artifactActions)
+      build = action.add_buildset()
+      build.files.add(data.srcs, ['in'])
+      build.files.add(data.classFiles, ['out'])
 
-    # Generate the action to compile the Java source files.
-    command = [javac, '-d', data.classDir]
-    if data.binaryJars:
-      command += ['-classpath', data.binaryJars]
-    command += ['$in']
-    command += data.compilerFlags
-    action = target.add_action('java.javac', commands=[command])
-    build = action.add_buildset()
-    build.files.add(data.srcs, ['in'])
-    build.files.add(data.classFiles, ['out'])
-
-    # Generate the action to produce the JAR file.
-    flags = 'cvf'
-    if data.mainClass:
-      flags += 'e'
-    command = [javacJar, flags, '$out']
-    if data.mainClass:
-      command += [data.mainClass]
-    command += ['-C', data.classDir, '.']
-    action = target.add_action('java.jar', commands=[command])
-    build = action.add_buildset()
-    build.files.add(data.classFiles, ['in'])
-    build.files.add(data.jarFilename, ['out'])
+      # Generate the action to produce the JAR file.
+      flags = 'cvf'
+      if data.mainClass:
+        flags += 'e'
+      command = [javacJar, flags, '$out']
+      if data.mainClass:
+        command += [data.mainClass]
+      command += ['-C', data.classDir, '.']
+      action = target.add_action('java.jar', commands=[command])
+      build = action.add_buildset()
+      build.files.add(data.classFiles, ['in'])
+      build.files.add(data.jarFilename, ['out'])
 
     # Generate the action to produce a merge of all dependent JARs if
     # so specified in the target.
     if data.bundleType and data.bundleFilename:
-      command = [sys.executable, path.join(path.dir(__file__), 'tools', 'augjar.py')]
-      command += ['-o', '$out', '$in']
-      input_files = [data.jarFilename] + data.binaryJars
+      command = [sys.executable, AUGJAR_TOOL, '-o', '$out']
+      inputs = [data.jarFilename] + data.binaryJars
       if data.bundleType == 'merge':
-        command += ['-s', 'Main-Class=' + data.mainClass]
-        inputs = input_files
+        command += [inputs[0], '-s', 'Main-Class=' + data.mainClass]
+        for infile in inputs[1:]:
+          command += ['-m', infile]
       elif data.bundleType == 'onejar':
-        inputs = [ONEJAR_FILENAME]
-        command += ['-s', 'One-Jar-Main-Class=' + data.mainClass]
-        for infile in input_files:
+        command += [ONEJAR_FILENAME, '-s', 'One-Jar-Main-Class=' + data.mainClass]
+        for infile in inputs:
           command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
+        inputs += [ONEJAR_FILENAME]
       else:
         raise ValueError('invalid bundleType: {!r}'.format(data.bundleType))
       action = target.add_action('java.bundle', commands=[command])
