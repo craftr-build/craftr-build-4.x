@@ -344,6 +344,7 @@ class Dependency(props.PropertySet):
     self._module = module
     self._target = target
     self._export = export
+    self._handler_data = {}
     self._eval_namespace = props.duplicate_namespace(
       parent.eval_namespace(), 'dependency "{}"'.format(self._refstring()))
     self.define_property('this.select', 'StringList', [], inheritable=False)
@@ -386,7 +387,11 @@ class Dependency(props.PropertySet):
     for handler in self._parent.target_handlers():
       common_scope = handler.get_common_property_scope()
       data = self.get_properties(common_scope) if common_scope else props.Namespace()
-      handler.finalize_dependency(self, data)
+      data = handler.finalize_dependency(self, data)
+      self._handler_data[handler] = data
+
+  def handler_data(self, handler):
+    return self._handler_data.get(handler)
 
 
 class Action:
@@ -554,7 +559,7 @@ class TargetHandler:
     pass
 
   def finalize_dependency(self, dependency, data):
-    pass
+    return data
 
   def translate_begin(self):
     pass
