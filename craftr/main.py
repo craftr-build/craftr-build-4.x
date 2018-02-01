@@ -8,10 +8,11 @@ from . import builtins, dsl
 
 class Context(dsl.Context):
 
-  def __init__(self, build_mode='debug'):
+  def __init__(self, build_directory, build_mode='debug'):
     self.path = ['.', os.path.join(os.path.dirname(__file__), 'lib')]
     self.options = {}
     self.modules = {}
+    self.build_directory = build_directory
     self.build_mode = build_mode
 
   def option_default(self, name, value):
@@ -83,7 +84,9 @@ def _main(argv=None):
     parser.error('--debug and --release are incompatible options.')
 
   # Create the build context.
-  context = Context(build_mode='release' if args.release else 'debug')
+  mode = 'release' if args.release else 'debug'
+  build_directory = os.path.join('build', mode)
+  context = Context(build_directory, mode)
 
   # Load the main build script.
   if args.file.endswith('/') or args.file.endswith('\\') or \
