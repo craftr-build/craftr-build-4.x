@@ -4,71 +4,7 @@ import os
 import sys
 
 from . import dsl, path, props
-
-
-class Context(dsl.BaseDslContext):
-
-  def __init__(self, build_directory, build_mode='debug'):
-    self.path = ['.', os.path.join(os.path.dirname(__file__), 'lib')]
-    self.options = {}
-    self.modules = {}
-    self.build_directory = build_directory
-    self.build_mode = build_mode
-
-    self.builtins = props.Namespace('builtins')
-    self.builtins.context = self
-    self.load_file(path.join(path.dir(__file__), 'builtins.py'), self.builtins)
-
-  def translate_targets(self, module):
-    seen = set()
-    def translate(target):
-      for dep in target.dependencies():
-        if dep.target():
-          translate(dep.target())
-        else:
-          for target in dep.module().targets():
-            translate(target)
-      if target not in seen:
-        seen.add(target)
-        for handler in target.target_handlers():
-          handler.translate_target(target, target.handler_data(handler))
-    for target in module.targets():
-      translate(target)
-
-  def load_module_file(self, filename):
-    with open(filename) as fp:
-      project = dsl.Parser().parse(fp.read())
-    return dsl.Interpreter(self, filename)(project)
-
-  # dsl.Context
-
-  def get_option(self, module_name, option_name):
-    return self.options[module_name + '.' + option_name]
-
-  def get_module(self, module_name):
-    if module_name not in self.modules:
-      for path in self.path:
-        filename = os.path.join(path, module_name + '.craftr')
-        if os.path.isfile(filename):
-          break
-        filename = os.path.join(path, module_name, 'build.craftr')
-        if os.path.isfile(filename):
-          break
-      else:
-        raise dsl.ModuleNotFoundError(module_name)
-      with open(filename) as fp:
-        project = dsl.Parser().parse(fp.read())
-      module = dsl.Interpreter(self, filename)(project)
-      self.modules[module_name] = module
-    else:
-      module = self.modules[module_name]
-    return module
-
-  def init_module(self, module):
-    super().init_module(module)
-    ns = module.eval_namespace()
-    for key in self.builtins.__all__:
-      setattr(ns, key, getattr(self.builtins, key))
+from .context import Context
 
 
 def get_argument_parser():
@@ -109,6 +45,9 @@ def _main(argv=None):
     return 0
 
   if args.configure or args.reconfigure:
+    # TODO: Handle --reconfigure by reading previously define build
+    #       mode and options.
+
     if not args.file:
       args.file = 'build.craftr'
     # Turn a directory-like file or one that actually points to a directory
@@ -120,21 +59,34 @@ def _main(argv=None):
     # Load the build script.
     mode = 'release' if args.release else 'debug'
     build_directory = os.path.join('build', mode)
-    context = Context(build_directory, mode)
+    context = Context(build_directory, mode, args.backend)
     module = context.load_module_file(args.file)
-
-    # Translate targets.
     context.translate_targets(module)
+    context.serialize()
 
-    # TODO: Export step
+  elif (args.clean or args.build):
+    context = Context(build_directory, None)
+    context.deserialize()
+
+  # Load the backend module.
+  backend_module = context.get_module(context.backend_name)
+  backend_factory = backend_module.eval_namespace().new_backend
+  backend_args = []
+  for x in (args.backend_args or ()):
+    backend_args += x
+  backend = backend_factory(context, module, backend_args)
+
+  if args.configure or args.reconfigure:
+    backend.export()
 
   if args.clean:
-    # TODO: Clean step
-    pass
+    backend.clean()
 
   if args.build:
     # TODO: Build step
-    pass
+    res = backend.build()
+    if res not in (0, None):
+      return res
 
   return 0
 

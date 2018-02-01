@@ -1,5 +1,7 @@
 
 import collections
+import hashlib
+import json
 import os
 import re
 import sys
@@ -26,6 +28,12 @@ def validate_target_name(name):
 def validate_action_name(name):
   if not re.match('^[\w\d_\-\.]+$', name):
     raise ValueError('invalid action name: {!r}'.format(name))
+
+
+def match_tag(tag, tags):
+  if tag[0] == '!':
+    return tag[1:] in tags
+  return tag in tags
 
 
 Pool = collections.namedtuple('Pool', 'name depth')
@@ -82,6 +90,9 @@ class FileSet:
     name = path.canonical(name)
     del self._files[name]
 
+  def __iter__(self):
+    return self._files.values()
+
   def name(self):
     return self._name
 
@@ -102,10 +113,20 @@ class FileSet:
       result.append(obj)
     return result
 
-  def files(self, tags=None):
+  def tagged(self, *tags):
     for tf in self._files.values():
-      if tags is None or all(x in tf.tags for x in tags):
-        yield tf
+      if not tags or all(match_tag(x, tf.tags) for x in tags):
+        yield tf.name
+
+  def to_json(self):
+    return {x.name: list(x.tags) for x in self._files.values()}
+
+  @classmethod
+  def from_json(cls, data):
+    obj = cls()
+    for key, tags in data.items():
+      obj.add(key,  tags)
+    return obj
 
 
 class Options(props.PropertySet):
@@ -438,6 +459,61 @@ class Dependency(props.PropertySet):
       handler.finalize_dependency(self, data)
 
 
+class ActionVariables:
+  """
+  A container for variables that must be lists of strings. Used in an
+  action's build step together with a #FileSet.
+  """
+
+  def __init__(self):
+    self._variables = collections.OrderedDict()
+
+  def __repr__(self):
+    v = ('{!r}: {!r}'.format(k, v) for k, v in self._variables.items())
+    return 'ActionVariables({{{}}})'.format(', '.join(v))
+
+  def __getitem__(self, key):
+    return self._variables[key]
+
+  def __setitem__(self, key, value):
+    if isinstance(value, str):
+      value = [value]
+    if not isinstance(value, (list, tuple)):
+      raise TypeError('expected str,list/tuple, got {}'.format(type(value).__name__))
+    if not all(isinstance(x, str) for x in value):
+      raise TypeError('expected item to be str')
+    self._variables[key] = list(value)
+
+  def __delitem__(self, key):
+    del self._variables[key]
+
+  def __contains__(self, key):
+    return key in self._variables
+
+  def get(self, key, default=None):
+    return self._variables.get(key, default)
+
+  def to_json(self):
+    return self._variables
+
+  @classmethod
+  def from_json(cls, data):
+    obj = cls()
+    obj._variables.update(data)
+    return obj
+
+
+class BuildSet(collections.namedtuple('_BuildSet', 'name files vars')):
+
+  def to_json(self):
+    return {'name': self.name, 'files': self.files.to_json(), 'vars': self.vars.to_json()}
+
+  @classmethod
+  def from_json(cls, data):
+    return BuildSet(data['name'], FileSet.from_json(data['files']),
+      ActionVariables.from_json(data['vars']))
+
+
 class Action:
   """
   Represents an action that translates a set of input files to a set of
@@ -502,40 +578,6 @@ class Action:
     are available for variable expansion in the *commands* strings.
   """
 
-  class ActionVariables:
-    """
-    A container for variables that must be lists of strings. Used in an
-    action's build step together with a #FileSet.
-    """
-
-    def __init__(self):
-      self._variables = collections.OrderedDict()
-
-    def __repr__(self):
-      v = ('{!r}: {!r}'.format(k, v) for k, v in self._variables.items())
-      return 'ActionVariables({{{}}})'.format(', '.join(v))
-
-    def __getitem__(self, key):
-      return self._variables[key]
-
-    def __setitem__(self, key, value):
-      if not isinstance(value, (list, tuple)):
-        raise TypeError('expected List/Tuple, got {}'.format(type(value).__name__))
-      if not all(isinstance(x, str) for x in value):
-        raise TypeError('expected item to be str')
-      self._variables[key] = list(value)
-
-    def __delitem__(self, key):
-      del self._variables[key]
-
-    def __contains__(self, key):
-      return key in self._variables
-
-    def get(self, key, default=None):
-      return self._variables.get(key, default)
-
-  BuildSet = collections.namedtuple('BuildSet', 'name files vars')
-
   def __init__(self, target, name, deps, commands, cwd=None, environ=None,
                explicit=False, syncio=False, deps_prefix=None, depfile=None):
     validate_action_name(name)
@@ -561,9 +603,32 @@ class Action:
     return '{}:{}'.format(self.target.identifier(), self.name)
 
   def add_buildset(self, name=None):
-    buildset = self.BuildSet(name, FileSet(), self.ActionVariables())
+    buildset = BuildSet(name, FileSet(), ActionVariables())
     self.builds.append(buildset)
     return buildset
+
+  def get_output_files(self):
+    files = []
+    for build in self.builds:
+      files += build.files.tagged('out')
+    return files
+
+  def to_json(self):
+    return {
+      'module': self.target.module().name(),
+      'target': self.target.name(),
+      'name': self.name,
+      'deps': [x.identifier() for x in self.deps],
+      'commands': self.commands,
+      'cwd': self.cwd,
+      'environ': self.environ,
+      'explicit': self.explicit,
+      'syncio': self.syncio,
+      'deps_prefix': self.deps_prefix,
+      'depfile': self.depfile,
+      'builds': [x.to_json() for x in self.builds]
+    }
+
 
 
 class TargetHandler:
@@ -617,3 +682,57 @@ class TargetHandler:
     """
 
     pass
+
+
+class BuildGraph:
+  """
+  This class represents the build graph that is built from #Action#s after
+  all targets have been handled.
+  """
+
+  def __init__(self):
+    self._mtime = sys.maxsize
+    self._actions = {}
+    self._selected = set()
+    # This will be used during deserialization to produce fake #Module
+    # objects to associate the #Action#s with.
+    self._modules = {}
+
+  def __getitem__(self, action_name):
+    return self._actions[action_name]
+
+  def actions(self):
+    return self._actions.values()
+
+  def add_action(self, action):
+    self._actions[action.identifier()] = action
+
+  def add_actions(self, actions):
+    for action in actions:
+      self._actions[action.identifier()] = action
+
+  def select(self, action_name):
+    if action_name not in self._actions:
+      raise action_name
+    self._selected.add(action_name)
+
+  def selected(self):
+    return self._selected
+
+  def to_json(self):
+    root = {}
+    root['actions'] = {a.identifier(): a.to_json() for a in self._actions.values()}
+    return root
+
+  def set_mtime(self, mtime):
+    self._mtime = mtime
+
+  def mtime(self):
+    return self._mtime
+
+  def hash(self, action):
+    hasher = hashlib.md5()
+    writer = props.Namespace()
+    writer.write = lambda x: hasher.update(x.encode('utf8'))
+    json.dump(action.to_json(), writer)
+    return hasher.hexdigest()[:12]

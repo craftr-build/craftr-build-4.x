@@ -458,16 +458,24 @@ class BaseDslContext:
     print('warn: {}:{}:{}: property {} does not exist'.format(
       filename, loc.lineno, loc.colno, prop_name))
 
+  def init_namespace(self, ns):
+    ns.context = self
+
   def init_module(self, module):
-    module.eval_namespace().context = self
+    self.init_namespace(module.eval_namespace())
 
   def init_target(self, target):
-    target.eval_namespace().context = self
+    self.init_namespace(target.eval_namespace())
 
   def init_dependency(self, dep):
-    dep.eval_namespace().context = self
+    self.init_namespace(dep.eval_namespace())
 
   def load_file(self, filename, namespace):
+    """
+    Note that this method does not use #init_namespace(). If you want the
+    namespace to be initialized, call #init_namespace() beforehand.
+    """
+
     with open(filename) as fp:
       code = compile(fp.read(), filename, 'exec')
       namespace.__file__ = filename

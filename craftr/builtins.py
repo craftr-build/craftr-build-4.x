@@ -100,10 +100,21 @@ def load(filename):
   returns a new namespace for the file.
   """
 
+
   ns = props.Namespace(filename)
   parent_globals = sys._getframe(1).f_globals
   filename = path.canonical(filename, path.dir(parent_globals['__file__']))
+
+  # Initialize the builtins for the namespace.
+  context.init_namespace(ns)
+
+  # Inherit the eval namespace of the evaluating Module/Target/Dependency.
+  obj = get_call_context().eval_namespace()
+  vars(ns).update(vars(obj))
+
+  # Make sure the namespace's file is set correctly.
   ns.__file__ = filename
+
   context.load_file(filename, ns)
   return ns
 
