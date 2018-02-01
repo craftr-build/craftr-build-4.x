@@ -42,6 +42,7 @@ def get_argument_parser():
   parser.add_argument('--recursive', action='store_true', help='Enable recursive target cleanup. Only with --clean')
   parser.add_argument('-b', '--build', action='store_true', help='Enable the build step. This step is always executed after the configure step, if it is also enabled.')
   parser.add_argument('targets', nargs='*', metavar='TARGET', help='Zero or more targets to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
+  parser.add_argument('-t', '--tool', nargs='...', help='Run a tool with the specified arguments.')
   return parser
 
 
@@ -63,7 +64,11 @@ def _main(argv=None):
     parser.error('--backend: can only be specified with --configure or --reconfigure')
   if args.recursive and not args.clean:
     parser.error('--recursive: can only be specified with --clean')
-  if not (args.configure or args.reconfigure or args.clean or args.build):
+  if args.tool is not None and (args.configure or args.reconfigure or args.r or args.clean or args.build):
+    parser.error('--tool: can not be combined with Craftr build steps')
+  if args.tool is not None and len(args.tool) < 1:
+    parser.error('--tool: need at least one argument (tool name)')
+  if not (args.tool or args.configure or args.reconfigure or args.clean or args.build):
     parser.print_usage()
     return 0
 
@@ -75,6 +80,20 @@ def _main(argv=None):
     args.configure = True
   if not args.options:
     args.options = []
+
+  # Handle --tool.
+  if args.tool:
+    context = Context(None, None)
+    set_options(context, args.options)
+    try:
+      module = context.get_module(args.tool[0])
+    except dsl.ModuleNotFoundError as exc:
+      try:
+        module = context.get_module('tools.' + args.tool[0])
+      except dsl.ModuleNotFoundError:
+        raise exc
+    module.eval_namespace().main(args.tool[1:])
+    return
 
   # Load the cache file from the build root directory, if it exists.
   root_cachefile = path.join(args.build_root, 'CraftrBuildRoot.json')
