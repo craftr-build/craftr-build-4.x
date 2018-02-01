@@ -1,0 +1,6 @@
+project "java_helloworld"
+
+target "main":
+  dependency "java"
+  java.srcs = glob('src/**/*.java')
+  java.mainClass = 'Main'

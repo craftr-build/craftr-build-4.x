@@ -4,7 +4,7 @@ eval import os
 
 options:
   str onejar = os.path.join(module.directory(), "one-jar-boot-0.97.jar")
-  str javac = "java"
+  str javac = "javac"
   str javacJar = "jar"
   str compilerFlags = ""
   str distType = "merge"
