@@ -15,9 +15,6 @@ class Context(dsl.BaseDslContext):
     self.build_directory = build_directory
     self.build_mode = build_mode
 
-  def option_default(self, name, value):
-    return self.options.setdefault(name, value)
-
   def translate_targets(self, module):
     seen = set()
     def translate(target):
@@ -69,7 +66,6 @@ class Context(dsl.BaseDslContext):
     for key in builtins.__all__:
       setattr(ns, key, getattr(builtins, key))
     ns.BUILD = builtins.BuildInfo(self.build_mode)
-    ns.option_default = self.option_default
 
 
 def get_argument_parser():

@@ -179,12 +179,9 @@ class CxxTargetHandler(craftr.TargetHandler):
     # a dynamic library from static libraries.
     dep.define_property('cxx.linkWholeArchive', 'Bool', False)
 
-  def translate_target(self, target):
-    srcs = target.get_property('cxx.srcs')
-    if not srcs:
-      return
-
+  def translate_target(self, target, data):
     # TODO
+    pass
 
 
 module.register_target_handler(CxxTargetHandler())

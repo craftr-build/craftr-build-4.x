@@ -1,5 +1,5 @@
 
-__all__ = ['OS', 'error', 'fmt', 'glob', 'load']
+__all__ = ['OS', 'error', 'fmt', 'glob', 'load', 'option_default']
 
 import collections
 import os
@@ -101,6 +101,12 @@ def load(filename):
   ns.__file__ = filename
   context = parent_globals['context'].load_file(filename, ns)
   return ns
+
+
+def option_default(name, value):
+  context = sys._getframe(1).f_globals['context']
+  return context.options.setdefault(name, value)
+
 
 
 if sys.platform.startswith('win32'):
