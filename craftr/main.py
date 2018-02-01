@@ -6,7 +6,7 @@ import sys
 from . import builtins, dsl
 
 
-class Context(dsl.Context):
+class Context(dsl.BaseDslContext):
 
   def __init__(self, build_directory, build_mode='debug'):
     self.path = ['.', os.path.join(os.path.dirname(__file__), 'lib')]

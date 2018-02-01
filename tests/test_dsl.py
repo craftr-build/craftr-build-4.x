@@ -13,7 +13,7 @@ class AssignedPropertyDoesNoteExist(Exception):
   pass
 
 
-class Context(dsl.Context):
+class Context(dsl.BaseDslContext):
 
   def __init__(self, strict=False):
     self.modules = {}

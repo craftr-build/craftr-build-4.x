@@ -411,7 +411,7 @@ class ParseError(Exception):
     return 'line {}, col {}: {}'.format(self.loc.lineno, self.loc.colno, self.message)
 
 
-class Context:
+class BaseDslContext:
 
   def get_option(self, module_name, option_name):
     raise NotImplementedError
