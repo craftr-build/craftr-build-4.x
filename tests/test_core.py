@@ -44,6 +44,11 @@ def test_transitive_exported_properties():
   t3.add_dependency(t2)
   t3['cxx'].files = ['c']
 
+  dep_targets = []
+  for dep in t3.transitive_dependencies():
+    dep_targets += dep.targets()
+  assert_equals(dep_targets, [t2])
+
   assert_equals(t3.get_property('cxx.files'), ['c', 'b'])
 
   # Exporting t1 will cause t3 inherit the target's exported properties
