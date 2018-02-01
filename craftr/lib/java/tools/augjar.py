@@ -142,10 +142,11 @@ def main():
       if args.verbose:
         print('renamed original file "{}" temporarily'.format(os.path.basename(args.output)))
 
+    compression = zipfile.ZIP_DEFLATED
     utf8reader = codecs.getreader('utf8')
     utf8writer = codecs.getwriter('utf8')
     with zipfile.ZipFile(args.jar, mode='r') as injar, \
-         zipfile.ZipFile(args.output, mode='w') as outjar:
+         zipfile.ZipFile(args.output, mode='w', compression=compression) as outjar:
       namelist = injar.namelist()
 
       # Read the manifest file.
