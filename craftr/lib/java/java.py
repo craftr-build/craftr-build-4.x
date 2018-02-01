@@ -234,8 +234,8 @@ class JavaTargetHandler(craftr.TargetHandler):
       if data.mainClass:
         command += [data.mainClass]
       command += ['-C', data.classDir, '.']
-      action = target.add_action('java.jar', commands=[command])
-      build = action.add_buildset()
+      jar_action = target.add_action('java.jar', commands=[command])
+      build = jar_action.add_buildset()
       build.files.add(data.classFiles, ['in'])
       build.files.add(data.jarFilename, ['out'])
 
@@ -255,8 +255,8 @@ class JavaTargetHandler(craftr.TargetHandler):
         inputs += [ONEJAR_FILENAME]
       else:
         raise ValueError('invalid bundleType: {!r}'.format(data.bundleType))
-      action = target.add_action('java.bundle', commands=[command])
-      build = action.add_buildset()
+      bundle_action = target.add_action('java.bundle', commands=[command])
+      build = bundle_action.add_buildset()
       build.files.add(inputs, ['in'])
       build.files.add(data.bundleFilename, ['out'])
 
@@ -267,14 +267,14 @@ class JavaTargetHandler(craftr.TargetHandler):
       command += ['-cp', path.pathsep.join(classpath)]
       command += [data.mainClass]
       action = target.add_action('java.run', commands=[command],
-        explicit=True, syncio=True, output=False)
+        deps=[jar_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
 
     if data.bundleFilename and data.mainClass:
       # An action to execute the bundled JAR.
       command = list(data.runPrefix or ['java']) + ['-jar', data.bundleFilename]
       action = target.add_action('java.runBundle', commands=[command],
-        explicit=True, syncio=True, output=False)
+        deps=[bundle_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
 
 
