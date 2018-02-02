@@ -204,7 +204,7 @@ class PropertySet:
     """
 
     ns = Namespace(scope + ' [resolved]')
-    for prop in self._properties[scope].values():
+    for prop in self._properties.get(scope, {}).values():
       setattr(ns, prop.name, self.get_property(prop.fullname))
     return ns
 
