@@ -484,9 +484,13 @@ class Action:
   def identifier(self):
     return '{}:{}'.format(self.target, self.name)
 
-  def add_buildset(self, name=None):
-    buildset = BuildSet(name)
-    self.builds.append(buildset)
+  def add_buildset(self, buildset=None, name=None):
+    if buildset is not None:
+      assert isinstance(buildset, BuildSet)
+      self.builds.append(buildset)
+    else:
+      buildset = BuildSet(name)
+      self.builds.append(buildset)
     return buildset
 
   def all_files_tagged(self, *tags):
