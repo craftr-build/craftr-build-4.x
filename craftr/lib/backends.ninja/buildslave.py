@@ -141,6 +141,8 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
 
   # Used to print the command-list on failure.
   def print_command_list(current=-1):
+    if node['cwd']:
+      error('Working directory:', os.getcwd())
     error('Command list:'.format(node_name))
     for i, cmd in enumerate(commands):
       error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
