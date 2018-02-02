@@ -1,3 +1,5 @@
 .env*/
 build/
 *.egg-info
+*.obj
+*.pdb
