@@ -1,0 +1,56 @@
+project "python"
+
+eval import sys
+options:
+  str pythonBin = sys.executable.replace('\\', '/')  # for shlex
+
+eval:
+  import json
+  import shlex
+  import subprocess
+  from craftr import path
+
+  def get_python_config(python_bin):
+    # TODO: Cache result
+    pyline = 'import json, distutils.sysconfig; '\
+      'print(json.dumps(distutils.sysconfig.get_config_vars()))'
+    command = shlex.split(python_bin) + ['-c', pyline]
+    output = subprocess.check_output(command, shell=True).decode()
+    config = json.loads(output)
+    config['_PYTHON_BIN'] = python_bin
+
+    # LIBDIR seems to be absent from Windows installations, so we
+    # figure it from the prefix.
+    if OS.type == 'nt' and 'LIBDIR' not in config:
+      config['LIBDIR'] = path.join(config['prefix'], 'libs')
+
+    config.setdefault('DEFINES', [])
+
+    # The name of the Python library is something like "libpython2.7.a",
+    # but we only want the "python2.7" part. Also take the library flags
+    # m, u and d into account (see PEP 3149).
+    if 'LIBRARY' in config:
+      lib = re.search('python\d\.\d(?:d|m|u){0,3}', config['LIBRARY'])
+      if lib:
+        target.impl.syslibs.append(lib.group(0))
+    elif OS.type == 'nt':
+      # This will make pyconfig.h nominate the correct .lib file.
+      config['DEFINES'] += ['MS_COREDLL']
+
+    return config
+
+  cfg = get_python_config(options.pythonBin)
+
+  files_dir = path.canonical(__file__ + '/../../tools.python.freeze/Files')
+  frozen_main_srcs = [
+    path.join(files_dir, 'frozenmain-' + sys.version[:3] + '.c'),
+    path.join(files_dir, 'frozen_dllmain-' + sys.version[:3] + '.c')
+  ]
+
+export target "python":
+  dependency "cxx"
+  export:
+    cxx.includes = [cfg['INCLUDEPY']]
+    cxx.defines = cfg['DEFINES']
+    cxx.staticLibraries = [cfg['LIBRARY']] if 'LIBRARY' in cfg else []
+    cxx.libraryPaths = [cfg['LIBDIR']]
