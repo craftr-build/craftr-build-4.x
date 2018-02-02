@@ -1,0 +1,41 @@
+project "tools.python.freeze" v1.0.0
+eval:
+  import argparse
+  import subprocess
+  import sys
+  from craftr import path
+
+  error = lambda *a: print(*a, file=sys.stderr)
+
+  def get_argument_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--python', help='Path to the Python executable. Defaults to the Python version that runs Craftr.')
+    parser.add_argument('argv', nargs='...', help='Additional arguments to pass to the freeze script.')
+    return parser
+
+  def main(argv=None):
+    parser = get_argument_parser()
+    args = parser.parse_args(argv)
+    if args.python:
+      args.python = shlex.split(args.python)
+    else:
+      args.python = [sys.executable]
+
+    # Determine the Python version.
+    version = subprocess.check_output(args.python + ['--version'],
+      stderr=subprocess.STDOUT).decode()
+    version = version.strip().split()[1][0]
+    if version not in ('2', '3'):
+      error('fatal: weird Python version: {!r}'.format(version))
+      return 1
+
+    # As an artifact of passing the arguments through via the Craftr CLI,
+    # the positional argument separator may still be in the argument list.
+    if args.argv[0] == '--':
+      args.argv.pop(0)
+
+    freeze = 'freeze-2.7' if version == '2' else 'freeze-3.6'
+    freeze = path.join(path.dir(__file__), 'Tools', freeze, 'freeze.py')
+    command = args.python + [freeze] + args.argv
+    print(command)
+    return subprocess.call(command)

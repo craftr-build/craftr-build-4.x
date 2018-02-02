@@ -253,10 +253,10 @@ def main():
     includes = ['-I' + incldir, '-I' + config_h_dir]
 
     # sanity check of directories and files
-    check_dirs = [prefix, exec_prefix, binlib, incldir]
+    check_dirs = [prefix, exec_prefix]
     if not win:
         # These are not directories on Windows.
-        check_dirs = check_dirs + extensions
+        check_dirs = check_dirs + extensions + [binlib, incldir]
     for dir in check_dirs:
         if not os.path.exists(dir):
             usage('needed directory %s not found' % dir)
