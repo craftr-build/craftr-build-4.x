@@ -83,6 +83,7 @@ target "main":
 #### Vala
 
 ```python
+# craftr --configure --build main:vala.run
 project "vala_helloworld"
 target "main":
   dependency "vala"
