@@ -93,6 +93,7 @@ import modulefinder
 import getopt
 import os
 import sys
+import sysconfig
 
 
 # Import the freeze-private modules
@@ -235,10 +236,12 @@ def main():
             binlib = os.path.join(exec_prefix, 'libs')
             incldir = os.path.join(prefix, 'include')
         else:
-            binlib = os.path.join(exec_prefix,
-                                'lib', 'python%s' % version,
-                                'config-%s' % flagged_version)
-            incldir = os.path.join(prefix, 'include', 'python%s' % flagged_version)
+            #binlib = os.path.join(exec_prefix,
+            #                    'lib', 'python%s' % version,
+            #                    'config-%s' % flagged_version)
+            #incldir = os.path.join(prefix, 'include', 'python%s' % flagged_version)
+            binlib = sysconfig.get_config_var('LIBPL')
+            incldir = sysconfig.get_config_var('INCLUDEPY')
         config_h_dir = os.path.join(exec_prefix, 'include',
                                     'python%s' % flagged_version)
         config_c_in = os.path.join(binlib, 'config.c.in')
