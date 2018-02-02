@@ -152,11 +152,6 @@ def quote(s, for_ninja=False):
   return s
 
 
-def make_rule_description(action):
-  commands = (' '.join(map(quote, x)) for x in action.commands)
-  return ' && '.join(commands)
-
-
 def make_rule_name(graph, action):
   return re.sub('[^\d\w_\.]+', '_', action.identifier())
 
@@ -190,7 +185,6 @@ def export_action(build_directory, writer, graph, action, non_explicit):
   writer.rule(
     rule_name,
     command,
-    description=make_rule_description(action),
     pool = 'console' if action.syncio else None,  # TODO: Support for pools in modules
     depfile = action.depfile,
     deps = 'gcc' if action.depfile else ('msvc' if action.deps_prefix else None)
