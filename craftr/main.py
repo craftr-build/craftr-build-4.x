@@ -41,7 +41,7 @@ def get_argument_parser():
   parser.add_argument('--clean', action='store_true', help='Enable the clean step. This step is always executed after the configure step and before the build step, if either are enabled.')
   parser.add_argument('--recursive', action='store_true', help='Enable recursive target cleanup. Only with --clean')
   parser.add_argument('-b', '--build', action='store_true', help='Enable the build step. This step is always executed after the configure step, if it is also enabled.')
-  parser.add_argument('targets', nargs='*', metavar='TARGET', help='Zero or more targets to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
+  parser.add_argument('targets', nargs='...', metavar='TARGET', help='Zero or more targets to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   parser.add_argument('-t', '--tool', nargs='...', help='Run a tool with the specified arguments.')
   return parser
 
@@ -55,7 +55,10 @@ def _main(argv=None):
   if args.debug and args.release:
     parser.error('--debug: can not be combined with --release')
   if not (args.clean or args.build) and args.targets:
-    parser.error('TARGET: can only be specified with --clean and/or --build')
+    if args.tool:
+      args.tool += args.targets
+    else:
+      parser.error('TARGET: can only be specified with --clean and/or --build')
   if not (args.clean or args.build) and args.backend_args:
     parser.error('--backend-args: can only be specified with --clean and/or --build')
   if not (args.configure or args.reconfigure) and args.file:
@@ -85,6 +88,7 @@ def _main(argv=None):
   if args.tool:
     context = Context(None, None)
     set_options(context, args.options)
+    sys.argv = ['craftr -t ' + args.tool[0]] + sys.argv[1:]
     try:
       module = context.get_module(args.tool[0])
     except dsl.ModuleNotFoundError as exc:
