@@ -229,7 +229,7 @@ class Compiler(utils.named):
 
     flags = []
     libs = list(data.staticLibraries) + list(data.dynamicLibraries) # TODO: Handle these differently?
-    libpath = list()
+    libpath = list(data.libraryPaths)
 
     # TODO: Inherit options from dependencies?
     """

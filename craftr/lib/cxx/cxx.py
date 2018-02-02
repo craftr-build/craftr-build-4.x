@@ -13,6 +13,9 @@ class CxxTargetHandler(craftr.TargetHandler):
     self.toolchain = toolchain
     self.compiler = load('./impl/' + toolchain + '.py').get_compiler(fragment)
 
+    print('Selected compiler: {} ({}) {} for {}'.format(
+      self.compiler.name, self.compiler.id, self.compiler.version, self.compiler.arch))
+
   def get_common_property_scope(self):
     return 'cxx'
 
@@ -54,6 +57,9 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # Include search paths.
     target.define_property('cxx.includes', 'StringList')
+
+    # Library search paths.
+    target.define_property('cxx.libraryPaths', 'StringList')
 
     # Paths for the dynamic linker. This is only used when running
     # the product of a build target via Craftr.

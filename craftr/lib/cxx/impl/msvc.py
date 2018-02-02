@@ -106,14 +106,17 @@ class MsvcCompiler(base.Compiler):
     return result
 
   def build_compile_flags(self, lang, target, data):
+    if data.separateDebugInformation is None:
+      data.separateDebugInformation = False
+
     command = super().build_compile_flags(lang, target, data)
     if BUILD.debug:
       command += ['/Od', '/RTC1', '/FC']
       if not self.version or self.version >= '18':
         # Enable parallel writes to .pdb files.
         command += ['/FS']
-      if data.separateDebugInformation in (None, True):
-        command += ['/Zi', '/Fd${out,pdb}']
+      if data.separateDebugInformation:
+        command += ['/Zi', '/Fd${out,pdb}']  # TODO: no .pdb files generated.?
       else:
         command += ['/Z7']
     command += ['/wd' + str(x) for x in unique(data.msvcDisableWarnings)]
@@ -137,7 +140,7 @@ class MsvcCompiler(base.Compiler):
     src = next(build.files.tagged('src'))
     obj = path.setsuffix(src, '.obj')
     build.files.add(obj, ['out', 'obj'])
-    if BUILD.debug and data.separateDebugInformation in (None, True):
+    if BUILD.debug and data.separateDebugInformation:
       pdb = path.setsuffix(src, '.pdb')
       build.files.add(pdb, ['out', 'pdb', 'optional'])
 

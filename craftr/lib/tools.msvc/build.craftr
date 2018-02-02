@@ -3,7 +3,7 @@ project "tools.msvc"
 options:
   str installDir = ''
   str version = ''
-  str arch = 'x86_amd64' if OS.arch == 'x64' else 'x86'
+  str arch = 'x86' if OS.arch == 'x86' else 'x86_amd64'
   str platformType = ''
   str sdkVersion = ''
 
