@@ -1,0 +1,3 @@
+project "ocaml" v1.0.0
+
+load "./ocaml.py"

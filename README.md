@@ -55,6 +55,17 @@ target "main":
   csharp.bundle = True
 ```
 
+#### OCaml
+
+```python
+# craftr --configure --build main:ocaml.run
+project "ocaml_helloworld"
+target "main":
+  dependency "ocaml"
+  ocaml.srcs = glob('src/*.ml')
+  ocaml.standalone = True  # False to produce an OCaml bytecode file
+```
+
 ---
 
 <p align="center">Copyright &copy; 2015-2018 &nbsp; Niklas Rosenstein</p>

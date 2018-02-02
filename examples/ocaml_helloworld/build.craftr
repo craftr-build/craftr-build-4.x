@@ -1,0 +1,6 @@
+project "ocaml_helloworld"
+
+target "main":
+  dependency "ocaml"
+  ocaml.srcs = glob('src/*.ml')
+  ocaml.standalone = True
