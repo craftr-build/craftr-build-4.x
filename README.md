@@ -8,10 +8,10 @@
 <a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr/branch/master"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik/branch/master?svg=true"></a>
 
 Craftr is a modular build system inspired by [Buck], [CMake], [QBS] and
-previous versions of Craftr itself. It combines a declarative syntax
-with the ability to evaluate Python code in the build script. The backbone
-for the build process is [Ninja], however, extensions can be used to target
-other build backends.
+previous versions of Craftr itself. It combines its own domain-specific
+declaration language with Python expression. The backbone for the build
+process is [Ninja], however, extensions can be used to target other
+build backends.
 
 Craftr runs on CPython 3.3 or higher.
 
@@ -30,6 +30,9 @@ install it directly from the Git repository.
 
 ### Examples
 
+Craftr ships with support for various programming languages out of the box.
+If you miss a feature for your language, let me know!
+
 #### C#
 
 ```python
@@ -40,6 +43,16 @@ target "main":
   csharp.srcs = glob('src/*.cs')
   csharp.packages = ['Newtonsoft.JSON:10.0.3']
   csharp.bundle = True
+```
+
+#### Haskell
+
+```python
+# craftr --configure --build main:haskell.run
+project "haskell_helloworld"
+target "main":
+  dependency "haskell"
+  haskell.srcs = ['src/Main.hs']
 ```
 
 #### Java
@@ -62,7 +75,7 @@ target "main":
 project "ocaml_helloworld"
 target "main":
   dependency "ocaml"
-  ocaml.srcs = glob('src/*.ml')
+  ocaml.srcs = ['src/Main.ml']
   ocaml.standalone = True  # False to produce an OCaml bytecode file
 ```
 

@@ -20,10 +20,12 @@ class OcamlTargetHandler(craftr.TargetHandler):
     target.define_property('ocaml.compilerFlags', 'StringList')
 
   def finalize_target(self, target, data):
+    src_dir = target.directory()
     build_dir = path.join(context.build_directory, target.module().name())
+    if not data.productName:
+      data.productName = target.name() + '-' + target.module().version()
     if data.srcs:
-      if not data.productName:
-        data.productName = target.name() + '-' + target.module().version()
+      data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName)
       if data.standalone:
         data.productFilename += exe_suffix
