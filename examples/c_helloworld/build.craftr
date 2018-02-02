@@ -1,0 +1,5 @@
+project "myproject"
+
+target "main":
+  dependency "cxx"
+  cxx.srcs = ['main.c']

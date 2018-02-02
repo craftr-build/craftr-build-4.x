@@ -34,6 +34,16 @@ Craftr ships with support for various programming languages out of the box.
 Note that the support for some languages is still very basic. If you miss a
 feature, let me know!
 
+#### C/C++
+
+```python
+# craftr --configure --build main:cxx.run
+project "myproject"
+target "main":
+  dependency "cxx"
+  cxx.srcs = ['main.c']
+```
+
 #### C#
 
 ```python
