@@ -1,0 +1,3 @@
+project "python" v1.0.0
+
+load "./python.py"

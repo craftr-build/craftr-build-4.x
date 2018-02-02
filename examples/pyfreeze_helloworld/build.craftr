@@ -1,0 +1,5 @@
+project "pyfreeze_helloworld"
+
+target "main":
+  dependency "python"
+  python.freezeScript = 'main.py'
