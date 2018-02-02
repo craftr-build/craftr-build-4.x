@@ -31,7 +31,8 @@ install it directly from the Git repository.
 ### Examples
 
 Craftr ships with support for various programming languages out of the box.
-If you miss a feature for your language, let me know!
+Note that the support for some languages is still very basic. If you miss a
+feature, let me know!
 
 #### C#
 
@@ -77,6 +78,15 @@ target "main":
   dependency "ocaml"
   ocaml.srcs = ['src/Main.ml']
   ocaml.standalone = True  # False to produce an OCaml bytecode file
+```
+
+#### Vala
+
+```python
+project "vala_helloworld"
+target "main":
+  dependency "vala"
+  vala.srcs = ['src/Main.vala']
 ```
 
 ---

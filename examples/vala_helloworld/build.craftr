@@ -1,0 +1,5 @@
+project "vala_helloworld"
+
+target "main":
+  dependency "vala"
+  vala.srcs = ['src/Main.vala']
