@@ -19,7 +19,15 @@ eval:
     if args.python:
       args.python = shlex.split(args.python)
     else:
-      args.python = [sys.executable]
+      # If we're inside a virtual env, the freeze tool won't work properly
+      # (or to be precise, the product of the freeze tool will get an error
+      # in site.py (missing __file__ name)).
+      if hasattr(sys, 'real_prefix'):
+        args.python = [path.join(sys.real_prefix, path.base(sys.executable))]
+      elif hasattr(sys, 'base_prefix') and base_prefix != sys.prefix:
+        args.python = [path.join(sys.base_prefix, path.base(sys.executable))]
+      else:
+        args.python = [sys.executable]
 
     # Determine the Python version.
     version = subprocess.check_output(args.python + ['--version'],

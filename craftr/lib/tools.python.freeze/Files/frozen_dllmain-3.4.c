@@ -45,6 +45,7 @@ changed, here is a snippet from the pythoncom extension module.
 
 ***************************************************************************/
 #include "windows.h"
+#include "pymacro.h"
 
 static char *possibleModules[] = {
     "pywintypes",
