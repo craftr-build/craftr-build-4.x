@@ -1,11 +1,20 @@
 
 import craftr
+from craftr import path
 
 # TODO: Support precompiled headers.
 # TODO: Support compiler-wrappers like ccache.
 # TODO: Support linker-wrappers (eg. for coverage).
 
 class CxxTargetHandler(craftr.TargetHandler):
+
+  def __init__(self, toolchain=None):
+    toolchain, fragment = (toolchain or options.toolchain).partition('#')[::2]
+    self.toolchain = toolchain
+    self.compiler = load('./impl/' + toolchain + '.py').get_compiler(fragment)
+
+  def get_common_property_scope(self):
+    return 'cxx'
 
   def setup_target(self, target):
     # Largely inspired by the Qbs cpp module.
@@ -14,12 +23,15 @@ class CxxTargetHandler(craftr.TargetHandler):
     # General
     # =======================
 
+    # Specifies the target type. Either `executable` or `library`.
+    target.define_property('cxx.type', 'String', 'executable')
+
     # The C and/or C++ input files for the target. If this property is not
     # set, the target will not be considered a C/C++ build target.
     target.define_property('cxx.srcs', 'StringList')
 
     # Allow the link-step to succeed even if symbols are unresolved.
-    target.define_property('cxx.allowUnresolvedSymbols', 'StringList', False)
+    target.define_property('cxx.allowUnresolvedSymbols', 'Bool', False)
 
     # Combine C/C++ sources into a single translation unit. Note that
     # many projects can not be compiled in this fashion.
@@ -37,6 +49,8 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # Preprocessor definitions to set when compiling.
     target.define_property('cxx.defines', 'StringList')
+    target.define_property('cxx.definesForStaticBuild', 'StringList')
+    target.define_property('cxx.definesForSharedBuild', 'StringList')
 
     # Include search paths.
     target.define_property('cxx.includes', 'StringList')
@@ -68,7 +82,10 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # Flags that are added to all compilation steps, independent of
     # the language.
-    target.define_property('cxx.compilerFlags', 'String')
+    target.define_property('cxx.compilerFlags', 'StringList')
+
+    # Specifies the way the library prefers to be linked. Either 'static' or 'dynamic'.
+    target.define_property('cxx.preferredLinkage', 'String')
 
     # Flags that are added to C compilation.
     target.define_property('cxx.cFlags', 'String')
@@ -79,6 +96,9 @@ class CxxTargetHandler(craftr.TargetHandler):
     # The version of the C standard. If left undefined, the compiler's
     # default value is used. Valid values include `c89`, `c99` and `c11`.
     target.define_property('cxx.cStd', 'String')
+
+    # The C standard library to link to.
+    target.define_property('cxx.cStdlib', 'String')
 
     # The version of the C++ standard. If left undefined, the compiler's
     # default value is used. Valid values include `c++98`, `c++11`
@@ -168,6 +188,12 @@ class CxxTargetHandler(craftr.TargetHandler):
     # Map of defines by platform ID.
     #target.define_property('cxx.definesByPlatform', 'Map[String, Map[String]]')
 
+    # Save temporary build prodcuts. Note that some toolchains (such as MSVC)
+    # can not compile AND actually build at the same time.
+    target.define_property('cxx.saveTemps', 'Bool', False)
+
+    self.compiler.setup_target(target)
+
   def setup_dependency(self, dep):
     # If False, the dependency will not be linked, even if it is a valid
     # input for a linker rule. This property affects library dependencies only.
@@ -179,9 +205,57 @@ class CxxTargetHandler(craftr.TargetHandler):
     # a dynamic library from static libraries.
     dep.define_property('cxx.linkWholeArchive', 'Bool', False)
 
+  def finalize_target(self, target, data):
+    src_dir = target.directory()
+    build_dir = path.join(context.build_directory, target.module().name())
+
+    data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
+    data.includes = [path.canonical(x, src_dir) for x in data.includes]
+    data.prefixHeaders = [path.canonical(x, src_dir) for x in data.prefixHeaders]
+
+    # TODO: Determine whether we build an executable, static library
+    #       or shared library.
+    data.productFilename = target.name() + '-' + target.module().version()
+    target.outputs().add(data.productFilename, ['exe'])
+
   def translate_target(self, target, data):
-    # TODO
-    pass
+
+    c_srcs = []
+    cpp_srcs = []
+    for filename in data.srcs:
+      if filename.endswith('.c'): c_srcs.append(filename)
+      if filename.endswith('.cpp') or filename.endswith('.cc'):
+        cpp_srcs.append(filename)
+
+    compile_actions = []
+    obj_files = []
+    for (srcs, lang) in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
+      if not srcs: continue
+      command = self.compiler.build_compile_flags(lang, target, data)
+      action = target.add_action('cxx.compile' + lang.capitalize(),
+        environ=self.compiler.compiler_env, commands=[command], input=True)
+      for src in srcs:
+        build = action.add_buildset()
+        build.files.add(src, ['in', 'src', 'src.' + lang])
+        self.compiler.update_compile_buildset(build, target, data)
+        obj_files += build.files.tagged('out', 'obj')
+      compile_actions.append(action)
+
+    link_action = None
+    if obj_files:
+      command = self.compiler.build_link_flags('cpp' if cpp_srcs else 'c', target, data)
+      link_action = target.add_action('cxx.link', commands=[command],
+        environ=self.compiler.linker_env, deps=compile_actions)
+      build = link_action.add_buildset()
+      build.files.add(obj_files, ['in', 'obj'])
+      build.files.add(data.productFilename, ['out', 'product'])
+      self.compiler.update_link_buildset(build, target, data)
+
+    if link_action and data.type == 'executable':
+      command = [data.productFilename]
+      action = target.add_action('cxx.run', commands=[command],
+        explicit=True, syncio=True, output=False)
+      action.add_buildset()
 
 
 module.register_target_handler(CxxTargetHandler())
