@@ -30,6 +30,18 @@ install it directly from the Git repository.
 
 ### Examples
 
+#### C#
+
+```python
+# craftr --configure --build main:csharp.runBundle
+project "csharp_helloworld"
+target "main":
+  dependency "csharp"
+  csharp.srcs = glob('src/*.cs')
+  csharp.packages = ['Newtonsoft.JSON:10.0.3']
+  csharp.bundle = True
+```
+
 #### Java
 
 ```python
@@ -41,18 +53,6 @@ target "main":
   java.artifacts = ['org.tensorflow:tensorflow:1.4.0']
   java.mainClass = 'Main'
   java.bundleType = 'merge'  # Or 'onejar'
-```
-
-#### C#
-
-```python
-# craftr --configure --build main:csharp.runBundle
-project "csharp_helloworld"
-target "main":
-  dependency "csharp"
-  csharp.srcs = glob('src/*.cs')
-  csharp.packages = ['Newtonsoft.JSON:10.0.3']
-  csharp.bundle = True
 ```
 
 #### OCaml
