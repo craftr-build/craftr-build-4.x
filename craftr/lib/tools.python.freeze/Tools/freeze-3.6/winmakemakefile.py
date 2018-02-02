@@ -73,7 +73,7 @@ def realwork(vars, moddefns, target):
 
     print('# The following line assumes you have built Python using the standard instructions')
     print('# Otherwise fix the following line to point to the library.')
-    print('pythonlib = "$(pythonhome)/pcbuild/python%s$(debug_suffix).lib"' % version_suffix)
+    print('pythonlib = "$(pythonhome)/libs/python%s$(debug_suffix).lib"' % version_suffix)
     print()
 
     # We only ever write one "entry point" symbol - either

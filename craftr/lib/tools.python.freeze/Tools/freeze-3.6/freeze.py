@@ -211,7 +211,13 @@ def main():
         else:
             exec_prefix = sys.exec_prefix
     if not prefix:
-        prefix = sys.prefix
+        # Account for virtualenv
+        if hasattr(sys, 'real_prefix'):
+            prefix = sys.real_prefix
+        elif hasattr(sys, 'base_prefix'):
+            prefix = sys.base_prefix  # Could be the same as sys.prefix
+        else:
+            prefix = sys.prefix
 
     # determine whether -p points to the Python source tree
     ishome = os.path.exists(os.path.join(prefix, 'Python', 'ceval.c'))
@@ -251,6 +257,12 @@ def main():
     supp_sources = []
     defines = []
     includes = ['-I' + incldir, '-I' + config_h_dir]
+
+    FILESDIR = os.path.normpath(os.path.join(__file__, '../../../Files'))
+    if not os.path.isfile(frozenmain_c):
+        frozenmain_c = os.path.join(FILESDIR, 'frozenmain-' + sys.version[:3] + '.c')
+    if not os.path.isfile(frozendllmain_c):
+        frozendllmain_c = os.path.join(FILESDIR, 'frozen_dllmain-' + sys.version[:3] + '.c')
 
     # sanity check of directories and files
     check_dirs = [prefix, exec_prefix]
