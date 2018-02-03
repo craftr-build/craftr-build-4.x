@@ -1,228 +1,274 @@
+"""
+This module provides classes to describe a collection of typed properties,
+and applying these properties to containers for these properties. Property
+values types are validated immediately.
+"""
 
-def duplicate_namespace(ns, scope_name=None):
-  new = Namespace(scope_name or ns.__name__)
-  for key, value in vars(ns).items():
-    if not key.startswith('_'):
-      setattr(new, key, value)
-  return new
-
-
-class Namespace:
-
-  def __init__(self, scope_name=None):
-    self.__name__ = scope_name
-
-  def __repr__(self):
-    return 'Namespace({})'.format(self.__name__ or '<unnamed>')
+import collections
 
 
-class Property:
+class Prop:
 
-  def __init__(self, name, type, default=None, readonly=False, inheritable=True):
-    if not hasattr(self, '_typecheck_' + type):
-      raise ValueError('invalid property type: {}'.format(type))
-    self.scope, self.name = name.split('.')
+  def __init__(self, name, type, default=NotImplemented, optional=True, readonly=False):
+    if default is NotImplemented:
+      if not optional:
+        raise ValueError('property is not optional, need default value')
+    self.name = name
     self.type = type
     self.default = default
+    self.optional = optional
     self.readonly = readonly
-    self.inheritable = inheritable
 
-    if type == 'StringList' and default is None:
-      self.default = ()
+  def get_default(self):
+    if self.default is NotImplemented:
+      return self.type.default()
+    default = self.default
+    if callable(default):
+      default = default()
+    return self.coerce(default)
 
-  def __repr__(self):
-    return 'Property(name={!r}, type={!r}, readonly={!r})'.format(
-      self.name, self.type, self.readonly)
-
-  @property
-  def fullname(self):
-    return self.scope + '.' + self.name
-
-  def typecheck(self, value):
-    if value is None:
-      return None
-    checker = getattr(self, '_typecheck_' + self.type)
-    try:
-      return checker(value)
-    except ValueError as exc:
-      raise ValueError('{}.{}: {}'.format(self.scope, self.name, exc))
-
-  def inherit(self, value, other_values):
-    method = getattr(self, '_inherit_' + self.type, None)
-    if method is None:
-      if value is not None:
-        return value
-      for value in other_values:
-        if value is not None:
-          return value
-      return None
-    return method(value, other_values)
-
-  @staticmethod
-  def _typecheck_String(value):
-    if not isinstance(value, str):
-      raise ValueError('expected String, got {} instead'.format(type(value).__name__))
+  def coerce(self, value):
+    if not self.optional or value is not None:
+      value = self.type.coerce(self.name, value)
     return value
 
+
+class PropType:
+  """
+  Base class for property datatype descriptors.
+  """
+
+  def coerce(self, name, value):
+    """
+    Called whenever a value is assigned to a property. This method is
+    supposed to check the type of *value* and eventually coerce it to the
+    proper Python datatype.
+    """
+    raise NotImplementedError
+
+  def default(self):
+    raise NotImplementedError
+
   @staticmethod
-  def _typecheck_StringList(value):
+  def typeerror(name, expected, value):
+    return TypeError('{}: expected {}, got {}'.format(
+      name, expected, type(value).__name__))
+
+
+class Bool(PropType):
+
+  def __init__(self, strict=True):
+    self.strict = strict
+
+  def coerce(self, name, value):
+    if self.strict and type(value) != bool:
+      raise self.typeerror(name, 'bool', value)
+    return bool(value)
+
+  def default(self):
+    return False
+
+
+class Integer(PropType):
+
+  def __init__(self, strict=False):
+    self.strict = strict
+
+  def coerce(self, name, value):
+    if self.strict and type(value) != int:
+      raise self.typeerror(name, 'int', value)
+    try:
+      return int(value)
+    except (ValueError, TypeError):
+      raise self.typeerror(name, 'int', value)
+
+  def default(self):
+    return 0
+
+
+class String(PropType):
+
+  def coerce(self, name, value):
+    if not isinstance(value, str):
+      raise self.typeerror(name, 'string', value)
+    return value
+
+  def default(self):
+    return ''
+
+
+class List(PropType):
+
+  def __init__(self, item_type=None):
+    self.item_type = item_type
+
+  def coerce(self, name, value):
     if isinstance(value, tuple):
       value = list(value)
-    if not isinstance(value, list):
-      raise ValueError('expected StringList, got {} instead'.format(type(value).__name__))
-    for item in value:
-      if not isinstance(item, str):
-        raise ValueError('expected String in StringList, found {}'.format(type(item).__name__))
+    elif not isinstance(value, list):
+      raise self.typeerror(name, 'list', value)
+    if self.item_type:
+      value = [self.item_type.coerce(name + '[' + str(i) + ']', x)
+               for i, x in enumerate(value)]
     return value
 
-  @staticmethod
-  def _typecheck_Bool(value):
-    if not isinstance(value, bool):
-      raise ValueError('expected Bool, got {}'.format(type(value).__name__))
+  def default(self):
+    return []
+
+
+class Dict(PropType):
+
+  def __init__(self, key_type=None, value_type=None):
+    self.key_type = key_type
+    self.value_type = value_type
+
+  def coerce(self, name, value):
+    if not isinstance(value, dict):
+      raise self.typeerror(name, 'dict', value)
+    if self.key_type:
+      value = {self.key_type.coerce(name + '.key(' + repr(k) + ')', k): v
+               for k, v in value.items()}
+    if self.value_type:
+      value = {k: self.value_type.coerce(name + '[' + repr(k) + ']', v)
+               for k, v in value.items()}
     return value
 
-  @staticmethod
-  def _typecheck_Int(value):
-    if type(value) is not int:  # bool is a subclass
-      raise ValueError('expected Int, got {}'.format(type(value).__name__))
-    return value
-
-  @staticmethod
-  def _inherit_StringList(value, other_values):
-    if value is None:
-      result = []
-    else:
-      result = list(value)
-    for value in other_values:
-      if value is not None:
-        result += value
-    return result
+  def default(self):
+    return {}
 
 
 class PropertySet:
+  """
+  A property set is a collection of property declarations that can be used
+  in a #Properties object.
+  """
 
-  def __init__(self, supports_exported_members=False):
-    self._properties = {}
-    self._namespaces = {}
-    self._supports_exported_members = supports_exported_members
+  class Scope:
+
+    def __init__(self, name):
+      if '.' in name:
+        raise ValueError('invalid scope name: {!r}'.format(name))
+      self.name = name
+      self.props = {}
+
+    def __repr__(self):
+      return '<PropertySet.Scope name={!r} len(props)={}>'.format(
+        self.name, len(self.props))
+
+    def __getitem__(self, key):
+      return self.props[key]
+
+    def __contains__(self, key):
+      return key in self.props
+
+    def __iter__(self):
+      return self.props.keys()
+
+    def add(self, prop_name, *args, **kwargs):
+      full_name = self.name + '.' + prop_name
+      if '.' in prop_name:
+        raise ValueError('invalid property name: {!r}'.format(full_name))
+      if prop_name in self.props:
+        raise ValueError('property name already used: {!r}'.format(full_name))
+      prop = Prop(full_name, *args, **kwargs)
+      self.props[prop_name] = prop
+      return prop
+
+  def __init__(self):
+    self.scopes = {}
 
   def __getitem__(self, key):
-    return self.namespace(key)
+    return self.scopes[key]
 
-  def supports_exported_members(self):
-    return self._supports_exported_members
+  def __contains__(self, key):
+    return key in self.scopes
 
-  def define_property(self, name, type, default=None, readonly=False, inheritable=True):
-    prop = Property(name, type, readonly, inheritable)
-    self._properties.setdefault(prop.scope, {})[prop.name] = prop
-    if prop.scope not in self._namespaces:
-      ns = Namespace(prop.scope)
-      if self._supports_exported_members:
-        ns.__exported__ = Namespace(prop.scope + '[export]')
-      self._on_new_namespace(prop.scope, ns)
-      self._namespaces[prop.scope] = ns
-    else:
-      ns = self._namespaces[prop.scope]
-    self._on_new_property(prop, ns)
-    setattr(ns, prop.name, default)
-    if self._supports_exported_members:
-      setattr(ns.__exported__, prop.name, None)
+  def __repr__(self):
+    return '<PropertySet len(scopes)={}>'.format(len(self.scopes))
 
-  def properties(self, scope=None):
-    if scope is not None:
-      yield from self._properties[scope].values()
-    else:
-      for props in self._properties.values():
-        yield from props.values()
+  def __iter__(self):
+    return self.scopes.keys()
 
-  def property(self, prop_name):
-    scope, name = prop_name.split('.')
-    try:
-      props = self._properties[scope]
-    except KeyError:
-      # TODO: Raise scope does not exist
-      raise KeyError(prop_name)
-    try:
-      return props[name]
-    except KeyError:
-      raise KeyError(prop_name)
-
-  def scopes(self):
-    return self._properties.keys()
-
-  def namespace(self, scope):
-    return self._namespaces[scope]
-
-  def namespaces(self):
-    for scope in self.scopes():
-      yield scope, self._namespaces[scope]
-
-  def get_property(self, property, default=None, inherit=None, export=False):
-    scope, name = property.split('.')
-    if scope not in self._properties:
-      raise KeyError('scope does not exist: {}'.format(scope))
-    props = self._properties[scope]
-    if name not in props:
-      raise KeyError('property does not exist: {}'.format(property))
-    prop = props[name]
-    namespace = self._namespaces[scope]
-    if export and self._supports_exported_members:
-      if inherit:
-        raise RuntimeError('inherit must be false when using export=True')
-      namespace = namespace.__exported__
-
-    # Retrieve the value and perform a type check.
-    value = getattr(namespace, name)
-    try:
-      value = prop.typecheck(value)
-    except ValueError as exc:
-      raise InvalidPropertyValue(self, str(exc))
-
-    # Iterator that yields inherited property values -- #Property.inherit()
-    # will receive this iterator and may choose to use it or not. Currently,
-    # this is used for merging lists.
-    def iter_inheritance():
-      if self._supports_exported_members:
-        yield self.get_property(property, inherit=False, export=True)
-      for propset in self._inherited_propsets():
-        try:
-          yield propset.get_property(property, inherit=False, export=True)
-        except KeyError:
-          pass
-
-    if inherit is None:
-      inherit = False if export else prop.inheritable
-    if inherit:
-      value = prop.inherit(value, iter_inheritance())
-    if value is None:
-      value = default
-    return value
-
-  def get_properties(self, scope):
-    """
-    Fills a #props.Namespace with all property values defined in that scope.
-    """
-
-    ns = Namespace(scope + ' [resolved]')
-    for prop in self._properties.get(scope, {}).values():
-      setattr(ns, prop.name, self.get_property(prop.fullname))
-    return ns
-
-  def _inherited_propsets(self):
-    return; yield
-
-  def _on_new_namespace(self, scope, ns):
-    pass
-
-  def _on_new_property(self, prop, ns):
-    pass
+  def add(self, scope_name):
+    if scope_name in self.scopes:
+      raise ValueError('scope already exists: {!r}'.format(scope_name))
+    scope = self.Scope(scope_name)
+    self.scopes[scope_name] = scope
+    return scope
 
 
-class InvalidPropertyValue(ValueError):
+class Properties:
+  """
+  A container for property values as declared in a #PropertySet.
+  """
 
-  def __init__(self, propset, message):
+  class Scope:
+
+    def __init__(self, scopedef):
+      assert isinstance(scopedef, PropertySet.Scope), type(scopedef)
+      self.scopedef = scopedef
+      self.values = {}
+
+    def __repr__(self):
+      return '<Properties.Scope name={!r}>'.format(self.scopedef.name)
+
+    def __getitem__(self, key):
+      try:
+        return self.values[key]
+      except KeyError:
+        if key in self.scopedef:
+          prop = self.scopedef[key]
+          value = self.values[key] = prop.get_default()
+          return value
+
+    def __setitem__(self, key, value):
+      prop = self.scopedef[key]
+      self.values[key] = prop.coerce(value)
+
+    def __contains__(self, key):
+      return key in self.scopedef
+
+    def __iter__(self):
+      return iter(self.property_scope)
+
+    @property
+    def name(self):
+      return self.scopedef.name
+
+  def __init__(self, propset):
     self.propset = propset
-    self.message = message
+    self.scopes = {}
 
-  def __str__(self):
-    return '{}: {}'.format(self.propset, self.message)
+  def __getitem__(self, key):
+    if '.' in key:
+      scope_name, prop_name = key.split('.', 1)
+      scope = self.scope(scope_name)
+      try:
+        return scope[prop_name]
+      except KeyError:
+        raise KeyError(key)
+    else:
+      raise KeyError(key)
+
+  def __setitem__(self, key, value):
+    if '.' in key:
+      scope_name, prop_name = key.split('.', 1)
+      scope = self.scope(scope_name)
+      scope[prop_name] = value
+    else:
+      raise KeyError(key)
+
+  def __contains__(self, key):
+    return key in self.scopes
+
+  def __iter__(self):
+    return self.scopes.keys()
+
+  def scope(self, name):
+    try:
+      result = self.scopes[name]
+    except KeyError:
+      if name not in self.propset:
+        raise
+      result = self.scopes[name] = self.Scope(self.propset[name])
+    return result

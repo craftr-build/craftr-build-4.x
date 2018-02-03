@@ -5,4 +5,3 @@ __version__ = '3.0.1-dev'
 from . import path
 from .backend import BuildBackend
 from .core import TargetHandler
-from .props import Namespace
