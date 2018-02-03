@@ -1,3 +1,6 @@
+"""
+This module provides the core classes for representing the build graph.
+"""
 
 import collections
 import hashlib
@@ -5,6 +8,7 @@ import json
 import os
 import re
 import sys
+import types
 
 from . import path, props
 from .common import BuildSet, FileSet
@@ -34,58 +38,65 @@ def validate_action_name(name):
 Pool = collections.namedtuple('Pool', 'name depth')
 
 
-class Options(props.PropertySet):
+class Context:
   """
-  Represents options.
-  """
-
-  def __repr__(self):
-    return 'Options()'
-
-
-class Module(props.PropertySet):
-  """
-  Represents a module.
+  Represents the context which contains all modules and target handlers.
   """
 
-  def __init__(self, name, version, directory):
+  def __init__(self, build_dir, build_variant, module_class=None,
+               target_class=None, dependency_class=None):
+    self.build_dir = build_dir
+    self.build_variant = build_variant
+    self.module_class = module_class or Module
+    self.target_class = target_class or Target
+    self.dependency_class = dependency_class or Dependency
+    self.target_props = props.PropertySet()
+    self.dependency_props = props.PropertySet()
+    self.handlers = collections.OrderedDict()
+
+    self.target_class.init_props(self.target_props)
+    self.dependency_class.init_props(self.dependency_props)
+
+  def register_handler(self, handler):
+    assert isinstance(handler, TargetHandler)
+    if handler.name in self.handlers:
+      raise ValueError('target handler name {!r} already used'.format(handler.name))
+    self.handlers[handler.name] = handler
+
+
+class Module:
+  """
+  Represents a Craftr module.
+  """
+
+  def __init__(self, context, name, version, directory):
     super().__init__()
     validate_module_name(name)
-    self._name = name
-    self._version = version
-    self._directory = directory
-    self._targets = collections.OrderedDict()
-    self._pools = collections.OrderedDict()
-    self._options = Options()
-    self._target_handlers = []
-    self._eval_namespace = props.Namespace('module "{}"'.format(name))
-    self._eval_namespace.module = self
+    self.context = context
+    self.name = name
+    self.version = version
+    self.directory = directory
+    self.targets = collections.OrderedDict()
+    self.pools = collections.OrderedDict()
+    self.eval_namespace = types.ModuleType('module "{}"'.format(name))
+    self.eval_namespace.module = self
 
   def __repr__(self):
     return 'Module({!r} v{})'.format(self._name, self._version)
 
-  def name(self):
-    return self._name
-
-  def version(self):
-    return self._version
-
-  def directory(self):
-    return self._directory
-
-  def targets(self, exported_only=False):
+  def iter_targets(self, exported_only=False):
     for target in self._targets.values():
       if not exported_only or target.is_exported():
         yield target
 
-  def target(self, name):
+  def get_target(self, name):
     if name not in self._targets:
       # TODO: A separate exception type
       raise RuntimeError('target {!r} does not exist'.format(self._name + ':' + name))
     return self._targets[name]
 
-  def add_target(self, name, export=False, directory=None):
-    target = Target(self, name, export, directory or self._directory)
+  def add_target(self, name, export=False):
+    target = Target(self, name, export)
     if target.name in self._targets:
       raise RuntimeError('target already defined: {!r}'.format(self._name + ':' + target.name))
     for handler in self.target_handlers():
@@ -96,69 +107,58 @@ class Module(props.PropertySet):
   def add_pool(self, name, depth):
     self._pools[name] = Pool(name, depth)
 
-  def pool(self, name):
+  def get_pool(self, name):
     return self._pools[name]
 
-  def register_target_handler(self, handler):
-    if not isinstance(handler, TargetHandler):
-      raise TypeError('expected TargetHandler')
-    self._target_handlers.append(handler)
 
-  def target_handlers(self):
-    return iter(self._target_handlers)
-
-  def eval_namespace(self):
-    return self._eval_namespace
-
-
-class Target(props.PropertySet):
+class Targets:
   """
-  Represents a target. A target is added to a project using the `target` block.
+  Represents a build target, which can have properties, some of which can be
+  exported to be inherited by other targets, and dependencies. Every target is
+  passed through every #TargetHandler that is registered in the #Context for
+  the translation process.
+
+  A target's *eval_namespace* inherits all members from it's owning #Module,
+  though once created, the two namespaces are not linked to each other (thus
+  values set in one do not influence the other).
   """
 
-  def __init__(self, module, name, export, directory):
+  def __init__(self, module, name, is_exported):
     super().__init__(True)
     validate_target_name(name)
-    self._module = module
-    self._name = name
-    self._export = export
-    self._directory = directory
-    self._dependencies = []
-    self._outputs = FileSet()
-    self._handler_data = {}
-    self._actions = collections.OrderedDict()
-    self._output_actions = []
-    self._eval_namespace = props.duplicate_namespace(
-      module.eval_namespace(), 'target "{}"'.format(name))
-    self._eval_namespace.target = self
-    self.define_property('this.pool', 'String', None, inheritable=False)
-    self.define_property('this.syncio', 'Bool', False, inheritable=False)
-    self.define_property('this.explicit', 'Bool', False, inheritable=False)
-    self.define_property('this.directory', 'String', None, inheritable=False)
+    self.module = module
+    self.name = name
+    self.is_exported  = is_exported
+    self.dependencies = []
+    self.outputs = FileSet()
+    self.handler_data = {}
+    self.actions = collections.OrderedDict()
+    self.output_actions = []
+    self.eval_namespace = types.Module('target "{}"'.format(name))
+    self.eval_namespace.target = self
 
   def __repr__(self):
     return 'Target({!r} of {})'.format(self._name, self._module)
 
-  def module(self):
-    return self._module
-
-  def name(self):
-    return self._name
-
+  @property
   def identifier(self):
     return '{}/{}'.format(self._module.name(), self._name)
 
-  def is_exported(self):
-    return self._export
+  @property
+  def directory(self):
+    result = self.get_property('this.directory', None)
+    if result is not None and not os.path.isabs(result):
+      result = os.path.join(self.module.directory, result)
+    elif result is None:
+      result = self.module.directory
+    return result
 
-  def dependencies(self, exported_only=False):
-    for dep in self._dependencies:
-      if not exported_only or dep.is_exported():
-        yield dep
-
-  def transitive_dependencies(self):
+  def iter_dependencies(self, transitive=False, exported_only=False):
     """
-    Returns a generator for all direct and indirect dependencies.
+    Returns a generator that iterates over the dependencies of this target.
+    If *transitive* is True, the generator will also yield exported transitive
+    dependencies. If *exported_only* is #True, it will only yield dependencies
+    that are exported in this target.
     """
 
     seen = set()
@@ -170,7 +170,7 @@ class Target(props.PropertySet):
             seen.add(dep)
             yield from transitive_deps(dep)
     for dep in self._dependencies:
-      if dep not in seen:
+      if dep not in seen and (not exported_only or dep.is_exported):
         yield dep
         seen.add(dep)
         yield from transitive_deps(dep)
@@ -191,14 +191,6 @@ class Target(props.PropertySet):
         handler.setup_target(self)
     self._dependencies.append(dep)
     return dep
-
-  def directory(self):
-    result = self.get_property('this.directory', None)
-    if result is not None and not os.path.isabs(result):
-      result = os.path.join(self._directory, result)
-    elif result is None:
-      result = self._directory
-    return result
 
   def target_handlers(self):
     seen = set()
