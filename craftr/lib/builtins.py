@@ -1,7 +1,10 @@
 # This file is loaded by the craftr.main.Context where the `context`
 # variable is available.
 
-assert 'context' in globals(), 'this file should not be with Python'
+try:
+  context
+except NameError:
+  raise RuntimeError('this file should not be imported')
 
 __all__ = ['BUILD', 'OS', 'error', 'fmt', 'glob', 'load', 'option_default']
 
@@ -9,21 +12,23 @@ import collections
 import os
 import platform
 import sys
-
-from craftr import core, dsl, path, props
+import types
+from nr import path
+from nr.datastructures.chaindict import ChainDict
+from craftr import core, dsl
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
 
 
-class BuildInfo(collections.namedtuple('_BuildInfo', 'mode')):
+class BuildInfo(collections.namedtuple('_BuildInfo', 'variant')):
 
   @property
   def debug(self):
-    return self.mode == 'debug'
+    return self.variant == 'debug'
 
   @property
   def release(self):
-    return self.mode == 'release'
+    return self.variant == 'release'
 
 
 def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
@@ -32,13 +37,18 @@ def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
   parent stackframe. Raises a #RuntimeError if it can not be determined.
   """
 
+  f= sys._getframe(stackdepth+1)
   scope = sys._getframe(stackdepth+1).f_globals
-  if dependency and isinstance(scope.get('dependency'), core.Dependency):
+  if '__dict__' in scope:
+    # For code evaluated with nr.ast.dynamic_eval().
+    scope = scope['__dict__']
+  if dependency and isinstance(scope.get('self'), core.Dependency):
     return scope['dependency']
   elif target and isinstance(scope.get('target'), core.Target):
     return scope['target']
   elif module and isinstance(scope.get('module'), core.Module):
     return scope['module']
+  print(scope['module'], scope.get('module'))
   raise RuntimeError('Call context could not be determined')
 
 
@@ -90,7 +100,7 @@ def fmt(s, frame=None):
 def glob(patterns, parent=None, excludes=None):
   if not parent:
     obj = get_call_context(dependency=False)
-    parent = obj.directory()
+    parent = obj.directory
   return path.glob(patterns, parent, excludes)
 
 
@@ -106,24 +116,21 @@ def load(name):
 
   if name.startswith('./') or name.startswith('.\\') \
       or path.isabs(name):
-    ns = props.Namespace(name)
+    ns = types.ModuleType(name)
     parent_globals = sys._getframe(1).f_globals
     name = path.canonical(name, path.dir(parent_globals['__file__']))
-
-    # Initialize the builtins for the namespace.
-    context.init_namespace(ns)
-
-    # Inherit the eval namespace of the evaluating Module/Target/Dependency.
-    obj = get_call_context().eval_namespace()
-    vars(ns).update(vars(obj))
 
     # Make sure the namespace's file is set correctly.
     ns.__file__ = name
 
-    context.load_file(name, ns)
+    # Inherit the eval namespace of the evaluating Module/Target/Dependency.
+    parent_vars = context.get_exec_vars(get_call_context())
+    scope = ChainDict(vars(ns), parent_vars)
+
+    context.load_script(name, scope)
     return ns
   else:
-    return context.get_module(name).eval_namespace()
+    return context.get_module(name).eval_namespace
 
 
 def option_default(name, value):
@@ -140,4 +147,4 @@ else:
   raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 
 
-BUILD = BuildInfo(context.build_mode)
+BUILD = BuildInfo(context.build_variant)

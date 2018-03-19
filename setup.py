@@ -22,7 +22,7 @@ setup(
   packages = find_packages(),
   entry_points = dict(
     console_scripts =   [
-      'craftr = craftr.main:main'
+      'craftr = craftr.__main__:_entry_point'
     ]
   )
 )

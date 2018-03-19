@@ -1,3 +1,25 @@
+# Copyright (c) 2018 Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""
+This module implements the parser for the Craftr DSL.
+"""
 
 import collections
 import contextlib
@@ -5,9 +27,10 @@ import os
 import string
 import textwrap
 import toml
+import types
 
-from . import core, props
-from nr.parse import strex
+from .. import core
+from nr import strex
 
 
 @contextlib.contextmanager
@@ -163,14 +186,14 @@ class Pool(Node):
 
 class Target(Node):
 
-  def __init__(self, loc, name, export):
+  def __init__(self, loc, name, public):
     super().__init__(loc)
     self.name = name
-    self.export = export
+    self.public = public
     self.children = []  # Requires, Assignment, Eval
 
   def render(self, fp, depth):
-    if self.export:
+    if self.public:
       fp.write('export ')
     fp.write('target "{}":\n'.format(self.name))
     for child in self.children:
@@ -218,16 +241,16 @@ class Export(Node):
 
 class Dependency(Node):
 
-  def __init__(self, loc, name, export):
+  def __init__(self, loc, name, public):
     super().__init__(loc)
     self.name = name
-    self.export = export
+    self.public = public
     self.assignments = []
 
   def render(self, fp, depth):
     fp.write('  ' * depth)
-    if self.export:
-      fp.write('export ')
+    if self.public:
+      fp.write('public ')
     fp.write('dependency "{}"'.format(self.name))
     fp.write(':\n' if self.assignments else '\n')
     for assign in self.assignments:
@@ -251,7 +274,7 @@ class Parser:
   ]
 
   KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
-              'export', 'target', 'dependency']
+              'export', 'public', 'target', 'dependency']
 
   def parse(self, source, filename='<input>'):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
@@ -287,7 +310,7 @@ class Parser:
       self._skip(lexer)
     return project
 
-  def _parse_stmt_or_block(self, lexer, keywords=None, parent_indent=None, export=False):
+  def _parse_stmt_or_block(self, lexer, keywords=None, parent_indent=None, export=False, public=False):
     if keywords is None:
       keywords = self.KEYWORDS
     token = lexer.next('name', 'eof')
@@ -296,7 +319,7 @@ class Parser:
     loc = token.cursor
 
     # This was not prefixed by "export".
-    if not export:
+    if not export and not public:
       if (parent_indent is None and loc.colno != 0):
         raise ParseError(loc, 'unexpected indent')
       if (parent_indent is not None and loc.colno <= parent_indent):
@@ -310,9 +333,13 @@ class Parser:
         raise ParseError(loc, 'unexpected keyword "export"')
       sub_keywords = []
       if 'configure' in keywords: sub_keywords.append('configure')
+      return self._parse_stmt_or_block(lexer, sub_keywords, parent_indent, export=True)
+    if 'public' in keywords and token.value == 'public' and not lexer.accept(':'):
+      sub_keywords = []
       if 'target' in keywords: sub_keywords.append('target')
       if 'dependency' in keywords: sub_keywords.append('dependency')
-      return self._parse_stmt_or_block(lexer, sub_keywords, parent_indent, export=True)
+      return self._parse_stmt_or_block(lexer, sub_keywords, parent_indent, public=True)
+
     if token.value == 'export' and lexer.token.type == ':':
       lexer.scanner.restore(lexer.token.cursor)
 
@@ -474,232 +501,3 @@ class ParseError(Exception):
   def __str__(self):
     return '{}: line {}, col {}: {}'.format(self.filename,
       self.loc.lineno, self.loc.colno, self.message)
-
-
-class BaseDslContext:
-
-  def get_option(self, module_name, option_name):
-    raise NotImplementedError
-
-  def get_module(self, module_name):
-    raise ModuleNotFoundError(module_name)
-
-  def update_config(self, config):
-    raise NotImplementedError
-
-  def assigned_scope_does_not_exist(self, filename, loc, scope, propset):
-    print('warn: {}:{}:{}: scope {} does not exist'.format(
-      filename, loc.lineno, loc.colno, scope))
-
-  def assigned_property_does_not_exist(self, filename, loc, prop_name, propset):
-    print('warn: {}:{}:{}: property {} does not exist'.format(
-      filename, loc.lineno, loc.colno, prop_name))
-
-  def init_namespace(self, ns):
-    ns.context = self
-
-  def init_module(self, module):
-    self.init_namespace(module.eval_namespace())
-
-  def init_target(self, target):
-    self.init_namespace(target.eval_namespace())
-
-  def init_dependency(self, dep):
-    self.init_namespace(dep.eval_namespace())
-
-  def load_file(self, filename, namespace):
-    """
-    Note that this method does not use #init_namespace(). If you want the
-    namespace to be initialized, call #init_namespace() beforehand.
-    """
-
-    with open(filename) as fp:
-      code = compile(fp.read(), filename, 'exec')
-      namespace.__file__ = filename
-      exec(code, vars(namespace))
-
-
-class Interpreter:
-  """
-  Interpreter for projects.
-  """
-
-  def __init__(self, context, filename, is_main=False):
-    self.context = context
-    self.filename = filename
-    self.directory = os.path.dirname(filename)
-    self.is_main = is_main
-
-  def __call__(self, project):
-    module = self.create_module(project)
-    self.eval_module(project, module)
-    return module
-
-  def create_module(self, project):
-    module = core.Module(project.name, project.version, self.directory)
-    self.context.init_module(module)
-    module.eval_namespace().__file__ = self.filename
-    return module
-
-  def eval_module(self, project, module):
-    for node in project.children:
-      if isinstance(node, Eval):
-        self._exec(node.loc.lineno, node.source, module.eval_namespace())
-      elif isinstance(node, Load):
-        self._load(node.loc.lineno, node.filename, module.eval_namespace())
-      elif isinstance(node, Options):
-        self._options(node, module)
-      elif isinstance(node, Pool):
-        module.add_pool(node.name, node.depth)
-      elif isinstance(node, Target):
-        self._target(node, module)
-      elif isinstance(node, Assignment):
-        self._assignment(node, module)
-      elif isinstance(node, Export):
-        self._export_block(node, module)
-      elif isinstance(node, Configure):
-        if self.is_main:
-          self.context.update_config(node.data)
-      else:
-        assert False, node
-
-  def _options(self, node, module):
-    ns = module.eval_namespace()
-    ns.options = getattr(ns, 'options', props.Namespace('options'))
-    for key, (type, value, loc) in node.options.items():
-      try:
-        has_value = self.context.get_option(module.name(), key)
-      except KeyError:
-        if value is None:
-          raise MissingRequiredOptionError(module.name(), key)
-        has_value = self._eval(loc.lineno, value, module.eval_namespace())
-      try:
-        has_value = Options.adapt(type, has_value)
-      except ValueError as exc:
-        raise InvalidOptionError(module.name(), key, str(exc))
-      # Publish the option value to the module's namespace.
-      setattr(ns.options, key, has_value)
-
-  def _load(self, lineno, filename, namespace):
-    if not os.path.isabs(filename):
-      filename = os.path.join(self.directory, filename)
-    filename = os.path.normpath(filename)
-    with override_member(namespace, '__file__', filename):
-      self.context.load_file(filename, namespace)
-
-  def _exec(self, lineno, source, namespace):
-    source = '\n' * (lineno-1) + source
-    code = compile(source, self.filename, 'exec')
-    exec(code, vars(namespace), vars(namespace))
-
-  def _eval(self, lineno, source, namespace):
-    source = '\n' * (lineno-1) + source
-    code = compile(source, self.filename, 'eval')
-    return eval(code, vars(namespace))
-
-  def _assignment(self, node, propset, override_export=False):
-    assert isinstance(propset, (core.Module, core.Target, core.Dependency))
-    export = override_export or node.export
-    if export and not propset.supports_exported_members():
-      raise RuntimeError('{} in a propset that does not supported exported members ({})'
-        .format(node, propset))
-    try:
-      scope = propset.namespace(node.scope)
-    except KeyError:
-      self.context.assigned_scope_does_not_exist(self.filename, node.loc, node.scope, propset)
-      return
-    if export:
-      scope = scope.__exported__
-    prop_name = node.scope + '.' + node.propname
-    try:
-      prop = propset.property(prop_name)
-    except KeyError:
-      prop = None
-      self.context.assigned_property_does_not_exist(self.filename, node.loc, prop_name, propset)
-      # Set property value anyway, maybe it is used later in the evaluation.
-    value = self._eval(node.loc.lineno, node.expression, propset.eval_namespace())
-    if prop:
-      try:
-        value = prop.typecheck(value)
-      except (TypeError, ValueError) as exc:
-        raise InvalidAssignmentError(propset, node.loc, str(exc))
-    setattr(scope, node.propname, value)
-
-  def _target(self, node, module):
-    target = module.add_target(node.name, node.export)
-    self.context.init_target(target)
-    for node in node.children:
-      if isinstance(node, Eval):
-        self._exec(node.loc.lineno, node.source, target.eval_namespace())
-      elif isinstance(node, Assignment):
-        self._assignment(node, target)
-      elif isinstance(node, Dependency):
-        self._dependency(node, target)
-      elif isinstance(node, Export):
-        self._export_block(node, target)
-      else:
-        assert False, node
-    target.finalize()
-
-  def _dependency(self, node, parent_target):
-    if node.name.startswith('@'):
-      obj = parent_target.module().target(node.name[1:])
-    else:
-      obj = self.context.get_module(node.name)
-    dep = parent_target.add_dependency(obj, node.export)
-    self.context.init_dependency(dep)
-    for assign in node.assignments:
-      assert isinstance(assign, Assignment), assign
-      self._assignment(assign, dep)
-    dep.finalize()
-
-  def _export_block(self, node, propset):
-    assert propset.supports_exported_members(), propset
-    for assign in node.assignments:
-      self._assignment(assign, propset, override_export=True)
-
-
-class RunError(Exception):
-  pass
-
-
-class OptionError(RunError):
-
-  def __init__(self, module_name, option_name, message=None):
-    self.module_name = module_name
-    self.option_name = option_name
-    self.message = message
-
-  def __str__(self):
-    result = '{}.{}'.format(self.module_name, self.option_name)
-    if self.message:
-      result += ': ' + str(self.message)
-    return result
-
-
-class MissingRequiredOptionError(OptionError):
-  pass
-
-
-class InvalidOptionError(OptionError):
-  pass
-
-
-class InvalidAssignmentError(RunError):
-
-  def __init__(self, propset, loc, message):
-    self.propset = propset
-    self.loc = loc
-    self.message = message
-
-  def __str__(self):
-    return '{} ({}:{}): {}'.format(self.propset, self.loc.lineno,
-      self.loc.colno, self.message)
-
-
-class ModuleNotFoundError(RunError):
-  pass
-
-
-class ExplicitRunError(RunError):
-  pass

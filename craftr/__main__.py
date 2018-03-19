@@ -1,11 +1,72 @@
+# Copyright (c) 2018 Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+"""
+Implements the Craftr command-line interface.
+"""
+
+from . import core
+from . import dsl
+from nr import path
 
 import argparse
 import json
 import os
 import sys
 
-from . import dsl, path, props
-from .context import Context
+
+class Context(dsl.Context):
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    #self.build_graph = core.BuildGraph()
+
+  def to_json(self):
+    root = collections.OrderedDict()
+    root['path'] = self.path
+    root['backend'] = self.backend_name
+    root['variant'] = self.build_variant
+    root['directory'] = self.build_directory
+    root['options'] = None  # TODO: Include options specified via the command-line.
+    root['graph'] = self.build_graph.to_json()
+    root['cache'] = self.cache
+    return root
+
+  def from_json(self, root):
+    self.path = root['path']
+    self.backend_name = root['backend']
+    self.build_variant = root['variant']
+    if self.build_directory != root['directory']:
+      print('warning: stored build directory does not match current build directory')
+    # TODO: Read options
+    self.build_graph.from_json(root['graph'])
+    self.cache.update(root.get('cache', {}))
+
+  def serialize(self):
+    path.makedirs(self.build_directory)
+    with open(path.join(self.build_directory, 'CraftrBuildGraph.json'), 'w') as fp:
+      json.dump(self.to_json(), fp)
+
+  def deserialize(self):
+    with open(path.join(self.build_directory, 'CraftrBuildGraph.json')) as fp:
+      root = json.load(fp, object_pairs_hook=collections.OrderedDict)
+    self.from_json(root)
 
 
 def set_options(context, options):
@@ -46,7 +107,7 @@ def get_argument_parser():
   return parser
 
 
-def _main(argv=None):
+def main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
 
@@ -136,8 +197,8 @@ def _main(argv=None):
 
   if not (args.debug or args.release):
     args.debug = True
-  mode = 'release' if args.release else 'debug'
-  build_directory = os.path.join('build', mode)
+  build_variant = 'release' if args.release else 'debug'
+  build_directory = os.path.join('build', build_variant)
 
   if args.configure:
     # TODO: Handle --reconfigure by reading previously define build
@@ -152,14 +213,14 @@ def _main(argv=None):
       args.file = os.path.join(args.file, 'build.craftr')
 
     # Load the build script.
-    context = Context(build_directory, mode, args.backend)
+    context = Context(build_variant, build_directory)
     set_options(context, args.options)
-    module = context.load_module_file(args.file, is_main=True)
-    context.translate_targets(module)
+    module = context.load_file(args.file, is_main=True)
+    context.translate_targets()
     context.serialize()
 
   elif (args.clean or args.build):
-    context = Context(build_directory, None)
+    context = Context(build_variant, build_directory)
     context.deserialize()
     set_options(context, args.options)
 
@@ -201,5 +262,4 @@ def _main(argv=None):
   return 0
 
 
-def main():
-  sys.exit(_main())
+_entry_point = lambda: sys.exit(main())

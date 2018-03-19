@@ -1,5 +1,5 @@
 glob2>=0.6
-nr>=1.4.9
+nr>=2.0.5
 requests>=2.18.4
 toml>=0.9.4
 typing>=3.6.4

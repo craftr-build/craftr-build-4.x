@@ -17,9 +17,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+"""
+This module implements parsing and interpreting the Craftr DSL.
+"""
 
-__author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '3.0.1-dev'
+from .parser import Parser
+from .interpreter import Context, Interpreter
 
-from .core import TargetHandler
-from .proplib import Bool, Integer, String, List, Dict, StringList

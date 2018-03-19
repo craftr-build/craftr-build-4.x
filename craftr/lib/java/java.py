@@ -3,7 +3,7 @@ import copy
 import craftr
 import shlex
 import sys
-from craftr import path
+from nr import path
 
 ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')
@@ -32,7 +32,6 @@ class ArtifactResolver:
     #maven.Artifacts objects). Returns a list of (Artifact, MavenRepository)
     objects.
     """
-
 
     artifacts = [maven.Artifact.from_id(x) if isinstance(x, str) else x
                  for x in artifacts]
@@ -125,173 +124,175 @@ def partition_sources(sources, src_roots, parent):
 
 class JavaTargetHandler(craftr.TargetHandler):
 
+  name = 'java'
+
   def __init__(self):
     self.artifacts = ArtifactResolver()
     self.artifact_actions = {}  # Cache to avoid producing the same action multiple times.
 
-  def get_common_property_scope(self):
-    return 'java'
+  def init(self, context):
+    props = context.target_properties
+    props.add('java.srcs', craftr.StringList())
+    props.add('java.srcRoots', craftr.StringList())
+    props.add('java.compilerFlags', craftr.StringList())
+    props.add('java.jarName', craftr.String())
+    props.add('java.mainClass', craftr.String())
+    props.add('java.bundleType', craftr.String())  # The bundle type for applications, can be `none`, `onejar` or `merge`.
+    props.add('java.binaryJars', craftr.StringList())
+    props.add('java.artifacts', craftr.StringList())
+    props.add('java.runArgsPrefix', craftr.StringList())
+    props.add('java.runArgs', craftr.StringList())
 
-  def setup_target(self, target):
-    target.define_property('java.srcs', 'StringList', inheritable=False)
-    target.define_property('java.srcRoots', 'StringList', inheritable=False)
-    target.define_property('java.compilerFlags', 'StringList')
-    target.define_property('java.jarName', 'String', inheritable=False)
-    target.define_property('java.mainClass', 'String', inheritable=False)
-    target.define_property('java.bundleType', 'String')  # The bundle type for applications, can be `none`, `onejar` or `merge`.
-    target.define_property('java.binaryJars', 'StringList')
-    target.define_property('java.artifacts', 'StringList')
-    target.define_property('java.runArgsPrefix', 'StringList', inheritable=False)
-    target.define_property('java.runArgs', 'StringList', inheritable=False)
+    props = context.dependency_properties
+    props.add('java.bundle', craftr.Bool())
 
-  def setup_dependency(self, target):
-    # Whether to include the library in a bundle.
-    target.define_property('java.bundle', 'Bool')
+  def translate_target(self, target):
+    src_dir = path.abs(target.directory)
+    build_dir = path.join(context.build_directory, target.module.name)
+    cache_dir = path.join(context.build_directory, module.name, 'artifacts')
 
-  def finalize_target(self, target, data):
-    src_dir = path.abs(target.directory())
-    build_dir = path.join(context.build_directory, target.module().name())
-    cache_dir = path.join(context.build_directory, module.name(), 'artifacts')
-
-    data.jarFilename = None
-    data.bundleFilename = None
-    data.nobundleBinaryJars = []
-    data.bundleBinaryJars = data.binaryJars[:]
+    jarFilename = None
+    bundleFilename = None
+    nobundleBinaryJars = []
+    bundleBinaryJars = target.get_prop_join('java.binaryJars')
+    artifacts = target.get_prop_join('java.artifacts')
+    srcs = target.get_prop_join('java.srcs')
+    bundleType = target.get_prop('java.bundleType')
+    print('>>', srcs)
 
     # Add actions that download the artifacts.
-    data.artifactActions = []
-    if data.artifacts:
-      print('[{}] Resolving JARs...'.format(target.identifier()))
-      for artifact, repo in self.artifacts.resolve(data.artifacts):
+    artifactActions = []
+    if artifacts:
+      print('[{}] Resolving JARs...'.format(target.id))
+      for artifact, repo in self.artifacts.resolve(artifacts):
         binary_jar = path.join(cache_dir, artifact.to_local_path('jar'))
         if binary_jar in self.artifact_actions:
-          data.artifactActions.append(self.artifact_actions[binary_jar])
+          artifactActions.append(self.artifact_actions[binary_jar])
         else:
           # TODO: We could theortically model this with a single action
           #       and multiple build sets.
           command = [sys.executable, DOWNLOAD_TOOL]
           command += [binary_jar]
           command += [repo.get_artifact_uri(artifact, 'jar')]
-          action = module.target('artifacts').add_action(
+          action = module.targets['artifacts'].add_action(
             str(artifact).replace(':', '_'), commands=[command])
           build = action.add_buildset()
           build.files.add(binary_jar, ['out'])
           self.artifact_actions[binary_jar] = action
-          data.artifactActions.append(action)
-        data.binaryJars.append(binary_jar)
-        data.bundleBinaryJars.append(binary_jar)
+          artifactActions.append(action)
+        binaryJars.append(binary_jar)
+        bundleBinaryJars.append(binary_jar)
 
     # Determine all the information necessary to build a java library,
     # and optionally a bundle.
-    if data.srcs:
-      data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
-      if not data.srcRoots:
-        data.srcRoots = ['src', 'java', 'javatest']
-      if not data.jarName:
-        data.jarName = (target.name() + '-' + target.module().version())
+    if srcs:
+      srcs = [path.canonical(x, src_dir) for x in srcs]
+      if not srcRoots:
+        srcRoots = ['src', 'java', 'javatest']
+      if not jarName:
+        jarName = (target.name() + '-' + target.module().version())
 
       # Construct the path to the output JAR file.
-      data.jarFilename = path.join(build_dir, data.jarName + '.jar')
-      data.bundleFilename = None
-      if data.bundleType:
-        assert data.bundleType in ('onejar', 'merge')
-        data.bundleFilename = path.join(build_dir, data.jarName + '-' + data.bundleType + '.jar')
+      jarFilename = path.join(build_dir, jarName + '.jar')
+      bundleFilename = None
+      if bundleType:
+        assert bundleType in ('onejar', 'merge')
+        bundleFilename = path.join(build_dir, jarName + '-' + bundleType + '.jar')
 
       # Create a list of all the Java Class files generated by the compiler.
-      data.classDir = path.join(build_dir, 'cls')
-      data.classFiles = []
-      for root, sources in partition_sources(data.srcs, data.srcRoots,
+      classDir = path.join(build_dir, 'cls')
+      classFiles = []
+      for root, sources in partition_sources(srcs, srcRoots,
                                             target.directory()).items():
         for src in sources:
-          clsfile = path.join(data.classDir, path.setsuffix(src, '.class'))
-          data.classFiles.append(clsfile)
+          clsfile = path.join(classDir, path.setsuffix(src, '.class'))
+          classFiles.append(clsfile)
 
-      target.outputs().add(data.jarFilename, ['java.library'])
-      if data.bundleFilename:
-        target.outputs().add(data.bundleFilename, ['java.bundle'])
+      target.outputs().add(jarFilename, ['java.library'])
+      if bundleFilename:
+        target.outputs().add(bundleFilename, ['java.bundle'])
 
       # Add to the binaryJars the Java libraries from dependencies.
       for dep in target.transitive_dependencies():
         depData = dep.handler_data(self)
         for target in dep.targets():
           libs = target.outputs().tagged('java.library')
-          data.binaryJars += libs
+          binaryJars += libs
           if depData.bundle:
-            data.bundleBinaryJars += libs
+            bundleBinaryJars += libs
           else:
-            data.nobundleBinaryJars += libs
+            nobundleBinaryJars += libs
 
-  def translate_target(self, target, data):
-    if data.srcs and data.classFiles:
+    if srcs and classFiles:
       # Generate the action to compile the Java source files.
-      command = [options.javac, '-d', data.classDir]
-      if data.binaryJars:
-        command += ['-classpath', path.pathsep.join(data.binaryJars)]
+      command = [options.javac, '-d', classDir]
+      if binaryJars:
+        command += ['-classpath', path.pathsep.join(binaryJars)]
       command += ['$in']
-      command += shlex.split(options.compilerFlags) + data.compilerFlags
+      command += shlex.split(options.compilerFlags) + compilerFlags
       action = target.add_action('java.javac', commands=[command],
-        input=True, deps=data.artifactActions)
+        input=True, deps=artifactActions)
       build = action.add_buildset()
-      build.files.add(data.srcs, ['in'])
-      build.files.add(data.classFiles, ['out'])
+      build.files.add(srcs, ['in'])
+      build.files.add(classFiles, ['out'])
 
       # Generate the action to produce the JAR file.
       flags = 'cvf'
-      if data.mainClass:
+      if mainClass:
         flags += 'e'
       command = [options.javacJar, flags, '$out']
-      if data.mainClass:
-        command += [data.mainClass]
-      command += ['-C', data.classDir, '.']
+      if mainClass:
+        command += [mainClass]
+      command += ['-C', classDir, '.']
       jar_action = target.add_action('java.jar', commands=[command])
       build = jar_action.add_buildset()
-      build.files.add(data.classFiles, ['in'])
-      build.files.add(data.jarFilename, ['out'])
+      build.files.add(classFiles, ['in'])
+      build.files.add(jarFilename, ['out'])
 
     # Generate the action to produce a merge of all dependent JARs if
     # so specified in the target.
-    if data.bundleType and data.bundleFilename:
+    if bundleType and bundleFilename:
       command = [sys.executable, AUGJAR_TOOL, '-o', '$out']
-      inputs = [data.jarFilename] + data.bundleBinaryJars
-      if data.bundleType == 'merge':
-        command += [inputs[0], '-s', 'Main-Class=' + data.mainClass]
+      inputs = [jarFilename] + bundleBinaryJars
+      if bundleType == 'merge':
+        command += [inputs[0], '-s', 'Main-Class=' + mainClass]
         for infile in inputs[1:]:
           command += ['-m', infile]
-      elif data.bundleType == 'onejar':
-        command += [ONEJAR_FILENAME, '-s', 'One-Jar-Main-Class=' + data.mainClass]
+      elif bundleType == 'onejar':
+        command += [ONEJAR_FILENAME, '-s', 'One-Jar-Main-Class=' + mainClass]
         for infile in inputs:
           command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
         inputs += [ONEJAR_FILENAME]
       else:
-        raise ValueError('invalid bundleType: {!r}'.format(data.bundleType))
+        raise ValueError('invalid bundleType: {!r}'.format(bundleType))
       bundle_action = target.add_action('java.bundle', commands=[command])
       build = bundle_action.add_buildset()
       build.files.add(inputs, ['in'])
-      build.files.add(data.bundleFilename, ['out'])
+      build.files.add(bundleFilename, ['out'])
 
-    if data.jarFilename and data.mainClass:
+    if jarFilename and mainClass:
       # An action to execute the library JAR (with the proper classpath).
-      command = list(data.runArgsPrefix or ['java'])
-      classpath = data.binaryJars + [data.jarFilename]
+      command = list(runArgsPrefix or ['java'])
+      classpath = binaryJars + [jarFilename]
       command += ['-cp', path.pathsep.join(classpath)]
-      command += [data.mainClass] + data.runArgs
+      command += [mainClass] + runArgs
       action = target.add_action('java.run', commands=[command],
         deps=[jar_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
 
-    if data.bundleFilename and data.mainClass:
+    if bundleFilename and mainClass:
       # An action to execute the bundled JAR.
-      command = list(data.runArgsPrefix or ['java'])
-      if not data.nobundleBinaryJars:
-        command += ['-jar', data.bundleFilename]
+      command = list(runArgsPrefix or ['java'])
+      if not nobundleBinaryJars:
+        command += ['-jar', bundleFilename]
       else:
-        classpath = data.nobundleBinaryJars + [data.bundleFilename]
+        classpath = nobundleBinaryJars + [bundleFilename]
         command += ['-cp', path.pathsep.join(classpath)]
-        command += ['com.simontuffs.onejar.Boot' if data.bundleType == 'onejar' else data.mainClass]
-      command += data.runArgs
+        command += ['com.simontuffs.onejar.Boot' if bundleType == 'onejar' else mainClass]
+      command += runArgs
       action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
       action.add_buildset()
 
 
-module.register_target_handler(JavaTargetHandler())
+context.register_handler(JavaTargetHandler())
