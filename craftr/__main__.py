@@ -21,7 +21,6 @@
 Implements the Craftr command-line interface.
 """
 
-from . import core
 from . import dsl
 from nr import path
 
