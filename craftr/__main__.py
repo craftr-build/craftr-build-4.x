@@ -26,6 +26,7 @@ from . import dsl
 from nr import path
 
 import argparse
+import collections
 import json
 import os
 import sys
@@ -35,7 +36,8 @@ class Context(dsl.Context):
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    #self.build_graph = core.BuildGraph()
+    self.backend_name = 'backends.ninja'
+    self.cache = {}
 
   def to_json(self):
     root = collections.OrderedDict()
@@ -44,7 +46,7 @@ class Context(dsl.Context):
     root['variant'] = self.build_variant
     root['directory'] = self.build_directory
     root['options'] = None  # TODO: Include options specified via the command-line.
-    root['graph'] = self.build_graph.to_json()
+    root['graph'] = self.graph.to_json()
     root['cache'] = self.cache
     return root
 
@@ -55,7 +57,7 @@ class Context(dsl.Context):
     if self.build_directory != root['directory']:
       print('warning: stored build directory does not match current build directory')
     # TODO: Read options
-    self.build_graph.from_json(root['graph'])
+    self.graph.from_json(root['graph'])
     self.cache.update(root.get('cache', {}))
 
   def serialize(self):
@@ -157,7 +159,8 @@ def main(argv=None):
         module = context.get_module('tools.' + args.tool[0])
       except dsl.ModuleNotFoundError:
         raise exc
-    module.eval_namespace().main(args.tool[1:])
+    scope = context.get_exec_vars(module)
+    scope['main'](args.tool[1:])
     return
 
   # Load the cache file from the build root directory, if it exists.
@@ -225,8 +228,8 @@ def main(argv=None):
     set_options(context, args.options)
 
   # Load the backend module.
-  backend_module = context.get_module(context.backend_name)
-  backend_factory = backend_module.eval_namespace().new_backend
+  backend_module = context.load_module(context.backend_name)
+  backend_factory = context.get_exec_vars(backend_module)['new_backend']
   backend_args = []
   for x in (args.backend_args or ()):
     backend_args += x
@@ -234,7 +237,7 @@ def main(argv=None):
 
   if args.configure:
     # Write the root cache back.
-    root_cache['main'] = module.name()
+    root_cache['main'] = module.name
     root_cache['mode'] = 'debug' if args.debug else 'release'
     root_cache['options'] = args.options
     root_cache['file'] = args.file
@@ -246,7 +249,7 @@ def main(argv=None):
   for target in args.targets:
     if '/' not in target:
       target = root_cache['main'] + '/' + target
-    context.build_graph.select(target)
+    context.graph.select(target)
 
   if args.clean:
     res = backend.clean(args.recursive)

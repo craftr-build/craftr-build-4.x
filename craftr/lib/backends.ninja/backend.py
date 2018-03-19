@@ -8,8 +8,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
-
-from craftr import path
+from nr import path
 
 ActionServer = load('./actionserver.py').ActionServer
 ninja_syntax = load('./ninja_syntax.py')
@@ -66,7 +65,7 @@ def check_ninja_version(build_directory, download=False):
 class NinjaBackend(craftr.BuildBackend):
 
   def export(self):
-    graph = self.context.build_graph
+    graph = self.context.graph
     build_directory = self.context.build_directory
 
     check_ninja_version(build_directory, download=True)
@@ -100,7 +99,7 @@ class NinjaBackend(craftr.BuildBackend):
 
   def clean(self, recursive):
     build_directory = self.context.build_directory
-    graph = self.context.build_graph
+    graph = self.context.graph
 
     ninja = check_ninja_version(build_directory)
     if not ninja:
@@ -121,7 +120,7 @@ class NinjaBackend(craftr.BuildBackend):
 
   def build(self):
     build_directory = self.context.build_directory
-    graph = self.context.build_graph
+    graph = self.context.graph
 
     with ActionServer(graph) as server:
       os.environ['CRAFTR_ACTION_SERVER'] = '{}:{}'.format(*server.address())
@@ -177,7 +176,7 @@ def export_action(build_directory, writer, graph, action, non_explicit):
     # Ensure that Ninja knows that there is at least an implicit dependency
     # betwene this action and its dependency. We do this by associating the
     # non-optional output files -- or otherwise the phony target.
-    output_files = dep.all_files_tagged('out', '!optional')
+    output_files = dep.all_files_tagged('out,!optional')
     if not output_files:
       output_files = [make_rule_name(graph, dep)]
     implicit_deps += output_files
@@ -196,8 +195,8 @@ def export_action(build_directory, writer, graph, action, non_explicit):
     writer.build(
       outputs = list(build.files.tagged('out')) or [phony_name],
       rule = rule_name,
-      inputs = list(build.files.tagged('in', '!optional')),
-      implicit = implicit_deps + list(build.files.tagged('in', 'optional')),
+      inputs = list(build.files.tagged('in,!optional')),
+      implicit = implicit_deps + list(build.files.tagged('in,optional')),
       variables = {'index': str(index)}
     )
 

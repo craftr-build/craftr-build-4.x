@@ -21,5 +21,6 @@
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '3.0.1-dev'
 
+from .build import BuildBackend
 from .core import TargetHandler
 from .proplib import Bool, Integer, String, List, Dict, StringList

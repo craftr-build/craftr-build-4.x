@@ -232,7 +232,8 @@ class Interpreter:
     self.context.finalize_module(module)
 
   def _options(self, node, module):
-    options = module.scope.setdefault('options', ModuleOptions(module.name))
+    scope = self.context.get_exec_vars(module)
+    options = scope.setdefault('options', ModuleOptions(module.name))
     for key, (type, value, loc) in node.options.items():
       option_name = module.name + '.' + key
       try:

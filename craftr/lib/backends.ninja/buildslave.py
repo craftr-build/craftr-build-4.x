@@ -13,9 +13,9 @@ import shlex
 import struct
 import subprocess
 import sys
+from craftr.build import BuildSet
 from itertools import chain
-from craftr import path
-from craftr.common import BuildSet
+from nr import path
 
 verbose = os.environ.get('CRAFTR_VERBOSE') == 'true'
 
@@ -168,7 +168,7 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
       return code
 
   # Check if all output files have been produced by the commands.
-  outputs = list(build.files.tagged('out', '!optional'))
+  outputs = list(build.files.tagged('out,!optional'))
   missing_files = [x for x in outputs if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
@@ -183,7 +183,7 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
     return 1
 
   # Show a warning about missing optional output files.
-  outputs = list(build.files.tagged('out', 'optional'))
+  outputs = list(build.files.tagged('out,optional'))
   missing_files = [x for x in outputs if not os.path.exists(x)]
   if missing_files:
     error('\n' + '-'*60)
