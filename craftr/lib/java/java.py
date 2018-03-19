@@ -153,12 +153,18 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     jarFilename = None
     bundleFilename = None
+    binaryJars = target.get_prop_join('java.binaryJars')
     nobundleBinaryJars = []
-    bundleBinaryJars = target.get_prop_join('java.binaryJars')
+    bundleBinaryJars = binaryJars
     artifacts = target.get_prop_join('java.artifacts')
     srcs = target.get_prop_join('java.srcs')
+    srcRoots = target.get_prop_join('java.srcRoots')
+    jarName = target.get_prop('java.jarName')
     bundleType = target.get_prop('java.bundleType')
-    print('>>', srcs)
+    compilerFlags = target.get_prop_join('java.compilerFlags')
+    mainClass = target.get_prop('java.mainClass')
+    runArgs = target.get_prop_join('java.runArgs')
+    runArgsPrefix = target.get_prop('java.runArgsPrefix')
 
     # Add actions that download the artifacts.
     artifactActions = []
@@ -190,7 +196,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       if not srcRoots:
         srcRoots = ['src', 'java', 'javatest']
       if not jarName:
-        jarName = (target.name() + '-' + target.module().version())
+        jarName = (target.name + '-' + target.module.version)
 
       # Construct the path to the output JAR file.
       jarFilename = path.join(build_dir, jarName + '.jar')
@@ -203,22 +209,22 @@ class JavaTargetHandler(craftr.TargetHandler):
       classDir = path.join(build_dir, 'cls')
       classFiles = []
       for root, sources in partition_sources(srcs, srcRoots,
-                                            target.directory()).items():
+                                            target.directory).items():
         for src in sources:
           clsfile = path.join(classDir, path.setsuffix(src, '.class'))
           classFiles.append(clsfile)
 
-      target.outputs().add(jarFilename, ['java.library'])
+      target.outputs.add(jarFilename, ['java.library'])
       if bundleFilename:
-        target.outputs().add(bundleFilename, ['java.bundle'])
+        target.outputs.add(bundleFilename, ['java.bundle'])
 
       # Add to the binaryJars the Java libraries from dependencies.
       for dep in target.transitive_dependencies():
-        depData = dep.handler_data(self)
-        for target in dep.targets():
-          libs = target.outputs().tagged('java.library')
+        doBundle = dep.props['java.bundle']
+        for dep_target in dep.sources:
+          libs = dep_target.outputs.tagged('java.library')
           binaryJars += libs
-          if depData.bundle:
+          if doBundle:
             bundleBinaryJars += libs
           else:
             nobundleBinaryJars += libs

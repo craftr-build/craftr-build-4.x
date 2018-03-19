@@ -247,8 +247,8 @@ def main(argv=None):
     backend.export()
 
   for target in args.targets:
-    if '/' not in target:
-      target = root_cache['main'] + '/' + target
+    if '@' not in target:
+      target = root_cache['main'] + '@' + target
     context.graph.select(target)
 
   if args.clean:
