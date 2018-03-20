@@ -1,12 +1,13 @@
 
 import craftr
 import logging as log
-from craftr import path, utils
+import nr.path as path
+import nr.stream
 from typing import Union, List
 
 base = load('./base.py')
 msvc = load('tools.msvc')
-unique = utils.stream.unique
+unique = nr.stream.stream.unique
 
 """
 class MsvcCompilerOptions(CompilerOptions):
@@ -76,12 +77,13 @@ class MsvcCompiler(base.Compiler):
     )
     self.toolkit = toolkit
 
-  def setup_target(self, target):
-    target.define_property('cxx.msvcDisableWarnings', 'StringList')
-    target.define_property('cxx.msvcWaringsAsErrors', 'StringList')
-    target.define_property('cxx.msvcCompilerFlags', 'StringList')
-    target.define_property('cxx.msvcLinkerFlags', 'StringList')
-    target.define_property('cxx.msvcNoDefaultLib', 'StringList')
+  def init(self, context):
+    props = context.target_properties
+    props.add('cxx.msvcDisableWarnings', craftr.StringList)
+    props.add('cxx.msvcWaringsAsErrors', craftr.StringList)
+    props.add('cxx.msvcCompilerFlags', craftr.StringList)
+    props.add('cxx.msvcLinkerFlags', craftr.StringList)
+    props.add('cxx.msvcNoDefaultLib', craftr.StringList)
 
   def on_target_created(self, build):
     if build.options.msvc_resource_files and build.localize_srcs:
@@ -121,6 +123,8 @@ class MsvcCompiler(base.Compiler):
         command += ['/Z7']
     command += ['/wd' + str(x) for x in unique(data.msvcDisableWarnings)]
 
+    if not data.runtimeLibrary:
+      data.runtimeLibrary = 'dynamic'
     if data.runtimeLibrary == 'static':
       command += ['/MTd' if BUILD.debug else '/MT']
     elif data.runtimeLibrary == 'dynamic' or data.runtimeLibrary is None:
@@ -157,7 +161,7 @@ class MsvcCompiler(base.Compiler):
     return command
 
   def update_link_buildset(self, build, target, data):
-    out = next(build.files.tagged('out', 'product'))
+    out = next(build.files.tagged('out,product'))
     if base.is_sharedlib(data):
       implib = path.setsuffix('.lib')
       build.files.add(implib, ['out', 'implib'])

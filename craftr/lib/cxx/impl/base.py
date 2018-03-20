@@ -1,10 +1,11 @@
 
 import craftr
-from craftr import utils
+import nr.named
+import nr.stream
 from typing import List, Dict, Union, Callable
 
-concat = utils.stream.concat
-unique = utils.stream.unique
+concat = nr.stream.stream.concat
+unique = nr.stream.stream.unique
 
 
 def is_sharedlib(data):
@@ -15,7 +16,7 @@ def is_staticlib(data):
   return data.type == 'library' and data.preferredLinkage == 'shared'
 
 
-class Compiler(utils.named):
+class Compiler(nr.named.named):
   """
   Represents the flags necessary to support the compilation and linking with
   a compiler in Craftr. Flag-information that expects an argument may have a
@@ -68,7 +69,7 @@ class Compiler(utils.named):
 
     # A dictionary for flags {lang: {static: [], dynamic: []}}
     # Non-existing keys will have appropriate default values.
-    ('linker_runtime', Dict[str, Dict[str, List[str]]], utils.named_initializer(dict)),
+    ('linker_runtime', Dict[str, Dict[str, List[str]]], nr.named.initializer(dict)),
 
     # XXX support MSVC /WHOLEARCHIVE
 
@@ -95,7 +96,7 @@ class Compiler(utils.named):
       return [x.replace('%ARG%', value) for x in args]
     return list(args)
 
-  def setup_target(self, target):
+  def init(self, context):
     pass
 
   def before_translate(self, build):

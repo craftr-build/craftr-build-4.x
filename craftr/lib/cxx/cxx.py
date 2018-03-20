@@ -1,6 +1,6 @@
 
 import craftr
-from craftr import path
+from nr import path
 
 # TODO: Support precompiled headers.
 # TODO: Support compiler-wrappers like ccache.
@@ -16,10 +16,8 @@ class CxxTargetHandler(craftr.TargetHandler):
     print('Selected compiler: {} ({}) {} for {}'.format(
       self.compiler.name, self.compiler.id, self.compiler.version, self.compiler.arch))
 
-  def get_common_property_scope(self):
-    return 'cxx'
-
-  def setup_target(self, target):
+  def init(self, context):
+    props = context.target_properties
     # Largely inspired by the Qbs cpp module.
     # https://doc.qt.io/qbs/cpp-module.html
 
@@ -27,158 +25,158 @@ class CxxTargetHandler(craftr.TargetHandler):
     # =======================
 
     # Specifies the target type. Either `executable` or `library`.
-    target.define_property('cxx.type', 'String', 'executable')
+    props.add('cxx.type', craftr.String, 'executable')
 
     # The C and/or C++ input files for the target. If this property is not
     # set, the target will not be considered a C/C++ build target.
-    target.define_property('cxx.srcs', 'StringList')
+    props.add('cxx.srcs', craftr.StringList)
 
     # Allow the link-step to succeed even if symbols are unresolved.
-    target.define_property('cxx.allowUnresolvedSymbols', 'Bool', False)
+    props.add('cxx.allowUnresolvedSymbols', craftr.Bool, False)
 
     # Combine C/C++ sources into a single translation unit. Note that
     # many projects can not be compiled in this fashion.
-    target.define_property('cxx.combineCSources', 'Bool', False)
-    target.define_property('cxx.combineCppSources', 'Bool', False)
+    props.add('cxx.combineCSources', craftr.Bool, False)
+    props.add('cxx.combineCppSources', craftr.Bool, False)
 
     # Allow the linker to discard data that appears to be unused.
     # This value being undefined uses the linker's default.
-    target.define_property('cxx.discardUnusedData', 'Bool')
+    props.add('cxx.discardUnusedData', craftr.Bool)
 
     # Whether to store debug information in an external file or bundle
     # instead of within the binary. Defaults to True for MSVC, False
     # otherwise.
-    target.define_property('cxx.separateDebugInformation', 'Bool')
+    props.add('cxx.separateDebugInformation', craftr.Bool)
 
     # Preprocessor definitions to set when compiling.
-    target.define_property('cxx.defines', 'StringList')
-    target.define_property('cxx.definesForStaticBuild', 'StringList')
-    target.define_property('cxx.definesForSharedBuild', 'StringList')
+    props.add('cxx.defines', craftr.StringList)
+    props.add('cxx.definesForStaticBuild', craftr.StringList)
+    props.add('cxx.definesForSharedBuild', craftr.StringList)
 
     # Include search paths.
-    target.define_property('cxx.includes', 'StringList')
+    props.add('cxx.includes', craftr.StringList)
 
     # Library search paths.
-    target.define_property('cxx.libraryPaths', 'StringList')
+    props.add('cxx.libraryPaths', craftr.StringList)
 
     # Paths for the dynamic linker. This is only used when running
     # the product of a build target via Craftr.
-    target.define_property('cxx.runPaths', 'StringList')
+    props.add('cxx.runPaths', craftr.StringList)
 
     # Dynamic libraries to link. You should use target dependencies
     # wherever possible rather than using this property.
-    target.define_property('cxx.dynamicLibraries', 'StringList')
+    props.add('cxx.dynamicLibraries', craftr.StringList)
 
     # Static libraries to link. You should use target dependencies
     # wherever possible rather than using this property.
-    target.define_property('cxx.staticLibraries', 'StringList')
+    props.add('cxx.staticLibraries', craftr.StringList)
 
     # List of files to automatically include at the beginning of
     # each translation unit.
-    target.define_property('cxx.prefixHeaders', 'StringList')
+    props.add('cxx.prefixHeaders', craftr.StringList)
 
     # Optimization level. Valid values are `none`, `size` and `speed`.
-    target.define_property('cxx.optimization', 'String')
+    props.add('cxx.optimization', craftr.String)
 
     # Whether to treat warnings as errors.
-    target.define_property('cxx.treatWarningsAsErrors', 'Bool')
+    props.add('cxx.treatWarningsAsErrors', craftr.Bool)
 
     # Specifies the warning level. Valid values are `none` or `all`.
-    target.define_property('cxx.warningLevel', 'String')
+    props.add('cxx.warningLevel', craftr.String)
 
     # Flags that are added to all compilation steps, independent of
     # the language.
-    target.define_property('cxx.compilerFlags', 'StringList')
+    props.add('cxx.compilerFlags', craftr.StringList)
 
     # Specifies the way the library prefers to be linked. Either 'static' or 'dynamic'.
-    target.define_property('cxx.preferredLinkage', 'String')
+    props.add('cxx.preferredLinkage', craftr.String)
 
     # Flags that are added to C compilation.
-    target.define_property('cxx.cFlags', 'String')
+    props.add('cxx.cFlags', craftr.String)
 
     # Flags that are added to C++ compilation.
-    target.define_property('cxx.cppFlags', 'String')
+    props.add('cxx.cppFlags', craftr.String)
 
     # The version of the C standard. If left undefined, the compiler's
     # default value is used. Valid values include `c89`, `c99` and `c11`.
-    target.define_property('cxx.cStd', 'String')
+    props.add('cxx.cStd', craftr.String)
 
     # The C standard library to link to.
-    target.define_property('cxx.cStdlib', 'String')
+    props.add('cxx.cStdlib', craftr.String)
 
     # The version of the C++ standard. If left undefined, the compiler's
     # default value is used. Valid values include `c++98`, `c++11`
     # and `c++14`.
-    target.define_property('cxx.cppStd', 'String')
+    props.add('cxx.cppStd', craftr.String)
 
     # The C++ standard library to link to. Possible values are `libc++`
     # and `libstdc++`.
-    target.define_property('cxx.cppStdlib', 'String')
+    props.add('cxx.cppStdlib', craftr.String)
 
     # Additional flags for the linker.
-    target.define_property('cxx.linkerFlags', 'StringList')
+    props.add('cxx.linkerFlags', craftr.StringList)
 
     # Name of the entry point of an executable or dynamic library.
-    target.define_property('cxx.entryPoint', 'String')
+    props.add('cxx.entryPoint', craftr.String)
 
     # Type of the runtime library. Accepted values are `dynamic` and
     # `static`. Defaults to `dynamic` for MSVC, otherwise undefined.
     # For GCC/Clang, `static` will imply `-static-libc` or flags alike.
-    target.define_property('cxx.runtimeLibrary', 'String')
+    props.add('cxx.runtimeLibrary', craftr.String)
 
     # Whether to enable exception handling.
-    target.define_property('cxx.enableExceptions', 'Bool', True)
+    props.add('cxx.enableExceptions', craftr.Bool, True)
 
     # Whether to enable runtime type information
-    target.define_property('cxx.enableRtti', 'Bool', True)
+    props.add('cxx.enableRtti', craftr.Bool, True)
 
     # Apple Settings
     # =======================
 
     # Additional search paths for OSX frameworks.
-    target.define_property('cxx.frameworkPaths', 'StringList')
+    props.add('cxx.frameworkPaths', craftr.StringList)
 
     # OSX framework to link. If the framework is part of your project,
     # consider using a dependency instead.
-    target.define_property('cxx.frameworks', 'StringList')
+    props.add('cxx.frameworks', craftr.StringList)
 
     # OSX framework to link weakly. If the framework is part of your project,
     # consider using a dependency instead.
-    target.define_property('cxx.weakFrameworks', 'StringList')
+    props.add('cxx.weakFrameworks', craftr.StringList)
 
     # A version number in the format [major] [minor] indicating the earliest
     # version that the product should run on.
-    target.define_property('cxx.minimumMacosVersion', 'String')
+    props.add('cxx.minimumMacosVersion', craftr.String)
 
     # Unix Settings
     # =======================
 
     # Generate position independent code. If this is undefined, PIC is
     # generated for libraries, but not applications.
-    target.define_property('cxx.positionIndependentCode', 'Bool')
+    props.add('cxx.positionIndependentCode', craftr.Bool)
 
     # rpaths that are passed to the linker. Paths that also appear
     # in runPaths are ignored.
-    target.define_property('cxx.rpaths', 'StringList')
+    props.add('cxx.rpaths', craftr.StringList)
 
     # The version to be appended to the soname in ELF shared libraries.
-    target.define_property('cxx.soVersion', 'String')
+    props.add('cxx.soVersion', craftr.String)
 
-    # Visibility level for exported symbols. Possible values incliude
+    # Visibility level for exported symbols. Possible values include
     # `default`, `hidden`, `hiddenInlines` and `minimal (which combines
     # `hidden` and `hiddenInlines`).
-    target.define_property('cxx.visibility', 'String')
+    props.add('cxx.visibility', craftr.String)
 
     # Windows Settings
     # =======================
 
     # Whether to automatically generate a manifest file and include it in
     # the binary. Disable this property if you define your own .rc file.
-    target.define_property('cxx.generateManifestFile', 'Bool', True)
+    props.add('cxx.generateManifestFile', craftr.Bool, True)
 
     # Specifies the character set used in the Win32 API. Defaults to
     # "unicode".
-    target.define_property('cxx.windowsApiCharacterSet', 'String')
+    props.add('cxx.windowsApiCharacterSet', craftr.String)
 
     # Advanced Settings
     # =======================
@@ -186,45 +184,45 @@ class CxxTargetHandler(craftr.TargetHandler):
     # TODO
 
     # Map of defines by language name.
-    #target.define_property('cxx.definesByLanguage', 'Map[String, Map[String]]')
+    #props.add('cxx.definesByLanguage', 'Map[String, Map[String]]')
 
     # Map of defines by compiler ID.
-    #target.define_property('cxx.definesByCompiler', 'Map[String, Map[String]]')
+    #props.add('cxx.definesByCompiler', 'Map[String, Map[String]]')
 
     # Map of defines by platform ID.
-    #target.define_property('cxx.definesByPlatform', 'Map[String, Map[String]]')
+    #props.add('cxx.definesByPlatform', 'Map[String, Map[String]]')
 
     # Save temporary build prodcuts. Note that some toolchains (such as MSVC)
     # can not compile AND actually build at the same time.
-    target.define_property('cxx.saveTemps', 'Bool', False)
+    props.add('cxx.saveTemps', craftr.Bool, False)
 
-    self.compiler.setup_target(target)
+    # Dependency Properties
+    # =======================
 
-  def setup_dependency(self, dep):
+    props = context.dependency_properties
+
     # If False, the dependency will not be linked, even if it is a valid
     # input for a linker rule. This property affects library dependencies only.
-    dep.define_property('cxx.link', 'Bool', True)
+    props.add('cxx.link', craftr.Bool, True)
 
-    # If True, then if the dependency is a static library, all of its
-    # objects will be pulled into a target binary, even if their symbols
-    # appear to be unused. This parameter is mainly useful when creating
-    # a dynamic library from static libraries.
-    dep.define_property('cxx.linkWholeArchive', 'Bool', False)
 
-  def finalize_target(self, target, data):
-    src_dir = target.directory()
-    build_dir = path.join(context.build_directory, target.module().name())
+    self.compiler.init(context)
 
-    data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
-    data.includes = [path.canonical(x, src_dir) for x in data.includes]
-    data.prefixHeaders = [path.canonical(x, src_dir) for x in data.prefixHeaders]
+  def translate_target(self, target):
+    context = target.context
+    src_dir = target.directory
+    build_dir = path.join(context.build_directory, target.module.name)
+
+    data = target.get_props('cxx.', as_object=True)
+    data.srcs = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.srcs')]
+    data.includes = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.includes')]
+    data.prefixHeaders = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.prefixHeaders')]
+
 
     # TODO: Determine whether we build an executable, static library
     #       or shared library.
-    data.productFilename = target.name() + '-' + target.module().version()
-    target.outputs().add(data.productFilename, ['exe'])
-
-  def translate_target(self, target, data):
+    data.productFilename = target.name + '-' + target.module.version
+    target.outputs.add(data.productFilename, ['exe'])
 
     c_srcs = []
     cpp_srcs = []
@@ -244,7 +242,7 @@ class CxxTargetHandler(craftr.TargetHandler):
         build = action.add_buildset()
         build.files.add(src, ['in', 'src', 'src.' + lang])
         self.compiler.update_compile_buildset(build, target, data)
-        obj_files += build.files.tagged('out', 'obj')
+        obj_files += build.files.tagged('out,obj')
       compile_actions.append(action)
 
     link_action = None
@@ -264,4 +262,4 @@ class CxxTargetHandler(craftr.TargetHandler):
       action.add_buildset()
 
 
-module.register_target_handler(CxxTargetHandler())
+context.register_handler(CxxTargetHandler())
