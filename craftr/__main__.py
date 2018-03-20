@@ -105,6 +105,7 @@ def get_argument_parser():
   parser.add_argument('-b', '--build', action='store_true', help='Enable the build step. This step is always executed after the configure step, if it is also enabled.')
   parser.add_argument('--show', metavar='ACTION', help='Shows the specified action.')
   parser.add_argument('--show-actions', action='store_true', help='Shows a list of available build actions.')
+  parser.add_argument('--dotviz', action='store_true', help='Prints a digraph representation of the build graph.')
   parser.add_argument('targets', nargs='...', metavar='TARGET', help='Zero or more targets/actions to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   parser.add_argument('-t', '--tool', nargs='...', help='Run a tool with the specified arguments.')
   return parser
@@ -114,7 +115,7 @@ def main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
   has_buildsteps = (args.configure or args.reconfigure or args.r or args.clean or args.build)
-  metaopts = ['tool', 'show', 'show-actions']
+  metaopts = ['tool', 'show', 'show-actions', 'dotviz']
   active_metaopts = []
 
   if args.r and not args.configure:
@@ -251,6 +252,15 @@ def main(argv=None):
     for action in context.graph:
       print(action)
     return 0
+  # Handle --dotviz.
+  if args.dotviz:
+    print('digraph {')
+    for action in context.graph.actions():
+      print('  "{}";'.format(action.identifier()))
+      for dep in action.deps:
+        print('    "{}" -> "{}";'.format(dep.identifier(), action.identifier()))
+    print('}')
+    return
 
   # Load the backend module.
   backend_module = context.load_module(context.backend_name)

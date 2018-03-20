@@ -374,6 +374,9 @@ class BuildGraph:
   def __getitem__(self, action_name):
     return self._actions[action_name]
 
+  def __iter__(self):
+    return iter(self._actions.keys())
+
   def actions(self):
     return self._actions.values()
 
