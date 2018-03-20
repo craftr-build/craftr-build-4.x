@@ -4,7 +4,7 @@ Parse information from .nupkg files.
 
 import xml.dom.minidom
 import zipfile
-from craftr import path
+from nr import path
 
 
 def get_nuspec(nupkg):

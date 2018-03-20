@@ -1,13 +1,15 @@
 
 import craftr
 import functools
+import nr.named
 import os
 import re
 import requests
 import subprocess
-from craftr import path, sh, utils
+from nr import path
+from craftr.utils import sh
 
-if OS.name == 'nt':
+if OS.type == 'nt':
   msvc = load('tools.msvc')
 else:
   msvc = None
@@ -16,7 +18,7 @@ nupkg = load('./tools/nupkg.py')
 artifacts_dir = path.join(context.build_directory, 'csharp', 'nuget')
 
 
-class CscInfo(utils.named):
+class CscInfo(nr.named.named):
 
   __annotations__ = [
     ('impl', str),
@@ -149,28 +151,29 @@ class CsharpTargetHandler(craftr.TargetHandler):
   def __init__(self, csc):
     self.csc = csc
 
-  def get_common_property_scope(self):
-    return 'csharp'
+  def init(self, context):
+    props = context.target_properties
+    props.add('csharp.srcs', craftr.StringList)
+    props.add('csharp.type', craftr.String, 'exe')  # appcontainer, exe, library, module, winexe, winmdobj
+    props.add('csharp.main', craftr.String)
+    props.add('csharp.productName', craftr.String)
+    props.add('csharp.compilerFlags', craftr.StringList)
+    props.add('csharp.dynamicLibraries', craftr.StringList)
+    props.add('csharp.packages', craftr.StringList)
+    props.add('csharp.bundle', craftr.Bool, False)  # Allows you to enable bundling of assemblies.
+    props.add('csharp.runArgsPrefix', craftr.StringList)
+    props.add('csharp.runArgs', craftr.StringList)
 
-  def setup_target(self, target):
-    target.define_property('csharp.srcs', 'StringList', inheritable=False)
-    target.define_property('csharp.type', 'String', 'exe', inheritable=False)  # appcontainer, exe, library, module, winexe, winmdobj
-    target.define_property('csharp.main', 'String', inheritable=False)
-    target.define_property('csharp.productName', 'String', inheritable=False)
-    target.define_property('csharp.compilerFlags', 'StringList')
-    target.define_property('csharp.dynamicLibraries', 'StringList')
-    target.define_property('csharp.packages', 'StringList')
-    target.define_property('csharp.bundle', 'Bool', False, inheritable=False)  # Allows you to enable bundling of assemblies.
-    target.define_property('csharp.runArgsPrefix', 'StringList', inheritable=False)
-    target.define_property('csharp.runArgs', 'StringList', inheritable=False)
+    props = context.dependency_properties
+    props.add('csharp.bundle', craftr.Bool, True)
 
-  def setup_dependency(self, target):
-    target.define_property('csharp.bundle', 'Bool', True)
-
-  def finalize_target(self, target, data):
-    build_dir = path.join(context.build_directory, target.module().name())
+  def translate_target(self, target):
+    build_dir = path.join(context.build_directory, target.module.name)
+    data = target.get_props('csharp.', as_object=True)
 
     # Install artifacts.
+    data.compilerFlags = target.get_prop_join('csharp.compilerFlags')
+    data.dynamicLibraries = target.get_prop_join('csharp.dynamicLibraries')
     data.dynamicLibraries += self.__install(data.packages)
 
     # Prepare information for compiling a product.
@@ -187,17 +190,17 @@ class CsharpTargetHandler(craftr.TargetHandler):
         raise ValueError('invalid csharp.type: {!r}'.format(data.type))
 
       if not data.productName:
-        data.productName = target.name() + '-' + target.module().version()
+        data.productName = target.name + '-' + target.module.version
       data.productFilename = path.join(build_dir, data.productName + suffix)
       data.bundleFilename = None
       if data.bundle:
         data.bundleFilename = path.addtobase(data.productFilename, '-bundle')
 
-      target.outputs().add(data.productFilename, ['csharp.' + data.type])
+      target.outputs.add(data.productFilename, ['csharp.' + data.type])
       if data.bundleFilename:
-        target.outputs().add(data.bundleFilename, ['csharp.' + data.type + 'Bundle'])
+        target.outputs.add(data.bundleFilename, ['csharp.' + data.type + 'Bundle'])
 
-  def translate_target(self, target, data):
+
     if data.srcs:
       bundleModules = []
       modules = []
@@ -205,11 +208,11 @@ class CsharpTargetHandler(craftr.TargetHandler):
       references = []
       for dep in target.transitive_dependencies():
         depData = dep.handler_data(self)
-        for target in dep.targets():
-          files = target.outputs().tagged('csharp.module')
+        for dep_target in dep.sources:
+          files = dep_target.outputs.tagged('csharp.module')
           if depData.bundle: bundleModules += files
           else: modules += files
-          files = target.outputs().tagged('!csharp.module', 'csharp.*')
+          files = dep_target.outputs.tagged('!csharp.module', 'csharp.*')
           if depData.bundle: bundleReferences += files
           else: references += files
 
@@ -293,4 +296,4 @@ class CsharpTargetHandler(craftr.TargetHandler):
 csc = CscInfo.get()
 print('{} v{}'.format('CSC' if csc.impl == 'net' else csc.impl, csc.version))
 
-module.register_target_handler(CsharpTargetHandler(csc))
+context.register_handler(CsharpTargetHandler(csc))
