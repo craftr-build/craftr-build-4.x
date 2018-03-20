@@ -231,6 +231,8 @@ class Interpreter:
       elif isinstance(node, Configure):
         if self.is_main:
           self.context.options.update(node.data)
+      elif isinstance(node, Using):
+        self.context.load_module(node.name)
       else:
         assert False, node
     self.context.finalize_module(module)

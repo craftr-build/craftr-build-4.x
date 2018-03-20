@@ -257,6 +257,16 @@ class Dependency(Node):
       assign.render(fp, depth+1)
 
 
+class Using(Node):
+
+  def __init__(self, loc, name):
+    super().__init__(loc)
+    self.name = name
+
+  def render(self, fp, depth):
+    fp.write('using "{}"'.format(self.name))
+
+
 class Parser:
 
   rules = [
@@ -274,7 +284,7 @@ class Parser:
   ]
 
   KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
-              'export', 'public', 'target', 'requires']
+              'export', 'public', 'target', 'requires', 'using']
 
   def parse(self, source, filename='<input>'):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
@@ -491,6 +501,10 @@ class Parser:
       assert isinstance(child, Assignment)
       export.assignments.append(child)
     return export
+
+  def _parse_using(self, lexer, parent_indent):
+    name = lexer.next('string').value.group(1)
+    return Using(lexer.token.cursor, name)
 
 
 class ParseError(Exception):
