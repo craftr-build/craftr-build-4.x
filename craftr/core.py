@@ -27,6 +27,7 @@ from . import proplib
 from nr.stream import stream
 from nr.datastructures.objectfrommapping import ObjectFromMapping
 import collections
+import warnings
 
 
 class Context:
@@ -106,6 +107,9 @@ class Module:
     self.targets[target.name] = target
     return target
 
+  def add_pool(self, name, depth):
+    warnings.warn('pools are currently not supported')
+
 
 class Target:
   """
@@ -133,7 +137,7 @@ class Target:
     self.outputs = FileSet()
 
   def __repr__(self):
-    return 'Target(id={!r})'.format(self.id)
+    return 'Target(id={!r}, public={!r})'.format(self.id, self.public)
 
   @property
   def context(self):
@@ -274,6 +278,7 @@ class Dependency:
     pass
 
   def __init__(self, target, sources, public):
+    sources = proplib.List[proplib.InstanceOf[Target]]().coerce('sources', sources)
     self.target = target
     self.sources = sources
     self.public = public
