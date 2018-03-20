@@ -237,7 +237,8 @@ class CxxTargetHandler(craftr.TargetHandler):
       if not srcs: continue
       command = self.compiler.build_compile_flags(lang, target, data)
       action = target.add_action('cxx.compile' + lang.capitalize(),
-        environ=self.compiler.compiler_env, commands=[command], input=True)
+        environ=self.compiler.compiler_env, commands=[command], input=True,
+        deps_prefix=self.compiler.deps_prefix, depfile=self.compiler.depfile_name)
       for src in srcs:
         build = action.add_buildset()
         build.files.add(src, ['in', 'src', 'src.' + lang])

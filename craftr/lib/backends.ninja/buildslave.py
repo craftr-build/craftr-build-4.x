@@ -110,7 +110,7 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
     node = node.as_json()  # In case we have a standard BuildGraph.
 
   if node_hash is not None and node_hash != graph.hash(node):
-    error('fatal: build node hash inconsistency, maybe try --prepare-build')
+    error('fatal: build node hash inconsistency ({!r} != {!r})'.format(node_hash, graph.hash(node)))
     return 1
 
   build = BuildSet.from_json(node['builds'][index])

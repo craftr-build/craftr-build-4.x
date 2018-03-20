@@ -126,13 +126,13 @@ class FileSet:
         yield tf.name
 
   def to_json(self):
-    return {x.name: list(x.tags) for x in self._files.values()}
+    return {x.name: sorted(x.tags) for x in self._files.values()}
 
   @classmethod
   def from_json(cls, data):
     obj = cls()
     for key, tags in data.items():
-      obj.add(key,  tags)
+      obj.add(key, tags)
     return obj
 
 
@@ -278,14 +278,13 @@ class Action:
     #True if the action needs to be run with the original stdin/stdout/stderr
     attached.
   deps_prefix (str):
-    A string that represents the prefix of for lines
-    in the output of the command(s) that represent additional dependencies
-    to the action (eg. headers in the case of C/C++). Can not be mixed with
-    *depfile*.
+    A string that represents the prefix of for lines in the output of the
+    command(s) that represent additional dependencies to the action (eg.
+    headers in the case of C/C++). Can not be mixed with *depfile*.
   depfile (str):
-    A filename that is produced by the command(s) which lists
-    additional dependencies of the action. The file must be formatted like
-    a Makefile. Can not be mixed with *deps_prefix*.
+    A filename that is produced by the command(s) which lists additional
+    dependencies of the action. The file must be formatted like a Makefile.
+    Can not be mixed with *deps_prefix*.
 
   # Members
   builds (list of BuildSet):
@@ -297,6 +296,8 @@ class Action:
                explicit=False, syncio=False, deps_prefix=None, depfile=None):
     assert isinstance(target, str)
     assert all(isinstance(x, Action) for x in deps)
+    if deps_prefix and depfile:
+      raise TypeError('deps_prefix and depfile parameters can not be mixed')
     self.target = target
     self.name = name
     self.deps =deps
@@ -419,7 +420,7 @@ class BuildGraph:
     hasher = hashlib.md5()
     writer = type('Namespace', (object,), {})()
     writer.write = lambda x: hasher.update(x.encode('utf8'))
-    json.dump(action.to_json(), writer)
+    json.dump(action.to_json(), writer, sort_keys=True)
     return hasher.hexdigest()[:12]
 
 
