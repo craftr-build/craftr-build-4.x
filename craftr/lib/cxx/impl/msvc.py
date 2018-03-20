@@ -56,7 +56,7 @@ class MsvcCompiler(base.Compiler):
 
   linker_c = ['link', '/nologo']
   linker_cpp = linker_c
-  linker_out = '/OUT:${out&product}'
+  linker_out = '/OUT:${out,product}'
   linker_shared = '/DLL'
   linker_exe = []
   linker_lib = '%ARG%.lib'
@@ -64,7 +64,7 @@ class MsvcCompiler(base.Compiler):
   linker_runtime = {}  # Required flags will be added in build_compile_flags()
 
   archiver = ['lib', '/nologo']
-  archiver_out = '/OUT:${out&product}'
+  archiver_out = '/OUT:${out,product}'
 
   def __init__(self, toolkit):
     super().__init__(

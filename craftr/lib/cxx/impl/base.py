@@ -162,8 +162,8 @@ class Compiler(nr.named.named):
     """
 
     command = self.expand(getattr(self, 'compiler_' + lang))
-    command.append('${in&src}')
-    command.extend(self.expand(self.compiler_out, '${out&obj}'))
+    command.append('${in,src}')
+    command.extend(self.expand(self.compiler_out, '${out,obj}'))
 
     if data.saveTemps:
       command.extend(self.expand(self.save_temps))
@@ -222,10 +222,10 @@ class Compiler(nr.named.named):
 
     if is_archive:
       command = self.expand(self.archiver)
-      command.extend(self.expand(self.archiver_out, '${out&product}'))
+      command.extend(self.expand(self.archiver_out, '${out,product}'))
     else:
       command = self.expand(self.linker_cpp if lang == 'cpp' else self.linker_c)
-      command.extend(self.expand(self.linker_out, '${out&product}'))
+      command.extend(self.expand(self.linker_out, '${out,product}'))
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
