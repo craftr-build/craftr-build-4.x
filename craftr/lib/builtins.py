@@ -15,6 +15,7 @@ import sys
 import types
 from nr import path
 from nr.datastructures.chaindict import ChainDict
+from nr.datastructures.objectfrommapping import ObjectFromMapping
 from craftr import core, dsl
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
@@ -130,7 +131,8 @@ def load(name):
     context.load_script(name, scope)
     return ns
   else:
-    return context.get_module(name).eval_namespace
+    scope = context.get_exec_vars(context.load_module(name))
+    return ObjectFromMapping(scope, name)
 
 
 def option_default(name, value):

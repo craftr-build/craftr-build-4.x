@@ -25,6 +25,10 @@ from nr import path
 from nr.datastructures.chaindict import ChainDict
 from nr.ast.dynamic_eval import dynamic_exec, dynamic_eval
 
+__all__ = ['RunError', 'OptionError', 'MissingRequiredOptionError',
+           'InvalidOptionError', 'InvalidAssignmentError', 'ModuleNotFoundError',
+           'ExplicitRunError', 'Context', 'Interpreter']
+
 
 class RunError(Exception):
   pass

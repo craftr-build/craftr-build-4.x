@@ -25,6 +25,7 @@ from the aspect of Craftr DSL.
 from .build import Action, BuildGraph, FileSet
 from . import proplib
 from nr.stream import stream
+from nr.datastructures.objectfrommapping import ObjectFromMapping
 import collections
 
 
@@ -170,6 +171,19 @@ class Target:
 
     prop = self.context.target_properties[prop_name]
     return prop.type.inherit(iter_values())
+
+  def get_props(self, prefix='', as_object=False):
+    """
+    Returns a dictionary that contains all property values, optionally from
+    the specified prefix.
+    """
+
+    result = {k[len(prefix):]: self.get_prop(k)
+              for k in self.context.target_properties.keys()
+              if k.startswith(prefix)}
+    if as_object:
+      result = ObjectFromMapping(result)
+    return result
 
   def transitive_dependencies(self):
     def worker(target):

@@ -22,5 +22,4 @@ This module implements parsing and interpreting the Craftr DSL.
 """
 
 from .parser import Parser
-from .interpreter import Context, Interpreter
-
+from .interpreter import *

@@ -5,6 +5,9 @@ Detect MSVC installations on the current system (Windows only).
 import contextlib
 import functools
 import json
+import nr.named
+import nr.path as path
+import nr.tempfile
 import operator
 import os
 import platform
@@ -15,11 +18,11 @@ import tempfile
 import typing as t
 import logging as log
 
-from craftr import path, sh, utils
+from craftr.utils import sh
 batchvars = load('tools.batchvars').batchvars
 
 
-class MsvcInstallation(utils.named):
+class MsvcInstallation(nr.named.named):
   """
   Represents an MSVC installation directory.
   """
@@ -141,7 +144,7 @@ class AsDictJSONEncoder(json.JSONEncoder):
     return super().default(obj)
 
 
-class ClInfo(utils.named):
+class ClInfo(nr.named.named):
 
   __annotations__ = [
     ('version', str),
@@ -206,7 +209,7 @@ class ClInfo(utils.named):
     )
 
 
-class MsvcToolkit(utils.named):
+class MsvcToolkit(nr.named.named):
   """
   Similar to a #MsvcInstallation, this class represents an MSVC
   installation, however it is fixed to a specific target architecture and
@@ -333,7 +336,7 @@ class MsvcToolkit(utils.named):
     # Determine the msvc_deps_prefix by making a small test. The
     # compilation will not succeed since no entry point is defined.
     deps_prefix = None
-    with utils.tempfile(suffix='.cpp', text=True) as fp:
+    with nr.tempfile.tempfile(suffix='.cpp', text=True) as fp:
       fp.write('#include <stddef.h>\n')
       fp.close()
       command = ['cl', '/Zs', '/showIncludes', fp.name, '/nologo']
