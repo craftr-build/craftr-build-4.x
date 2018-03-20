@@ -103,7 +103,9 @@ def get_argument_parser():
   parser.add_argument('--clean', action='store_true', help='Enable the clean step. This step is always executed after the configure step and before the build step, if either are enabled.')
   parser.add_argument('--recursive', action='store_true', help='Enable recursive target cleanup. Only with --clean')
   parser.add_argument('-b', '--build', action='store_true', help='Enable the build step. This step is always executed after the configure step, if it is also enabled.')
-  parser.add_argument('targets', nargs='...', metavar='TARGET', help='Zero or more targets to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
+  parser.add_argument('--show', metavar='ACTION', help='Shows the specified action.')
+  parser.add_argument('--show-actions', action='store_true', help='Shows a list of available build actions.')
+  parser.add_argument('targets', nargs='...', metavar='TARGET', help='Zero or more targets/actions to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   parser.add_argument('-t', '--tool', nargs='...', help='Run a tool with the specified arguments.')
   return parser
 
@@ -111,6 +113,9 @@ def get_argument_parser():
 def main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
+  has_buildsteps = (args.configure or args.reconfigure or args.r or args.clean or args.build)
+  metaopts = ['tool', 'show', 'show-actions']
+  active_metaopts = []
 
   if args.r and not args.configure:
     parser.error('-r: use --reconfigure or combine with -c, --configure')
@@ -129,11 +134,17 @@ def main(argv=None):
     parser.error('--backend: can only be specified with --configure or --reconfigure')
   if args.recursive and not args.clean:
     parser.error('--recursive: can only be specified with --clean')
-  if args.tool is not None and (args.configure or args.reconfigure or args.r or args.clean or args.build):
-    parser.error('--tool: can not be combined with Craftr build steps')
   if args.tool is not None and len(args.tool) < 1:
     parser.error('--tool: need at least one argument (tool name)')
-  if not (args.tool or args.configure or args.reconfigure or args.clean or args.build):
+  for opt in metaopts:
+    active = getattr(args, opt.replace('-', '_'))
+    if active and has_buildsteps:
+      parser.error('--{}: can not be combined with Craftr build steps'.format(opt))
+    if active:
+      active_metaopts.append(opt)
+  if len(active_metaopts) >= 2:
+    parser.error('can not combined these options: {}'.format(', '.join('--' + x for x in active_metaopts)))
+  if not has_buildsteps and not active_metaopts:
     parser.print_usage()
     return 0
 
@@ -221,10 +232,25 @@ def main(argv=None):
     context.translate_targets()
     context.serialize()
 
-  elif (args.clean or args.build):
+  else:
     context = Context(build_variant, build_directory)
     context.deserialize()
     set_options(context, args.options)
+
+  # Handle --show.
+  if args.show:
+    if '@' not in args.show:
+      args.show = root_cache['main'] + '@' + args.show
+    action = context.graph[args.show]
+    data = action.to_json()
+    data['hash'] = context.graph.hash(action)
+    print(json.dumps(data, sort_keys=True, indent=2))
+    return 0
+  # Handle --show-actions.
+  if args.show_actions:
+    for action in context.graph:
+      print(action)
+    return 0
 
   # Load the backend module.
   backend_module = context.load_module(context.backend_name)
