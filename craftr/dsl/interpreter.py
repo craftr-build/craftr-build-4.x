@@ -244,7 +244,7 @@ class Interpreter:
         has_value = self.context.options[option_name]
       except KeyError:
         if value is None:
-          raise MissingRequiredOptionError(option_name)
+          raise MissingRequiredOptionError(module.name, option_name)
         has_value = self._eval(loc.lineno, value, self.context.get_exec_vars(module))
       try:
         has_value = Options.adapt(type, has_value)
@@ -270,12 +270,17 @@ class Interpreter:
   def _assignment(self, node, obj, override_export=False):
     assert isinstance(obj, (core.Module, core.Target, core.Dependency)), type(obj)
     export = override_export or node.export
-    if export and not isinstance(obj, core.Target):
-      raise RuntimeError('can not export properties in a non-target context')
-    props = obj.exported_props if export else obj.props
+
+    if isinstance(obj, core.Target):
+      props = obj.exported_props if export else obj.props
+    else:
+      if export:
+        raise RuntimeError('can not export properties in a non-target context')
+      props = obj.props
+
     propname = node.scope + '.' + node.propname
     if propname not in props:
-      self.context.report_property_does_not_exist(self.filename, node.loc, name, obj)
+      self.context.report_property_does_not_exist(self.filename, node.loc, propname, obj)
       return
 
     value = self._eval(node.loc.lineno, node.expression, self.context.get_exec_vars(obj))
@@ -308,14 +313,14 @@ class Interpreter:
     else:
       module = self.context.load_module(node.name)
       sources = [x for x in module.targets.values() if x.public]
-    dep = parent_target.add_dependency(sources, node.public)
+    dep = parent_target.add_dependency(sources, node.export)
     self.context.init_dependency(dep)
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
     self.context.finalize_dependency(dep)
 
-  def _export_block(self, node, propset):
-    assert propset.supports_exported_members(), propset
+  def _export_block(self, node, obj):
+    assert isinstance(obj, core.Target)
     for assign in node.assignments:
-      self._assignment(assign, propset, override_export=True)
+      self._assignment(assign, obj, override_export=True)

@@ -218,7 +218,6 @@ class CxxTargetHandler(craftr.TargetHandler):
     data.includes = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.includes')]
     data.prefixHeaders = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.prefixHeaders')]
 
-
     # TODO: Determine whether we build an executable, static library
     #       or shared library.
     data.productFilename = target.name + '-' + target.module.version

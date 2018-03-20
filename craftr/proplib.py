@@ -90,6 +90,12 @@ class PropType:
       name, expected, type(value).__name__))
 
 
+class Any(PropType):
+
+  def coerce(self, name, value):
+    return value
+
+
 class Bool(PropType):
 
   def __init__(self, strict=True):
@@ -235,11 +241,13 @@ class InstanceOf(PropType, metaclass=nr.generic.GenericMeta):
 class PropertySet:
   """
   The #PropertySet describes a set of properties. It does not contain actual
-  property values.
+  property values. If *allow_any* is #True, any properties will be permitted
+  by the set.
   """
 
-  def __init__(self):
+  def __init__(self, allow_any=False):
     self.props = {}
+    self.allow_any = allow_any
 
   def __repr__(self):
     return '<PropertySet props={}>'.format(self.props)
@@ -248,9 +256,23 @@ class PropertySet:
     try:
       return self.props[key]
     except KeyError:
+      if self.allow_any:
+        return Prop(key, Any())
       raise NoSuchProperty(key)
 
+  def __setitem__(self, key, prop):
+    if not isinstance(prop, Prop):
+      raise TypeError('expected Prop')
+    if key != prop.name:
+      raise ValueError('property key does not match property name')
+    self.props[key] = prop
+
+  def __delitem__(self, key):
+    del self.props[key]
+
   def __contains__(self, key):
+    if self.allow_any:
+      return True
     return key in self.props
 
   def __iter__(self):
@@ -276,7 +298,10 @@ class PropertySet:
     return self.props.values()
 
   def get(self, key):
-    return self.props.get(key)
+    prop = self.props.get(key)
+    if prop is None and self.allow_any:
+      prop = Prop(key, Any())
+    return prop
 
 
 class Properties:

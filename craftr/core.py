@@ -36,6 +36,8 @@ class Context:
   """
 
   def __init__(self):
+    self.module_properties = proplib.PropertySet(allow_any=True)
+    Module.setup_standard_properties(self.module_properties)
     self.target_properties = proplib.PropertySet()
     Target.setup_standard_properties(self.target_properties)
     self.dependency_properties = proplib.PropertySet()
@@ -89,18 +91,24 @@ class Module:
   be treated relative to.
   """
 
+  @staticmethod
+  def setup_standard_properties(props):
+    pass
+
   def __init__(self, context, name, version, directory):
     self.context = context
     self.name = name
     self.version = version
     self.directory = directory
     self.targets = {}
+    self.pools = {}
+    self.props = proplib.Properties(context.module_properties)
 
   def __repr__(self):
     return 'Module(name={!r}, version={!r}, directory={!r})'.format(
       self.name, self.version, self.directory)
 
-  def add_target(self, name, public):
+  def add_target(self, name, public=False):
     if name in self.targets:
       raise ValueError('target name {!r} already occupied'.format(name))
     target = Target(self, name, public)
@@ -108,7 +116,12 @@ class Module:
     return target
 
   def add_pool(self, name, depth):
-    warnings.warn('pools are currently not supported')
+    if name in self.pools:
+      raise ValueError('pool {!r} already defined'.format(name))
+    self.pools[name] = depth
+
+  def public_targets(self):
+    return (x for x in self.targets.values() if x .public)
 
 
 class Target:
@@ -190,14 +203,15 @@ class Target:
     return result
 
   def transitive_dependencies(self):
-    def worker(target):
+    def worker(target, private=False):
       for dep in target.dependencies:
-        yield dep
+        if dep.public or private:
+          yield dep
         for t in dep.sources:
           yield from worker(t)
-    return stream.unique(worker(self))
+    return stream.unique(worker(self, private=True))
 
-  def add_dependency(self, sources, public):
+  def add_dependency(self, sources, public=False):
     dep = Dependency(self, sources, public)
     self.dependencies.append(dep)
     return dep
@@ -278,11 +292,16 @@ class Dependency:
     pass
 
   def __init__(self, target, sources, public):
+    if isinstance(sources, collections.Iterator):
+      sources = list(sources)
     sources = proplib.List[proplib.InstanceOf[Target]]().coerce('sources', sources)
     self.target = target
     self.sources = sources
     self.public = public
     self.props = proplib.Properties(target.context.dependency_properties)
+
+  def __repr__(self):
+    return 'Dependency({!r}, {!r})'.format(self.target, self.sources)
 
   @property
   def context(self):

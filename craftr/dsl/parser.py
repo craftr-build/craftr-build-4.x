@@ -194,7 +194,7 @@ class Target(Node):
 
   def render(self, fp, depth):
     if self.public:
-      fp.write('export ')
+      fp.write('public ')
     fp.write('target "{}":\n'.format(self.name))
     for child in self.children:
       child.render(fp, depth+1)
@@ -241,17 +241,17 @@ class Export(Node):
 
 class Dependency(Node):
 
-  def __init__(self, loc, name, public):
+  def __init__(self, loc, name, export):
     super().__init__(loc)
     self.name = name
-    self.public = public
+    self.export = export
     self.assignments = []
 
   def render(self, fp, depth):
     fp.write('  ' * depth)
-    if self.public:
-      fp.write('public ')
-    fp.write('dependency "{}"'.format(self.name))
+    if self.export:
+      fp.write('export ')
+    fp.write('requires "{}"'.format(self.name))
     fp.write(':\n' if self.assignments else '\n')
     for assign in self.assignments:
       assign.render(fp, depth+1)
@@ -274,7 +274,7 @@ class Parser:
   ]
 
   KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
-              'export', 'public', 'target', 'dependency']
+              'export', 'public', 'target', 'requires']
 
   def parse(self, source, filename='<input>'):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
@@ -333,18 +333,21 @@ class Parser:
         raise ParseError(loc, 'unexpected keyword "export"')
       sub_keywords = []
       if 'configure' in keywords: sub_keywords.append('configure')
+      if 'requires' in keywords: sub_keywords.append('requires')
       return self._parse_stmt_or_block(lexer, sub_keywords, parent_indent, export=True)
     if 'public' in keywords and token.value == 'public' and not lexer.accept(':'):
       sub_keywords = []
       if 'target' in keywords: sub_keywords.append('target')
-      if 'dependency' in keywords: sub_keywords.append('dependency')
       return self._parse_stmt_or_block(lexer, sub_keywords, parent_indent, public=True)
 
     if token.value == 'export' and lexer.token.type == ':':
       lexer.scanner.restore(lexer.token.cursor)
 
     if token.value in keywords:
-      return getattr(self, '_parse_' + token.value)(lexer, parent_indent=parent_indent, export=export)
+      kwargs = {'parent_indent': parent_indent}
+      if export: kwargs['export'] = export
+      if public: kwargs['public'] = public
+      return getattr(self, '_parse_' + token.value)(lexer, **kwargs)
     elif token.value in self.KEYWORDS:
       raise ParseError(loc, 'unexpected keyword "{}"'.format(token.value))
     scope = token.value
@@ -390,13 +393,13 @@ class Parser:
       result = first_line.strip() + '\n' + result
     return result
 
-  def _parse_configure(self, lexer, parent_indent, export):
+  def _parse_configure(self, lexer, parent_indent, export=False):
     block = Configure(lexer.token.cursor, export=export)
     lexer.next(':')
     block.loads(self._parse_expression(lexer, parent_indent))
     return block
 
-  def _parse_options(self, lexer, parent_indent, export):
+  def _parse_options(self, lexer, parent_indent, export=False):
     assert not export
     options = Options(lexer.token.cursor)
     lexer.next(':')
@@ -426,21 +429,21 @@ class Parser:
       raise ParseError(lexer.token.cursor, 'expected at least one indented statement')
     return options
 
-  def _parse_load(self, lexer, parent_indent, export):
+  def _parse_load(self, lexer, parent_indent, export=False):
     assert export is False
     loc = lexer.token.cursor
     filename = lexer.next('string').value.group(1)
     lexer.next('nl', 'eof')
     return Load(loc, filename)
 
-  def _parse_eval(self, lexer, parent_indent, export):
+  def _parse_eval(self, lexer, parent_indent, export=False):
     assert not export
     loc = lexer.token.cursor
     if lexer.accept(':'):
       lexer.next('nl')
     return Eval(loc, self._parse_expression(lexer, loc.colno))
 
-  def _parse_pool(self, lexer, parent_indent, export):
+  def _parse_pool(self, lexer, parent_indent, export=False):
     assert not export
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
@@ -448,13 +451,13 @@ class Parser:
     lexer.next('nl', 'eof')
     return Pool(loc, name, depth)
 
-  def _parse_target(self, lexer, parent_indent, export):
+  def _parse_target(self, lexer, parent_indent, public=False):
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
     lexer.next(':')
     lexer.next('nl')
-    subblocks = ['dependency', 'eval', 'export']
-    target = Target(loc, name, export)
+    subblocks = ['requires', 'eval', 'export']
+    target = Target(loc, name, public)
     while True:
       self._skip(lexer)
       child = self._parse_stmt_or_block(lexer, subblocks, parent_indent)
@@ -462,7 +465,7 @@ class Parser:
       target.children.append(child)
     return target
 
-  def _parse_dependency(self, lexer, parent_indent, export):
+  def _parse_requires(self, lexer, parent_indent, export=False):
     name = lexer.next('string').value.group(1)
     dep = Dependency(lexer.token.cursor, name, export)
     if lexer.accept(':'):
@@ -477,7 +480,7 @@ class Parser:
       lexer.next('nl', 'eof')
     return dep
 
-  def _parse_export(self, lexer, parent_indent, export):
+  def _parse_export(self, lexer, parent_indent, export=False):
     assert not export
     export = Export(lexer.token.cursor)
     lexer.next(':')
