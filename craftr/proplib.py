@@ -81,7 +81,7 @@ class PropType:
   def default(self):
     raise NotImplementedError
 
-  def inherit(self, values):
+  def inherit(self, name, values):
     return next(values)
 
   @staticmethod
@@ -158,8 +158,13 @@ class List(PropType, metaclass=nr.generic.GenericMeta):
   def default(self):
     return []
 
-  def inherit(self, values):
-    return [x for y in values for x in y]
+  def inherit(self, name, values):
+    result = []
+    for i, item in enumerate(values):
+      if not isinstance(values, (tuple, list)):
+        self.typeerror(name + '[{}]'.format(i), 'tuple,list', values)
+      result += item
+    return result
 
 
 class Dict(PropType, metaclass=nr.generic.GenericMeta):
@@ -197,6 +202,34 @@ class Dict(PropType, metaclass=nr.generic.GenericMeta):
 
 
 StringList = List[String]
+
+
+class InstanceOf(PropType, metaclass=nr.generic.GenericMeta):
+
+  __generic_args__ = ['type']
+
+  def __init__(self, *type):
+    if type and self.__generic_bind__:
+      raise RuntimeError('can not override type for generic bound InstanceOf')
+    if len(type) == 1:
+      type = type[0]
+    if type:
+      self.type = type
+
+  @property
+  def typename(self):
+    if isinstance(self.type, (list, tuple)):
+      return '{' + ','.join(x.__name__ for x in self.type) + '}'
+    else:
+      return self.type.__name__
+
+  def coerce(self, name, value):
+    if not isinstance(value, self.type):
+      self.typeerror(name, self.typename, value)
+    return value
+
+  def default(self):
+    raise NotImplementedError
 
 
 class PropertySet:

@@ -170,7 +170,7 @@ class Target:
         yield target.exported_props[prop_name]
 
     prop = self.context.target_properties[prop_name]
-    return prop.type.inherit(iter_values())
+    return prop.type.inherit(prop_name, iter_values())
 
   def get_props(self, prefix='', as_object=False):
     """
