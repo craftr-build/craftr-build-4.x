@@ -146,7 +146,6 @@ class Target:
     self.exported_props = proplib.Properties(module.context.target_properties)
     self.dependencies = []
     self.actions = collections.OrderedDict()
-    self._output_actions = []
     self.outputs = FileSet()
 
   def __repr__(self):
@@ -278,13 +277,9 @@ class Target:
         for target in dep.sources:
           deps += target.output_actions
     elif deps_was_unset and self.actions:
-      if self._output_actions:
-        deps.append(self._output_actions[-1])
-      else:
-        # Could be None, if output was set to False
-        action = self.__previous_action()
-        if action:
-          deps.append(action)
+      output_actions = self.output_actions
+      if output_actions:
+        deps.append(output_actions[-1])
 
     # TODO: Assign the action to the pool specified in the target.
     kwargs.setdefault('explicit', self.get_prop('this.explicit'))
@@ -295,11 +290,6 @@ class Target:
       self._output_actions.append(action)
     action.is_output = output
     return action
-
-  def __previous_action(self):
-    for key, action in reversed(self.actions.items()):
-      if action.is_output is not False:
-        return action
 
 
 class Dependency:
