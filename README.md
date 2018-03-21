@@ -117,7 +117,7 @@ target "main":
 Run as `craftr -cb main:ocaml.run`
 </td>
   </tr>
-  <tr><th>Vala</th></tr>
+  <tr><th>Vala</th><th>Cython</th></tr>
   <tr>
     <td>
 
@@ -129,6 +129,18 @@ target "main":
 ```
 
 Run as `craftr -cb main:vala.run`
+</td>
+    <td>
+
+```python
+project "cython_helloworld"
+using "cython"
+target "main":
+  cython.srcs = glob('src/*.pyx')
+  cython.main = 'src/Main.pyx'
+```
+
+Run as `craftr -cb main:cython.run`
 </td>
   </tr>
 </table>
