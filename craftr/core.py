@@ -100,8 +100,8 @@ class Module:
     self.name = name
     self.version = version
     self.directory = directory
-    self.targets = {}
-    self.pools = {}
+    self.targets = collections.OrderedDict()
+    self.pools = collections.OrderedDict()
     self.props = proplib.Properties(context.module_properties)
 
   def __repr__(self):
