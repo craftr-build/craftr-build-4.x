@@ -1,6 +1,6 @@
 
 import craftr
-from craftr import path
+from nr import path
 
 if OS.type == 'nt':
   exe_suffix = '.exe'
@@ -10,25 +10,25 @@ else:
 
 class HaskellTargetHandler(craftr.TargetHandler):
 
-  def get_common_property_scope(self):
-    return 'haskell'
+  def init(self, context):
+    props = context.target_properties
+    props.add('haskell.srcs', craftr.StringList)
+    props.add('haskell.productName', craftr.String)
+    props.add('haskell.compilerFlags', craftr.StringList)
 
-  def setup_target(self, target):
-    target.define_property('haskell.srcs', 'StringList', inheritable=False)
-    target.define_property('haskell.productName', 'String', inheritable=False)
-    target.define_property('haskell.compilerFlags', 'StringList')
+  def translate_target(self, target):
+    src_dir = target.directory
+    build_dir = path.join(context.build_directory, target.module.name)
+    data = target.get_props('haskell.', as_object=True)
+    data.compilerFlags = target.get_prop_join('haskell.compilerFlags')
 
-  def finalize_target(self, target, data):
-    src_dir = target.directory()
-    build_dir = path.join(context.build_directory, target.module().name())
     if not data.productName:
-      data.productName = target.name() + target.module().version()
+      data.productName = target.name + target.module.version
     if data.srcs:
       data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName + exe_suffix)
-      target.outputs().add(data.productFilename, ['exe'])
+      target.outputs.add(data.productFilename, ['exe'])
 
-  def translate_target(self, target, data):
     if data.srcs:
       # Action to compile the sources to an executable.
       command = ['ghc', '-o', '$out', '$in']
@@ -45,4 +45,4 @@ class HaskellTargetHandler(craftr.TargetHandler):
       action.add_buildset()
 
 
-module.register_target_handler(HaskellTargetHandler())
+context.register_handler(HaskellTargetHandler())

@@ -1,4 +1,5 @@
 project "python"
+using "cxx"
 
 eval import sys
 options:
@@ -8,7 +9,7 @@ eval:
   import json
   import shlex
   import subprocess
-  from craftr import path
+  from nr import path
 
   def get_python_config(python_bin):
     # TODO: Cache result
@@ -47,8 +48,7 @@ eval:
     path.join(files_dir, 'frozen_dllmain-' + sys.version[:3] + '.c')
   ]
 
-export target "python":
-  dependency "cxx"
+public target "python":
   export:
     cxx.includes = [cfg['INCLUDEPY']]
     cxx.defines = cfg['DEFINES']

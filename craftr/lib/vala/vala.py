@@ -1,6 +1,6 @@
 
 import craftr
-from craftr import path
+from nr import path
 
 if OS.type == 'nt':
   exe_suffix = '.exe'
@@ -10,26 +10,27 @@ else:
 
 class ValaTargetHandler(craftr.TargetHandler):
 
-  def get_common_property_scope(self):
-    return 'vala'
+  def init(self, context):
+    props = context.target_properties
+    props.add('vala.srcs', craftr.StringList)
+    props.add('vala.productName', craftr.String)
+    props.add('vala.compilerFlags', craftr.StringList)
+    props.add('vala.linkerFlags', craftr.StringList)
 
-  def setup_target(self, target):
-    target.define_property('vala.srcs', 'StringList', inheritable=False)
-    target.define_property('vala.productName', 'String', inheritable=False)
-    target.define_property('vala.compilerFlags', 'StringList')
-    target.define_property('vala.linkerFlags', 'StringList')
+  def translate_target(self, target):
+    src_dir = target.directory
+    build_dir = path.join(context.build_directory, target.module.name)
+    data = target.get_props('vala.', as_object=True)
+    data.compilerFlags = target.get_prop_join('vala.compilerFlags')
+    data.linkerFlags = target.get_prop_join('vala.linkerFlags')
 
-  def finalize_target(self, target, data):
-    src_dir = target.directory()
-    build_dir = path.join(context.build_directory, target.module().name())
     if not data.productName:
-      data.productName = target.name() + '-' + target.module().version()
+      data.productName = target.name() + '-' + target.module.version
     if data.srcs:
       data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName + exe_suffix)
-      target.outputs().add(data.productFilename, ['exe'])
+      target.outputs.add(data.productFilename, ['exe'])
 
-  def translate_target(self, target, data):
     if data.srcs:
       command = ['valac', '-o', '$out', '$in']
       command += data.compilerFlags
@@ -46,4 +47,4 @@ class ValaTargetHandler(craftr.TargetHandler):
       action.add_buildset()
 
 
-module.register_target_handler(ValaTargetHandler())
+context.register_handler(ValaTargetHandler())
