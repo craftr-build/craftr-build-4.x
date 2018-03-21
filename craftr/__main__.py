@@ -23,6 +23,7 @@ Implements the Craftr command-line interface.
 
 from . import dsl
 from nr import path
+from nr.stream import stream
 
 import argparse
 import collections
@@ -215,9 +216,6 @@ def main(argv=None):
   build_directory = os.path.join('build', build_variant)
 
   if args.configure:
-    # TODO: Handle --reconfigure by reading previously define build
-    #       mode and options.
-
     if not args.file:
       args.file = 'build.craftr'
     # Turn a directory-like file or one that actually points to a directory
@@ -257,7 +255,7 @@ def main(argv=None):
     print('digraph {')
     for action in context.graph.actions():
       print('  "{}";'.format(action.identifier()))
-      for dep in action.deps:
+      for dep in stream.unique(action.deps):
         print('    "{}" -> "{}";'.format(dep.identifier(), action.identifier()))
     print('}')
     return

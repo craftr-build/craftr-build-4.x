@@ -146,7 +146,7 @@ class Target:
     self.exported_props = proplib.Properties(module.context.target_properties)
     self.dependencies = []
     self.actions = collections.OrderedDict()
-    self.output_actions = []
+    self._output_actions = []
     self.outputs = FileSet()
 
   def __repr__(self):
@@ -163,6 +163,26 @@ class Target:
   @property
   def directory(self):
     return self.exported_props['this.directory'] or self.props['this.directory'] or self.module.directory
+
+  @property
+  def output_actions(self):
+    """
+    Returns a list for the target's output actions. If there is at least
+    one action that is explicitly marked as output, only actions that are
+    marked as such will be returned. Otherwise, the last action that was
+    created and not explicitly marked as NO output will be returned.
+    """
+
+    result = []
+    last_default_output = None
+    for action in self.actions.values():
+      if action.is_output:
+        result.append(action)
+      elif action.is_output is None:
+        last_default_output = action
+    if not result and last_default_output:
+      result.append(last_default_output)
+    return result
 
   def get_prop(self, prop_name):
     """
@@ -258,8 +278,8 @@ class Target:
         for target in dep.sources:
           deps += target.output_actions
     elif deps_was_unset and self.actions:
-      if self.output_actions:
-        deps.append(self.output_actions[-1])
+      if self._output_actions:
+        deps.append(self._output_actions[-1])
       else:
         # Could be None, if output was set to False
         action = self.__previous_action()
@@ -272,7 +292,7 @@ class Target:
     action = Action(self.id, name, deps=deps, **kwargs)
     self.actions[name] = action
     if output:
-      self.output_actions.append(action)
+      self._output_actions.append(action)
     action.is_output = output
     return action
 
