@@ -313,7 +313,8 @@ class Dependency:
     self.props = proplib.Properties(target.context.dependency_properties)
 
   def __repr__(self):
-    return 'Dependency({!r}, {!r})'.format(self.target, self.sources)
+    return 'Dependency({!r}, {!r}, public={!r})'.format(
+      self.target, self.sources, self.public)
 
   @property
   def context(self):
