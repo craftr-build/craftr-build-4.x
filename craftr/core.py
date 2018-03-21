@@ -113,6 +113,8 @@ class Module:
       raise ValueError('target name {!r} already occupied'.format(name))
     target = Target(self, name, public)
     self.targets[target.name] = target
+    for handler in self.context.handlers:
+      handler.target_created(target)
     return target
 
   def add_pool(self, name, depth):
@@ -326,6 +328,9 @@ class TargetHandler:
   """
 
   def init(self, context):
+    pass
+
+  def target_created(self, target):
     pass
 
   def translate_begin(self):
