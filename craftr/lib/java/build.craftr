@@ -1,8 +1,6 @@
 project "java" v1.0.0
 
 eval import os
-eval:
-  print('os' in globals())
 
 options:
   str onejar = os.path.join(module.directory, "tools", "one-jar-boot-0.97.jar")
@@ -10,7 +8,7 @@ options:
   str javacJar = "jar"
   str compilerFlags = ""
 
-load "./java.py"
-
 public target "artifacts":
   eval pass
+
+load "./java.py"

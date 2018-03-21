@@ -44,12 +44,15 @@ class ArtifactResolver:
       if artifact.scope != 'compile' or artifact.type != 'jar':
         continue
 
+      indent = '| ' * depth
+
       # For now, we use this to avoid downloading the same dependency in
       # different versions, instead only the first version that we find.
       artifact_id = '{}:{}'.format(artifact.group, artifact.artifact)
       if artifact_id in self.poms:
         if parent_deps is not None:
           parent_deps.append(artifact_id)
+        print('  {}{} (CACHED)'.format('| ' * depth, artifact))
         continue
 
       # Try to find a POM manifest for the artifact.
@@ -77,7 +80,6 @@ class ArtifactResolver:
       queue.extend([(depth+1, x, deps) for x in reversed(maven.pom_eval_deps(pom))])
 
       # Print dependency info.
-      indent = '| ' * depth
       print('  {}{} ({})'.format('| ' * depth, artifact, repo.name))
 
     seen = set()
@@ -146,6 +148,9 @@ class JavaTargetHandler(craftr.TargetHandler):
     props = context.dependency_properties
     props.add('java.bundle', craftr.Bool())
 
+  def target_created(self, target):
+    target.add_dependency([module.targets['artifacts']])
+
   def translate_target(self, target):
     src_dir = path.abs(target.directory)
     build_dir = path.join(context.build_directory, target.module.name)
@@ -181,7 +186,8 @@ class JavaTargetHandler(craftr.TargetHandler):
           command += [binary_jar]
           command += [repo.get_artifact_uri(artifact, 'jar')]
           action = module.targets['artifacts'].add_action(
-            str(artifact).replace(':', '_'), commands=[command])
+            str(artifact).replace(':', '_'), commands=[command],
+            input=False, deps=[])
           build = action.add_buildset()
           build.files.add(binary_jar, ['out'])
           self.artifact_actions[binary_jar] = action

@@ -1,13 +1,12 @@
 project "java_helloworld"
+using "java"
 
 target "lib":
-  dependency "java"
   java.srcs = glob('src/lib/*.java')
   export java.artifacts = ['org.tensorflow:tensorflow:1.4.0']
 
 target "main":
-  dependency "java"
-  dependency "@lib"
+  requires "@lib"
   java.srcs = ['src/Main.java']
   java.mainClass = 'Main'
   java.bundleType = 'merge'
