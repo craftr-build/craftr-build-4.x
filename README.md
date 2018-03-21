@@ -38,22 +38,24 @@ yet powerful and easy to extend/customize.
     <td>
 
 ```python
-# craftr -cb main:cxx.run
 project "myproject"
 using "cxx"
 target "main":
   cxx.srcs = ['main.c']
 ```
+
+Run as `craftr -cb main:cxx.run`
 </td>
 <td>
 
 ```python
-# craftr -cb main:cxx.run
 project "myproject"
 using "cxx"
 target "main":
   cxx.srcs = ['main.cpp']
 ```
+
+Run as `craftr -cb main:cxx.run`
 </td>
   </tr>
   <tr><th>C#</th><th>Java</th></tr>
@@ -61,7 +63,6 @@ target "main":
     <td>
 
 ```python
-# craftr -cb main:csharp.runBundle
 project "csharp_helloworld"
 using "csharp"
 target "main":
@@ -69,19 +70,24 @@ target "main":
   csharp.packages = ['Newtonsoft.JSON:10.0.3']
   csharp.bundle = True
 ```
+
+Run as `craftr -cb main:csharp.runBundle`
 </td>
     <td>
 
 ```python
-# craftr -cb main:java.runBundle
 project "java_helloworld"
 using "java"
 target "main":
   java.srcs = glob('src/**/*.java')
-  java.artifacts = ['org.tensorflow:tensorflow:1.4.0']
+  java.artifacts = [
+      'org.tensorflow:tensorflow:1.4.0'
+    ]
   java.mainClass = 'Main'
   java.bundleType = 'merge'  # Or 'onejar'
 ```
+
+Run as `craftr -cb main:java.runBundle`
 </td>
   </tr>
   <tr><th>Haskell</th><th>OCaml</th></tr>
@@ -89,23 +95,26 @@ target "main":
     <td>
 
 ```python
-# craftr -cb main:haskell.run
 project "haskell_helloworld"
 using "haskell"
 target "main":
   haskell.srcs = ['src/Main.hs']
 ```
+
+Run as `craftr -cb main:haskell.run`
 </td>
     <td>
 
 ```python
-# craftr -cb main:ocaml.run
 project "ocaml_helloworld"
 using "ocaml"
 target "main":
   ocaml.srcs = ['src/Main.ml']
-  ocaml.standalone = True  # False to produce an OCaml bytecode file
+  # False to produce an OCaml bytecode file
+  ocaml.standalone = True
 ```
+
+Run as `craftr -cb main:ocaml.run`
 </td>
   </tr>
   <tr><th>Vala</th></tr>
@@ -113,12 +122,13 @@ target "main":
     <td>
 
 ```python
-# craftr -cb main:vala.run
 project "vala_helloworld"
 using "vala"
 target "main":
   vala.srcs = ['src/Main.vala']
 ```
+
+Run as `craftr -cb main:vala.run`
 </td>
   </tr>
 </table>
