@@ -7,30 +7,27 @@
 <a href="https://travis-ci.org/craftr-build/craftr"><img src="https://travis-ci.org/craftr-build/craftr.svg?branch=master"></a>
 <a href="https://ci.appveyor.com/project/NiklasRosenstein/craftr/branch/master"><img src="https://ci.appveyor.com/api/projects/status/6v01441cdq0s7mik/branch/master?svg=true"></a>
 
-Craftr is a modular build system that has evolved from regular Python scripts
-to a Domain Specific Language and has recently been inspired by [Buck],
-[CMake] and [QBS]. It uses [Ninja] as its build backend by default, but
-extensions can implement compatibility with other builders.  
-Craftr runs on CPython 3.3 or higher.
+Craftr is a new software build system with a focus on ease of use, granularity
+and extensibility. It is language independent and supports a wide range of
+popular programming languages out of the box. Craftr uses [Ninja] to execute
+builds.
 
-  [Buck]: https://buckbuild.com/
-  [CMake]: https://cmake.org/
-  [QBS]: https://bugreports.qt.io/projects/QBS/summary
-  [Ninja]: https://github.com/ninja-build/ninja.git
-  [PyPI]: https://pypi.python.org/pypi
+__Inspiration__
 
-### Installation
+* [Buck](https://buckbuild.com/)
+* [CMake](https://cmake.org/)
+* [QBS](https://bugreports.qt.io/projects/QBS/summary)
 
-Craftr 3 is in alpha and not currently available on [PyPI]. You can however
-install it directly from the Git repository.
+__Install__
+
+Craftr 3 is work in progress and not currently available on PyPI. If you
+install `craftr-build` via Pip, you will install Craftr 2 which is vastly
+different from this version. To get *this* version, you have to install it
+directly from the GitHub repository.
 
     pip3 install git+https://github.com/craftr-build/craftr.git@master
 
-
-### What does it look like?
-
-Craftr is supposed to be an ergonomic tool that should be easy to use and is
-yet powerful and easy to extend/customize.
+__Examples__
 
 <table>
   <tr><th>C</th><th>C++</th></tr>
@@ -38,7 +35,7 @@ yet powerful and easy to extend/customize.
     <td>
 
 ```python
-project "myproject"
+project "examples.c"
 using "cxx"
 target "main":
   cxx.srcs = ['main.c']
@@ -49,7 +46,7 @@ Run as `craftr -cb main:cxx.run`
 <td>
 
 ```python
-project "myproject"
+project "examples.cpp"
 using "cxx"
 target "main":
   cxx.srcs = ['main.cpp']
@@ -63,7 +60,7 @@ Run as `craftr -cb main:cxx.run`
     <td>
 
 ```python
-project "csharp_helloworld"
+project "examples.csharp"
 using "csharp"
 target "main":
   csharp.srcs = glob('src/*.cs')
@@ -76,7 +73,7 @@ Run as `craftr -cb main:csharp.runBundle`
     <td>
 
 ```python
-project "java_helloworld"
+project "examples.java"
 using "java"
 target "main":
   java.srcs = glob('src/**/*.java')
@@ -95,7 +92,7 @@ Run as `craftr -cb main:java.runBundle`
     <td>
 
 ```python
-project "haskell_helloworld"
+project "examples.haskell"
 using "haskell"
 target "main":
   haskell.srcs = ['src/Main.hs']
@@ -106,7 +103,7 @@ Run as `craftr -cb main:haskell.run`
     <td>
 
 ```python
-project "ocaml_helloworld"
+project "examples.ocaml"
 using "ocaml"
 target "main":
   ocaml.srcs = ['src/Main.ml']
@@ -122,7 +119,7 @@ Run as `craftr -cb main:ocaml.run`
     <td>
 
 ```python
-project "vala_helloworld"
+project "examples.vala"
 using "vala"
 target "main":
   vala.srcs = ['src/Main.vala']
@@ -133,7 +130,7 @@ Run as `craftr -cb main:vala.run`
     <td>
 
 ```python
-project "cython_helloworld"
+project "example.cython"
 using "cython"
 target "main":
   cython.srcs = glob('src/*.pyx')
