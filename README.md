@@ -14,11 +14,16 @@ builds.
 
   [Ninja]: https://github.com/ninja-build/ninja
 
-__Inspiration__
+__Current State__
 
-* [Buck](https://buckbuild.com/)
-* [CMake](https://cmake.org/)
-* [QBS](https://bugreports.qt.io/projects/QBS/summary)
+The build system core is running smoothly &ndash; now it is mostly a matter
+of implementing support for various programming languages or extending the
+features of existing supported languages (for example C/C++). Much of the
+logic from previous Craftr versions ([2.0], [v3.0.0-pre]) can be used,
+but the implementation will be very different.
+
+  [2.0]: https://github.com/craftr-build/craftr/tree/2.0
+  [v3.0.0-pre]: https://github.com/craftr-build/craftr/tree/v3.0.0-pre
 
 __Install__
 
