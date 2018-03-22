@@ -30,6 +30,11 @@ class Compiler(nr.named.named):
     ('version', str),
     ('arch', str),
 
+    ('executable_suffix', str),
+    ('library_prefix', str),
+    ('library_shared_suffix', str),
+    ('library_static_suffix', str),
+
     ('compiler_c', List[str]),               # Arguments to invoke the C compiler.
     ('compiler_cpp', List[str]),             # Arguments to invoke the C++ compiler.
     ('compiler_env', Dict[str, str]),        # Environment variables for the compiler.
@@ -97,7 +102,9 @@ class Compiler(nr.named.named):
     return list(args)
 
   def init(self, context):
-    pass
+    """
+    Called from CxxTargetHandler.init().
+    """
 
   def before_translate(self, build):
     pass
@@ -120,16 +127,17 @@ class Compiler(nr.named.named):
 
     return None
 
-  def build_compile_flags(self, lang, target, data):
+  def get_compile_command(self, target, data, lang):
     """
-    Build the compiler flags. Does not include the #compiler_out argument,
-    yet. Use the #build_compile_out_flags() method for that.
+    This method is called to generate a command to build a C or C++ source
+    file into an object file. The command must use action variables to
+    reference any files used by the command, eg. commonly `${in,src}` and
+    `${out,obj}`.
+
+    The default implementation of this method constructs a command based on
+    the data members of the #Compiler subclass.
     """
 
-    if not data.preferredLinkage:
-      data.preferredLinkage = 'static'
-    if data.preferredLinkage not in ('static', 'shared'):
-      error('invalid cxx.preferredLinkage: {!r}'.format(data.preferredLinkage))
     if data.type not in ('executable', 'library'):
       error('invalid cxx.type: {!r}'.format(data.type))
 
@@ -201,10 +209,44 @@ class Compiler(nr.named.named):
 
     return command
 
-  def update_compile_buildset(self, build, target, data):
+  def create_compile_action(self, target, data, action_name, lang, srcs):
+    command = self.get_compile_command(target, data, lang)
+    action = target.add_action(
+      action_name,
+      environ=self.compiler_env,
+      commands=[command],
+      input=True,
+      deps_prefix=self.deps_prefix,
+      depfile=self.depfile_name)
+
+    for src in srcs:
+      buildset = action.add_buildset()
+      buildset.files.add(src, ['in', 'src', 'src.' + lang])
+      self.add_objects_for_source(target, data, lang, src, buildset)
+
+    return action
+
+  # @abstract
+  def add_objects_for_source(sefl, target, data, lang, src, buildset):
+    """
+    This method is called from #create_compile_action() in order to construct
+    the object output filename for the specified C or C++ source file and add
+    it to the *buildset*. Additional files may also be added, for example the
+    MSVC compiler will add the PDB file.
+
+    The object file must be tagged as `out` and `obj`. Additional output files
+    should be tagged with at least `out` and maybe `optional`.
+    """
+
     raise NotImplementedError
 
-  def build_link_flags(self, lang, target, data):
+  def get_link_command(self, target, data, lang):
+    """
+    Similar to #get_compile_command(), this method is called to generate a
+    command to link object files to an executable, shared library or static
+    library.
+    """
+
     is_archive = False
     is_shared = False
 
@@ -261,5 +303,19 @@ class Compiler(nr.named.named):
       flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
     return command + ['$in'] + flags #+ additional_input_files
 
-  def update_link_buildset(self, build, target, data):
-    raise NotImplementedError
+  def create_link_action(self, target, data, action_name, lang, compile_actions):
+    command = self.get_link_command(target, data, lang)
+    link_action = target.add_action(
+      action_name,
+      commands=[command],
+      environ=self.linker_env,
+      deps=compile_actions)
+    obj_files = list(concat(x.all_files_tagged(['out', 'obj']) for x in compile_actions))
+    buildset = link_action.add_buildset()
+    buildset.files.add(obj_files, ['in', 'obj'])
+    buildset.files.add(data.productFilename, ['out', 'product'])
+    self.add_link_outputs(target, data, lang, compile_actions, obj_files, buildset)
+    return link_action
+
+  def add_link_outputs(self, target, data, lang, compile_actions, obj_files, buildset):
+    pass

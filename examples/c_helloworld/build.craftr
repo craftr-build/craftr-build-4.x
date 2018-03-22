@@ -1,5 +1,5 @@
 project "myproject"
+using "cxx"
 
 target "main":
-  dependency "cxx"
   cxx.srcs = ['main.c']

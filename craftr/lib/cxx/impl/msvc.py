@@ -66,6 +66,11 @@ class MsvcCompiler(base.Compiler):
   archiver = ['lib', '/nologo']
   archiver_out = '/OUT:${out,product}'
 
+  executable_suffix = '.exe'
+  library_prefix = ''
+  library_shared_suffix = '.dll'
+  library_static_suffix = '.lib'
+
   def __init__(self, toolkit):
     super().__init__(
       version = toolkit.cl_version,
@@ -85,33 +90,13 @@ class MsvcCompiler(base.Compiler):
     props.add('cxx.msvcLinkerFlags', craftr.StringList)
     props.add('cxx.msvcNoDefaultLib', craftr.StringList)
 
-  def on_target_created(self, build):
-    if build.options.msvc_resource_files and build.localize_srcs:
-      build.options.msvc_resource_files = [craftr.localpath(x) for x in build.options.msvc_resource_files]
-
-  def before_link(self, build):
-    result = []
-    options = build.options
-    obj_dir = path.join(build.namespace.build_directory, 'obj', build.target.name)
-    if options.msvc_resource_files:
-      outfiles = craftr.relocate_files(options.msvc_resource_files, obj_dir, '.res', parent=build.namespace.directory)
-      command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']
-      result.append(build.target.add_action(
-        name = 'rc',
-        commands = [command],
-        environ = self.toolkit.environ,
-        input_files = options.msvc_resource_files,
-        output_files = outfiles,
-        foreach=True
-      ))
-      build.additional_link_files.extend(outfiles)
-    return result
-
-  def build_compile_flags(self, lang, target, data):
+  # @override
+  def get_compile_command(self, target, data, lang):
     if data.separateDebugInformation is None:
       data.separateDebugInformation = False
 
-    command = super().build_compile_flags(lang, target, data)
+    command = super().get_compile_command(target, data, lang)
+
     if BUILD.debug:
       command += ['/Od', '/RTC1', '/FC']
       if not self.version or self.version >= '18':
@@ -139,32 +124,32 @@ class MsvcCompiler(base.Compiler):
       command += ['/showIncludes']
     return command
 
-  def update_compile_buildset(self, build, target, data):
-    # TODO: Select the obj filename in the build directory.
-    src = next(build.files.tagged('src'))
-    obj = path.setsuffix(src, '.obj')
-    build.files.add(obj, ['out', 'obj'])
-    if BUILD.debug and data.separateDebugInformation:
-      pdb = path.setsuffix(src, '.pdb')
-      build.files.add(pdb, ['out', 'pdb', 'optional'])
+  def add_objects_for_source(self, target, data, lang, src, buildset):
+    objdir = get_output_directory(target, 'obj')
+    rel = path.rel(src, target.directory)
+    obj = path.setsuffix(path.join(objdir, rel), '.obj')
+    buildset.files.add(obj, ['out', 'obj'])
 
-  def build_link_flags(self, lang, target, data):
-    command = super().build_link_flags(lang, target, data)
+    if BUILD.debug and data.separateDebugInformation:
+      pdb = path.setsuffix(obj, '.pdb')
+      buildset.files.add(pdb, ['out', 'pdb', 'optional'])
+
+  def get_link_command(self, target, data, lang):
+    command = super().get_link_command(target, data, lang)
     command += [
       ('/NODEFAULTLIB:' + x) if x else '/NODEFAULTLIB'
       for x in unique(data.msvcNoDefaultLib)
     ]
     if base.is_sharedlib(data):
-      command += ['/IMPLIB:${out,implib}']  # set from set_target_outputs()
+      command += ['/IMPLIB:${out,implib}']  # set from add_link_outputs()
     if BUILD.debug and base.is_sharedlib(data):
       command += ['/DEBUG']
     return command
 
-  def update_link_buildset(self, build, target, data):
-    out = next(build.files.tagged('out,product'))
+  def add_link_outputs(self, target, data, lang, compile_actions, obj_files, buildset):
     if base.is_sharedlib(data):
-      implib = path.setsuffix('.lib')
-      build.files.add(implib, ['out', 'implib'])
+      implib = path.setsuffix(data.productFilename, '.lib')
+      buildset.files.add(implib, ['out', 'implib'])
 
 
 def get_compiler(fragment):

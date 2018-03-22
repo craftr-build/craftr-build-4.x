@@ -1,6 +1,7 @@
 
 import craftr
 from nr import path
+base = load('./impl/base.py')
 
 # TODO: Support precompiled headers.
 # TODO: Support compiler-wrappers like ccache.
@@ -26,6 +27,12 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # Specifies the target type. Either `executable` or `library`.
     props.add('cxx.type', craftr.String, 'executable')
+
+    # The name of the output file. This string may contain the string
+    # `$(ext)` which will be replaced with the platform's proper extension.
+    # It may also contain the string `$(lib)` which will be replaced by
+    # `lib` on OSX and macOS but with an empty string on Windows.
+    props.add('cxx.productName', craftr.String)
 
     # The C and/or C++ input files for the target. If this property is not
     # set, the target will not be considered a C/C++ build target.
@@ -218,10 +225,30 @@ class CxxTargetHandler(craftr.TargetHandler):
     data.includes = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.includes')]
     data.prefixHeaders = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.prefixHeaders')]
 
-    # TODO: Determine whether we build an executable, static library
-    #       or shared library.
-    data.productFilename = target.name + '-' + target.module.version
-    target.outputs.add(data.productFilename, ['exe'])
+    if not data.preferredLinkage:
+      data.preferredLinkage = 'static'
+    if data.preferredLinkage not in ('static', 'shared'):
+      error('invalid cxx.preferredLinkage: {!r}'.format(data.preferredLinkage))
+
+    if not data.productName:
+      data.productName = '$(lib)' + target.name + '-' + target.module.version + '$(ext)'
+    if data.type == 'executable':
+      repl = {'$(lib)': '', '$(ext)': self.compiler.executable_suffix}
+      tags = ['exe']
+      suggestedName = '{}$(ext)'
+    elif base.is_sharedlib(data):
+      repl = {'$(lib)': self.compiler.library_prefix, '$(ext)': self.compiler.library_shared_suffix}
+      tags = ['lib', 'sharedlib']
+    elif base.is_staticlib(data):
+      repl = {'$(lib)': self.compiler.library_prefix, '$(ext)': self.compiler.library_static_suffix}
+      tags = ['lib', 'staticlib']
+    else:
+      raise RuntimeError('what is this?', data)
+    for a, b in repl.items():
+      data.productName = data.productName.replace(a, b)
+
+    data.productFilename = path.join(get_output_directory(target), data.productName)
+    target.outputs.add(data.productFilename, tags)
 
     c_srcs = []
     cpp_srcs = []
@@ -234,26 +261,15 @@ class CxxTargetHandler(craftr.TargetHandler):
     obj_files = []
     for (srcs, lang) in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
       if not srcs: continue
-      command = self.compiler.build_compile_flags(lang, target, data)
-      action = target.add_action('cxx.compile' + lang.capitalize(),
-        environ=self.compiler.compiler_env, commands=[command], input=True,
-        deps_prefix=self.compiler.deps_prefix, depfile=self.compiler.depfile_name)
-      for src in srcs:
-        build = action.add_buildset()
-        build.files.add(src, ['in', 'src', 'src.' + lang])
-        self.compiler.update_compile_buildset(build, target, data)
-        obj_files += build.files.tagged('out,obj')
+      name = 'cxx.compile' + lang.capitalize()
+      action = self.compiler.create_compile_action(target, data, name, lang, srcs)
       compile_actions.append(action)
 
-    link_action = None
-    if obj_files:
-      command = self.compiler.build_link_flags('cpp' if cpp_srcs else 'c', target, data)
-      link_action = target.add_action('cxx.link', commands=[command],
-        environ=self.compiler.linker_env, deps=compile_actions)
-      build = link_action.add_buildset()
-      build.files.add(obj_files, ['in', 'obj'])
-      build.files.add(data.productFilename, ['out', 'product'])
-      self.compiler.update_link_buildset(build, target, data)
+    if compile_actions:
+      lang = 'cpp' if cpp_srcs else 'c'
+      link_action = self.compiler.create_link_action(target, data, 'cxx.link', lang, compile_actions)
+    else:
+      link_action = None
 
     if link_action and data.type == 'executable':
       command = [data.productFilename]

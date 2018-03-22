@@ -139,6 +139,10 @@ def option_default(name, value):
   return context.options.setdefault(name, value)
 
 
+def get_output_directory(target, *subdir):
+  return path.join(context.build_directory, target.module.name, target.name, *subdir)
+
+
 if sys.platform.startswith('win32'):
   OS = OsInfo('windows', 'win32', os.name, 'x86_64' if os.environ.get('ProgramFiles(x86)') else 'x86')
 elif sys.platform.startswith('darwin'):
