@@ -89,6 +89,25 @@ class MsvcCompiler(base.Compiler):
     props.add('cxx.msvcCompilerFlags', craftr.StringList)
     props.add('cxx.msvcLinkerFlags', craftr.StringList)
     props.add('cxx.msvcNoDefaultLib', craftr.StringList)
+    props.add('cxx.msvcResourceFiles', craftr.StringList)
+
+  # @override
+  def translate_target(self, target, data):
+    src_dir = target.directory
+    obj_dir = get_output_directory(target, 'obj')
+    if data.msvcResourceFiles:
+      data.msvcResourceFiles = [path.canonical(x, src_dir) for x in data.msvcResourceFiles]
+
+      outfiles = relocate_files(src_dir, data.msvcResourceFiles, obj_dir, '.res')
+      command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']
+      action = target.add_action(
+        'cxx.msvcRc',
+        commands = [command],
+        environ = self.compiler_env
+      )
+      buildset = action.add_buildset()
+      buildset.files.add(data.msvcResourceFiles, ['in'])
+      buildset.files.add(outfiles, ['out', 'obj'])   # Include in the link step
 
   # @override
   def get_compile_command(self, target, data, lang):
@@ -124,6 +143,7 @@ class MsvcCompiler(base.Compiler):
       command += ['/showIncludes']
     return command
 
+  # @override
   def add_objects_for_source(self, target, data, lang, src, buildset):
     objdir = get_output_directory(target, 'obj')
     rel = path.rel(src, target.directory)
@@ -134,6 +154,7 @@ class MsvcCompiler(base.Compiler):
       pdb = path.setsuffix(obj, '.pdb')
       buildset.files.add(pdb, ['out', 'pdb', 'optional'])
 
+  # @override
   def get_link_command(self, target, data, lang):
     command = super().get_link_command(target, data, lang)
     command += [
@@ -146,7 +167,8 @@ class MsvcCompiler(base.Compiler):
       command += ['/DEBUG']
     return command
 
-  def add_link_outputs(self, target, data, lang, compile_actions, obj_files, buildset):
+  # @override
+  def add_link_outputs(self, target, data, lang, buildset):
     if base.is_sharedlib(data):
       implib = path.setsuffix(data.productFilename, '.lib')
       buildset.files.add(implib, ['out', 'implib'])

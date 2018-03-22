@@ -143,6 +143,26 @@ def get_output_directory(target, *subdir):
   return path.join(context.build_directory, target.module.name, target.name, *subdir)
 
 
+def relocate_files(parent, files, outdir, suffix, replace_suffix=True):
+  """
+  Converts the list of filenames *files* so that they are placed under
+  *outdir* instead of *parent* and have the specified *suffix*. If
+  *replace_suffix* is #True (default), then the file's suffix will be
+  replaced, otherwise appended.
+  """
+
+  outdir = path.canonical(outdir)
+  parent = path.canonical(parent)
+
+  result = []
+  for filename in files:
+    filename = path.join(outdir, path.rel(path.canonical(filename), parent))
+    filename = path.addsuffix(filename, suffix, replace=replace_suffix)
+    result.append(filename)
+
+  return result
+
+
 if sys.platform.startswith('win32'):
   OS = OsInfo('windows', 'win32', os.name, 'x86_64' if os.environ.get('ProgramFiles(x86)') else 'x86')
 elif sys.platform.startswith('darwin'):

@@ -293,6 +293,26 @@ class Target:
     action.is_output = output
     return action
 
+  def actions_and_files_tagged(self, tags):
+    """
+    Returns a tuple of (actions, files) where *actions* is a list of actions
+    in the target that have at least one buildset where the specified *tags*
+    match, and *files* is a list of the files that match these tags.
+    """
+
+    if isinstance(tags, str):
+      tags = [x.strip() for x in tags.split(',')]
+
+    actions = []
+    files = []
+    for action in self.actions.values():
+      matched_files = action.all_files_tagged(tags)
+      if matched_files:
+        actions.append(action)
+        files += matched_files
+
+    return actions, files
+
 
 class Dependency:
   """

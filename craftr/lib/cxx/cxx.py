@@ -218,7 +218,6 @@ class CxxTargetHandler(craftr.TargetHandler):
   def translate_target(self, target):
     context = target.context
     src_dir = target.directory
-    build_dir = path.join(context.build_directory, target.module.name)
 
     data = target.get_props('cxx.', as_object=True)
     data.srcs = [path.canonical(x, src_dir) for x in target.get_prop_join('cxx.srcs')]
@@ -249,6 +248,8 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     data.productFilename = path.join(get_output_directory(target), data.productName)
     target.outputs.add(data.productFilename, tags)
+
+    self.compiler.translate_target(target, data)
 
     c_srcs = []
     cpp_srcs = []

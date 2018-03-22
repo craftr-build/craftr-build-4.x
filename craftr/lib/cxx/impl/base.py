@@ -101,31 +101,16 @@ class Compiler(nr.named.named):
       return [x.replace('%ARG%', value) for x in args]
     return list(args)
 
+  # @override
   def init(self, context):
     """
     Called from CxxTargetHandler.init().
     """
 
-  def before_translate(self, build):
-    pass
-
-  def before_compile(self, build):
+  def translate_target(self, target, data):
     """
-    Calld before #build_compile_flags(). Allows you to create additional
-    build actions. Return a list of build actions that will be added as
-    deps to the compile step.
+    Called to allow the compiler additional translation steps.
     """
-
-    return None
-
-  def before_link(self, build):
-    """
-    Called before #build_link_flags(). Allows you to create additional
-    build actions. Return a list of build actions that will be added as
-    deps to the link step.
-    """
-
-    return None
 
   def get_compile_command(self, target, data, lang):
     """
@@ -305,17 +290,17 @@ class Compiler(nr.named.named):
 
   def create_link_action(self, target, data, action_name, lang, compile_actions):
     command = self.get_link_command(target, data, lang)
+    compile_actions, obj_files = target.actions_and_files_tagged(['out', 'obj'])
     link_action = target.add_action(
       action_name,
       commands=[command],
       environ=self.linker_env,
       deps=compile_actions)
-    obj_files = list(concat(x.all_files_tagged(['out', 'obj']) for x in compile_actions))
     buildset = link_action.add_buildset()
     buildset.files.add(obj_files, ['in', 'obj'])
     buildset.files.add(data.productFilename, ['out', 'product'])
-    self.add_link_outputs(target, data, lang, compile_actions, obj_files, buildset)
+    self.add_link_outputs(target, data, lang, buildset)
     return link_action
 
-  def add_link_outputs(self, target, data, lang, compile_actions, obj_files, buildset):
+  def add_link_outputs(self, target, data, lang, buildset):
     pass
