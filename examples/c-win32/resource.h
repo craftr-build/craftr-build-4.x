@@ -1,0 +1,3 @@
+enum {
+  IDS_HELLO
+};

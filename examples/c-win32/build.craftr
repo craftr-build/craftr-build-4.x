@@ -1,0 +1,6 @@
+project "myproject"
+using "cxx"
+
+target "main":
+  cxx.srcs = ['main.c']
+  cxx.msvcResourceFiles = ['test.rc']
