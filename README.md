@@ -12,6 +12,8 @@ and extensibility. It is language independent and supports a wide range of
 popular programming languages out of the box. Craftr uses [Ninja] to execute
 builds.
 
+  [Ninja]: https://github.com/ninja-build/ninja
+
 __Inspiration__
 
 * [Buck](https://buckbuild.com/)
