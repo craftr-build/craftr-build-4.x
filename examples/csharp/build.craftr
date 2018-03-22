@@ -1,4 +1,4 @@
-project "csharp_helloworld"
+project "examples.csharp"
 using "csharp"
 
 target "main":

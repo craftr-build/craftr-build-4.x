@@ -1,4 +1,4 @@
-project "java_helloworld"
+project "examples.java"
 using "java"
 
 target "lib":

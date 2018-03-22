@@ -1,4 +1,4 @@
-project "myproject"
+project "exmaples.c-win32"
 using "cxx"
 
 target "main":
