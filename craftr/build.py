@@ -28,6 +28,7 @@ import re
 import sys
 import warnings
 
+from . import proplib
 from nr import path
 
 
@@ -295,7 +296,7 @@ class Action:
   def __init__(self, target, name, deps, commands, cwd=None, environ=None,
                explicit=False, syncio=False, deps_prefix=None, depfile=None):
     assert isinstance(target, str)
-    assert all(isinstance(x, Action) for x in deps)
+    deps = proplib.List[proplib.InstanceOf[Action]]().coerce('deps', deps)
     if deps_prefix and depfile:
       raise TypeError('deps_prefix and depfile parameters can not be mixed')
     self.target = target

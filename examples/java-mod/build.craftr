@@ -1,0 +1,8 @@
+project "examples.java-mod"
+using "java"
+
+target "main":
+  java.srcs = glob('src/**/*.java')
+  java.jmod = {'com.greetings': 'src'}
+  java.jlinkModules = ['com.greetings']
+  java.jlinkLaunchers = {'greetings': 'com.greetings/com.greetings.Main'}

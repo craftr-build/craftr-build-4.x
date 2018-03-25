@@ -4,11 +4,15 @@ import craftr
 import shlex
 import sys
 from nr import path
+from nr.stream import stream
 
 ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')
 DOWNLOAD_TOOL = path.join(path.dir(__file__), 'tools', 'download.py')
+
 maven = load('./tools/maven.py')
+platform_commands = load('tools.platform-commands')
+concat = stream.concat
 
 
 class ArtifactResolver:
@@ -110,18 +114,31 @@ def partition_sources(sources, src_roots, parent):
   executed module's directory.
   """
 
-  abs_roots = [path.canonical(x, parent) for x in src_roots]
   result = {}
   for source in [path.canonical(x, parent) for x in sources]:
-    for root, rel_root in zip(abs_roots, src_roots):
-      rel_source = path.rel(source, root)
-      if path.isrel(rel_source):
-        break
-    else:
+    root = find_src_root(source, src_roots, parent)
+    if not root:
       raise ValueError('could not find relative path for {!r} given the '
         'specified root dirs:\n  '.format(source) + '\n  '.join(src_roots))
+    rel_root, rel_source = root
     result.setdefault(rel_root, []).append(rel_source)
   return result
+
+
+def find_src_root(src, roots, parent, allow_curdir=False):
+  """
+  Finds the source root that *src* is inside and returns it as a tuple of
+  (root, rel_path) or #None if the *src* file is not inside any of the
+  specified *roots*.
+  """
+
+  abs_roots = (path.canonical(x, parent) for x in roots)
+  for root, rel_root in zip(abs_roots, roots):
+    rel = path.rel(src, root, par=True)
+    if allow_curdir and rel == path.curdir or path.issub(rel):
+      return rel_root, rel
+
+  return None
 
 
 class JavaTargetHandler(craftr.TargetHandler):
@@ -134,16 +151,22 @@ class JavaTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('java.srcs', craftr.StringList())
-    props.add('java.srcRoots', craftr.StringList())
-    props.add('java.compilerFlags', craftr.StringList())
-    props.add('java.jarName', craftr.String())
-    props.add('java.mainClass', craftr.String())
-    props.add('java.bundleType', craftr.String())  # The bundle type for applications, can be `none`, `onejar` or `merge`.
-    props.add('java.binaryJars', craftr.StringList())
-    props.add('java.artifacts', craftr.StringList())
-    props.add('java.runArgsPrefix', craftr.StringList())
-    props.add('java.runArgs', craftr.StringList())
+    props.add('java.srcs', craftr.StringList)
+    props.add('java.srcRoots', craftr.StringList)
+    props.add('java.compilerFlags', craftr.StringList)
+    props.add('java.jmod', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps module names to the module base directories.
+    props.add('java.jarName', craftr.String)
+    props.add('java.mainClass', craftr.String)
+    props.add('java.bundleType', craftr.String)  # The bundle type for applications, can be `none`, `onejar` or `merge`.
+    props.add('java.binaryJars', craftr.StringList)
+    props.add('java.artifacts', craftr.StringList)
+    props.add('java.runArgsPrefix', craftr.StringList)
+    props.add('java.runArgs', craftr.StringList)
+    props.add('java.jlinkModules', craftr.StringList)  # List of modules to include in the runtime
+    props.add('java.jlinkName', craftr.String)  # Directory output name
+    props.add('java.jlinkLaunchers', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps command names to class identifiers in the form "package/class"
+    props.add('java.jlinkModulePath', craftr.StringList)
+    props.add('java.jlinkStripDebug', craftr.Bool, True)
 
     props = context.dependency_properties
     props.add('java.bundle', craftr.Bool())
@@ -153,11 +176,9 @@ class JavaTargetHandler(craftr.TargetHandler):
 
   def translate_target(self, target):
     src_dir = path.abs(target.directory)
-    build_dir = path.join(context.build_directory, target.module.name)
+    build_dir = get_output_directory(target)
     cache_dir = path.join(context.build_directory, module.name, 'artifacts')
 
-    jarFilename = None
-    bundleFilename = None
     binaryJars = target.get_prop_join('java.binaryJars')
     nobundleBinaryJars = []
     bundleBinaryJars = binaryJars
@@ -170,6 +191,12 @@ class JavaTargetHandler(craftr.TargetHandler):
     mainClass = target.get_prop('java.mainClass')
     runArgs = target.get_prop_join('java.runArgs')
     runArgsPrefix = target.get_prop('java.runArgsPrefix')
+    jmod = target.get_prop('java.jmod')
+    jlinkStripDebug = target.get_prop('java.jlinkStripDebug')
+    jlinkModules = target.get_prop('java.jlinkModules')
+    jlinkName = target.get_prop('java.jlinkName')
+    jlinkLaunchers = target.get_prop('java.jlinkLaunchers')
+    jlinkModulePath = target.get_prop_join('java.jlinkModulePath')
 
     # Add actions that download the artifacts.
     artifactActions = []
@@ -195,34 +222,59 @@ class JavaTargetHandler(craftr.TargetHandler):
         binaryJars.append(binary_jar)
         bundleBinaryJars.append(binary_jar)
 
+    jar_action = None
+    javac_action = None
+    jmod_actions = []
+    bundle_action = None
+    jlink_action = None
+    run_action = None
+    run_bundle_action = None
+
+    classDir = path.join(build_dir, 'cls')
+    jarFilename = None
+    bundleFilename = None
+    jmodFilenames = {}
+    jmodDir = path.join(build_dir, 'jmods')
+
     # Determine all the information necessary to build a java library,
     # and optionally a bundle.
     if srcs:
       srcs = [path.canonical(x, src_dir) for x in srcs]
       if not srcRoots:
         srcRoots = ['src', 'java', 'javatest']
-      if not jarName:
+      if not jarName and not jmod:
         jarName = (target.name + '-' + target.module.version)
 
       # Construct the path to the output JAR file.
-      jarFilename = path.join(build_dir, jarName + '.jar')
+      if jarName:
+        jarFilename = path.join(build_dir, jarName + '.jar')
+
+      # Construct the bundle filename.
       bundleFilename = None
-      if bundleType:
+      if bundleType and jarFilename:
         assert bundleType in ('onejar', 'merge')
         bundleFilename = path.join(build_dir, jarName + '-' + bundleType + '.jar')
 
-      # Create a list of all the Java Class files generated by the compiler.
-      classDir = path.join(build_dir, 'cls')
-      classFiles = []
-      for root, sources in partition_sources(srcs, srcRoots,
-                                            target.directory).items():
-        for src in sources:
-          clsfile = path.join(classDir, path.setsuffix(src, '.class'))
-          classFiles.append(clsfile)
+      # Construct Java module filenames.
+      if jmod:
+        for mod_name, mod_dir in jmod.items():
+          mod_filename = path.join(jmodDir, mod_name + '.jmod')
+          mod_dir = path.canonical(mod_dir, src_dir)
+          root = find_src_root(mod_dir, srcRoots, src_dir, allow_curdir=True)
+          if not root:
+            print('warning: jmod "{}" directory "{}" not in a srcRoot'.format(mod_name, mod_dir))
+          else:
+            mod_dir = path.join(classDir, root[0], root[1])
+          jmod[mod_name] = mod_dir
+          jmodFilenames[mod_name] = mod_filename
 
-      target.outputs.add(jarFilename, ['java.library'])
-      if bundleFilename:
-        target.outputs.add(bundleFilename, ['java.bundle'])
+      # Create a list of all the Java Class files generated by the compiler.
+      classFiles = {}
+      for root, sources in partition_sources(srcs, srcRoots, src_dir).items():
+        classFiles[root] = []
+        for src in sources:
+          clsfile = path.join(classDir, root, path.setsuffix(src, '.class'))
+          classFiles[root].append(clsfile)
 
       # Add to the binaryJars the Java libraries from dependencies.
       for dep in target.transitive_dependencies():
@@ -236,17 +288,29 @@ class JavaTargetHandler(craftr.TargetHandler):
             nobundleBinaryJars += libs
 
     if srcs and classFiles:
-      # Generate the action to compile the Java source files.
-      command = [options.javac, '-d', classDir]
-      if binaryJars:
-        command += ['-classpath', path.pathsep.join(binaryJars)]
-      command += ['$in']
-      command += shlex.split(options.compilerFlags) + compilerFlags
-      action = target.add_action('java.javac', commands=[command],
-        input=True, deps=artifactActions)
-      build = action.add_buildset()
-      build.files.add(srcs, ['in'])
-      build.files.add(classFiles, ['out'])
+      javac_actions = []
+      for root, files in classFiles.items():
+        # Generate the action to compile the Java source files.
+        command = [options.javac, '-d', path.join(classDir, root)]
+        if binaryJars:
+          command += ['-classpath', path.pathsep.join(binaryJars)]
+        command += ['$in']
+        command += shlex.split(options.compilerFlags) + compilerFlags
+        action = target.add_action('java.javac-' + root, commands=[command],
+          input=True, deps=artifactActions)
+
+        build = action.add_buildset()
+        build.files.add(srcs, ['in'])  # TODO: Select only the files in the current source root
+        build.files.add(files, ['out'])
+
+        javac_actions.append(action)
+
+      javac_action = target.add_action('java.javac', commands=[], deps=javac_actions)
+      javac_action.add_buildset()
+
+    if jarFilename:
+      assert javac_action
+      target.outputs.add(jarFilename, ['java.library'])
 
       # Generate the action to produce the JAR file.
       flags = 'cvf'
@@ -255,15 +319,38 @@ class JavaTargetHandler(craftr.TargetHandler):
       command = [options.javacJar, flags, '$out']
       if mainClass:
         command += [mainClass]
-      command += ['-C', classDir, '.']
-      jar_action = target.add_action('java.jar', commands=[command])
+      for root in classFiles.keys():
+        command += ['-C', path.join(classDir, root), '.']
+      jar_action = target.add_action('java.jar', commands=[command], deps=[javac_action])
       build = jar_action.add_buildset()
-      build.files.add(classFiles, ['in'])
+      build.files.add(concat(classFiles.values()), ['in'])
       build.files.add(jarFilename, ['out'])
+
+    # Generate actions to build Java modules.
+    if jmod:
+      for mod_name, mod_dir in jmod.items():
+        # TODO: Determine the class actions that produce the mentioned class
+        #       files so we can add them as dependencies -- allowing the build
+        #       backend to determine when the rule needs to be rebuilt.
+
+        mod_filename = jmodFilenames[mod_name]
+        commands = []
+        commands.append(platform_commands.rm(mod_filename, force=True))
+        commands.append(['jmod', 'create', '--class-path', mod_dir, mod_filename])
+        action = target.add_action('java.jmod-' + mod_name, commands=commands, deps=[javac_action])
+        buildset = action.add_buildset()
+        #buildset.files.add(..., ['in', 'java.class'])
+        buildset.files.add(mod_filename, ['out', 'java.jmod'])
+        jmod_actions.append(action)
+
+      action = target.add_action('java.jmod', commands=[['echo']], deps=jmod_actions)
+      action.add_buildset()
 
     # Generate the action to produce a merge of all dependent JARs if
     # so specified in the target.
     if bundleType and bundleFilename:
+      target.outputs.add(bundleFilename, ['java.bundle'])
+
       command = [sys.executable, AUGJAR_TOOL, '-o', '$out']
       inputs = [jarFilename] + bundleBinaryJars
       if bundleType == 'merge':
@@ -282,15 +369,46 @@ class JavaTargetHandler(craftr.TargetHandler):
       build.files.add(inputs, ['in'])
       build.files.add(bundleFilename, ['out'])
 
+    if jlinkModules:
+      jlinkModulePath = list(jlinkModulePath)
+      jlinkModulePath.append(jmodDir)  # TODO: Append jmodDir of all dependencies
+
+      # TODO: Collect actions that produce the modules -- possibly from
+      # dependent targets and not just this target (thus, just jmod_actions
+      # may not be sufficient).
+
+      if not jlinkName:
+        jlinkName = target.name + '-' + target.module.version + '-runtime'
+      if not path.isabs(jlinkName):
+        jlinkName = path.join(build_dir, jlinkName)
+
+      commands = []
+      # Make sure the previous directory does not exist.
+      commands.append(platform_commands.rm(jlinkName, recursive=True, force=True))
+      # Generate the jlink command/
+      commands.append(['jlink'])
+      if jlinkStripDebug:
+        commands[-1] += ['--strip-debug']
+      commands[-1] += ['--module-path', jmodDir]
+      commands[-1] += ['--add-modules'] + jlinkModules
+      commands[-1] += ['--output', jlinkName]
+      for command, module in jlinkLaunchers.items():
+        commands[-1] += ['--launcher', '{}={}'.format(command, module)]
+
+      jlink_action = target.add_action('java.jlink', commands=commands,
+        deps=jmod_actions + [jar_action], explicit=True, syncio=True, output=True)
+      build = jlink_action.add_buildset()
+      # TODO: Determine input/output files?
+
     if jarFilename and mainClass:
       # An action to execute the library JAR (with the proper classpath).
       command = list(runArgsPrefix or ['java'])
       classpath = binaryJars + [jarFilename]
       command += ['-cp', path.pathsep.join(classpath)]
       command += [mainClass] + runArgs
-      action = target.add_action('java.run', commands=[command],
+      run_action = target.add_action('java.run', commands=[command],
         deps=[jar_action], explicit=True, syncio=True, output=False)
-      action.add_buildset()
+      run_action.add_buildset()
 
     if bundleFilename and mainClass:
       # An action to execute the bundled JAR.
@@ -302,9 +420,9 @@ class JavaTargetHandler(craftr.TargetHandler):
         command += ['-cp', path.pathsep.join(classpath)]
         command += ['com.simontuffs.onejar.Boot' if bundleType == 'onejar' else mainClass]
       command += runArgs
-      action = target.add_action('java.runBundle', commands=[command],
+      run_bundle_action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
-      action.add_buildset()
+      run_bundle_action.add_buildset()
 
 
 context.register_handler(JavaTargetHandler())

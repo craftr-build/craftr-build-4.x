@@ -283,13 +283,14 @@ class Target:
       if output_actions:
         deps.append(output_actions[-1])
 
+    # Filter 'None' values from the actions list.
+    deps = [x for x in deps if x is not None]
+
     # TODO: Assign the action to the pool specified in the target.
     kwargs.setdefault('explicit', self.get_prop('this.explicit'))
     kwargs.setdefault('syncio', self.get_prop('this.syncio'))
     action = Action(self.id, name, deps=deps, **kwargs)
     self.actions[name] = action
-    if output:
-      self._output_actions.append(action)
     action.is_output = output
     return action
 

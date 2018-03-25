@@ -23,6 +23,7 @@ properties and their datatype.
 """
 
 import builtins
+import collections
 import nr.generic
 
 
@@ -167,8 +168,8 @@ class List(PropType, metaclass=nr.generic.GenericMeta):
   def inherit(self, name, values):
     result = []
     for i, item in enumerate(values):
-      if not isinstance(values, (tuple, list)):
-        self.typeerror(name + '[{}]'.format(i), 'tuple,list', values)
+      if not isinstance(values, (tuple, list, collections.Iterable)):
+        raise self.typeerror(name + '[{}]'.format(i), 'tuple,list', values)
       result += item
     return result
 
@@ -231,7 +232,7 @@ class InstanceOf(PropType, metaclass=nr.generic.GenericMeta):
 
   def coerce(self, name, value):
     if not isinstance(value, self.type):
-      self.typeerror(name, self.typename, value)
+      raise self.typeerror(name, self.typename, value)
     return value
 
   def default(self):
