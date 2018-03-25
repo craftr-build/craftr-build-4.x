@@ -166,7 +166,7 @@ class JavaTargetHandler(craftr.TargetHandler):
     props.add('java.jlinkName', craftr.String)  # Directory output name
     props.add('java.jlinkLaunchers', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps command names to class identifiers in the form "package/class"
     props.add('java.jlinkModulePath', craftr.StringList)
-    props.add('java.jlinkStripDebug', craftr.Bool, True)
+    props.add('java.jlinkFlags', craftr.StringList)
 
     props = context.dependency_properties
     props.add('java.bundle', craftr.Bool())
@@ -192,11 +192,11 @@ class JavaTargetHandler(craftr.TargetHandler):
     runArgs = target.get_prop_join('java.runArgs')
     runArgsPrefix = target.get_prop('java.runArgsPrefix')
     jmod = target.get_prop('java.jmod')
-    jlinkStripDebug = target.get_prop('java.jlinkStripDebug')
     jlinkModules = target.get_prop('java.jlinkModules')
     jlinkName = target.get_prop('java.jlinkName')
     jlinkLaunchers = target.get_prop('java.jlinkLaunchers')
     jlinkModulePath = target.get_prop_join('java.jlinkModulePath')
+    jlinkFlags = target.get_prop_join('java.jlinkFlags')
 
     # Add actions that download the artifacts.
     artifactActions = []
@@ -387,13 +387,12 @@ class JavaTargetHandler(craftr.TargetHandler):
       commands.append(platform_commands.rm(jlinkName, recursive=True, force=True))
       # Generate the jlink command/
       commands.append(['jlink'])
-      if jlinkStripDebug:
-        commands[-1] += ['--strip-debug']
       commands[-1] += ['--module-path', jmodDir]
       commands[-1] += ['--add-modules'] + jlinkModules
       commands[-1] += ['--output', jlinkName]
       for command, module in jlinkLaunchers.items():
         commands[-1] += ['--launcher', '{}={}'.format(command, module)]
+      commands[-1] += jlinkFlags
 
       jlink_action = target.add_action('java.jlink', commands=commands,
         deps=jmod_actions + [jar_action], explicit=True, syncio=True, output=True)

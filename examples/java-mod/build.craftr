@@ -6,3 +6,4 @@ target "main":
   java.jmod = {'com.greetings': 'src'}
   java.jlinkModules = ['com.greetings']
   java.jlinkLaunchers = {'greetings': 'com.greetings/com.greetings.Main'}
+  java.jlinkFlags = ['--compress=2', '--strip-debug', '--no-header-files', '--no-man-pages']
