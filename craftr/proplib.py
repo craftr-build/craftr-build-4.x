@@ -22,9 +22,10 @@ This module implements the #PropertySet class which is used to describe
 properties and their datatype.
 """
 
+from nr.generic import GenericMeta
+
 import builtins
 import collections
-import nr.generic
 
 
 class Prop:
@@ -139,7 +140,7 @@ class String(PropType):
     return ''
 
 
-class List(PropType, metaclass=nr.generic.GenericMeta):
+class List(PropType, metaclass=GenericMeta):
 
   __generic_args__ = ['item_type']
 
@@ -174,7 +175,7 @@ class List(PropType, metaclass=nr.generic.GenericMeta):
     return result
 
 
-class Dict(PropType, metaclass=nr.generic.GenericMeta):
+class Dict(PropType, metaclass=GenericMeta):
 
   __generic_args__ = ['key_type', 'value_type']
 
@@ -211,7 +212,7 @@ class Dict(PropType, metaclass=nr.generic.GenericMeta):
 StringList = List[String]
 
 
-class InstanceOf(PropType, metaclass=nr.generic.GenericMeta):
+class InstanceOf(PropType, metaclass=GenericMeta):
 
   __generic_args__ = ['type']
 

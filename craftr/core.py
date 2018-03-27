@@ -22,12 +22,14 @@ The core module in Craftr implements targets and their properties independent
 from the aspect of Craftr DSL.
 """
 
-from .build import Action, BuildGraph, FileSet
-from . import proplib
 from nr.stream import stream
 from nr.datastructures.objectfrommapping import ObjectFromMapping
+
 import collections
 import warnings
+
+import {Action, BuildGraph, FileSet} from './build'
+import proplib from './proplib'
 
 
 class Context:

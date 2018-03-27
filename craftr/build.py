@@ -24,12 +24,12 @@ This module implementations the representation of final build information.
 import collections
 import hashlib
 import json
+import nr.path as path
 import re
 import sys
 import warnings
 
-from . import proplib
-from nr import path
+import proplib from './proplib'
 
 
 class TaggedFile:

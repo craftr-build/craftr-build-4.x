@@ -21,6 +21,8 @@
 This module implements the parser for the Craftr DSL.
 """
 
+from nr import strex
+
 import collections
 import contextlib
 import os
@@ -29,8 +31,7 @@ import textwrap
 import toml
 import types
 
-from .. import core
-from nr import strex
+import core from '../core'
 
 
 @contextlib.contextmanager

@@ -21,5 +21,5 @@
 This module implements parsing and interpreting the Craftr DSL.
 """
 
-from .parser import Parser
-from .interpreter import *
+import {Parser} from './parser'
+import * from './interpreter'

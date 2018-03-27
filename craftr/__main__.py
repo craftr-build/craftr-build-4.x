@@ -21,7 +21,6 @@
 Implements the Craftr command-line interface.
 """
 
-from . import dsl
 from nr import path
 from nr.stream import stream
 
@@ -30,6 +29,8 @@ import collections
 import json
 import os
 import sys
+
+import dsl from './dsl'
 
 
 class Context(dsl.Context):
@@ -299,3 +300,7 @@ def main(argv=None):
 
 
 _entry_point = lambda: sys.exit(main())
+
+
+if __name__ == '__main__' or ('require' in globals() and require.main == module):
+  _entry_point()

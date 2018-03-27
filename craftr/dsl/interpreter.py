@@ -18,12 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .. import core
-from .parser import *
-
 from nr import path
 from nr.datastructures.chaindict import ChainDict
 from nr.ast.dynamic_eval import dynamic_exec, dynamic_eval
+
+import * from './parser'
+import core from '../core'
 
 __all__ = ['RunError', 'OptionError', 'MissingRequiredOptionError',
            'InvalidOptionError', 'InvalidAssignmentError', 'ModuleNotFoundError',
