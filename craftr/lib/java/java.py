@@ -286,16 +286,19 @@ class JavaTargetHandler(craftr.TargetHandler):
             bundleBinaryJars += libs
           else:
             nobundleBinaryJars += libs
+      binaryJars = list(stream.unique(binaryJars))
 
     if srcs and classFiles:
       javac_actions = []
       for root, files in classFiles.items():
         # Generate the action to compile the Java source files.
-        command = [options.javac, '-d', path.join(classDir, root)]
+        command = [options.javac]
         if binaryJars:
-          command += ['-classpath', path.pathsep.join(binaryJars)]
+          command += ['-cp', path.pathsep.join(map(path.abs, binaryJars))]
+        command += ['-d', path.join(classDir, root)]
         command += ['$in']
         command += shlex.split(options.compilerFlags) + compilerFlags
+
         action = target.add_action('java.javac-' + root, commands=[command],
           input=True, deps=artifactActions)
 
@@ -399,14 +402,22 @@ class JavaTargetHandler(craftr.TargetHandler):
       build = jlink_action.add_buildset()
       # TODO: Determine input/output files?
 
-    if jarFilename and mainClass:
+    if (len(jmod) == 1 or jarFilename) and mainClass:
       # An action to execute the library JAR (with the proper classpath).
-      command = list(runArgsPrefix or ['java'])
-      classpath = binaryJars + [jarFilename]
-      command += ['-cp', path.pathsep.join(classpath)]
-      command += [mainClass] + runArgs
+      if jarFilename:
+        command = list(runArgsPrefix or ['java'])
+        classpath = binaryJars + [jarFilename]
+        command += ['-cp', path.pathsep.join(classpath)]
+        command += [mainClass] + runArgs
+      else:
+        command = list(runArgsPrefix or ['java'])
+        command += ['-p', path.pathsep.join([jmodDir])]  # TODO: Additional JMOD dirs?
+        command += ['-cp', path.pathsep.join(binaryJars)]
+        mod_name = next(iter(jmod))
+        command += ['-m', mod_name + '/' + mainClass] + runArgs
+
       run_action = target.add_action('java.run', commands=[command],
-        deps=[jar_action], explicit=True, syncio=True, output=False)
+        deps=[jar_action] + jmod_actions, explicit=True, syncio=True, output=False)
       run_action.add_buildset()
 
     if bundleFilename and mainClass:
