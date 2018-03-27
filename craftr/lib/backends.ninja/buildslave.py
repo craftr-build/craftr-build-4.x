@@ -16,6 +16,7 @@ import sys
 from craftr.build import BuildSet
 from itertools import chain
 from nr import path
+from utils import quote
 
 verbose = os.environ.get('CRAFTR_VERBOSE') == 'true'
 
@@ -145,7 +146,7 @@ def run_build_action(graph, node_name, index, main_build_cell=None):
       error('Working directory:', os.getcwd())
     error('Command list:'.format(node_name))
     for i, cmd in enumerate(commands):
-      error('>' if current == i else ' ', '$', ' '.join(map(shlex.quote , cmd)))
+      error('>' if current == i else ' ', '$', ' '.join(map(quote , cmd)))
 
   if verbose:
     print_command_list()
