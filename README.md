@@ -27,12 +27,9 @@ but the implementation will be very different.
 
 __Install__
 
-Craftr 3 is work in progress and not currently available on PyPI. If you
-install `craftr-build` via Pip, you will install Craftr 2 which is vastly
-different from this version. To get *this* version, you have to install it
-directly from the GitHub repository.
-
-    pip3 install git+https://github.com/craftr-build/craftr.git@master
+    $ pip install nodepy-runtime
+    $ nodepy https://nodepy.org/instal-pm.py
+    $ nodepy-pm install git+https://github.com/craftr-build/craftr.git
 
 __Examples__
 
