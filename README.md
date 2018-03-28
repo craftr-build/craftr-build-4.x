@@ -43,7 +43,7 @@ __Examples__
 
 ```python
 project "examples.c"
-using "cxx"
+import "cxx.craftr"
 target "main":
   cxx.srcs = ['main.c']
 ```
@@ -54,7 +54,7 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.cpp"
-using "cxx"
+import "cxx.craftr"
 target "main":
   cxx.srcs = ['main.cpp']
 ```
@@ -68,7 +68,8 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.csharp"
-using "csharp"
+import {glob} from "craftr.craftr"
+import "csharp.craftr"
 target "main":
   csharp.srcs = glob('src/*.cs')
   csharp.packages = ['Newtonsoft.JSON:10.0.3']
@@ -81,7 +82,8 @@ Run as `craftr -cb main:csharp.runBundle`
 
 ```python
 project "examples.java"
-using "java"
+import {glob} from "craftr.craftr"
+import "java.craftr"
 target "main":
   java.srcs = glob('src/**/*.java')
   java.artifacts = [
@@ -100,7 +102,7 @@ Run as `craftr -cb main:java.runBundle`
 
 ```python
 project "examples.haskell"
-using "haskell"
+import "haskell.craftr"
 target "main":
   haskell.srcs = ['src/Main.hs']
 ```
@@ -111,7 +113,7 @@ Run as `craftr -cb main:haskell.run`
 
 ```python
 project "examples.ocaml"
-using "ocaml"
+import "ocaml.craftr"
 target "main":
   ocaml.srcs = ['src/Main.ml']
   # False to produce an OCaml bytecode file
@@ -127,7 +129,7 @@ Run as `craftr -cb main:ocaml.run`
 
 ```python
 project "examples.vala"
-using "vala"
+import "vala.craftr"
 target "main":
   vala.srcs = ['src/Main.vala']
 ```
@@ -138,7 +140,8 @@ Run as `craftr -cb main:vala.run`
 
 ```python
 project "example.cython"
-using "cython"
+import {glob} from "craftr.craftr"
+import "cython.craftr"
 target "main":
   cython.srcs = glob('src/*.pyx')
   cython.main = 'src/Main.pyx'
