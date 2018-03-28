@@ -224,7 +224,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         bundleBinaryJars.append(binary_jar)
 
     jar_action = None
-    javac_action = None
+    javac_actions = []
     jmod_actions = []
     bundle_action = None
     jlink_action = None
@@ -313,7 +313,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       javac_action.add_buildset()
 
     if jarFilename:
-      assert javac_action
+      assert javac_actions
       target.outputs.add(jarFilename, ['java.library'])
 
       # Generate the action to produce the JAR file.
@@ -325,7 +325,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         command += [mainClass]
       for root in classFiles.keys():
         command += ['-C', path.join(classDir, root), '.']
-      jar_action = target.add_action('java.jar', commands=[command], deps=[javac_action])
+      jar_action = target.add_action('java.jar', commands=[command], deps=javac_actions)
       build = jar_action.add_buildset()
       build.files.add(stream.concat(classFiles.values()), ['in'])
       build.files.add(jarFilename, ['out'])
@@ -341,7 +341,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         commands = []
         commands.append(platform_commands.rm(mod_filename, force=True))
         commands.append(['jmod', 'create', '--class-path', mod_dir, mod_filename])
-        action = target.add_action('java.jmod-' + mod_name, commands=commands, deps=[javac_action])
+        action = target.add_action('java.jmod-' + mod_name, commands=commands, deps=javac_actions)
         buildset = action.add_buildset()
         #buildset.files.add(..., ['in', 'java.class'])
         buildset.files.add(mod_filename, ['out', 'java.jmod'])

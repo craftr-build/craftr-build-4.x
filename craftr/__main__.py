@@ -230,7 +230,6 @@ def main(argv=None):
     context = Context(build_variant, build_directory)
     set_options(context, args.options)
     module = context.load_file(args.file, is_main=True, get_nodepy_module=True)
-    print('>>>', module)
     context.translate_targets()
     context.serialize()
 
