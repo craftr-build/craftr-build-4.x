@@ -1,12 +1,12 @@
 
-import craftr
+from typing import Union, List
 import logging as log
 import nr.path as path
 import nr.stream
-from typing import Union, List
+import craftr, {BUILD} from 'craftr.craftr'
+import base from './base'
+import msvc from 'tools.msvc.craftr'
 
-base = load('./base.py')
-msvc = load('tools.msvc')
 unique = nr.stream.stream.unique
 
 """
@@ -94,7 +94,7 @@ class MsvcCompiler(base.Compiler):
   # @override
   def translate_target(self, target, data):
     src_dir = target.directory
-    obj_dir = get_output_directory(target, 'obj')
+    obj_dir = craftr.get_output_directory(target, 'obj')
     if data.msvcResourceFiles:
       data.msvcResourceFiles = [path.canonical(x, src_dir) for x in data.msvcResourceFiles]
 
@@ -145,7 +145,7 @@ class MsvcCompiler(base.Compiler):
 
   # @override
   def add_objects_for_source(self, target, data, lang, src, buildset):
-    objdir = get_output_directory(target, 'obj')
+    objdir = craftr.get_output_directory(target, 'obj')
     rel = path.rel(src, target.directory)
     obj = path.setsuffix(path.join(objdir, rel), '.obj')
     buildset.files.add(obj, ['out', 'obj'])

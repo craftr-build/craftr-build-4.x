@@ -1,5 +1,6 @@
 project "examples.c"
-using "cxx"
+
+import "cxx.craftr"
 
 target "main":
   cxx.srcs = ['main.c']

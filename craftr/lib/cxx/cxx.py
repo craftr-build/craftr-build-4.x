@@ -1,7 +1,7 @@
 
-import craftr
-from nr import path
-base = load('./impl/base.py')
+import {options} from './build.craftr'
+import craftr, {path} from 'craftr.craftr'
+import base from './impl/base'
 
 # TODO: Support precompiled headers.
 # TODO: Support compiler-wrappers like ccache.
@@ -12,7 +12,7 @@ class CxxTargetHandler(craftr.TargetHandler):
   def __init__(self, toolchain=None):
     toolchain, fragment = (toolchain or options.toolchain).partition('#')[::2]
     self.toolchain = toolchain
-    self.compiler = load('./impl/' + toolchain + '.py').get_compiler(fragment)
+    self.compiler = require('./impl/' + toolchain).get_compiler(fragment)
 
     print('Selected compiler: {} ({}) {} for {}'.format(
       self.compiler.name, self.compiler.id, self.compiler.version, self.compiler.arch))
@@ -246,7 +246,7 @@ class CxxTargetHandler(craftr.TargetHandler):
     for a, b in repl.items():
       data.productName = data.productName.replace(a, b)
 
-    data.productFilename = path.join(get_output_directory(target), data.productName)
+    data.productFilename = path.join(craftr.get_output_directory(target), data.productName)
     target.outputs.add(data.productFilename, tags)
 
     self.compiler.translate_target(target, data)
@@ -279,4 +279,5 @@ class CxxTargetHandler(craftr.TargetHandler):
       action.add_buildset()
 
 
+import {context} from './build.craftr'
 context.register_handler(CxxTargetHandler())

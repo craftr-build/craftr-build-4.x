@@ -1,8 +1,8 @@
 
-import craftr
+from typing import List, Dict, Union, Callable
 import nr.named
 import nr.stream
-from typing import List, Dict, Union, Callable
+import craftr, {BUILD} from 'craftr.craftr'
 
 concat = nr.stream.stream.concat
 unique = nr.stream.stream.unique

@@ -1,19 +1,21 @@
 project "cxx" v1.0.0
 
+import craftr from 'craftr.craftr'
+
 eval:
-  option_default('cxx.architecture', OS.arch)
+  craftr.option_default('cxx.architecture', OS.arch)
   if OS.id == 'win32':
     if OS.type == 'nt':
-      option_default('cxx.toolchain', 'msvc')
+      craftr.option_default('cxx.toolchain', 'msvc')
     else:
-      option_default('cxx.toolchain', 'mingw')
+      craftr.option_default('cxx.toolchain', 'mingw')
   elif OS.id == 'darwin':
-    option_default('cxx.toolchain', 'clang')
+    craftr.option_default('cxx.toolchain', 'clang')
   else:
-    option_default('cxx.toolchain', 'gcc')
+    craftr.option_default('cxx.toolchain', 'gcc')
 
 options:
   str architecture
   str toolchain
 
-load "./cxx.py"
+import "./cxx"
