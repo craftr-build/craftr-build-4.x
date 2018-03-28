@@ -144,16 +144,6 @@ class Options(Node):
         fp.write('\n')
 
 
-class Load(Node):
-
-  def __init__(self, loc, filename):
-    self.loc = loc
-    self.filename = filename
-
-  def render(self, fp, depth):
-    fp.write('load "{}"\n'.format(self.filename))
-
-
 class Eval(Node):
 
   def __init__(self, loc, source, remainder):
@@ -280,7 +270,7 @@ class Parser:
     strex.Charset('ws', '\t ', skip=True),
   ]
 
-  KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
+  KEYWORDS = ['project', 'configure', 'options', 'eval', 'pool',
               'export', 'public', 'target', 'requires', 'import']
 
   def parse(self, source, filename='<input>'):
@@ -435,13 +425,6 @@ class Parser:
     if not options.options:
       raise ParseError(lexer.token.cursor, 'expected at least one indented statement')
     return options
-
-  def _parse_load(self, lexer, parent_indent, export=False):
-    assert export is False
-    loc = lexer.token.cursor
-    filename = lexer.next('string').value.group(1)
-    lexer.next('nl', 'eof')
-    return Load(loc, filename)
 
   def _parse_eval(self, lexer, parent_indent, export=False):
     assert not export

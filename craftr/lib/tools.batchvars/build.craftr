@@ -1,2 +1,4 @@
 project "tools.batchvars"
-load "./batchvars.py"
+
+eval:
+  module.nodepy_module.exports = require("./batchvars")

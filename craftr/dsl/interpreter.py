@@ -275,8 +275,6 @@ class Interpreter:
     for node in namespace.children:
       if isinstance(node, Eval):
         self._exec(node.loc.lineno, node.source, self.context.get_exec_vars(module))
-      elif isinstance(node, Load):
-        self._load(node.loc.lineno, node.filename, self.context.get_exec_vars(module))
       elif isinstance(node, Options):
         self._options(node, module)
       elif isinstance(node, Pool):
@@ -312,13 +310,6 @@ class Interpreter:
       except ValueError as exc:
         raise InvalidOptionError(module.name, key, str(exc))
       setattr(options, key, has_value)
-
-  def _load(self, lineno, filename, namespace):
-    if not path.isabs(filename):
-      filename = path.join(self.directory, filename)
-    filename = path.norm(filename)
-    with override_member(namespace, '__file__', filename):
-      self.context.load_script(filename, namespace)
 
   def _exec(self, lineno, source, vars):
     source = '\n' * (lineno-1) + source
