@@ -7,7 +7,8 @@ import json
 import subprocess
 import sys
 import os
-from craftr.utils import sh
+
+import sh from '@craftr/craftr-build/utils/sh'
 
 
 def batchvars(batchfile, *args):

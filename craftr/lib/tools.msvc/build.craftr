@@ -7,4 +7,5 @@ options:
   str platformType = ''
   str sdkVersion = ''
 
-load "./msvc.py"
+eval:
+  module.nodepy_module.exports = require('./msvc')

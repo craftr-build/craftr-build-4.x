@@ -18,8 +18,9 @@ import tempfile
 import typing as t
 import logging as log
 
-from craftr.utils import sh
-batchvars = load('tools.batchvars').batchvars
+import {context, options} from './build.craftr'
+import sh from '@craftr/craftr-build/utils/sh'
+import {batchvars} from 'tools.batchvars.craftr'
 
 
 class MsvcInstallation(nr.named.named):

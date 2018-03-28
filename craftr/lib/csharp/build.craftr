@@ -6,4 +6,4 @@ options:
   str monoArch = OS.arch  # Used to determine the Mono installation path. Must be either x64 or x86
   str mergeTool = ''  # The name of the tool to merge assemblies.
 
-load "./csharp.py"
+import "./csharp.py"

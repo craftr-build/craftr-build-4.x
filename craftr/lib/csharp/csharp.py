@@ -1,20 +1,23 @@
 
-import craftr
+from nr import path
+
 import functools
 import nr.named
 import os
 import re
 import requests
 import subprocess
-from nr import path
-from craftr.utils import sh
+
+import {context, options} from './build.craftr'
+import craftr, {OS} from 'craftr.craftr'
+import sh from '@craftr/craftr-build/utils/sh'
+import nupkg from './tools/nupkg'
 
 if OS.type == 'nt':
-  msvc = load('tools.msvc')
+  import msvc from 'tools.msvc.craftr'
 else:
   msvc = None
 
-nupkg = load('./tools/nupkg.py')
 artifacts_dir = path.join(context.build_directory, 'csharp', 'nuget')
 
 
