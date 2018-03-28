@@ -206,5 +206,5 @@ def main(argv=None):
   return run_build_action(graph, args.action, args.index)
 
 
-if __name__ == '__main__':
+if require.main == module:
   sys.exit(main())

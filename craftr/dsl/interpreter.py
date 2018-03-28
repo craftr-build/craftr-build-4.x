@@ -177,11 +177,10 @@ class Context(core.Context):
     self.modules = {}
     self.loader = self.ModuleLoader(self)
 
-    # TODO: Remove again after
+    # TODO: Remove the loader again after the Craftr Context is no longer used.
     craftr_dir = path.dir(path.dir(__file__))
     require.context.resolver.loaders.append(self.loader)
     require.context.resolver.paths.append(pathlib.Path(craftr_dir).joinpath('lib'))
-    print(require.context.resolver.paths)
 
     self._builtins = {}
     craftr = self.load_module('craftr')

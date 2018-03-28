@@ -28,6 +28,7 @@ import argparse
 import collections
 import json
 import os
+import shlex
 import sys
 
 import dsl from './dsl'
@@ -266,7 +267,7 @@ def main(argv=None):
   backend_module = context.load_module(context.backend_name)
   backend_args = []
   for x in (args.backend_args or ()):
-    backend_args += x
+    backend_args += shlex.split(x)
   backend = backend_module.new_backend(context, backend_args)
 
   if args.configure:
