@@ -1,18 +1,19 @@
 
-import copy
-import craftr
-import shlex
-import sys
 from nr import path
 from nr.stream import stream
+
+import copy
+import shlex
+import sys
+
+import craftr from 'craftr.craftr'
+import maven from './tools/maven'
+import platform_commands from 'tools.platform-commands.craftr'
 
 ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')
 DOWNLOAD_TOOL = path.join(path.dir(__file__), 'tools', 'download.py')
 
-maven = load('./tools/maven.py')
-platform_commands = load('tools.platform-commands')
-concat = stream.concat
 
 
 class ArtifactResolver:
@@ -176,7 +177,7 @@ class JavaTargetHandler(craftr.TargetHandler):
 
   def translate_target(self, target):
     src_dir = path.abs(target.directory)
-    build_dir = get_output_directory(target)
+    build_dir = craftr.get_output_directory(target)
     cache_dir = path.join(context.build_directory, module.name, 'artifacts')
 
     binaryJars = target.get_prop_join('java.binaryJars')
@@ -326,7 +327,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         command += ['-C', path.join(classDir, root), '.']
       jar_action = target.add_action('java.jar', commands=[command], deps=[javac_action])
       build = jar_action.add_buildset()
-      build.files.add(concat(classFiles.values()), ['in'])
+      build.files.add(stream.concat(classFiles.values()), ['in'])
       build.files.add(jarFilename, ['out'])
 
     # Generate actions to build Java modules.

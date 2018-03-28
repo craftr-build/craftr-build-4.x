@@ -1,22 +1,26 @@
 # This file is loaded by the craftr.main.Context where the `context`
 # variable is available.
 
-try:
-  context
-except NameError:
-  raise RuntimeError('this file should not be imported')
+project "craftr" v1.0.0
+eval:>>
 
-__all__ = ['BUILD', 'OS', 'error', 'fmt', 'glob', 'load', 'option_default']
+__builtins__ = ['BUILD', 'OS']
+__all__ = __builtins__ + ['path', 'error', 'fmt', 'glob', 'option_default', 'get_output_directory', 'relocate_files']
+
+from nr import path
+from nr.datastructures.chaindict import ChainDict
+from nr.datastructures.objectfrommapping import ObjectFromMapping
 
 import collections
 import os
 import platform
 import sys
 import types
-from nr import path
-from nr.datastructures.chaindict import ChainDict
-from nr.datastructures.objectfrommapping import ObjectFromMapping
-from craftr import core, dsl
+
+import {BuildBackend} from '@craftr/craftr-build/build'
+import {Target, Dependency, Module, TargetHandler} from '@craftr/craftr-build/core'
+import {ExplicitRunError} from '@craftr/craftr-build/dsl'
+import {Bool, Integer, String, List, Dict, StringList} from '@craftr/craftr-build/proplib'
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
 
@@ -34,7 +38,7 @@ class BuildInfo(collections.namedtuple('_BuildInfo', 'variant')):
 
 def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
   """
-  Returns the #core.Module, #core.Target or #core.Dependency from the
+  Returns the #Module, #Target or #Dependency from the
   parent stackframe. Raises a #RuntimeError if it can not be determined.
   """
 
@@ -43,18 +47,17 @@ def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
   if '__dict__' in scope:
     # For code evaluated with nr.ast.dynamic_eval().
     scope = scope['__dict__']
-  if dependency and isinstance(scope.get('self'), core.Dependency):
+  if dependency and isinstance(scope.get('self'), Dependency):
     return scope['dependency']
-  elif target and isinstance(scope.get('target'), core.Target):
+  elif target and isinstance(scope.get('target'), Target):
     return scope['target']
-  elif module and isinstance(scope.get('module'), core.Module):
+  elif module and isinstance(scope.get('module'), Module):
     return scope['module']
-  print(scope['module'], scope.get('module'))
   raise RuntimeError('Call context could not be determined')
 
 
 def error(*message):
-  raise dsl.ExplicitRunError(' '.join(map(str, message)))
+  raise ExplicitRunError(' '.join(map(str, message)))
 
 
 def fmt(s, frame=None):
@@ -103,36 +106,6 @@ def glob(patterns, parent=None, excludes=None):
     obj = get_call_context(dependency=False)
     parent = obj.directory
   return path.glob(patterns, parent, excludes)
-
-
-def load(name):
-  """
-  Similar to the `load` statement in the Craftr build file, but it can be
-  used to load a Python script into a new namespace (not the build scripts
-  eval namespace).
-
-  Can also be used to load another Craftr build script (if no relative or
-  absolute filename is specified). Will return the module's eval namespace.
-  """
-
-  if name.startswith('./') or name.startswith('.\\') \
-      or path.isabs(name):
-    ns = types.ModuleType(name)
-    parent_globals = sys._getframe(1).f_globals
-    name = path.canonical(name, path.dir(parent_globals['__file__']))
-
-    # Make sure the namespace's file is set correctly.
-    ns.__file__ = name
-
-    # Inherit the eval namespace of the evaluating Module/Target/Dependency.
-    parent_vars = context.get_exec_vars(get_call_context())
-    scope = ChainDict(vars(ns), parent_vars)
-
-    context.load_script(name, scope)
-    return ns
-  else:
-    scope = context.get_exec_vars(context.load_module(name))
-    return ObjectFromMapping(scope, name)
 
 
 def option_default(name, value):

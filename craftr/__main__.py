@@ -42,7 +42,7 @@ class Context(dsl.Context):
 
   def to_json(self):
     root = collections.OrderedDict()
-    root['path'] = self.path
+    #root['path'] = self.path
     root['backend'] = self.backend_name
     root['variant'] = self.build_variant
     root['directory'] = self.build_directory
@@ -52,7 +52,7 @@ class Context(dsl.Context):
     return root
 
   def from_json(self, root):
-    self.path = root['path']
+    #self.path = root['path']
     self.backend_name = root['backend']
     self.build_variant = root['variant']
     if self.build_directory != root['directory']:
@@ -228,7 +228,8 @@ def main(argv=None):
     # Load the build script.
     context = Context(build_variant, build_directory)
     set_options(context, args.options)
-    module = context.load_file(args.file, is_main=True)
+    module = context.load_file(args.file, is_main=True, get_nodepy_module=True)
+    print('>>>', module)
     context.translate_targets()
     context.serialize()
 
@@ -263,15 +264,14 @@ def main(argv=None):
 
   # Load the backend module.
   backend_module = context.load_module(context.backend_name)
-  backend_factory = context.get_exec_vars(backend_module)['new_backend']
   backend_args = []
   for x in (args.backend_args or ()):
     backend_args += x
-  backend = backend_factory(context, backend_args)
+  backend = backend_module.new_backend(context, backend_args)
 
   if args.configure:
     # Write the root cache back.
-    root_cache['main'] = module.name
+    root_cache['main'] = module.craftr_module.name
     root_cache['mode'] = 'debug' if args.debug else 'release'
     root_cache['options'] = args.options
     root_cache['file'] = args.file

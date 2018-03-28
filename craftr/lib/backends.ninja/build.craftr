@@ -7,5 +7,4 @@ options:
   # requirements, it will be downloaded anyway.
   bool local = False
 
-eval:
-  new_backend = load('./backend.py').NinjaBackend
+import {NinjaBackend as new_backend} from './backend'

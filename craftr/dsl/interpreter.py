@@ -20,7 +20,11 @@
 
 from nr import path
 from nr.datastructures.chaindict import ChainDict
+from nr.datastructures.objectfrommapping import ObjectFromMapping
 from nr.ast.dynamic_eval import dynamic_exec, dynamic_eval
+from nodepy.utils.path import pathlib
+
+import nodepy
 
 import * from './parser'
 import core from '../core'
@@ -98,11 +102,72 @@ class ModuleOptions:
       super().__setattr__(key, value)
 
 
+class CraftrNodepyModule(nodepy.loader.PythonModule):
+
+  def __init__(self, dsl_context, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.dsl_context = dsl_context
+    self.craftr_module = None
+
+  def _preprocess_code(self, code):
+    return code
+
+  def __setattr__(self, key, value):
+    super().__setattr__(key, value)
+
+  def _exec_code(self, code):
+    assert self.loaded
+    is_main = False
+    code = code.replace('\r\n', '\n')
+    project = Parser().parse(code, str(self.filename))
+    if project.name in self.dsl_context.modules:
+      raise RuntimeError('modules {!r} already loaded'.format(project.name))
+    interpreter = Interpreter(self, self.dsl_context, str(self.filename), is_main)
+    self.craftr_module = interpreter(project)
+    assert self.loaded
+    self.dsl_context.modules[self.craftr_module.name] = self.craftr_module
+
+  def preprocess_eval_block(self, code):
+    return super()._preprocess_code(code)
+
+
+class CraftrNodepyScript(nodepy.loader.PythonModule):
+
+  def __init__(self, scope, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.scope = scope
+
+  def _exec_code(self, code):
+    dynamic_exec(code, self.scope, filename=str(self.filename))
+
+  def init(self):
+    super().init()
+    old_namespace, self.namespace = self.namespace, ObjectFromMapping(self.scope)
+    for key in ['__name__', '__file__', 'require']:
+      setattr(self.namespace, key, getattr(old_namespace, key))
+
+
 class Context(core.Context):
   """
   An extension of the #core.Context interface that implements the basic
   behaviour of the context with the Craftr DSL.
   """
+
+  class ModuleLoader(nodepy.resolver.StdResolver.Loader):
+
+    def __init__(self, dsl_context):
+      self.dsl_context = dsl_context
+
+    def suggest_files(self, nodepy_context, path):
+      if path.suffix == '.craftr':
+        yield path
+        yield path.with_suffix('').joinpath('build.craftr')
+
+    def can_load(self, nodepy_context, path):
+      return path.suffix == '.craftr'
+
+    def load_module(self, context, package, filename):
+      return CraftrNodepyModule(self.dsl_context, require.context, None, pathlib.Path(filename))
 
   def __init__(self, build_variant, build_directory):
     super().__init__()
@@ -110,45 +175,33 @@ class Context(core.Context):
     self.build_directory = build_directory
     self.options = {}
     self.modules = {}
+    self.loader = self.ModuleLoader(self)
+
+    # TODO: Remove again after
     craftr_dir = path.dir(path.dir(__file__))
-    self.path = ['.', path.join(craftr_dir, 'lib')]
-    self._builtins = self.load_script(path.join(craftr_dir, 'lib', 'builtins.py'), {'context': self})
+    require.context.resolver.loaders.append(self.loader)
+    require.context.resolver.paths.append(pathlib.Path(craftr_dir).joinpath('lib'))
+    print(require.context.resolver.paths)
+
+    self._builtins = {}
+    craftr = self.load_module('craftr')
+    for key in craftr.__builtins__:
+      self._builtins[key] = getattr(craftr, key)
 
   def get_builtins(self):
     return self._builtins
 
-  def load_module(self, name):
-    if name not in self.modules:
-      for x in self.path:
-        filename = path.join(x, name + '.craftr')
-        if path.isfile(filename):
-          break
-        filename = path.join(x, name, 'build.craftr')
-        if path.isfile(filename):
-          break
-      else:
-        raise ModuleNotFoundError(name)
-      with open(filename) as fp:
-        project = Parser().parse(fp.read(), filename)
-      module = Interpreter(self, filename)(project)
-      self.modules[name] = module
-    else:
-      module = self.modules[name]
-    return module
+  def load_module(self, name, get_nodepy_module=False):
+    return require(name + '.craftr', exports=not get_nodepy_module)
 
-  def load_file(self, filename, is_main=False):
-    with open(filename) as fp:
-      project = Parser().parse(fp.read(), filename)
-    if project.name in self.modules:
-      raise RuntimeError('modules {!r} already loaded'.format(project.name))
-    module = Interpreter(self, filename, is_main)(project)
-    self.modules[module.name] = module
-    return module
+  def load_file(self, filename, is_main=False, get_nodepy_module=False):
+    return require(path.abs(filename), exports=not get_nodepy_module)
 
   def load_script(self, filename, context):
     assert hasattr(context, '__getitem__'), context
-    with open(filename) as fp:
-      dynamic_exec(fp.read(), context, filename=filename)
+    nodepy_module = CraftrNodepyScript(context, require.context, None, pathlib.Path(filename))
+    nodepy_module.init()
+    nodepy_module.load()
     return context
 
   def report_property_does_not_exist(self, filename, loc, prop_name, propset):
@@ -158,7 +211,10 @@ class Context(core.Context):
   def get_exec_vars(self, obj):
     assert isinstance(obj, (core.Module, core.Target, core.Dependency)), obj
     if not hasattr(obj, 'scope'):
-      obj.scope = {}
+      if isinstance(obj, core.Module):
+        obj.scope = vars(obj.nodepy_module.namespace)
+      else:
+        obj.scope = {}
     if isinstance(obj, core.Module):
       obj.scope['context'] = self
       obj.scope['module'] = obj
@@ -196,7 +252,8 @@ class Interpreter:
   Interpreter for projects.
   """
 
-  def __init__(self, context, filename, is_main=False):
+  def __init__(self, nodepy_module, context, filename, is_main=False):
+    self.nodepy_module = nodepy_module
     self.context = context
     self.filename = filename
     self.directory = path.dir(filename)
@@ -208,7 +265,10 @@ class Interpreter:
     return module
 
   def create_module(self, namespace):
+    if not self.nodepy_module.loaded:
+      self.nodepy_module.init()
     module = core.Module(self.context, namespace.name, namespace.version, self.directory)
+    module.nodepy_module = self.nodepy_module
     self.context.init_module(module)
     return module
 
@@ -263,6 +323,7 @@ class Interpreter:
 
   def _exec(self, lineno, source, vars):
     source = '\n' * (lineno-1) + source
+    source = self.nodepy_module.preprocess_eval_block(source)
     dynamic_exec(source, vars, filename=self.filename)
 
   def _eval(self, lineno, source, vars):

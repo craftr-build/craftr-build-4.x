@@ -156,12 +156,17 @@ class Load(Node):
 
 class Eval(Node):
 
-  def __init__(self, loc, source):
+  def __init__(self, loc, source, remainder):
     super().__init__(loc)
     self.source = source.rstrip()
+    self.remainder = remainder
 
   def render(self, fp, depth):
-    if '\n' in self.source:
+    if self.remainder:
+      assert depth == 0
+      fp.write('eval:>>\n')
+      fp.write(self.source)
+    elif '\n' in self.source:
       fp.write('  ' * depth + 'eval:\n')
       for line in self.source.split('\n'):
         if line:
@@ -258,16 +263,6 @@ class Dependency(Node):
       assign.render(fp, depth+1)
 
 
-class Using(Node):
-
-  def __init__(self, loc, name):
-    super().__init__(loc)
-    self.name = name
-
-  def render(self, fp, depth):
-    fp.write('using "{}"'.format(self.name))
-
-
 class Parser:
 
   rules = [
@@ -279,13 +274,14 @@ class Parser:
     strex.Charset('name', string.ascii_letters + string.digits + '_'),
     strex.Keyword('=', '='),
     strex.Keyword(':', ':'),
+    strex.Keyword('>>', '>>'),
     strex.Keyword('.', '.'),
     strex.Charset('nl', '\n'),
     strex.Charset('ws', '\t ', skip=True),
   ]
 
   KEYWORDS = ['project', 'configure', 'options', 'load', 'eval', 'pool',
-              'export', 'public', 'target', 'requires', 'using']
+              'export', 'public', 'target', 'requires', 'import']
 
   def parse(self, source, filename='<input>'):
     lexer = strex.Lexer(strex.Scanner(source), self.rules)
@@ -450,9 +446,28 @@ class Parser:
   def _parse_eval(self, lexer, parent_indent, export=False):
     assert not export
     loc = lexer.token.cursor
+    is_remainder = False
     if lexer.accept(':'):
+      if lexer.accept('>>'):
+        is_remainder = True
       lexer.next('nl')
-    return Eval(loc, self._parse_expression(lexer, loc.colno))
+    if is_remainder and parent_indent:
+      raise ParseError(lexer.token.cursor, 'eval:>> block only on top-level')
+    if is_remainder:
+      lines = []
+      while lexer.scanner:
+        lines.append(lexer.scanner.readline())
+      source = ''.join(lines)
+    else:
+      source = self._parse_expression(lexer, loc.colno)
+    return Eval(loc, source, is_remainder)
+
+  def _parse_import(self, lexer, parent_indent, export=False):
+    assert not export
+    assert not parent_indent
+    loc = lexer.token.cursor
+    source = self._parse_expression(lexer, loc.colno)
+    return Eval(loc, 'import ' + source, False)
 
   def _parse_pool(self, lexer, parent_indent, export=False):
     assert not export
@@ -502,10 +517,6 @@ class Parser:
       assert isinstance(child, Assignment)
       export.assignments.append(child)
     return export
-
-  def _parse_using(self, lexer, parent_indent):
-    name = lexer.next('string').value.group(1)
-    return Using(lexer.token.cursor, name)
 
 
 class ParseError(Exception):

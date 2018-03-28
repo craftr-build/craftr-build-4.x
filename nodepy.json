@@ -1,0 +1,18 @@
+{
+  "name": "@craftr/craftr-build",
+  "version": "3.0.1-dev",
+  "license": "MIT",
+  "authors": ["Niklas Rosenstein <rosensteinniklas@gmail.com>"],
+  "description": "The Craftr build system.",
+  "pip_dependencies": {
+    "glob2": ">=0.6",
+    "nr": ">=2.0.5",
+    "requests": ">=2.18.4",
+    "toml": ">=0.9.4",
+    "typing": ">=3.6.4"
+  },
+  "resolve_root": "./craftr",
+  "bin": {
+    "craftr": "./craftr/__main__.py"
+  }
+}

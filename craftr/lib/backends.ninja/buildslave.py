@@ -3,6 +3,8 @@
 # avoiding the need to read the whole build graph for every build that
 # Ninja runs.
 
+from nr import path
+
 import argparse
 import io
 import json
@@ -13,10 +15,9 @@ import shlex
 import struct
 import subprocess
 import sys
-from craftr.build import BuildSet
-from itertools import chain
-from nr import path
-from utils import quote
+
+import {BuildSet} from '@craftr/craftr-build/build'
+import {quote} from './utils'
 
 verbose = os.environ.get('CRAFTR_VERBOSE') == 'true'
 
