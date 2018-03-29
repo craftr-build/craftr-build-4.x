@@ -13,7 +13,7 @@ def is_sharedlib(data):
 
 
 def is_staticlib(data):
-  return data.type == 'library' and data.preferredLinkage == 'shared'
+  return data.type == 'library' and data.preferredLinkage == 'static'
 
 
 class Compiler(nr.named.named):
@@ -257,7 +257,10 @@ class Compiler(nr.named.named):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
-    libs = list(data.staticLibraries) + list(data.dynamicLibraries) # TODO: Handle these separately?
+
+    # TODO: Tell the compiler to link staticLibraries and dynamicLibraries
+    #       statically/dynamically respectively?
+    libs = data.systemLibraries + data.staticLibraries + data.dynamicLibraries
 
     # Inherit options from dependencies.
     """
@@ -286,6 +289,7 @@ class Compiler(nr.named.named):
     flags += concat([self.expand(self.linker_libpath, x) for x in unique(data.libraryPaths)])
     if not is_staticlib(data):
       flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
+
     return command + ['$in'] + flags #+ additional_input_files
 
   def create_link_action(self, target, data, action_name, lang, compile_actions):
