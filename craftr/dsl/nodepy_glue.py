@@ -68,7 +68,7 @@ class CraftrModule(nodepy.loader.PythonModule):
       raise RuntimeError('modules {!r} already loaded'.format(project.name))
     interpreter = Interpreter(self, self.dsl_context, str(self.filename), is_main)
     self.craftr_module = interpreter.create_module(project)
-    self.namespace.module = self.craftr_module
+    self.craftr_module.init_namespace(self.namespace)
     interpreter.eval_module(project, self.craftr_module)
     assert self.loaded
     self.dsl_context.modules[self.craftr_module.name] = self.craftr_module

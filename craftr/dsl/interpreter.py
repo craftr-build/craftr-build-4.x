@@ -76,28 +76,6 @@ class ExplicitRunError(RunError):
   pass
 
 
-class ModuleOptions:
-
-  def __init__(self, name):
-    self._name = name
-    self._data = {}
-
-  def __repr__(self):
-    return 'ModuleOptions({!r}, {!r})'.format(self._name, self._data)
-
-  def __getattr__(self, key):
-    try:
-      return self._data[key]
-    except KeyError:
-      raise AttributeError(key)
-
-  def __setattr__(self, key, value):
-    if key not in ('_name', '_data'):
-      self._data[key] = value
-    else:
-      super().__setattr__(key, value)
-
-
 class Interpreter:
   """
   Interpreter for projects.
@@ -145,7 +123,7 @@ class Interpreter:
 
   def _options(self, node, module):
     assert module is self.nodepy_module.craftr_module, (module, self.nodepy_module.craftr_module)
-    options = module.scope.setdefault('options', ModuleOptions(module.name))
+    options = module.options
     for key, (type, value, loc) in node.options.items():
       option_name = module.name + '.' + key
       try:

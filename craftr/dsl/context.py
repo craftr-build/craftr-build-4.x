@@ -32,9 +32,43 @@ import core from '../core'
 STDLIB_DIR = module.package.directory.joinpath('craftr', 'lib')
 
 
+class ModuleOptions:
+
+  def __init__(self, name, context):
+    self._name = name
+    self._data = {}
+    self._context = context
+
+  def __repr__(self):
+    return 'ModuleOptions({!r}, {!r})'.format(self._name, self._data)
+
+  def __getattr__(self, key):
+    try:
+      return self._data[key]
+    except KeyError:
+      raise AttributeError(key)
+
+  def __setattr__(self, key, value):
+    if key not in ('_name', '_data', '_context'):
+      self._data[key] = value
+    else:
+      super().__setattr__(key, value)
+
+  def setdefault(self, key, value):
+    return self._context.options.setdefault(self._name + '.' + key, value)
+
+
 class DslModule(core.Module):
 
   nodepy_module = None
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.options = ModuleOptions(self.name, self.context)
+
+  def init_namespace(self, ns):
+    ns.module = self
+    ns.options = self.options
 
   @property
   def scope(self):
