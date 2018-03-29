@@ -440,5 +440,5 @@ class BuildBackend:
   def clean(self, recursive):
     raise NotImplementedError
 
-  def build(self):
+  def build(self, verbose):
     raise NotImplementedError

@@ -111,6 +111,7 @@ def get_argument_parser():
   parser.add_argument('--dotviz', action='store_true', help='Prints a digraph representation of the build graph.')
   parser.add_argument('targets', nargs='...', metavar='TARGET', help='Zero or more targets/actions to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   parser.add_argument('-t', '--tool', nargs='...', help='Run a tool with the specified arguments.')
+  parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode.')
   return parser
 
 
@@ -291,7 +292,7 @@ def main(argv=None):
 
   if args.build:
     # TODO: Build step
-    res = backend.build()
+    res = backend.build(verbose=args.verbose)
     if res not in (0, None):
       return res
 

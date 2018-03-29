@@ -131,12 +131,14 @@ class NinjaBackend(craftr.BuildBackend):
     command += targets
     return subprocess.call(command)
 
-  def build(self):
+  def build(self, verbose):
     build_directory = self.context.build_directory
     graph = self.context.graph
 
     with ActionServer(graph) as server:
       os.environ['CRAFTR_ACTION_SERVER'] = '{}:{}'.format(*server.address())
+      if verbose:
+        os.environ['CRAFTR_VERBOSE'] = 'true'
       ninja = check_ninja_version(build_directory)
       if not ninja:
         return 1
