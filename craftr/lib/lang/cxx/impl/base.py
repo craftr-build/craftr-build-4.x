@@ -258,7 +258,6 @@ class Compiler(nr.named.named):
 
     flags = []
     libs = list(data.staticLibraries) + list(data.dynamicLibraries) # TODO: Handle these separately?
-    libpath = target.get_prop_join('cxx.libraryPaths')
 
     # Inherit options from dependencies.
     """
@@ -284,7 +283,7 @@ class Compiler(nr.named.named):
       else:
         flags += self.expand(runtime.get('dynamic', []))
 
-    flags += concat([self.expand(self.linker_libpath, x) for x in unique(libpath)])
+    flags += concat([self.expand(self.linker_libpath, x) for x in unique(data.libraryPaths)])
     if not is_staticlib(data):
       flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
     return command + ['$in'] + flags #+ additional_input_files

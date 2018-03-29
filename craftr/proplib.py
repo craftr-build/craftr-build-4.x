@@ -32,7 +32,7 @@ import collections
 class Prop:
 
   def __init__(self, name, type, default=NotImplemented, optional=True,
-               readonly=False):
+               readonly=False, options=None):
     if isinstance(type, builtins.type):
       if not issubclass(type, PropType):
         raise TypeError('expected PropType subclass', type)
@@ -49,6 +49,7 @@ class Prop:
     self.default = default
     self.optional = optional
     self.readonly = readonly
+    self.options = options or {}
 
   def __repr__(self):
     return 'Prop(name={!r}, type={!r}, default={!r}, optional={!r}, readonly={!r})'.format(

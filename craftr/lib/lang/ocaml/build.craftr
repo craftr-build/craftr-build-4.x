@@ -13,16 +13,15 @@ class OcamlTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('ocaml.srcs', craftr.PathList)
+    props.add('ocaml.srcs', craftr.PathList, options={'inherit': True})
     props.add('ocaml.standalone', craftr.Bool)
     props.add('ocaml.productName', craftr.String)
-    props.add('ocaml.compilerFlags', craftr.StringList)
+    props.add('ocaml.compilerFlags', craftr.StringList, options={'inherit': True})
 
   def translate_target(self, target):
     src_dir = target.directory
     build_dir = path.join(context.build_directory, target.module.name)
     data = target.get_props('ocaml.', as_object=True)
-    data.compilerFlags = target.get_prop_join('ocaml.compilerFlags')
 
     if not data.productName:
       data.productName = target.name + '-' + target.module.version

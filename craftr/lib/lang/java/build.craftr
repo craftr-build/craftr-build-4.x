@@ -162,22 +162,22 @@ class JavaTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('java.srcs', craftr.PathList)
-    props.add('java.srcRoots', craftr.StringList)
-    props.add('java.compilerFlags', craftr.StringList)
+    props.add('java.srcs', craftr.PathList, options={'inherit': True})
+    props.add('java.srcRoots', craftr.StringList, options={'inherit': True})
+    props.add('java.compilerFlags', craftr.StringList, options={'inherit': True})
     props.add('java.jmod', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps module names to the module base directories.
     props.add('java.jarName', craftr.String)
     props.add('java.mainClass', craftr.String)
     props.add('java.bundleType', craftr.String)  # The bundle type for applications, can be `none`, `onejar` or `merge`.
-    props.add('java.binaryJars', craftr.PathList)
-    props.add('java.artifacts', craftr.StringList)
+    props.add('java.binaryJars', craftr.PathList, options={'inherit': True})
+    props.add('java.artifacts', craftr.StringList, options={'inherit': True})
     props.add('java.runArgsPrefix', craftr.StringList)
     props.add('java.runArgs', craftr.StringList)
-    props.add('java.jlinkModules', craftr.StringList)  # List of modules to include in the runtime
+    props.add('java.jlinkModules', craftr.StringList, options={'inherit': True})  # List of modules to include in the runtime
     props.add('java.jlinkName', craftr.String)  # Directory output name
     props.add('java.jlinkLaunchers', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps command names to class identifiers in the form "package/class"
-    props.add('java.jlinkModulePath', craftr.PathList)
-    props.add('java.jlinkFlags', craftr.StringList)
+    props.add('java.jlinkModulePath', craftr.PathList, options={'inherit': True})
+    props.add('java.jlinkFlags', craftr.StringList, options={'inherit': True})
 
     props = context.dependency_properties
     props.add('java.bundle', craftr.Bool())
@@ -190,30 +190,16 @@ class JavaTargetHandler(craftr.TargetHandler):
     build_dir = craftr.get_output_directory(target)
     cache_dir = path.join(context.build_directory, module.name, 'artifacts')
 
-    binaryJars = target.get_prop_join('java.binaryJars')
+    data = target.get_props('java.', as_object=True)
+
     nobundleBinaryJars = []
-    bundleBinaryJars = binaryJars
-    artifacts = target.get_prop_join('java.artifacts')
-    srcs = target.get_prop_join('java.srcs')
-    srcRoots = target.get_prop_join('java.srcRoots')
-    jarName = target.get_prop('java.jarName')
-    bundleType = target.get_prop('java.bundleType')
-    compilerFlags = target.get_prop_join('java.compilerFlags')
-    mainClass = target.get_prop('java.mainClass')
-    runArgs = target.get_prop_join('java.runArgs')
-    runArgsPrefix = target.get_prop('java.runArgsPrefix')
-    jmod = target.get_prop('java.jmod')
-    jlinkModules = target.get_prop('java.jlinkModules')
-    jlinkName = target.get_prop('java.jlinkName')
-    jlinkLaunchers = target.get_prop('java.jlinkLaunchers')
-    jlinkModulePath = target.get_prop_join('java.jlinkModulePath')
-    jlinkFlags = target.get_prop_join('java.jlinkFlags')
+    bundleBinaryJars = data.binaryJars
 
     # Add actions that download the artifacts.
     artifactActions = []
-    if artifacts:
+    if data.artifacts:
       print('[{}] Resolving JARs...'.format(target.id))
-      for artifact, repo in self.artifacts.resolve(artifacts):
+      for artifact, repo in self.artifacts.resolve(data.artifacts):
         binary_jar = path.join(cache_dir, artifact.to_local_path('jar'))
         if binary_jar in self.artifact_actions:
           artifactActions.append(self.artifact_actions[binary_jar])
@@ -230,7 +216,7 @@ class JavaTargetHandler(craftr.TargetHandler):
           build.files.add(binary_jar, ['out'])
           self.artifact_actions[binary_jar] = action
           artifactActions.append(action)
-        binaryJars.append(binary_jar)
+        data.binaryJars.append(binary_jar)
         bundleBinaryJars.append(binary_jar)
 
     jar_action = None
@@ -249,38 +235,38 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     # Determine all the information necessary to build a java library,
     # and optionally a bundle.
-    if srcs:
-      if not srcRoots:
-        srcRoots = ['src', 'java', 'javatest']
-      if not jarName and not jmod:
-        jarName = (target.name + '-' + target.module.version)
+    if data.srcs:
+      if not data.srcRoots:
+        data.srcRoots = ['src', 'java', 'javatest']
+      if not data.jarName and not data.jmod:
+        data.jarName = (target.name + '-' + target.module.version)
 
       # Construct the path to the output JAR file.
-      if jarName:
-        jarFilename = path.join(build_dir, jarName + '.jar')
+      if data.jarName:
+        jarFilename = path.join(build_dir, data.jarName + '.jar')
 
       # Construct the bundle filename.
       bundleFilename = None
-      if bundleType and jarFilename:
-        assert bundleType in ('onejar', 'merge')
-        bundleFilename = path.join(build_dir, jarName + '-' + bundleType + '.jar')
+      if data.bundleType and jarFilename:
+        assert data.bundleType in ('onejar', 'merge')
+        bundleFilename = path.join(build_dir, data.jarName + '-' + data.bundleType + '.jar')
 
       # Construct Java module filenames.
-      if jmod:
-        for mod_name, mod_dir in jmod.items():
+      if data.jmod:
+        for mod_name, mod_dir in data.jmod.items():
           mod_filename = path.join(jmodDir, mod_name + '.jmod')
           mod_dir = path.canonical(mod_dir, src_dir)
-          root = find_src_root(mod_dir, srcRoots, src_dir, allow_curdir=True)
+          root = find_src_root(mod_dir, data.srcRoots, src_dir, allow_curdir=True)
           if not root:
             print('warning: jmod "{}" directory "{}" not in a srcRoot'.format(mod_name, mod_dir))
           else:
             mod_dir = path.join(classDir, root[0], root[1])
-          jmod[mod_name] = mod_dir
+          data.jmod[mod_name] = mod_dir
           jmodFilenames[mod_name] = mod_filename
 
       # Create a list of all the Java Class files generated by the compiler.
       classFiles = {}
-      for root, sources in partition_sources(srcs, srcRoots, src_dir).items():
+      for root, sources in partition_sources(data.srcs, data.srcRoots, src_dir).items():
         classFiles[root] = []
         for src in sources:
           clsfile = path.join(classDir, root, path.setsuffix(src, '.class'))
@@ -291,29 +277,29 @@ class JavaTargetHandler(craftr.TargetHandler):
         doBundle = dep.props['java.bundle']
         for dep_target in dep.sources:
           libs = dep_target.files_tagged(['out', 'java.library'])
-          binaryJars += libs
+          data.binaryJars += libs
           if doBundle:
             bundleBinaryJars += libs
           else:
             nobundleBinaryJars += libs
-      binaryJars = list(stream.unique(binaryJars))
+      data.binaryJars = list(stream.unique(data.binaryJars))
 
-    if srcs and classFiles:
+    if data.srcs and classFiles:
       javac_actions = []
       for root, files in classFiles.items():
         # Generate the action to compile the Java source files.
         command = [options.javac]
-        if binaryJars:
-          command += ['-cp', path.pathsep.join(map(path.abs, binaryJars))]
+        if data.binaryJars:
+          command += ['-cp', path.pathsep.join(map(path.abs, data.binaryJars))]
         command += ['-d', path.join(classDir, root)]
         command += ['$in']
-        command += shlex.split(options.compilerFlags) + compilerFlags
+        command += shlex.split(options.compilerFlags) + data.compilerFlags
 
         action = target.add_action('java.javac-' + root, commands=[command],
           input=True, deps=artifactActions)
 
         build = action.add_buildset()
-        build.files.add(srcs, ['in'])  # TODO: Select only the files in the current source root
+        build.files.add(data.srcs, ['in'])  # TODO: Select only the files in the current source root
         build.files.add(files, ['out'])
 
         javac_actions.append(action)
@@ -326,11 +312,11 @@ class JavaTargetHandler(craftr.TargetHandler):
 
       # Generate the action to produce the JAR file.
       flags = 'cvf'
-      if mainClass:
+      if data.mainClass:
         flags += 'e'
       command = [options.javacJar, flags, '$out']
-      if mainClass:
-        command += [mainClass]
+      if data.mainClass:
+        command += [data.mainClass]
       for root in classFiles.keys():
         command += ['-C', path.join(classDir, root), '.']
       jar_action = target.add_action('java.jar', commands=[command], deps=javac_actions)
@@ -339,8 +325,8 @@ class JavaTargetHandler(craftr.TargetHandler):
       build.files.add(jarFilename, ['out', 'java.library'])
 
     # Generate actions to build Java modules.
-    if jmod:
-      for mod_name, mod_dir in jmod.items():
+    if data.jmod:
+      for mod_name, mod_dir in data.jmod.items():
         # TODO: Determine the class actions that produce the mentioned class
         #       files so we can add them as dependencies -- allowing the build
         #       backend to determine when the rule needs to be rebuilt.
@@ -360,83 +346,83 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     # Generate the action to produce a merge of all dependent JARs if
     # so specified in the target.
-    if bundleType and bundleFilename:
+    if data.bundleType and bundleFilename:
       command = [sys.executable, AUGJAR_TOOL, '-o', '$out']
       inputs = [jarFilename] + bundleBinaryJars
-      if bundleType == 'merge':
-        command += [inputs[0], '-s', 'Main-Class=' + mainClass]
+      if data.bundleType == 'merge':
+        command += [inputs[0], '-s', 'Main-Class=' + data.mainClass]
         for infile in inputs[1:]:
           command += ['-m', infile]
-      elif bundleType == 'onejar':
-        command += [ONEJAR_FILENAME, '-s', 'One-Jar-Main-Class=' + mainClass]
+      elif data.bundleType == 'onejar':
+        command += [ONEJAR_FILENAME, '-s', 'One-Jar-Main-Class=' + data.mainClass]
         for infile in inputs:
           command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
         inputs += [ONEJAR_FILENAME]
       else:
-        raise ValueError('invalid bundleType: {!r}'.format(bundleType))
+        raise ValueError('invalid bundleType: {!r}'.format(data.bundleType))
       bundle_action = target.add_action('java.bundle', commands=[command])
       build = bundle_action.add_buildset()
       build.files.add(inputs, ['in'])
       build.files.add(bundleFilename, ['out', 'java.bundle'])
 
-    if jlinkModules:
-      jlinkModulePath = list(jlinkModulePath)
-      jlinkModulePath.append(jmodDir)  # TODO: Append jmodDir of all dependencies
+    if data.jlinkModules:
+      data.jlinkModulePath = list(data.jlinkModulePath)
+      data.jlinkModulePath.append(jmodDir)  # TODO: Append jmodDir of all dependencies
 
       # TODO: Collect actions that produce the modules -- possibly from
       # dependent targets and not just this target (thus, just jmod_actions
       # may not be sufficient).
 
-      if not jlinkName:
-        jlinkName = target.name + '-' + target.module.version + '-runtime'
-      if not path.isabs(jlinkName):
-        jlinkName = path.join(build_dir, jlinkName)
+      if not data.jlinkName:
+        data.jlinkName = target.name + '-' + target.module.version + '-runtime'
+      if not path.isabs(data.jlinkName):
+        data.jlinkName = path.join(build_dir, data.jlinkName)
 
       commands = []
       # Make sure the previous directory does not exist.
-      commands.append(platform_commands.rm(jlinkName, recursive=True, force=True))
+      commands.append(platform_commands.rm(data.jlinkName, recursive=True, force=True))
       # Generate the jlink command/
       commands.append(['jlink'])
       commands[-1] += ['--module-path', jmodDir]
-      commands[-1] += ['--add-modules'] + jlinkModules
-      commands[-1] += ['--output', jlinkName]
-      for command, mod_name in jlinkLaunchers.items():
+      commands[-1] += ['--add-modules'] + data.jlinkModules
+      commands[-1] += ['--output', data.jlinkName]
+      for command, mod_name in data.jlinkLaunchers.items():
         commands[-1] += ['--launcher', '{}={}'.format(command, mod_name)]
-      commands[-1] += jlinkFlags
+      commands[-1] += data.jlinkFlags
 
       jlink_action = target.add_action('java.jlink', commands=commands,
         deps=jmod_actions + [jar_action], explicit=True, syncio=True, output=True)
       build = jlink_action.add_buildset()
       # TODO: Determine input/output files?
 
-    if (len(jmod) == 1 or jarFilename) and mainClass:
+    if (len(data.jmod) == 1 or jarFilename) and data.mainClass:
       # An action to execute the library JAR (with the proper classpath).
       if jarFilename:
-        command = list(runArgsPrefix or ['java'])
-        classpath = binaryJars + [jarFilename]
+        command = list(data.runArgsPrefix or ['java'])
+        classpath = data.binaryJars + [jarFilename]
         command += ['-cp', path.pathsep.join(classpath)]
-        command += [mainClass] + runArgs
+        command += [data.mainClass] + data.runArgs
       else:
-        command = list(runArgsPrefix or ['java'])
+        command = list(data.runArgsPrefix or ['java'])
         command += ['-p', path.pathsep.join([jmodDir])]  # TODO: Additional JMOD dirs?
-        command += ['-cp', path.pathsep.join(binaryJars)]
-        mod_name = next(iter(jmod))
-        command += ['-m', mod_name + '/' + mainClass] + runArgs
+        command += ['-cp', path.pathsep.join(data.binaryJars)]
+        mod_name = next(iter(data.jmod))
+        command += ['-m', mod_name + '/' + data.mainClass] + data.runArgs
 
       run_action = target.add_action('java.run', commands=[command],
         deps=[jar_action] + jmod_actions, explicit=True, syncio=True, output=False)
       run_action.add_buildset()
 
-    if bundleFilename and mainClass:
+    if bundleFilename and data.mainClass:
       # An action to execute the bundled JAR.
-      command = list(runArgsPrefix or ['java'])
+      command = list(data.runArgsPrefix or ['java'])
       if not nobundleBinaryJars:
         command += ['-jar', bundleFilename]
       else:
         classpath = nobundleBinaryJars + [bundleFilename]
         command += ['-cp', path.pathsep.join(classpath)]
-        command += ['com.simontuffs.onejar.Boot' if bundleType == 'onejar' else mainClass]
-      command += runArgs
+        command += ['com.simontuffs.onejar.Boot' if data.bundleType == 'onejar' else data.mainClass]
+      command += data.runArgs
       run_bundle_action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
       run_bundle_action.add_buildset()

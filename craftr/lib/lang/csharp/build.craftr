@@ -162,12 +162,12 @@ class CsharpTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('csharp.srcs', craftr.StringList)
+    props.add('csharp.srcs', craftr.PathList, options={'inherit': True})
     props.add('csharp.type', craftr.String, 'exe')  # appcontainer, exe, library, module, winexe, winmdobj
     props.add('csharp.main', craftr.String)
     props.add('csharp.productName', craftr.String)
-    props.add('csharp.compilerFlags', craftr.StringList)
-    props.add('csharp.dynamicLibraries', craftr.StringList)
+    props.add('csharp.compilerFlags', craftr.StringList, options={'inherit': True})
+    props.add('csharp.dynamicLibraries', craftr.PathList, options={'inherit': True})
     props.add('csharp.packages', craftr.StringList)
     props.add('csharp.bundle', craftr.Bool, False)  # Allows you to enable bundling of assemblies.
     props.add('csharp.runArgsPrefix', craftr.StringList)
@@ -181,8 +181,6 @@ class CsharpTargetHandler(craftr.TargetHandler):
     data = target.get_props('csharp.', as_object=True)
 
     # Install artifacts.
-    data.compilerFlags = target.get_prop_join('csharp.compilerFlags')
-    data.dynamicLibraries = target.get_prop_join('csharp.dynamicLibraries')
     data.dynamicLibraries += self.__install(data.packages)
 
     # Prepare information for compiling a product.

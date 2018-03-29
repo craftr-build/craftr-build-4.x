@@ -54,7 +54,7 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # The C and/or C++ input files for the target. If this property is not
     # set, the target will not be considered a C/C++ build target.
-    props.add('cxx.srcs', craftr.PathList)
+    props.add('cxx.srcs', craftr.PathList, options={'inherit': True})
 
     # Allow the link-step to succeed even if symbols are unresolved.
     props.add('cxx.allowUnresolvedSymbols', craftr.Bool, False)
@@ -74,31 +74,31 @@ class CxxTargetHandler(craftr.TargetHandler):
     props.add('cxx.separateDebugInformation', craftr.Bool)
 
     # Preprocessor definitions to set when compiling.
-    props.add('cxx.defines', craftr.StringList)
-    props.add('cxx.definesForStaticBuild', craftr.StringList)
-    props.add('cxx.definesForSharedBuild', craftr.StringList)
+    props.add('cxx.defines', craftr.StringList, options={'inherit': True})
+    props.add('cxx.definesForStaticBuild', craftr.StringList, options={'inherit': True})
+    props.add('cxx.definesForSharedBuild', craftr.StringList, options={'inherit': True})
 
     # Include search paths.
-    props.add('cxx.includes', craftr.PathList)
+    props.add('cxx.includes', craftr.PathList, options={'inherit': True})
 
     # Library search paths.
-    props.add('cxx.libraryPaths', craftr.PathList)
+    props.add('cxx.libraryPaths', craftr.PathList, options={'inherit': True})
 
     # Paths for the dynamic linker. This is only used when running
     # the product of a build target via Craftr.
-    props.add('cxx.runPaths', craftr.PathList)
+    props.add('cxx.runPaths', craftr.PathList, options={'inherit': True})
 
     # Dynamic libraries to link. You should use target dependencies
     # wherever possible rather than using this property.
-    props.add('cxx.dynamicLibraries', craftr.PathList)
+    props.add('cxx.dynamicLibraries', craftr.PathList, options={'inherit': True})
 
     # Static libraries to link. You should use target dependencies
     # wherever possible rather than using this property.
-    props.add('cxx.staticLibraries', craftr.PathList)
+    props.add('cxx.staticLibraries', craftr.PathList, options={'inherit': True})
 
     # List of files to automatically include at the beginning of
     # each translation unit.
-    props.add('cxx.prefixHeaders', craftr.PathList)
+    props.add('cxx.prefixHeaders', craftr.PathList, options={'inherit': True})
 
     # Optimization level. Valid values are `none`, `size` and `speed`.
     props.add('cxx.optimization', craftr.String)
@@ -111,16 +111,16 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # Flags that are added to all compilation steps, independent of
     # the language.
-    props.add('cxx.compilerFlags', craftr.StringList)
+    props.add('cxx.compilerFlags', craftr.StringList, options={'inherit': True})
 
     # Specifies the way the library prefers to be linked. Either 'static' or 'dynamic'.
     props.add('cxx.preferredLinkage', craftr.String)
 
     # Flags that are added to C compilation.
-    props.add('cxx.cFlags', craftr.String)
+    props.add('cxx.cFlags', craftr.StringList, options={'inherit': True})
 
     # Flags that are added to C++ compilation.
-    props.add('cxx.cppFlags', craftr.String)
+    props.add('cxx.cppFlags', craftr.StringList, options={'inherit': True})
 
     # The version of the C standard. If left undefined, the compiler's
     # default value is used. Valid values include `c89`, `c99` and `c11`.
@@ -139,7 +139,7 @@ class CxxTargetHandler(craftr.TargetHandler):
     props.add('cxx.cppStdlib', craftr.String)
 
     # Additional flags for the linker.
-    props.add('cxx.linkerFlags', craftr.StringList)
+    props.add('cxx.linkerFlags', craftr.StringList, options={'inherit': True})
 
     # Name of the entry point of an executable or dynamic library.
     props.add('cxx.entryPoint', craftr.String)
@@ -159,15 +159,15 @@ class CxxTargetHandler(craftr.TargetHandler):
     # =======================
 
     # Additional search paths for OSX frameworks.
-    props.add('cxx.frameworkPaths', craftr.PathList)
+    props.add('cxx.frameworkPaths', craftr.PathList, options={'inherit': True})
 
     # OSX framework to link. If the framework is part of your project,
     # consider using a dependency instead.
-    props.add('cxx.frameworks', craftr.StringList)
+    props.add('cxx.frameworks', craftr.StringList, options={'inherit': True})
 
     # OSX framework to link weakly. If the framework is part of your project,
     # consider using a dependency instead.
-    props.add('cxx.weakFrameworks', craftr.StringList)
+    props.add('cxx.weakFrameworks', craftr.StringList, options={'inherit': True})
 
     # A version number in the format [major] [minor] indicating the earliest
     # version that the product should run on.
@@ -182,7 +182,7 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     # rpaths that are passed to the linker. Paths that also appear
     # in runPaths are ignored.
-    props.add('cxx.rpaths', craftr.PathList)
+    props.add('cxx.rpaths', craftr.PathList, options={'inherit': True})
 
     # The version to be appended to the soname in ELF shared libraries.
     props.add('cxx.soVersion', craftr.String)
@@ -234,13 +234,7 @@ class CxxTargetHandler(craftr.TargetHandler):
     self.compiler.init(context)
 
   def translate_target(self, target):
-    context = target.context
-    src_dir = target.directory
-
     data = target.get_props('cxx.', as_object=True)
-    data.srcs = target.get_prop_join('cxx.srcs')
-    data.includes = target.get_prop_join('cxx.includes')
-    data.prefixHeaders = target.get_prop_join('cxx.prefixHeaders')
 
     if not data.preferredLinkage:
       data.preferredLinkage = 'static'

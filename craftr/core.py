@@ -189,30 +189,28 @@ class Target:
       result.append(last_default_output)
     return result
 
-  def get_prop(self, prop_name):
+  def get_prop(self, prop_name, inherit=False):
     """
     Returns a property value, preferring the value in the #exported_props.
+
+    If *inherit* is #True, the property must be a #proplib.List property
+    and the values in the exported and non-exported property containers as
+    well as transitive dependencies are respected.
     """
 
-    if self.exported_props.is_set(prop_name):
-      return self.exported_props[prop_name]
+    if inherit:
+      def iter_values():
+        yield self.exported_props[prop_name]
+        yield self.props[prop_name]
+        for target in self.transitive_dependencies().attr('sources').concat():
+          yield target.exported_props[prop_name]
+      prop = self.context.target_properties[prop_name]
+      return prop.type.inherit(prop_name, iter_values())
     else:
-      return self.props[prop_name]
-
-  def get_prop_join(self, prop_name):
-    """
-    Returns a property value, taking the #exported_props and #props into
-    account as well as the values from all the target's dependencies.
-    """
-
-    def iter_values():
-      yield self.exported_props[prop_name]
-      yield self.props[prop_name]
-      for target in self.transitive_dependencies().attr('sources').concat():
-        yield target.exported_props[prop_name]
-
-    prop = self.context.target_properties[prop_name]
-    return prop.type.inherit(prop_name, iter_values())
+      if self.exported_props.is_set(prop_name):
+        return self.exported_props[prop_name]
+      else:
+        return self.props[prop_name]
 
   def get_props(self, prefix='', as_object=False):
     """
@@ -220,11 +218,16 @@ class Target:
     the specified prefix.
     """
 
-    result = {k[len(prefix):]: self.get_prop(k)
-              for k in self.context.target_properties.keys()
-              if k.startswith(prefix)}
+    result = {}
+    propset = self.context.target_properties
+    for prop in filter(lambda x: x.name.startswith(prefix), propset.values()):
+      inherit = prop.options.get('inherit', False)
+      value = self.get_prop(prop.name, inherit)
+      result[prop.name[len(prefix):]] = value
+
     if as_object:
       result = ObjectFromMapping(result)
+
     return result
 
   def transitive_dependencies(self):
