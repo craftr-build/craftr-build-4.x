@@ -434,6 +434,7 @@ class Parser:
       if lexer.accept('>>'):
         is_remainder = True
       lexer.next('nl')
+      loc.lineno += 1
     if is_remainder and parent_indent:
       raise ParseError(lexer.token.cursor, 'eval:>> block only on top-level')
     if is_remainder:
