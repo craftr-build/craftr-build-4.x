@@ -112,6 +112,8 @@ def get_argument_parser():
   parser.add_argument('targets', nargs='...', metavar='TARGET', help='Zero or more targets/actions to clean and/or build. If neither --clean nor --build is used, passing targets will cause an error.')
   parser.add_argument('-t', '--tool', nargs='...', help='Run a tool with the specified arguments.')
   parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode.')
+  parser.add_argument('--link', metavar='PATH', help='Link a Craftr module into your Node.py modules directory. This is useful for projects that contain no nodepy.json manifest.')
+  parser.add_argument('--unlink', metavar='PATH_OR_MODULE', help='Unlink a module that you previously linked into the Node.py modules directory.')
   return parser
 
 
@@ -119,9 +121,10 @@ def main(argv=None):
   parser = get_argument_parser()
   args = parser.parse_args(argv)
   has_buildsteps = (args.configure or args.reconfigure or args.r or args.clean or args.build)
-  metaopts = ['tool', 'show', 'show-actions', 'dotviz']
+  metaopts = ['tool', 'show', 'show-actions', 'dotviz', 'link', 'unlink']
   active_metaopts = []
 
+  # Validate command-line option combinations.
   if args.r and not args.configure:
     parser.error('-r: use --reconfigure or combine with -c, --configure')
   if args.debug and args.release:
@@ -152,6 +155,9 @@ def main(argv=None):
   if not has_buildsteps and not active_metaopts:
     parser.print_usage()
     return 0
+
+  if args.link or args.unlink:
+    return handle_link(args)
 
   # Assign flag implications.
   if args.r:
@@ -296,6 +302,47 @@ def main(argv=None):
     if res not in (0, None):
       return res
 
+  return 0
+
+
+def handle_link(args):
+  assert not (args.link and args.unlink)
+  manifest = path.join(args.link or args.unlink)
+  build_script = path.join(args.link or args.unlink, 'build.craftr')
+  name = None
+
+  if path.isfile(manifest):
+    with open(manifest) as fp:
+      name = json.load(fp)['name']
+  elif path.isfile(build_script):
+    with open(build_script) as fp:
+      name = dsl.Parser().parse(fp.read(), build_script).name
+
+  # If args.unlink pointed to a directory, overwrite the args.unlink
+  # value to the name that we extracted from the manifest or build script.
+  if name and args.unlink:
+    args.unlink = name
+
+  if name or args.unlink:
+    name = name or args.unlink
+    module_link = path.join('.nodepy', 'modules', name + '.nodepy-link')
+
+  if args.unlink:
+    if not path.isfile(module_link):
+      print('error: can not unlink {!r}'.format(args.unlink))
+      return 1
+    print('unlinking module {!r}'.format(args.unlink))
+    os.remove(module_link)
+    return 0
+
+  if not name:
+    print('error: invalid link source: {!r}'.format(args.link))
+    return 1
+
+  print('linking module {!r} from "{}"'.format(name, args.link))
+  path.makedirs(path.dir(module_link))
+  with open(module_link, 'w') as fp:
+    fp.write(path.canonical(args.link))
   return 0
 
 
