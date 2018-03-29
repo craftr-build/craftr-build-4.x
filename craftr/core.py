@@ -104,7 +104,7 @@ class Module:
     self.directory = directory
     self.targets = collections.OrderedDict()
     self.pools = collections.OrderedDict()
-    self.props = proplib.Properties(context.module_properties)
+    self.props = proplib.Properties(context.module_properties, self)
 
   def __repr__(self):
     return 'Module(name={!r}, version={!r}, directory={!r})'.format(
@@ -149,8 +149,8 @@ class Target:
     self.module = module
     self.name = name
     self.public = public
-    self.props = proplib.Properties(module.context.target_properties)
-    self.exported_props = proplib.Properties(module.context.target_properties)
+    self.props = proplib.Properties(module.context.target_properties, self)
+    self.exported_props = proplib.Properties(module.context.target_properties, self)
     self.dependencies = []
     self.actions = collections.OrderedDict()
 
@@ -345,7 +345,7 @@ class Dependency:
     self.target = target
     self.sources = sources
     self.public = public
-    self.props = proplib.Properties(target.context.dependency_properties)
+    self.props = proplib.Properties(target.context.dependency_properties, self)
 
   def __repr__(self):
     return 'Dependency({!r}, {!r}, public={!r})'.format(

@@ -18,7 +18,7 @@ import types
 import {BuildBackend} from '@craftr/craftr-build/build'
 import {Target, Dependency, Module, TargetHandler} from '@craftr/craftr-build/core'
 import {ExplicitRunError} from '@craftr/craftr-build/dsl'
-import {Bool, Integer, String, List, Dict, StringList} from '@craftr/craftr-build/proplib'
+import {Bool, Integer, String, Path, List, Dict, StringList, PathList} from '@craftr/craftr-build/proplib'
 import sh from '@craftr/craftr-build/utils/sh'
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')

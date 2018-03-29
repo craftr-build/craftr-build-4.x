@@ -22,6 +22,7 @@ This module implements the #PropertySet class which is used to describe
 properties and their datatype.
 """
 
+from nr import path
 from nr.generic import GenericMeta
 
 import builtins
@@ -59,11 +60,11 @@ class Prop:
     default = self.default
     if callable(default):
       default = default()
-    return self.coerce(default)
+    return self.coerce(default, None)
 
-  def coerce(self, value):
+  def coerce(self, value, owner=None):
     if not self.optional or value is not None:
-      value = self.type.coerce(self.name, value)
+      value = self.type.coerce(self.name, value, owner)
     return value
 
 
@@ -72,7 +73,7 @@ class PropType:
   Base class for property datatype descriptors.
   """
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     """
     Called whenever a value is assigned to a property. This method is
     supposed to check the type of *value* and eventually coerce it to the
@@ -94,7 +95,7 @@ class PropType:
 
 class Any(PropType):
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     return value
 
 
@@ -103,7 +104,7 @@ class Bool(PropType):
   def __init__(self, strict=True):
     self.strict = strict
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     if self.strict and type(value) != bool:
       raise self.typeerror(name, 'bool', value)
     return bool(value)
@@ -117,7 +118,7 @@ class Integer(PropType):
   def __init__(self, strict=False):
     self.strict = strict
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     if self.strict and type(value) != int:
       raise self.typeerror(name, 'int', value)
     try:
@@ -131,13 +132,31 @@ class Integer(PropType):
 
 class String(PropType):
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     if not isinstance(value, str):
       raise self.typeerror(name, 'string', value)
     return value
 
   def default(self):
     return ''
+
+
+class Path(String):
+
+  def __init__(self, parent_dir_getter=None):
+    self.parent_dir_getter = parent_dir_getter
+
+  def coerce(self, name, value, owner=None):
+    if self.parent_dir_getter:
+      parent_dir = self.parent_dir_getter(owner)
+    else:
+      if owner is None:
+        raise RuntimeError('no owner object received')
+      if not hasattr(owner, 'directory'):
+        raise RuntimeError('owner {!r} has no member "directory"'.format(owner))
+      parent_dir = owner.directory
+    value = super().coerce(name, value, owner)
+    return path.canonical(value, path.abs(parent_dir))
 
 
 class List(PropType, metaclass=GenericMeta):
@@ -153,13 +172,13 @@ class List(PropType, metaclass=GenericMeta):
       item_type = item_type()
     self.item_type = item_type
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     if isinstance(value, tuple):
       value = list(value)
     elif not isinstance(value, list):
       raise self.typeerror(name, 'list', value)
     if self.item_type:
-      value = [self.item_type.coerce(name + '[' + str(i) + ']', x)
+      value = [self.item_type.coerce(name + '[' + str(i) + ']', x, owner)
                for i, x in enumerate(value)]
     return value
 
@@ -194,14 +213,14 @@ class Dict(PropType, metaclass=GenericMeta):
     self.key_type = key_type
     self.value_type = value_type
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     if not isinstance(value, dict):
       raise self.typeerror(name, 'dict', value)
     if self.key_type:
-      value = {self.key_type.coerce(name + '.key(' + repr(k) + ')', k): v
+      value = {self.key_type.coerce(name + '.key(' + repr(k) + ')', k, owner): v
                for k, v in value.items()}
     if self.value_type:
-      value = {k: self.value_type.coerce(name + '[' + repr(k) + ']', v)
+      value = {k: self.value_type.coerce(name + '[' + repr(k) + ']', v, owner)
                for k, v in value.items()}
     return value
 
@@ -210,6 +229,7 @@ class Dict(PropType, metaclass=GenericMeta):
 
 
 StringList = List[String]
+PathList = List[Path]
 
 
 class InstanceOf(PropType, metaclass=GenericMeta):
@@ -231,7 +251,7 @@ class InstanceOf(PropType, metaclass=GenericMeta):
     else:
       return self.type.__name__
 
-  def coerce(self, name, value):
+  def coerce(self, name, value, owner=None):
     if not isinstance(value, self.type):
       raise self.typeerror(name, self.typename, value)
     return value
@@ -308,12 +328,16 @@ class PropertySet:
 
 class Properties:
   """
-  A container for property values as declared in a #PropertySet.
+  A container for property values as declared in a #PropertySet. A property
+  set can be associated with an arbitrary "owner" object. Property types in
+  the #PropertySet may use this owner object to retrieve additional
+  information (see the #Path and #PathList property types).
   """
 
-  def __init__(self, propset):
+  def __init__(self, propset, owner=None):
     self.propset = propset
     self.values = {}
+    self.owner = owner
 
   def __repr__(self):
     return 'Properties({})'.format(self.values)
@@ -329,7 +353,7 @@ class Properties:
     prop = self.propset[key]
     if prop.readonly:
       raise ReadOnlyProperty(key)
-    self.values[key] = prop.coerce(value)
+    self.values[key] = prop.coerce(value, self.owner)
 
   def __contains__(self, key):
     return key in self.propset
