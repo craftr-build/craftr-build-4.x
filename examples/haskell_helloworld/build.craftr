@@ -1,5 +1,0 @@
-project "haskell_helloworld"
-
-target "main":
-  dependency "haskell"
-  haskell.srcs = ['src/Main.hs']
