@@ -51,6 +51,7 @@ class Compiler(nr.named.named):
     ('expand_flag', List[str]),              # Flag(s) to request macro-expanded source.
     ('warnings_flag', List[str]),            # Flag(s) to enable all warnings.
     ('warnings_as_errors_flag', List[str]),  # Flag(s) to turn warnings into errors.
+    ('optimize_none_flag', List[str]),
     ('optimize_speed_flag', List[str]),
     ('optimize_size_flag', List[str]),
     ('enable_exceptions', List[str]),
@@ -184,7 +185,7 @@ class Compiler(nr.named.named):
       command.extend(self.expand(self.warnings_as_errors))
     command.extend(self.expand(self.enable_exceptions if data.enableExceptions else self.disable_exceptions))
     command.extend(self.expand(self.enable_rtti if data.enableRtti else self.disable_rtti))
-    if not BUILD.debug:
+    if not BUILD.debug and data.optimization:
       command += self.expand(getattr(self, 'optimize_' + data.optimization + '_flag'))
     if forced_includes:
       command += concat(self.expand(self.force_include, x) for x in forced_includes)
@@ -257,11 +258,11 @@ class Compiler(nr.named.named):
 
     flags = []
     libs = list(data.staticLibraries) + list(data.dynamicLibraries) # TODO: Handle these differently?
-    libpath = list(data.libraryPaths)
+    libpath = target.get_prop_join('cxx.libraryPaths')
 
-    # TODO: Inherit options from dependencies?
+    # Inherit options from dependencies.
     """
-    for dep in build.target.deps(with_behaviour=CxxBuild).attr('impl'):
+    for dep_target in target.transitive_dependencies().attr('sources').concat():
       libs += dep.exported_syslibs
       if dep.type == 'library':
         additional_input_files.extend(dep.linkname_full or dep.outname_full)

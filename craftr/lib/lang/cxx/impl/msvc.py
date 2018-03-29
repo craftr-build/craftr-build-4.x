@@ -45,6 +45,7 @@ class MsvcCompiler(base.Compiler):
   expand_flag = '/E'
   warnings_flag = '/W4'
   warnings_as_errors_flag = '/WX'
+  optimize_none_flag = '/Od'
   optimize_speed_flag = '/O2'
   optimize_size_flag = ['/O1', '/Os']
   enable_exceptions = '/EHsc'

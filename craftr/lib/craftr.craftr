@@ -5,7 +5,7 @@ project "craftr" v1.0.0
 eval:>>
 
 __builtins__ = ['BUILD', 'OS', 'path', 'error', 'fmt', 'glob']
-__all__ = __builtins__ + ['option_default', 'get_output_directory', 'relocate_files']
+__all__ = __builtins__ + ['option_default', 'get_output_directory', 'relocate_files', 'sh']
 
 from nr import path
 
@@ -19,6 +19,7 @@ import {BuildBackend} from '@craftr/craftr-build/build'
 import {Target, Dependency, Module, TargetHandler} from '@craftr/craftr-build/core'
 import {ExplicitRunError} from '@craftr/craftr-build/dsl'
 import {Bool, Integer, String, List, Dict, StringList} from '@craftr/craftr-build/proplib'
+import sh from '@craftr/craftr-build/utils/sh'
 
 OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
 

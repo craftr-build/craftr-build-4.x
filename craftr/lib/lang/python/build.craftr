@@ -1,9 +1,11 @@
 project "python"
-using "cxx"
 
-eval import sys
+import {sh} from "craftr.craftr"
+import "lang/cxx.craftr"
+import sys
+
 options:
-  str pythonBin = sys.executable.replace('\\', '/')  # for shlex
+  str pythonBin = sh.quote(sys.executable.replace('\\', '/'))  # for shlex
 
 eval:
   import json
@@ -42,7 +44,7 @@ eval:
 
   cfg = get_python_config(options.pythonBin)
 
-  files_dir = path.canonical(__file__ + '/../../tools.python.freeze/Files')
+  files_dir = path.canonical(__file__ + '/../../../tools/python.freeze/Files')
   frozen_main_srcs = [
     path.join(files_dir, 'frozenmain-' + sys.version[:3] + '.c'),
     path.join(files_dir, 'frozen_dllmain-' + sys.version[:3] + '.c')
