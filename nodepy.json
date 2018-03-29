@@ -13,6 +13,6 @@
   },
   "resolve_root": "./craftr",
   "bin": {
-    "craftr": "./craftr/__main__.py"
+    "craftr": "./craftr/main.py"
   }
 }
