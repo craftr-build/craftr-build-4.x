@@ -299,8 +299,5 @@ def main(argv=None):
   return 0
 
 
-_entry_point = lambda: sys.exit(main())
-
-
-if __name__ == '__main__' or ('require' in globals() and require.main == module):
-  _entry_point()
+if require.main == module:
+  sys.exit(main())
