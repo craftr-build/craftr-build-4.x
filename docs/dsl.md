@@ -1,160 +1,123 @@
+# The Craftr build language
 
-### Build script language definition
+## Introduction
 
-The Craftr DSL is a very similar to the one of QBS. Originally, Craftr build
-scripts were plain Python code. However, a custom DSL allows for a lot of
-customizablity and declarative power.  
+Craftr uses its own language to allow you to define build targets. The goal
+of this language is to have a flexible and expressive and yet powerful syntax
+for describing build information.
+
+The DSL allows you to write inline-Python code, and every property that you
+assign on the module, target or dependency level is evaluated as a full Python
+expression. The Python used by Craftr has some additional features regarding
+built-in variables and syntax.
+
+Importing other build scripts or Python scripts can be done using the [Node.py]
+module import syntax, for example:
+
+```python
+project "myproject"
+
+import "java.craftr"
+import {glob} from "craftr.craftr"
+import utils from "./utils"
+```
+
+Importing other Craftr build scripts always require the `.craftr` suffix. Once
+another Craftr module is imported, it is part of the build process.
+
+The standard library provides a bunch of modules that implement build support
+for various programming languages. Once such a module is imported, properties
+that are supported by that module can be set on modules and dependencies, but
+most of the time on targets.
+
+```python
+project "myproject"
+
+import "java.craftr"
+import {glob} from "craftr.craftr"
+
+target "main":
+  java.srcs = glob('src/**/*.java')
+```
+
+## Syntax Documentation
+
 A build script consists of statements and blocks, and most blocks have their
 own inner grammar. Not all blocks can be nested inside each other.
+
+### Example
 
 ```python
 project "myproject" v1.6.4
 
+# A block of TOML formatted configuration values. These are applied only
+# when your build script is the builds' entry point.
 configure:
   [myproject]
   option1 = 42
 
+# A block of options expected by the module. Options without default value
+# must be set, otherwise there will be an error. The options are made available
+# as an object called "objects" in the global namespace of the module.
 options:
   int option1
   str option2 = "Hello, World"
   bool option3 = False
 
-eval print('This is a single line of Python code!')
+eval print('This is a single line of Python code! option2:', options.option2)
 
+# A block of Node.py-processed Python code.
 eval:
   print('This is a block of Python code!')
   print('The options you chose are:', options.option1, options.option2, options.option3)
   print('You are on', OSNAME)
   includes = ['./include']
 
+# An import-line, the same can be put inside an eval: block.
+# Allows you to import other Craftr build modules, Python or Node.py modules.
+import "cxx.craftr"
+import {glob} from "craftr.craftr"
+
+# Declare a pool where targets can be assigned to.
 pool "myPool" 4
 
-export target "lib":
-  export dependency "cxx"
-  export dependency "cxx/libs/curl":
+# Declare a public target. Exported targets are publicly visible and
+# automatically depended on when declaring a dependency to the module in
+# another target.
+public target "lib":
+
+  # Declare an exported dependency to the module "libcurl.craftr".
+  # Exported dependencies are inherited transitively by other targets.
+  export requires "libcurl":
     cxx.link = True  # That's the default
 
+  # Assign the target to a pool. Note that this may not always be respected
+  # by the target build handler.
   this.pool = "myPool"
-  cxx.type = 'library'  # Defaults to 'executable'
-  cxx.srcs = glob(['./src/*.cpp', './src/' + OSNAME + '/*.cpp'].
+
+  # Set property values -- note that these properties can only be set because
+  # the "cxx.craftr" module was imported previously.
+  cxx.type = 'library'
+  cxx.srcs = glob(['./src/*.cpp', './src/' + OSNAME + '/*.cpp'],
     excludes = ['./src/main.cpp'])
 
-  # Can be a block or a statement. These have the same effect.
-  # Remember that we defined `includes` in the eval section above.
+  # Exported properties CAN be inherited transitively by targets that
+  # depend on this target. Whether the information is considered is up
+  # to the target handler implementation.
   export cxx.includePaths = includes
   export:
     cxx.includePaths = includes
 
+# Declare a non-public target. Can still be explicity depended on using
+# `requires "myproject@main"`.
 target "main":
-  dependency "@lib"
+  requires "@lib"
   cxx.srcs = ['./src/main.cpp']
 ```
 
-#### Statement `project`
+## Target Properties
 
-This statement is mandatory and must be specified as the first non-comment
-line in the build script. It accepts a literal string for the project's name
-and optionally a version as argument.
-
-    <project> := "project" <str> [<version>]
-    <str>     := "\"" + [^"]* + "\""
-    <version> := "v" + <num> + "." + <num> + "." + <num>
-    <num>     := "0" | ([1-9] + [0-9])
-
-#### Statement `eval`
-
-This statement executes a line of Python code. Everything following the
-statement on the same line is treated as one line of Python code.
-
-    <eval>        := "eval" + <python_expr>
-    <python_expr> := ...
-
-#### Statement `load`
-
-This statement loads a Python script and executes it in the same scope as
-`eval` would do. Using `load` multiple times will execute the Python script
-multiple times.
-
-    <load>  := "load" + <str>
-
-#### Statement `export`
-
-This statement can only be used inside, or as a prefix to, a `target` block.
-It is the single-line form of the `export` block and can be added before a
-variable assignment to export that variable to targets that depend on it.
-
-Additionall, an `export` can be prepended to a `dependency` block or statement
-to export the dependency to other targets.
-
-Exported targets are visible to targets in other modules using when depending
-on a module with `dependency`.
-
-#### Statement `dependency`
-
-This statement is the single-line form of the `dependency` block. It can only be
-used inside a `target` block and accepts exactly one string literal as argument
-that is used as the name of the dependency.
-
-    <dependency> := "dependency" + <str> | "export" + "dependency" + <str>
-
-#### Statement `pool`
-
-This statement is used to create a new job pool with a certain depth. Targets
-that are assigned to this pool will be limited in their parallel execution.
-Note that maybe not all build backends support this option.
-
-    <pool> := "pool" + <str> + <num>`
-
-#### Block `configure`
-
-This block is parsed as TOML and augments the build context's options. It has
-the same effect to using a Craftr configuration file. Note that by default,
-only `configure` blocks in the main build script are evaluated. To make sure
-a `configure` block is always evaluated (eg. when it is listed as a
-dependency), use `export configure`.
-
-#### Block `options`
-
-This block can be used once in a build script and specifies the options that
-will be automatically parsed from the command-line and configuration files and
-made available to the build script's scope under an object named `options`.
-
-The `options` block has a special inner grammar.
-
-    <options_line>  := <type> + <name> | <type> + <name> + "=" + <python_expr>
-    <type>          := "int" | "str" | "bool"
-    <name>          := [\w\d\_]+
-
-#### Block `eval`
-
-This block will evaluate Python code that is put inside the block. `eval`
-blocks are executed in the order they are specified in the build script.
-`eval` blocks may be used on the global level or inside a `target` block.
-
-Inside a target, you have access to the option namespace provided by the
-dependencies. Example:
-
-```python
-target "main":
-  dependency "cxx"
-  eval:
-    if cxx.compiler_id == 'msvc':
-      error('Can not be compiled with MSVC.')
-    cxx.srcs = glob('src/*.cpp')
-    cxx.__exported__.includePaths = ['./include']
-```
-
-#### Block `target`
-
-This block defines a new build target. A target is usually only useful with a
-`dependency` statement or block inside that loads a module which implements the
-ability to build your target (like the `"cpp"` module).
-
-Inside target blocks, there can be `dependency` or `export` statements and
-blocks as well as assignments in the form of `<key> = <python_expr>`. If the
-`<key>` is not a registered target property (either a standard property or
-registered by one of the target's dependencies), a warning will be printed
-when assigning the key.
+Target blocks have a set of default properties.
 
 | Property        | Type | Description |
 | --------------- | ---- | ----------- |
@@ -163,23 +126,18 @@ when assigning the key.
 | `this.explicit` | bool | Do not build this target unless it is required by another target or it is explicitly specified on the command-line. |
 | `this.directory`| str  | The directory to consider relative paths relative to. A relative path will still be considered relative to the original path. |
 
-#### Block `dependency`
 
-Similar to a `dependency` statement, only that the block form allows you to
-supply properties on this dependency. These properties will influence the
-way the dependency is treated.  
+## Built-in variables
 
-Additionally, it allows you to select a subset of the dependencies' targets
-that will be taken into account. By default, all exported targets of the
-dependency are considered (or all, if no targets are exported).
+These variables are available inside Craftr build scripts -- not in normal
+Node.py/Python scripts.
 
-```python
-target "main":
-  dependency "cpp"
-  dependency "niklasrosenstein/maxon.c4d":
-    this.select = ['c4d_legacy', 'python']
-```
-
-The string value that is passed to the `dependency` statement or block may be
-prefixed with an `@` (at) sign to indicate that the target does not require
-another module, but a target from the same build script.
+| Name | Type | Description |
+| - | - | - |
+| `path` | module | The `nr.path` module -- available for convenience. |
+| `options` | `ModuleOptions` | A `ModuleOptions` object. This will be filled with the actual option values after the first `options:` block. You can use this in an `eval:` block before the first `options:` block to initialize default values. |
+| `OS` | `OsInfo` | An `OsInfo` object that contains the name, id, type and arch of the current operating system. Possible names are `windows`, `macos` and `linux`. Possible IDs are `win32`, `darwin` and `linux`. Possible types are `nt` and `posix`. Note that on Windows Cygwin, the type will also be `posix`.  Possible architectures are `x86_64` and `x86`. |
+| `BUILD` | `BuildInfo` | A `BuildInfo` object that tells you whether this is a release or debug build. Members of this object are `mode`, `debug` and `release`. |
+| `error(message)` | function | Raise an error (`craftr.dsl.ExplicitRunError`) with the specified message. |
+| `fmt(format)` | function | Expects a Python `str.format()` string that will be substituted in the context of the current global and local variables. |
+| `glob(patterns, excludes=[], parent=None)` | function | Match glob patterns relative to `parent`. If `parent` is omitted, defaults to directory of the build script or the target if explicitly set with `this.directory`. |
