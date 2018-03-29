@@ -3,7 +3,7 @@ eval:>>
 
 import craftr from 'craftr.craftr'
 
-if OS.name == 'nt':
+if OS.type == 'nt':
   exe_suffix = '.exe'
 else:
   exe_suffix = ''
