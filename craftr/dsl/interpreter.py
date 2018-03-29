@@ -19,19 +19,15 @@
 # SOFTWARE.
 
 from nr import path
-from nr.datastructures.chaindict import ChainDict
-from nr.datastructures.objectfrommapping import ObjectFromMapping
 from nr.ast.dynamic_eval import dynamic_exec, dynamic_eval
 from nodepy.utils.path import pathlib
 
 import nodepy
-
 import * from './parser'
-import core from '../core'
 
 __all__ = ['RunError', 'OptionError', 'MissingRequiredOptionError',
            'InvalidOptionError', 'InvalidAssignmentError', 'ModuleNotFoundError',
-           'ExplicitRunError', 'Context', 'Interpreter']
+           'ExplicitRunError', 'Interpreter']
 
 
 class RunError(Exception):
@@ -102,150 +98,6 @@ class ModuleOptions:
       super().__setattr__(key, value)
 
 
-class CraftrNodepyModule(nodepy.loader.PythonModule):
-
-  def __init__(self, dsl_context, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.dsl_context = dsl_context
-    self.craftr_module = None
-
-  def _preprocess_code(self, code):
-    return code
-
-  def __setattr__(self, key, value):
-    super().__setattr__(key, value)
-
-  def _exec_code(self, code):
-    assert self.loaded
-    is_main = False
-    code = code.replace('\r\n', '\n')
-    project = Parser().parse(code, str(self.filename))
-    if project.name in self.dsl_context.modules:
-      raise RuntimeError('modules {!r} already loaded'.format(project.name))
-    interpreter = Interpreter(self, self.dsl_context, str(self.filename), is_main)
-    self.craftr_module = interpreter(project)
-    assert self.loaded
-    self.dsl_context.modules[self.craftr_module.name] = self.craftr_module
-
-  def preprocess_eval_block(self, code):
-    return super()._preprocess_code(code)
-
-
-class CraftrNodepyScript(nodepy.loader.PythonModule):
-
-  def __init__(self, scope, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.scope = scope
-
-  def _exec_code(self, code):
-    dynamic_exec(code, self.scope, filename=str(self.filename))
-
-  def init(self):
-    super().init()
-    old_namespace, self.namespace = self.namespace, ObjectFromMapping(self.scope)
-    for key in ['__name__', '__file__', 'require']:
-      setattr(self.namespace, key, getattr(old_namespace, key))
-
-
-class Context(core.Context):
-  """
-  An extension of the #core.Context interface that implements the basic
-  behaviour of the context with the Craftr DSL.
-  """
-
-  class ModuleLoader(nodepy.resolver.StdResolver.Loader):
-
-    def __init__(self, dsl_context):
-      self.dsl_context = dsl_context
-
-    def suggest_files(self, nodepy_context, path):
-      if path.suffix == '.craftr':
-        yield path
-        yield path.with_suffix('').joinpath('build.craftr')
-
-    def can_load(self, nodepy_context, path):
-      return path.suffix == '.craftr'
-
-    def load_module(self, context, package, filename):
-      return CraftrNodepyModule(self.dsl_context, require.context, None, pathlib.Path(filename))
-
-  def __init__(self, build_variant, build_directory):
-    super().__init__()
-    self.build_variant = build_variant
-    self.build_directory = build_directory
-    self.options = {}
-    self.modules = {}
-    self.loader = self.ModuleLoader(self)
-
-    # TODO: Remove the loader again after the Craftr Context is no longer used.
-    craftr_dir = path.dir(path.dir(__file__))
-    require.context.resolver.loaders.append(self.loader)
-    require.context.resolver.paths.append(pathlib.Path(craftr_dir).joinpath('lib'))
-
-    self._builtins = {}
-    craftr = self.load_module('craftr')
-    for key in craftr.__builtins__:
-      self._builtins[key] = getattr(craftr, key)
-
-  def get_builtins(self):
-    return self._builtins
-
-  def load_module(self, name, get_nodepy_module=False):
-    return require(name + '.craftr', exports=not get_nodepy_module)
-
-  def load_file(self, filename, is_main=False, get_nodepy_module=False):
-    return require(path.abs(filename), exports=not get_nodepy_module)
-
-  def load_script(self, filename, context):
-    assert hasattr(context, '__getitem__'), context
-    nodepy_module = CraftrNodepyScript(context, require.context, None, pathlib.Path(filename))
-    nodepy_module.init()
-    nodepy_module.load()
-    return context
-
-  def report_property_does_not_exist(self, filename, loc, prop_name, propset):
-    print('warn: {}:{}:{}: property {} does not exist'.format(
-      filename, loc.lineno, loc.colno, prop_name))
-
-  def get_exec_vars(self, obj):
-    assert isinstance(obj, (core.Module, core.Target, core.Dependency)), obj
-    if not hasattr(obj, 'scope'):
-      if isinstance(obj, core.Module):
-        obj.scope = vars(obj.nodepy_module.namespace)
-      else:
-        obj.scope = {}
-    if isinstance(obj, core.Module):
-      obj.scope['context'] = self
-      obj.scope['module'] = obj
-      obj.scope['self'] = obj
-      return ChainDict(obj.scope, self.get_builtins())
-    elif isinstance(obj, core.Target):
-      obj.scope['self'] = obj
-      obj.scope['target'] = obj
-      return ChainDict(obj.scope, self.get_exec_vars(obj.module))
-    else:
-      obj.scope['self'] = obj
-      return ChainDict(obj.scope, self.get_exec_vars(obj.target))
-
-  def init_module(self, module):
-    pass
-
-  def init_target(self, target):
-    pass
-
-  def init_dependency(self, dep):
-    pass
-
-  def finalize_module(self, module):
-    pass
-
-  def finalize_target(self, target):
-    pass
-
-  def finalize_dependency(self, dependency):
-    pass
-
-
 class Interpreter:
   """
   Interpreter for projects.
@@ -266,15 +118,15 @@ class Interpreter:
   def create_module(self, namespace):
     if not self.nodepy_module.loaded:
       self.nodepy_module.init()
-    module = core.Module(self.context, namespace.name, namespace.version, self.directory)
+    module = self.context.module_class(
+      self.context, namespace.name, namespace.version, self.directory)
     module.nodepy_module = self.nodepy_module
-    self.context.init_module(module)
     return module
 
   def eval_module(self, namespace, module):
     for node in namespace.children:
       if isinstance(node, Eval):
-        self._exec(node.loc.lineno, node.source, self.context.get_exec_vars(module))
+        self._exec(node.loc.lineno, node.source, module.scope)
       elif isinstance(node, Options):
         self._options(node, module)
       elif isinstance(node, Pool):
@@ -288,15 +140,12 @@ class Interpreter:
       elif isinstance(node, Configure):
         if self.is_main:
           self.context.options.update(node.data)
-      elif isinstance(node, Using):
-        self.context.load_module(node.name)
       else:
         assert False, node
-    self.context.finalize_module(module)
 
   def _options(self, node, module):
-    scope = self.context.get_exec_vars(module)
-    options = scope.setdefault('options', ModuleOptions(module.name))
+    assert module is self.nodepy_module.craftr_module, (module, self.nodepy_module.craftr_module)
+    options = module.scope.setdefault('options', ModuleOptions(module.name))
     for key, (type, value, loc) in node.options.items():
       option_name = module.name + '.' + key
       try:
@@ -304,7 +153,7 @@ class Interpreter:
       except KeyError:
         if value is None:
           raise MissingRequiredOptionError(module.name, option_name)
-        has_value = self._eval(loc.lineno, value, self.context.get_exec_vars(module))
+        has_value = self._eval(loc.lineno, value, module.scope)
       try:
         has_value = Options.adapt(type, has_value)
       except ValueError as exc:
@@ -336,7 +185,7 @@ class Interpreter:
       self.context.report_property_does_not_exist(self.filename, node.loc, propname, obj)
       return
 
-    value = self._eval(node.loc.lineno, node.expression, self.context.get_exec_vars(obj))
+    value = self._eval(node.loc.lineno, node.expression, obj.scope)
     try:
       props[propname] = value
     except (TypeError, ValueError) as exc:
@@ -345,11 +194,11 @@ class Interpreter:
       raise InvalidAssignmentError(obj, node.loc, str(exc))
 
   def _target(self, node, module):
-    target = module.add_target(node.name, node.public)
-    self.context.init_target(target)
+    target = module.add_target_with_class(
+      self.context.target_class, node.name, node.public)
     for node in node.children:
       if isinstance(node, Eval):
-        self._exec(node.loc.lineno, node.source, self.context.get_exec_vars(target))
+        self._exec(node.loc.lineno, node.source, target.scope)
       elif isinstance(node, Assignment):
         self._assignment(node, target)
       elif isinstance(node, Dependency):
@@ -358,7 +207,6 @@ class Interpreter:
         self._export_block(node, target)
       else:
         assert False, node
-    self.context.finalize_target(target)
 
   def _dependency(self, node, parent_target):
     if node.name.startswith('@'):
@@ -366,12 +214,11 @@ class Interpreter:
     else:
       module = self.context.load_module(node.name)
       sources = [x for x in module.targets.values() if x.public]
-    dep = parent_target.add_dependency(sources, node.export)
-    self.context.init_dependency(dep)
+    dep = parent_target.add_dependency_with_class(
+      self.context.dependency_class, sources, node.export)
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
-    self.context.finalize_dependency(dep)
 
   def _export_block(self, node, obj):
     assert isinstance(obj, core.Target)

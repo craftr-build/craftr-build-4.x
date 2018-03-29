@@ -11,4 +11,4 @@ options:
 public target "artifacts":
   eval pass
 
-load "./java.py"
+import "./java"

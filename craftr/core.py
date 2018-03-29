@@ -23,7 +23,7 @@ from the aspect of Craftr DSL.
 """
 
 from nr.stream import stream
-from nr.datastructures.objectfrommapping import ObjectFromMapping
+from nr.datastructures.mappings import ObjectFromMapping
 
 import collections
 import warnings
@@ -110,14 +110,17 @@ class Module:
     return 'Module(name={!r}, version={!r}, directory={!r})'.format(
       self.name, self.version, self.directory)
 
-  def add_target(self, name, public=False):
+  def add_target_with_class(self, target_cls, name, public=False):
     if name in self.targets:
       raise ValueError('target name {!r} already occupied'.format(name))
-    target = Target(self, name, public)
+    target = target_cls(self, name, public)
     self.targets[target.name] = target
     for handler in self.context.handlers:
       handler.target_created(target)
     return target
+
+  def add_target(self, *args, **kwargs):
+    return self.add_target_with_class(Target, *args, **kwargs)
 
   def add_pool(self, name, depth):
     if name in self.pools:
@@ -234,10 +237,13 @@ class Target:
           yield from worker(t)
     return stream.unique(worker(self, private=True))
 
-  def add_dependency(self, sources, public=False):
-    dep = Dependency(self, sources, public)
+  def add_dependency_with_class(self, dependency_cls, sources, public=False):
+    dep = dependency_cls(self, sources, public)
     self.dependencies.append(dep)
     return dep
+
+  def add_dependency(self, *args, **kwargs):
+    return self.add_dependency_with_class(Dependency, *args, **kwargs)
 
   def add_action(self, name=None, *, input=None, output=None, deps=None, **kwargs):
     """

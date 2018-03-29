@@ -6,6 +6,7 @@ import copy
 import shlex
 import sys
 
+import {module, context, options} from './build.craftr'
 import craftr from 'craftr.craftr'
 import maven from './tools/maven'
 import platform_commands from 'tools.platform-commands.craftr'
@@ -394,8 +395,8 @@ class JavaTargetHandler(craftr.TargetHandler):
       commands[-1] += ['--module-path', jmodDir]
       commands[-1] += ['--add-modules'] + jlinkModules
       commands[-1] += ['--output', jlinkName]
-      for command, module in jlinkLaunchers.items():
-        commands[-1] += ['--launcher', '{}={}'.format(command, module)]
+      for command, mod_name in jlinkLaunchers.items():
+        commands[-1] += ['--launcher', '{}={}'.format(command, mod_name)]
       commands[-1] += jlinkFlags
 
       jlink_action = target.add_action('java.jlink', commands=commands,

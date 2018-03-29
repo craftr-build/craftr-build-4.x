@@ -8,8 +8,6 @@ __builtins__ = ['BUILD', 'OS']
 __all__ = __builtins__ + ['path', 'error', 'fmt', 'glob', 'option_default', 'get_output_directory', 'relocate_files']
 
 from nr import path
-from nr.datastructures.chaindict import ChainDict
-from nr.datastructures.objectfrommapping import ObjectFromMapping
 
 import collections
 import os

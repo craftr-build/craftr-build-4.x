@@ -229,7 +229,7 @@ def main(argv=None):
     # Load the build script.
     context = Context(build_variant, build_directory)
     set_options(context, args.options)
-    module = context.load_file(args.file, is_main=True, get_nodepy_module=True)
+    module = context.load_module_from_file(args.file)
     context.translate_targets()
     context.serialize()
 
@@ -263,15 +263,15 @@ def main(argv=None):
     return
 
   # Load the backend module.
-  backend_module = context.load_module(context.backend_name)
+  new_backend = context.load_module(context.backend_name).scope['new_backend']
   backend_args = []
   for x in (args.backend_args or ()):
     backend_args += shlex.split(x)
-  backend = backend_module.new_backend(context, backend_args)
+  backend = new_backend(context, backend_args)
 
   if args.configure:
     # Write the root cache back.
-    root_cache['main'] = module.craftr_module.name
+    root_cache['main'] = module.name
     root_cache['mode'] = 'debug' if args.debug else 'release'
     root_cache['options'] = args.options
     root_cache['file'] = args.file
