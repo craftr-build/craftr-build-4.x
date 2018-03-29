@@ -14,24 +14,38 @@ builds.
 
   [Ninja]: https://github.com/ninja-build/ninja
 
-__Current State__
+### Current State
 
-The build system core is running smoothly &ndash; now it is mostly a matter
-of implementing support for various programming languages or extending the
-features of existing supported languages (for example C/C++). Much of the
-logic from previous Craftr versions ([2.0], [v3.0.0-pre]) can be used,
-but the implementation will be very different.
+The core functionality is working and there is moderate support for C# and
+Java, as well as some for C/C++, Haskell, OCaml and Vala &ndash; however the
+interfaces for build scripts can change any time. The main goal at the moment
+is to implement/improve support for the following languages:
+
+* C/C++ (GCC, Clang, MSVC)
+* Cython (requires C/C++ support)
+* Java (better Java 9 module support)
+
+Some reference implementations are available in previous Craftr versions and
+prototypes (namely [2.0], [v3.0.0-pre1] and [v3.0.0-pre2]).
 
   [2.0]: https://github.com/craftr-build/craftr/tree/2.0
-  [v3.0.0-pre]: https://github.com/craftr-build/craftr/tree/v3.0.0-pre
+  [v3.0.0-pre1]: https://github.com/craftr-build/craftr/tree/v3.0.0-pre1
+  [v3.0.0-pre2]: https://github.com/craftr-build/craftr/tree/v3.0.0-pre2
 
-__Install__
+### How to Install  Craftr
+
+  [Node.py]: https://github.com/nodepy/nodepy
+
+Craftr builds on the [Node.py] runtime and must be installed via its package
+manager `nodepy-pm`.
 
     $ pip install nodepy-runtime
-    $ nodepy https://nodepy.org/instal-pm.py
+    $ nodepy https://nodepy.org/install-pm.py
     $ nodepy-pm install git+https://github.com/craftr-build/craftr.git
 
-__Examples__
+---
+
+### Examples
 
 <table>
   <tr><th>C</th><th>C++</th></tr>
@@ -40,7 +54,7 @@ __Examples__
 
 ```python
 project "examples.c"
-import "cxx.craftr"
+import "craftr/cxx"
 target "main":
   cxx.srcs = ['main.c']
 ```
@@ -51,7 +65,7 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.cpp"
-import "cxx.craftr"
+import "craftr/cxx"
 target "main":
   cxx.srcs = ['main.cpp']
 ```
@@ -65,8 +79,7 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.csharp"
-import {glob} from "craftr.craftr"
-import "csharp.craftr"
+import "craftr/csharp"
 target "main":
   csharp.srcs = glob('src/*.cs')
   csharp.packages = ['Newtonsoft.JSON:10.0.3']
@@ -79,8 +92,7 @@ Run as `craftr -cb main:csharp.runBundle`
 
 ```python
 project "examples.java"
-import {glob} from "craftr.craftr"
-import "java.craftr"
+import "craftr/java"
 target "main":
   java.srcs = glob('src/**/*.java')
   java.artifacts = [
@@ -99,7 +111,7 @@ Run as `craftr -cb main:java.runBundle`
 
 ```python
 project "examples.haskell"
-import "haskell.craftr"
+import "craftr/haskell"
 target "main":
   haskell.srcs = ['src/Main.hs']
 ```
@@ -110,7 +122,7 @@ Run as `craftr -cb main:haskell.run`
 
 ```python
 project "examples.ocaml"
-import "ocaml.craftr"
+import "craftr/ocaml"
 target "main":
   ocaml.srcs = ['src/Main.ml']
   # False to produce an OCaml bytecode file
@@ -126,7 +138,7 @@ Run as `craftr -cb main:ocaml.run`
 
 ```python
 project "examples.vala"
-import "vala.craftr"
+import "craftr/vala"
 target "main":
   vala.srcs = ['src/Main.vala']
 ```
@@ -137,8 +149,7 @@ Run as `craftr -cb main:vala.run`
 
 ```python
 project "example.cython"
-import {glob} from "craftr.craftr"
-import "cython.craftr"
+import "craftr/cython"
 target "main":
   cython.srcs = glob('src/*.pyx')
   cython.main = 'src/Main.pyx'
