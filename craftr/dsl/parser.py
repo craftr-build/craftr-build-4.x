@@ -347,6 +347,7 @@ class Parser:
       return getattr(self, '_parse_' + token.value)(lexer, **kwargs)
     elif token.value in self.KEYWORDS:
       raise ParseError(loc, 'unexpected keyword "{}"'.format(token.value))
+
     scope = token.value
     lexer.next('.')
     propname = lexer.next('name').value
@@ -497,9 +498,9 @@ class Parser:
     lexer.next(':')
     while True:
       self._skip(lexer)
-      child = self._parse_stmt_or_block(lexer, [], parent_indent)
+      child = self._parse_stmt_or_block(lexer, ['requires'], parent_indent)
       if not child: break
-      assert isinstance(child, Assignment)
+      assert isinstance(child, (Assignment, Dependency))
       export.assignments.append(child)
     return export
 

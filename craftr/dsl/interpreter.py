@@ -186,19 +186,24 @@ class Interpreter:
       else:
         assert False, node
 
-  def _dependency(self, node, parent_target):
+  def _dependency(self, node, parent_target, override_export=False):
     if node.name.startswith('@'):
       sources = [parent_target.module.targets[node.name[1:]]]
     else:
       module = self.context.load_module(node.name)
       sources = [x for x in module.targets.values() if x.public]
     dep = parent_target.add_dependency_with_class(
-      self.context.dependency_class, sources, node.export)
+      self.context.dependency_class, sources, override_export or node.export)
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
 
   def _export_block(self, node, obj):
     assert isinstance(obj, core.Target)
-    for assign in node.assignments:
-      self._assignment(assign, obj, override_export=True)
+    for child in node.assignments:
+      if isinstance(child, Assignment):
+        self._assignment(child, obj, override_export=True)
+      elif isinstance(child, Dependency):
+        self._dependency(child, obj, override_export=True)
+      else:
+        assert False, child
