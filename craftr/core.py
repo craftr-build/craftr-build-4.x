@@ -153,7 +153,6 @@ class Target:
     self.exported_props = proplib.Properties(module.context.target_properties)
     self.dependencies = []
     self.actions = collections.OrderedDict()
-    self.outputs = FileSet()
 
   def __repr__(self):
     return 'Target(id={!r}, public={!r})'.format(self.id, self.public)
@@ -321,6 +320,13 @@ class Target:
         files += matched_files
 
     return actions, files
+
+  def files_tagged(self, tags):
+    """
+    Returns only files with the specified tags.
+    """
+
+    return self.actions_and_files_tagged(tags)[1]
 
 
 class Dependency:

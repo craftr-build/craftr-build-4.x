@@ -29,7 +29,6 @@ class ValaTargetHandler(craftr.TargetHandler):
     if data.srcs:
       data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName + exe_suffix)
-      target.outputs.add(data.productFilename, ['exe'])
 
     if data.srcs:
       command = ['valac', '-o', '$out', '$in']
@@ -39,7 +38,7 @@ class ValaTargetHandler(craftr.TargetHandler):
       action = target.add_action('vala.compile', commands=[command])
       build = action.add_buildset()
       build.files.add(data.srcs, ['in'])
-      build.files.add(data.productFilename, ['out'])
+      build.files.add(data.productFilename, ['out', 'exe'])
 
       command = [data.productFilename]
       action = target.add_action('vala.run', commands=[command],

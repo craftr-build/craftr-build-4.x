@@ -246,8 +246,8 @@ class CxxTargetHandler(craftr.TargetHandler):
     for a, b in repl.items():
       data.productName = data.productName.replace(a, b)
 
+    data.productTags = tags
     data.productFilename = path.join(craftr.get_output_directory(target), data.productName)
-    target.outputs.add(data.productFilename, tags)
 
     self.compiler.translate_target(target, data)
 

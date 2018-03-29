@@ -27,7 +27,6 @@ class HaskellTargetHandler(craftr.TargetHandler):
     if data.srcs:
       data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName + exe_suffix)
-      target.outputs.add(data.productFilename, ['exe'])
 
     if data.srcs:
       # Action to compile the sources to an executable.
@@ -36,7 +35,7 @@ class HaskellTargetHandler(craftr.TargetHandler):
       action = target.add_action('haskell.compile', commands=[command])
       build = action.add_buildset()
       build.files.add(data.srcs, ['in'])
-      build.files.add(data.productFilename, ['out'])
+      build.files.add(data.productFilename, ['out', 'exe'])
 
       # Action to run the executable.
       command = [data.productFilename]

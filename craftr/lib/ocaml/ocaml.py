@@ -32,7 +32,6 @@ class OcamlTargetHandler(craftr.TargetHandler):
         data.productFilename += exe_suffix
       else:
         data.productFilename += '.cma'
-      target.outputs.add(data.productFilename, ['exe'])
 
     if data.srcs:
       # Action to compile an executable.
@@ -41,7 +40,7 @@ class OcamlTargetHandler(craftr.TargetHandler):
       action = target.add_action('ocaml.compile', commands=[command])
       build = action.add_buildset()
       build.files.add(data.srcs, ['in'])
-      build.files.add(data.productFilename, ['out'])
+      build.files.add(data.productFilename, ['out', 'exe'])
 
       # Action to run the executable.
       command = [data.productFilename]

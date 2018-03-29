@@ -282,7 +282,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       for dep in target.transitive_dependencies():
         doBundle = dep.props['java.bundle']
         for dep_target in dep.sources:
-          libs = dep_target.outputs.tagged('java.library')
+          libs = dep_target.files_tagged(['out', 'java.library'])
           binaryJars += libs
           if doBundle:
             bundleBinaryJars += libs
@@ -315,7 +315,6 @@ class JavaTargetHandler(craftr.TargetHandler):
 
     if jarFilename:
       assert javac_actions
-      target.outputs.add(jarFilename, ['java.library'])
 
       # Generate the action to produce the JAR file.
       flags = 'cvf'
@@ -329,7 +328,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       jar_action = target.add_action('java.jar', commands=[command], deps=javac_actions)
       build = jar_action.add_buildset()
       build.files.add(stream.concat(classFiles.values()), ['in'])
-      build.files.add(jarFilename, ['out'])
+      build.files.add(jarFilename, ['out', 'java.library'])
 
     # Generate actions to build Java modules.
     if jmod:
@@ -354,8 +353,6 @@ class JavaTargetHandler(craftr.TargetHandler):
     # Generate the action to produce a merge of all dependent JARs if
     # so specified in the target.
     if bundleType and bundleFilename:
-      target.outputs.add(bundleFilename, ['java.bundle'])
-
       command = [sys.executable, AUGJAR_TOOL, '-o', '$out']
       inputs = [jarFilename] + bundleBinaryJars
       if bundleType == 'merge':
@@ -372,7 +369,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       bundle_action = target.add_action('java.bundle', commands=[command])
       build = bundle_action.add_buildset()
       build.files.add(inputs, ['in'])
-      build.files.add(bundleFilename, ['out'])
+      build.files.add(bundleFilename, ['out', 'java.bundle'])
 
     if jlinkModules:
       jlinkModulePath = list(jlinkModulePath)

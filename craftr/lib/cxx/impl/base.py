@@ -298,7 +298,7 @@ class Compiler(nr.named.named):
       deps=compile_actions)
     buildset = link_action.add_buildset()
     buildset.files.add(obj_files, ['in', 'obj'])
-    buildset.files.add(data.productFilename, ['out', 'product'])
+    buildset.files.add(data.productFilename, ['out', 'product'] + data.productTags)
     self.add_link_outputs(target, data, lang, buildset)
     return link_action
 

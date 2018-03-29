@@ -199,11 +199,6 @@ class CsharpTargetHandler(craftr.TargetHandler):
       if data.bundle:
         data.bundleFilename = path.addtobase(data.productFilename, '-bundle')
 
-      target.outputs.add(data.productFilename, ['csharp.' + data.type])
-      if data.bundleFilename:
-        target.outputs.add(data.bundleFilename, ['csharp.' + data.type + 'Bundle'])
-
-
     if data.srcs:
       bundleModules = []
       modules = []
@@ -212,10 +207,10 @@ class CsharpTargetHandler(craftr.TargetHandler):
       for dep in target.transitive_dependencies():
         depData = dep.handler_data(self)
         for dep_target in dep.sources:
-          files = dep_target.outputs.tagged('csharp.module')
+          files = dep_target.files_tagged(['out', 'csharp.module'])[1]
           if depData.bundle: bundleModules += files
           else: modules += files
-          files = dep_target.outputs.tagged('!csharp.module', 'csharp.*')
+          files = dep_target.files_tagged(['out', '!csharp.module', 'csharp.*'])[1]
           if depData.bundle: bundleReferences += files
           else: references += files
 
@@ -235,7 +230,7 @@ class CsharpTargetHandler(craftr.TargetHandler):
         environ=self.csc.environ)
       build = action.add_buildset()
       build.files.add(data.srcs, ['in'])
-      build.files.add(data.productFilename, ['out'])
+      build.files.add(data.productFilename, ['out', 'csharp.' + data.type])
 
       # Action to run the product.
       command = list(data.runArgsPrefix or self.csc.exec_args([]))
@@ -254,7 +249,7 @@ class CsharpTargetHandler(craftr.TargetHandler):
       action = target.add_action('csharp.bundle', commands=[command])
       build = action.add_buildset()
       build.files.add(data.productFilename, ['in'])
-      build.files.add(data.bundleFilename, ['out'])
+      build.files.add(data.bundleFilename, ['out', 'csharp.' + data.type + 'Bundle'])
 
       # Action to run the product.
       command = list(data.runArgsPrefix or self.csc.exec_args([]))
