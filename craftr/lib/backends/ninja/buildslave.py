@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 import {BuildSet} from '@craftr/craftr-build/build'
-import {quote} from './utils'
+import {quote} from '@craftr/craftr-build/utils/sh'
 
 verbose = os.environ.get('CRAFTR_VERBOSE') == 'true'
 

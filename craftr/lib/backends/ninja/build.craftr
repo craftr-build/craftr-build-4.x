@@ -20,10 +20,10 @@ import subprocess
 import sys
 import zipfile
 
+import {quote} from '@craftr/craftr-build/utils/sh'
 import craftr from 'craftr.craftr'
 import {ActionServer} from './ActionServer'
 import ninja_syntax from './ninja_syntax'
-import {quote} from './utils'
 import {options} from './build.craftr'
 
 NINJA_FILENAME = 'ninja' + ('.exe' if os.name == 'nt' else '')
