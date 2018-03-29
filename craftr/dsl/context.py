@@ -24,6 +24,7 @@ creates a child Node.py context with the ability to load Craftr modules.
 """
 
 from nr.datastructures.mappings import ChainDict, MappingFromObject
+from nodepy.utils import pathlib
 
 import nodepy
 import {CraftrModuleLoader} from './nodepy_glue'
@@ -109,6 +110,7 @@ class Context(core.Context):
     self.loader = CraftrModuleLoader(self)
     self.nodepy_context = nodepy.context.Context(parent=require.context)
     self.nodepy_context.resolver.loaders.append(self.loader)
+    self.nodepy_context.resolver.paths.append(pathlib.Path(require.context.modules_directory))  # TODO:  Use the nearest available .nodepy/modules directory?
     self.nodepy_context.resolver.paths.append(STDLIB_DIR)
 
     self.build_variant = build_variant
@@ -118,7 +120,7 @@ class Context(core.Context):
     self.require = self.nodepy_context.require
 
     if load_builtins:
-      module = self.require('craftr.craftr', exports=False)
+      module = self.require('craftr', exports=False)
       assert module.context is self.nodepy_context
       module = module.namespace
       for key in module.__builtins__:

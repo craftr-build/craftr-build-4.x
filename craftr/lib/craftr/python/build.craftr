@@ -1,7 +1,7 @@
-project "python"
+project "craftr/python"
 
-import {sh} from "craftr.craftr"
-import "lang/cxx.craftr"
+import {sh} from "craftr"
+import "craftr/cxx"
 import sys
 
 options:

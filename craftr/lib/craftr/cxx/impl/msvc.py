@@ -3,9 +3,9 @@ from typing import Union, List
 import logging as log
 import nr.path as path
 import nr.stream
-import craftr, {BUILD} from 'craftr.craftr'
+import craftr, {BUILD} from 'craftr'
 import base from './base'
-import msvc from 'tools/msvc.craftr'
+import msvc from 'craftr/tools/msvc'
 
 unique = nr.stream.stream.unique
 

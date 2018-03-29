@@ -1,4 +1,4 @@
-project "lang/csharp" v1.0.0
+project "craftr/csharp" v1.0.0
 
 options:
   str impl = 'net' if OS.type == 'nt' else 'mono'
@@ -16,11 +16,11 @@ import requests
 import subprocess
 
 import sh from '@craftr/craftr-build/utils/sh'
-import craftr from 'craftr.craftr'
+import craftr from 'craftr'
 import nupkg from './nupkg'
 
 if OS.type == 'nt':
-  import msvc from 'tools/msvc.craftr'
+  import msvc from 'craftr/tools/msvc'
 else:
   msvc = None
 

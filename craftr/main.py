@@ -38,7 +38,7 @@ class Context(dsl.Context):
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.backend_name = 'backends/ninja'
+    self.backend_name = 'craftr/backends/ninja'
     self.cache = {}
 
   def to_json(self):

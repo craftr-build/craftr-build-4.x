@@ -1,4 +1,4 @@
-project "tools/batchvars"
+project "craftr/tools/batchvars"
 eval:>>
 """
 Runs a batch file and outputs the environment variables after that batch file
@@ -10,7 +10,7 @@ import subprocess
 import sys
 import os
 
-import sh from '@craftr/craftr-build/utils/sh'
+import {sh} from 'craftr'
 
 
 def batchvars(batchfile, *args):

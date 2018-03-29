@@ -93,7 +93,11 @@ class CraftrModuleLoader(nodepy.resolver.StdResolver.Loader):
   def suggest_files(self, nodepy_context, path):
     if path.suffix == '.craftr':
       yield path
-      yield path.with_suffix('').joinpath('build.craftr')
+      path = path.with_suffix('')
+    else:
+      yield path.with_suffix('.craftr')
+    path = nodepy.resolver.resolve_link(nodepy_context, path)
+    yield path.joinpath('build.craftr')
 
   def can_load(self, nodepy_context, path):
     return path.suffix == '.craftr'

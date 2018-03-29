@@ -2,7 +2,7 @@
 from typing import List, Dict, Union, Callable
 import nr.named
 import nr.stream
-import craftr, {BUILD} from 'craftr.craftr'
+import craftr, {BUILD} from 'craftr'
 
 concat = nr.stream.stream.concat
 unique = nr.stream.stream.unique

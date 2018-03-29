@@ -1,7 +1,7 @@
-project "haskell" v1.0.0
+project "craftr/haskell" v1.0.0
 eval:>>
 
-import craftr from 'craftr.craftr'
+import craftr from 'craftr'
 
 if OS.type == 'nt':
   exe_suffix = '.exe'

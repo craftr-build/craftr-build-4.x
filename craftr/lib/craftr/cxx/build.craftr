@@ -1,4 +1,4 @@
-project "lang/cxx" v1.0.0
+project "craftr/cxx" v1.0.0
 
 eval:
   options.setdefault('architecture', OS.arch)
@@ -18,7 +18,7 @@ options:
 
 eval:>>
 
-import craftr from 'craftr.craftr'
+import craftr from 'craftr'
 import base from './impl/base'
 
 # TODO: Support precompiled headers.
@@ -95,6 +95,9 @@ class CxxTargetHandler(craftr.TargetHandler):
     # Static libraries to link. You should use target dependencies
     # wherever possible rather than using this property.
     props.add('cxx.staticLibraries', craftr.PathList, options={'inherit': True})
+
+    # Link with system libraries, where unspecified linkage.
+    props.add('cxx.systemLibraries', craftr.StringList, options={'inherit': True})
 
     # List of files to automatically include at the beginning of
     # each translation unit.
@@ -291,4 +294,7 @@ class CxxTargetHandler(craftr.TargetHandler):
       action.add_buildset()
 
 
-context.register_handler(CxxTargetHandler())
+handler = CxxTargetHandler()
+compiler = handler.compiler
+
+context.register_handler(handler)

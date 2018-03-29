@@ -1,4 +1,4 @@
-project "tools/msvc"
+project "craftr/tools/msvc"
 
 options:
   str installDir = ''
@@ -30,7 +30,7 @@ import typing as t
 import logging as log
 
 import sh from '@craftr/craftr-build/utils/sh'
-import {batchvars} from 'tools/batchvars.craftr'
+import {batchvars} from 'craftr/tools/batchvars'
 
 
 class MsvcInstallation(nr.named.named):

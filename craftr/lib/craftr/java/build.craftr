@@ -1,4 +1,4 @@
-project "java" v1.0.0
+project "craftr/java" v1.0.0
 
 options:
   str onejar = path.join(module.directory, "tools", "one-jar-boot-0.97.jar")
@@ -17,9 +17,9 @@ import copy
 import shlex
 import sys
 
-import craftr from 'craftr.craftr'
+import craftr from 'craftr'
 import maven from './tools/maven'
-import platform_commands from 'tools/platform-commands.craftr'
+import platform_commands from 'craftr/tools/platform-commands'
 
 ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')

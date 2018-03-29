@@ -476,8 +476,9 @@ class Parser:
     return target
 
   def _parse_requires(self, lexer, parent_indent, export=False):
+    loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
-    dep = Dependency(lexer.token.cursor, name, export)
+    dep = Dependency(loc, name, export)
     if lexer.accept(':'):
       lexer.next('nl')
       while True:
