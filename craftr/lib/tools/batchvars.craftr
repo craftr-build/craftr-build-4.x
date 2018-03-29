@@ -1,3 +1,5 @@
+project "tools/batchvars"
+eval:>>
 """
 Runs a batch file and outputs the environment variables after that batch file
 has run as a JSON object.

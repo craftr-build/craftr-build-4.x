@@ -1,3 +1,14 @@
+project "tools/msvc"
+
+options:
+  str installDir = ''
+  str version = ''
+  str arch = 'x86' if OS.arch == 'x86' else 'x86_amd64'
+  str platformType = ''
+  str sdkVersion = ''
+
+eval:>>
+
 """
 Detect MSVC installations on the current system (Windows only).
 """
@@ -18,9 +29,8 @@ import tempfile
 import typing as t
 import logging as log
 
-import {context, options} from './build.craftr'
 import sh from '@craftr/craftr-build/utils/sh'
-import {batchvars} from 'tools.batchvars.craftr'
+import {batchvars} from 'tools/batchvars.craftr'
 
 
 class MsvcInstallation(nr.named.named):

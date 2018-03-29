@@ -167,14 +167,13 @@ def main(argv=None):
     set_options(context, args.options)
     sys.argv = ['craftr -t ' + args.tool[0]] + sys.argv[1:]
     try:
-      module = context.get_module(args.tool[0])
-    except dsl.ModuleNotFoundError as exc:
+      module = context.load_module(args.tool[0])
+    except require.ResolveError as exc:
       try:
-        module = context.get_module('tools.' + args.tool[0])
+        module = context.load_module('tools/' + args.tool[0])
       except dsl.ModuleNotFoundError:
         raise exc
-    scope = context.get_exec_vars(module)
-    scope['main'](args.tool[1:])
+    module.scope['main'](args.tool[1:])
     return
 
   # Load the cache file from the build root directory, if it exists.

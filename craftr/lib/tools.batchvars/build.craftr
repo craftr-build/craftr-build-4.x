@@ -1,4 +1,0 @@
-project "tools.batchvars"
-
-eval:
-  module.nodepy_module.exports = require("./batchvars")

@@ -5,7 +5,7 @@ import nr.path as path
 import nr.stream
 import craftr, {BUILD} from 'craftr.craftr'
 import base from './base'
-import msvc from 'tools.msvc.craftr'
+import msvc from 'tools/msvc.craftr'
 
 unique = nr.stream.stream.unique
 
