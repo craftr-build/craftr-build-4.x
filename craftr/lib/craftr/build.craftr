@@ -92,8 +92,11 @@ def fmt(s, frame=None):
           x = self.func.__closure__[index]
           return x
       # Try globals
-      try: return self.frame.f_globals[key]
+      g = self.frame.f_globals
+      g = g.get('__dict__', g)
+      try: return g[key]
       except KeyError: pass
+      raise KeyError(key)
 
   frame = frame or inspect.currentframe().f_back
   vars = Resolver(frame)
