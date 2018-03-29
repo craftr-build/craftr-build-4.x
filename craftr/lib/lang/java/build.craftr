@@ -1,20 +1,29 @@
+project "java" v1.0.0
 
-from nr import path
+options:
+  str onejar = path.join(module.directory, "tools", "one-jar-boot-0.97.jar")
+  str javac = "javac"
+  str javacJar = "jar"
+  str compilerFlags = ""
+
+public target "artifacts":
+  eval pass
+
+eval:>>
+
 from nr.stream import stream
 
 import copy
 import shlex
 import sys
 
-import {module, context, options} from './build.craftr'
 import craftr from 'craftr.craftr'
 import maven from './tools/maven'
-import platform_commands from 'tools.platform-commands.craftr'
+import platform_commands from 'tools/platform-commands.craftr'
 
 ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')
 DOWNLOAD_TOOL = path.join(path.dir(__file__), 'tools', 'download.py')
-
 
 
 class ArtifactResolver:

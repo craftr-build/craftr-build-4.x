@@ -1,5 +1,12 @@
+project "lang/csharp" v1.0.0
 
-from nr import path
+options:
+  str impl = 'net' if OS.type == 'nt' else 'mono'
+  str csc = 'csc' if OS.type == 'nt' else 'mcs'
+  str monoArch = OS.arch  # Used to determine the Mono installation path. Must be either x64 or x86
+  str mergeTool = ''  # The name of the tool to merge assemblies.
+
+eval:>>
 
 import functools
 import nr.named
@@ -8,13 +15,12 @@ import re
 import requests
 import subprocess
 
-import {context, options} from './build.craftr'
-import craftr, {OS} from 'craftr.craftr'
 import sh from '@craftr/craftr-build/utils/sh'
-import nupkg from './tools/nupkg'
+import craftr from 'craftr.craftr'
+import nupkg from './nupkg'
 
 if OS.type == 'nt':
-  import msvc from 'tools.msvc.craftr'
+  import msvc from 'tools/msvc.craftr'
 else:
   msvc = None
 

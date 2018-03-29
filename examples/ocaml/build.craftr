@@ -1,6 +1,7 @@
 project "ocaml_helloworld"
 
+import "lang/ocaml.craftr"
+
 target "main":
-  dependency "ocaml"
   ocaml.srcs = glob('src/*.ml')
   ocaml.standalone = True

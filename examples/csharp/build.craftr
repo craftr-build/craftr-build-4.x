@@ -1,7 +1,6 @@
 project "examples.csharp"
 
-import {glob} from 'craftr.craftr'
-import "csharp.craftr"
+import "lang/csharp.craftr"
 
 target "main":
   csharp.srcs = glob('src/*.cs')

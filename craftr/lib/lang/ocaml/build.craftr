@@ -1,6 +1,7 @@
+project "ocaml" v1.0.0
+eval:>>
 
-import craftr
-from nr import path
+import craftr from 'craftr.craftr'
 
 if OS.name == 'nt':
   exe_suffix = '.exe'

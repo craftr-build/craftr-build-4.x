@@ -1,6 +1,7 @@
+project "haskell" v1.0.0
+eval:>>
 
-import craftr
-from nr import path
+import craftr from 'craftr.craftr'
 
 if OS.type == 'nt':
   exe_suffix = '.exe'

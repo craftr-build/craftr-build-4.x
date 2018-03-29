@@ -1,5 +1,6 @@
 project "exmaples.c-win32"
-using "cxx"
+
+import "lang/cxx.craftr"
 
 target "main":
   cxx.srcs = ['main.c']

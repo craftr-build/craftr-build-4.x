@@ -1,6 +1,6 @@
 project "examples.c"
 
-import "cxx.craftr"
+import "lang/cxx.craftr"
 
 target "main":
   cxx.srcs = ['main.c']

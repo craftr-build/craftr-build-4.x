@@ -1,3 +1,0 @@
-project "haskell" v1.0.0
-
-load "./haskell.py"

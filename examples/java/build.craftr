@@ -1,7 +1,6 @@
 project "examples.java"
 
-import {glob} from 'craftr.craftr'
-import 'java.craftr'
+import "lang/java.craftr"
 
 target "lib":
   java.srcs = glob('src/lib/*.java')

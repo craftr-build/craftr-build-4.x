@@ -1,5 +1,6 @@
 project "vala_helloworld"
 
+import "lang/vala.craftr"
+
 target "main":
-  dependency "vala"
   vala.srcs = ['src/Main.vala']

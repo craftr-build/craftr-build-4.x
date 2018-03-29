@@ -1,6 +1,13 @@
+project "vala" v1.0.0
 
-import craftr
-from nr import path
+eval import os
+
+options:
+  str valaBin = os.environ.get('VALAC', 'vala')
+
+eval:>>
+
+import craftr from 'craftr.craftr'
 
 if OS.type == 'nt':
   exe_suffix = '.exe'

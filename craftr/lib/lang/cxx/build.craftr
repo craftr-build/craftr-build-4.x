@@ -1,6 +1,24 @@
+project "lang/cxx" v1.0.0
 
-import {options} from './build.craftr'
-import craftr, {path} from 'craftr.craftr'
+eval:
+  options.setdefault('architecture', OS.arch)
+  if OS.id == 'win32':
+    if OS.type == 'nt':
+      options.setdefault('toolchain', 'msvc')
+    else:
+      options.setdefault('toolchain', 'mingw')
+  elif OS.id == 'darwin':
+    options.setdefault('toolchain', 'clang')
+  else:
+    options.setdefault('toolchain', 'gcc')
+
+options:
+  str architecture
+  str toolchain
+
+eval:>>
+
+import craftr from 'craftr.craftr'
 import base from './impl/base'
 
 # TODO: Support precompiled headers.
@@ -279,5 +297,4 @@ class CxxTargetHandler(craftr.TargetHandler):
       action.add_buildset()
 
 
-import {context} from './build.craftr'
 context.register_handler(CxxTargetHandler())
