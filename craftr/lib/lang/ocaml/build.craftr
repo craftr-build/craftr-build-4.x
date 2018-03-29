@@ -13,7 +13,7 @@ class OcamlTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('ocaml.srcs', craftr.StringList)
+    props.add('ocaml.srcs', craftr.PathList)
     props.add('ocaml.standalone', craftr.Bool)
     props.add('ocaml.productName', craftr.String)
     props.add('ocaml.compilerFlags', craftr.StringList)
@@ -27,7 +27,6 @@ class OcamlTargetHandler(craftr.TargetHandler):
     if not data.productName:
       data.productName = target.name + '-' + target.module.version
     if data.srcs:
-      data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName)
       if data.standalone:
         data.productFilename += exe_suffix

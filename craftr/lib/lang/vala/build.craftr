@@ -19,7 +19,7 @@ class ValaTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('vala.srcs', craftr.StringList)
+    props.add('vala.srcs', craftr.PathList)
     props.add('vala.productName', craftr.String)
     props.add('vala.compilerFlags', craftr.StringList)
     props.add('vala.linkerFlags', craftr.StringList)
@@ -34,7 +34,6 @@ class ValaTargetHandler(craftr.TargetHandler):
     if not data.productName:
       data.productName = target.name() + '-' + target.module.version
     if data.srcs:
-      data.srcs = [path.canonical(x, src_dir) for x in data.srcs]
       data.productFilename = path.join(build_dir, data.productName + exe_suffix)
 
     if data.srcs:

@@ -162,21 +162,21 @@ class JavaTargetHandler(craftr.TargetHandler):
 
   def init(self, context):
     props = context.target_properties
-    props.add('java.srcs', craftr.StringList)
+    props.add('java.srcs', craftr.PathList)
     props.add('java.srcRoots', craftr.StringList)
     props.add('java.compilerFlags', craftr.StringList)
     props.add('java.jmod', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps module names to the module base directories.
     props.add('java.jarName', craftr.String)
     props.add('java.mainClass', craftr.String)
     props.add('java.bundleType', craftr.String)  # The bundle type for applications, can be `none`, `onejar` or `merge`.
-    props.add('java.binaryJars', craftr.StringList)
+    props.add('java.binaryJars', craftr.PathList)
     props.add('java.artifacts', craftr.StringList)
     props.add('java.runArgsPrefix', craftr.StringList)
     props.add('java.runArgs', craftr.StringList)
     props.add('java.jlinkModules', craftr.StringList)  # List of modules to include in the runtime
     props.add('java.jlinkName', craftr.String)  # Directory output name
     props.add('java.jlinkLaunchers', craftr.Dict[craftr.String, craftr.String])  # A dictionary that maps command names to class identifiers in the form "package/class"
-    props.add('java.jlinkModulePath', craftr.StringList)
+    props.add('java.jlinkModulePath', craftr.PathList)
     props.add('java.jlinkFlags', craftr.StringList)
 
     props = context.dependency_properties
@@ -250,7 +250,6 @@ class JavaTargetHandler(craftr.TargetHandler):
     # Determine all the information necessary to build a java library,
     # and optionally a bundle.
     if srcs:
-      srcs = [path.canonical(x, src_dir) for x in srcs]
       if not srcRoots:
         srcRoots = ['src', 'java', 'javatest']
       if not jarName and not jmod:

@@ -257,7 +257,7 @@ class Compiler(nr.named.named):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []
-    libs = list(data.staticLibraries) + list(data.dynamicLibraries) # TODO: Handle these differently?
+    libs = list(data.staticLibraries) + list(data.dynamicLibraries) # TODO: Handle these separately?
     libpath = target.get_prop_join('cxx.libraryPaths')
 
     # Inherit options from dependencies.

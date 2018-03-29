@@ -90,15 +90,13 @@ class MsvcCompiler(base.Compiler):
     props.add('cxx.msvcCompilerFlags', craftr.StringList)
     props.add('cxx.msvcLinkerFlags', craftr.StringList)
     props.add('cxx.msvcNoDefaultLib', craftr.StringList)
-    props.add('cxx.msvcResourceFiles', craftr.StringList)
+    props.add('cxx.msvcResourceFiles', craftr.PathList)
 
   # @override
   def translate_target(self, target, data):
     src_dir = target.directory
     obj_dir = craftr.get_output_directory(target, 'obj')
     if data.msvcResourceFiles:
-      data.msvcResourceFiles = [path.canonical(x, src_dir) for x in data.msvcResourceFiles]
-
       outfiles = relocate_files(src_dir, data.msvcResourceFiles, obj_dir, '.res')
       command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']
       action = target.add_action(
