@@ -16,9 +16,7 @@ module import syntax, for example:
 
 ```python
 project "myproject"
-
-import "java.craftr"
-import {glob} from "craftr.craftr"
+import "craftr/lang/java"
 import utils from "./utils"
 ```
 
@@ -32,10 +30,7 @@ most of the time on targets.
 
 ```python
 project "myproject"
-
-import "java.craftr"
-import {glob} from "craftr.craftr"
-
+import "craftr/lang/java"
 target "main":
   java.srcs = glob('src/**/*.java')
 ```
@@ -75,8 +70,7 @@ eval:
 
 # An import-line, the same can be put inside an eval: block.
 # Allows you to import other Craftr build modules, Python or Node.py modules.
-import "cxx.craftr"
-import {glob} from "craftr.craftr"
+import "craftr/lang/cxx"
 
 # Declare a pool where targets can be assigned to.
 pool "myPool" 4
@@ -113,6 +107,34 @@ public target "lib":
 target "main":
   requires "@lib"
   cxx.srcs = ['./src/main.cpp']
+```
+
+## Conditional Blocks
+
+The following blocks can be made condition by appending a Python `if ...`
+statement
+
+* export
+* eval
+* target
+* requires
+
+Example:
+
+```python
+project "sfml"
+import "craftr/lang/cxx"
+import {pkg_config} from "craftr/tools/pkg-config"
+eval if False:
+  print("This gets never executed")
+target "sfml" if OS.id != 'win32':
+  requires "somelib" if some_condition:
+    prop.name = "here"
+  requires "anotherlib" if another_condition
+  eval pkg_config(target, 'SFML-all')
+target "sfml" if OS.id == 'win32':
+  cxx.includes = ...
+  # etc etc
 ```
 
 ## Target Properties

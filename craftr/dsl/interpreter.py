@@ -104,7 +104,7 @@ class Interpreter:
   def eval_module(self, namespace, module):
     for node in namespace.children:
       if isinstance(node, Eval):
-        self._exec(node.loc.lineno, node.source, module.scope)
+        self._eval_block(node, module)
       elif isinstance(node, Options):
         self._options(node, module)
       elif isinstance(node, Pool):
@@ -172,11 +172,13 @@ class Interpreter:
       raise InvalidAssignmentError(obj, node.loc, str(exc))
 
   def _target(self, node, module):
+    if not self._test_if_expr(node, module):
+      return
     target = module.add_target_with_class(
       self.context.target_class, node.name, node.public)
     for node in node.children:
       if isinstance(node, Eval):
-        self._exec(node.loc.lineno, node.source, target.scope)
+        self._eval_block(node, target)
       elif isinstance(node, Assignment):
         self._assignment(node, target)
       elif isinstance(node, Dependency):
@@ -187,6 +189,8 @@ class Interpreter:
         assert False, node
 
   def _dependency(self, node, parent_target, override_export=False):
+    if not self._test_if_expr(node, parent_target):
+      return
     if node.name.startswith('@'):
       sources = [parent_target.module.targets[node.name[1:]]]
     else:
@@ -200,6 +204,8 @@ class Interpreter:
 
   def _export_block(self, node, obj):
     assert isinstance(obj, core.Target)
+    if not self._test_if_expr(node, obj):
+      return
     for child in node.assignments:
       if isinstance(child, Assignment):
         self._assignment(child, obj, override_export=True)
@@ -207,3 +213,13 @@ class Interpreter:
         self._dependency(child, obj, override_export=True)
       else:
         assert False, child
+
+  def _eval_block(self, node, obj):
+    if not self._test_if_expr(node, obj):
+      return
+    self._exec(node.loc.lineno, node.source, obj.scope)
+
+  def _test_if_expr(self, node, obj):
+    if node.if_expr:
+      return bool(self._eval(node.loc.lineno, node.if_expr, obj.scope))
+    return True

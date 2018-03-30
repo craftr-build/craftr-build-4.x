@@ -146,10 +146,12 @@ class Options(Node):
 
 class Eval(Node):
 
-  def __init__(self, loc, source, remainder):
+  def __init__(self, loc, source, remainder, if_expr=None):
     super().__init__(loc)
     self.source = source.rstrip()
     self.remainder = remainder
+    self.if_expr = if_expr
+    assert not (remainder and if_expr)
 
   def render(self, fp, depth):
     if self.remainder:
@@ -157,7 +159,11 @@ class Eval(Node):
       fp.write('eval:>>\n')
       fp.write(self.source)
     elif '\n' in self.source:
-      fp.write('  ' * depth + 'eval:\n')
+      fp.write('  ' * depth + 'eval')
+      if self.if_expr:
+        fp.write(' if ')
+        fp.write(self.if_expr)
+      fp.write(':\n')
       for line in self.source.split('\n'):
         if line:
           fp.write('  ' * (depth+1))
@@ -182,16 +188,21 @@ class Pool(Node):
 
 class Target(Node):
 
-  def __init__(self, loc, name, public):
+  def __init__(self, loc, name, public, if_expr=None):
     super().__init__(loc)
     self.name = name
     self.public = public
+    self.if_expr = if_expr
     self.children = []  # Requires, Assignment, Eval
 
   def render(self, fp, depth):
     if self.public:
       fp.write('public ')
-    fp.write('target "{}":\n'.format(self.name))
+    fp.write('target "{}"'.format(self.name))
+    if self.if_expr:
+      fp.write(' if ')
+      fp.write(self.if_expr)
+    fp.write(':\n')
     for child in self.children:
       child.render(fp, depth+1)
 
@@ -237,10 +248,11 @@ class Export(Node):
 
 class Dependency(Node):
 
-  def __init__(self, loc, name, export):
+  def __init__(self, loc, name, export, if_expr=None):
     super().__init__(loc)
     self.name = name
     self.export = export
+    self.if_expr = if_expr
     self.assignments = []
 
   def render(self, fp, depth):
@@ -248,6 +260,9 @@ class Dependency(Node):
     if self.export:
       fp.write('export ')
     fp.write('requires "{}"'.format(self.name))
+    if self.if_expr:
+      fp.write(' if ')
+      fp.write(self.if_expr)
     fp.write(':\n' if self.assignments else '\n')
     for assign in self.assignments:
       assign.render(fp, depth+1)
@@ -430,14 +445,19 @@ class Parser:
   def _parse_eval(self, lexer, parent_indent, export=False):
     assert not export
     loc = lexer.token.cursor
+    if_expr = self._parse_block_if_expr(lexer)
     is_remainder = False
-    if lexer.accept(':'):
-      if lexer.accept('>>'):
-        is_remainder = True
-      lexer.next('nl')
-      loc.lineno += 1
+
+    if not if_expr:
+      if lexer.accept(':'):
+        if lexer.accept('>>'):
+          is_remainder = True
+        lexer.next('nl')
+        loc.lineno += 1
+
     if is_remainder and parent_indent:
       raise ParseError(lexer.token.cursor, 'eval:>> block only on top-level')
+
     if is_remainder:
       lines = []
       while lexer.scanner:
@@ -445,7 +465,8 @@ class Parser:
       source = ''.join(lines)
     else:
       source = self._parse_expression(lexer, loc.colno)
-    return Eval(loc, source, is_remainder)
+
+    return Eval(loc, source, is_remainder, if_expr)
 
   def _parse_import(self, lexer, parent_indent, export=False):
     assert not export
@@ -465,10 +486,12 @@ class Parser:
   def _parse_target(self, lexer, parent_indent, public=False):
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
-    lexer.next(':')
-    lexer.next('nl')
+    if_expr = self._parse_block_if_expr(lexer)
+    if not if_expr:
+      lexer.next(':')
+      lexer.next('nl')
     subblocks = ['requires', 'eval', 'export']
-    target = Target(loc, name, public)
+    target = Target(loc, name, public, if_expr)
     while True:
       self._skip(lexer)
       child = self._parse_stmt_or_block(lexer, subblocks, parent_indent)
@@ -479,8 +502,9 @@ class Parser:
   def _parse_requires(self, lexer, parent_indent, export=False):
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
-    dep = Dependency(loc, name, export)
-    if lexer.accept(':'):
+    if_expr = self._parse_block_if_expr(lexer, allow_non_block=True)
+    dep = Dependency(loc, name, export, if_expr)
+    if if_expr or lexer.accept(':'):
       lexer.next('nl')
       while True:
         self._skip(lexer)
@@ -495,7 +519,9 @@ class Parser:
   def _parse_export(self, lexer, parent_indent, export=False):
     assert not export
     export = Export(lexer.token.cursor)
-    lexer.next(':')
+    if_expr = self._parse_block_if_expr(lexer)
+    if not if_expr:
+      lexer.next(':')
     while True:
       self._skip(lexer)
       child = self._parse_stmt_or_block(lexer, ['requires'], parent_indent)
@@ -503,6 +529,22 @@ class Parser:
       assert isinstance(child, (Assignment, Dependency))
       export.assignments.append(child)
     return export
+
+  def _parse_block_if_expr(self, lexer, allow_non_block=False):
+    loc = lexer.token.cursor
+    token = lexer.accept('name')
+    if not token: return None
+    if token.value == 'if':
+      result = lexer.scanner.readline()
+      result = result.partition('#')[0].strip()
+      if result.endswith(':'):
+        result = result[:-1]
+        lexer.scanner.seek(-1, 'cur')
+      elif not allow_non_block:
+        raise ParseError(loc, 'missing : at the end of conditional block')
+      return result
+    else:
+      raise ParseError(loc, 'expected "if" or ":", got {!r}'.format(token.value))
 
 
 class ParseError(Exception):
