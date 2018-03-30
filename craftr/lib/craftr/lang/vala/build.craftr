@@ -1,4 +1,4 @@
-project "craftr/vala" v1.0.0
+project "craftr/lang/vala" v1.0.0
 
 eval import os
 

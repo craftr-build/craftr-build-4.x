@@ -1,6 +1,6 @@
 project "vala_helloworld"
 
-import "craftr/vala"
+import "craftr/lang/vala"
 
 target "main":
   vala.srcs = ['src/Main.vala']

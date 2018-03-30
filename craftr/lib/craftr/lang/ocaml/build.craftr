@@ -1,4 +1,4 @@
-project "craftr/ocaml" v1.0.0
+project "craftr/lang/ocaml" v1.0.0
 eval:>>
 
 import craftr from 'craftr'

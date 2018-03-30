@@ -54,7 +54,7 @@ manager `nodepy-pm`.
 
 ```python
 project "examples.c"
-import "craftr/cxx"
+import "craftr/lang/cxx"
 target "main":
   cxx.srcs = ['main.c']
 ```
@@ -65,7 +65,7 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.cpp"
-import "craftr/cxx"
+import "craftr/lang/cxx"
 target "main":
   cxx.srcs = ['main.cpp']
 ```
@@ -79,7 +79,7 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.csharp"
-import "craftr/csharp"
+import "craftr/lang/csharp"
 target "main":
   csharp.srcs = glob('src/*.cs')
   csharp.packages = ['Newtonsoft.JSON:10.0.3']
@@ -92,7 +92,7 @@ Run as `craftr -cb main:csharp.runBundle`
 
 ```python
 project "examples.java"
-import "craftr/java"
+import "craftr/lang/java"
 target "main":
   java.srcs = glob('src/**/*.java')
   java.artifacts = [
@@ -111,7 +111,7 @@ Run as `craftr -cb main:java.runBundle`
 
 ```python
 project "examples.haskell"
-import "craftr/haskell"
+import "craftr/lang/haskell"
 target "main":
   haskell.srcs = ['src/Main.hs']
 ```
@@ -122,7 +122,7 @@ Run as `craftr -cb main:haskell.run`
 
 ```python
 project "examples.ocaml"
-import "craftr/ocaml"
+import "craftr/lang/ocaml"
 target "main":
   ocaml.srcs = ['src/Main.ml']
   # False to produce an OCaml bytecode file
@@ -138,7 +138,7 @@ Run as `craftr -cb main:ocaml.run`
 
 ```python
 project "examples.vala"
-import "craftr/vala"
+import "craftr/lang/vala"
 target "main":
   vala.srcs = ['src/Main.vala']
 ```
@@ -149,7 +149,7 @@ Run as `craftr -cb main:vala.run`
 
 ```python
 project "example.cython"
-import "craftr/cython"
+import "craftr/lang/cython"
 target "main":
   cython.srcs = glob('src/*.pyx')
   cython.main = 'src/Main.pyx'

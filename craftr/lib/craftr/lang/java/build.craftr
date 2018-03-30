@@ -1,4 +1,4 @@
-project "craftr/java" v1.0.0
+project "craftr/lang/java" v1.0.0
 
 options:
   str onejar = path.join(module.directory, "tools", "one-jar-boot-0.97.jar")

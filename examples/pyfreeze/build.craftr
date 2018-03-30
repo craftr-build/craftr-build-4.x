@@ -1,8 +1,8 @@
 project "examples.pyfreeze"
 
-import python from "craftr/python"
+import python from "craftr/lang/python"
 
 target "main":
-  requires "craftr/python"
+  requires "craftr/lang/python"
   cxx.srcs = glob('frozen_src/*.c') + python.frozen_main_srcs
   cxx.defines = ['BUILD_FROZEN']

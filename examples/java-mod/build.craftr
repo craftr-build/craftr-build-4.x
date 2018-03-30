@@ -1,6 +1,6 @@
 project "examples.java-mod"
 
-import "craftr/java"
+import "craftr/lang/java"
 
 target "main":
   java.srcs = glob('src/**/*.java')

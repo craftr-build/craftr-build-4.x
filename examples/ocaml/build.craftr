@@ -1,6 +1,6 @@
 project "ocaml_helloworld"
 
-import "craftr/ocaml"
+import "craftr/lang/ocaml"
 
 target "main":
   ocaml.srcs = glob('src/*.ml')

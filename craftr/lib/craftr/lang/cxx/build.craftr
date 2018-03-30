@@ -1,4 +1,4 @@
-project "craftr/cxx" v1.0.0
+project "craftr/lang/cxx" v1.0.0
 
 eval:
   options.setdefault('architecture', OS.arch)

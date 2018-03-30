@@ -1,4 +1,4 @@
-project "craftr/haskell" v1.0.0
+project "craftr/lang/haskell" v1.0.0
 eval:>>
 
 import craftr from 'craftr'

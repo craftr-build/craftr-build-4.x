@@ -1,4 +1,4 @@
-project "craftr/csharp" v1.0.0
+project "craftr/lang/csharp" v1.0.0
 
 options:
   str impl = 'net' if OS.type == 'nt' else 'mono'

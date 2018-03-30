@@ -1,6 +1,6 @@
 project "examples.haskell"
 
-import "craftr/haskell"
+import "craftr/lang/haskell"
 
 target "main":
   haskell.srcs = ['src/Main.hs']
