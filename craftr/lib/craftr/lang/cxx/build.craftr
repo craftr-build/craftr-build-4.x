@@ -2,6 +2,7 @@ project "craftr/lang/cxx" v1.0.0
 
 eval:
   options.setdefault('architecture', OS.arch)
+  options.setdefault('staticRuntime', OS.id == 'win32')
   if OS.id == 'win32':
     if OS.type == 'nt':
       options.setdefault('toolchain', 'msvc')
@@ -15,12 +16,14 @@ eval:
 options:
   str architecture
   str toolchain
+  bool staticRuntime
 
 eval:>>
 
 import craftr from 'craftr'
 import base from './impl/base'
 
+# TODO: Handle staticRuntime option.
 # TODO: Support precompiled headers.
 # TODO: Support compiler-wrappers like ccache.
 # TODO: Support linker-wrappers (eg. for coverage).

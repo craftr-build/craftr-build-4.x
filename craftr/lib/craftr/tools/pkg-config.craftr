@@ -1,0 +1,60 @@
+project "craftr/tools/pkg-config"
+eval:>>
+
+import {sh} from 'craftr'
+import cxx from 'craftr/lang/cxx'
+
+
+class PkgConfigError(Exception):
+  pass
+
+
+def pkg_config(target, pkg_name, static=True):
+  """
+  This function runs the `pkg-config` command with the specified *pkg_name*
+  and appends values to the targets exported properties.
+  """
+
+  command = ['pkg-config', pkg_name, '--cflags', '--libs']
+  if static:
+    command.append('--static')
+
+  try:
+    flags = sh.check_output(command).decode()
+  except FileNotFoundError as exc:
+    raise PkgConfigError('pkg-config is not available ({})'.format(exc))
+  except sh.CalledProcessError as exc:
+    raise PkgConfigError('{} not installed on this system\n\n{}'.format(
+        pkg_name, exc.stderr or exc.stdout))
+
+  # Parse the flags.
+  includes = []
+  defines = []
+  syslibs = []
+  libpath = []
+  compile_flags = []
+  link_flags = []
+
+  for flag in sh.split(flags):
+    if flag.startswith('-I'):
+      include.append(flag[2:])
+    elif flag.startswith('-D'):
+      defines.append(flag[2:])
+    elif flag.startswith('-l'):
+      syslibs.append(flag[2:])
+    elif flag.startswith('-L'):
+      libpath.append(flag[2:])
+    elif flag.startswith('-Wl,'):
+      link_flags.append(flag[4:])
+    else:
+      compile_flags.append(flag)
+
+  target.exported_props['cxx.includes'] += includes
+  target.exported_props['cxx.defines'] += defines
+  target.exported_props['cxx.systemLibraries'] += syslibs
+  target.exported_props['cxx.libraryPaths'] += libpath
+  target.exported_props['cxx.compilerFlags'] += compile_flags
+  target.exported_props['cxx.linkerFlags'] += link_flags
+
+
+pkg_config.Error = PkgConfigError

@@ -1,0 +1,68 @@
+project "craftr/libs/sfml"
+
+options:
+  str version = '2.4.2'
+  str binaryDir = ''
+  bool static = True
+  bool debug = BUILD.debug
+
+import cxx from 'craftr/lang/cxx'
+
+target "sfml" if OS.id == 'win32':
+  eval:
+    import {get_source_archive} from 'craftr/tools/download'
+    if cxx.compiler.id in ('msvc', 'mingw'):
+      if not options.binaryDir:
+        # Find the appropriate download URL.
+        bit = 32 if cxx.compiler.is32bit else 64
+        if cxx.compiler.id == 'msvc':
+          if cxx.compiler.toolkit.version <= 110:
+            vcv = 'vc11'
+          elif cxx.compiler.toolkit.version <= 120:
+            vcv = 'vc12'
+          else:
+            vcv = 'vc14'
+          url = fmt('https://www.sfml-dev.org/files/SFML-{options.version}-windows-{vcv}-{bit}-bit.zip')
+        else:
+          url = fmt('https://www.sfml-dev.org/files/SFML-{options.version}-windows-gcc-6.1.0-mingw-{bit}-bit.zip')
+
+        # Download and unpack the archive.
+        options.binaryDir = path.abs(path.join(
+          get_source_archive(url), 'SFML-' + options.version))
+
+      ssfx = '-s' if options.static else ''
+      dsfx = '-d' if options.debug else ''
+    else:
+      error('unsupported compiler on Windows: {!r}'.format(cxx.compiler.id))
+
+  cxx.includes = [path.join(options.binaryDir, 'include')]
+  cxx.defines = ['SFML_STATIC'] if options.static else []
+  cxx.libraryPaths = [path.join(options.binaryDir, 'lib')]
+  cxx.systemLibraries = [fmt(x) for x in [
+      'sfml-main{dsfx}',
+      'sfml-audio{ssfx}{dsfx}',
+      'sfml-graphics{ssfx}{dsfx}',
+      'sfml-network{ssfx}{dsfx}',
+      'sfml-window{ssfx}{dsfx}',
+      'sfml-system{ssfx}{dsfx}',
+      'opengl32',
+      'openal32',
+      'freetype',
+      'jpeg',
+      'flac',
+      'vorbisenc',
+      'vorbisfile',
+      'vorbis',
+      'ogg',
+      # Windows specific
+      'ws2_32',
+      'winmm',
+      'gdi32',
+      'user32',
+      'advapi32'
+    ]]
+
+target "sfml" if OS.id != 'win32':
+  eval:
+    import {pkg_config} from 'craftr/tools/pkg-config'
+    pkg_config(target, 'SFML-all', static=options.static)
