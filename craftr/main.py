@@ -77,7 +77,7 @@ def set_options(context, options):
   prev_scope = None
   for item in options:
     name, assign, value = item.partition('=')
-    scope, name = name.rpartition('.')[::2]
+    scope, name = name.rpartition(':')[::2]
     if not scope: scope = prev_scope
     if not scope or not name:
       parser.error('--options: invalid argument: {}'.format(item))
