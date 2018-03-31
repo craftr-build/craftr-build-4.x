@@ -82,6 +82,17 @@ class Project(Node):
       child.render(fp, depth)
 
 
+class LinkModule(Node):
+
+  def __init__(self, loc, path):
+    super().__init__(loc)
+    self.path = path
+
+  def render(self, fp, depth):
+    assert depth == 0
+    fp.write('link "{}"'.format(self.name))
+
+
 class Configure(Node):
 
   def __init__(self, loc, export):
@@ -290,7 +301,7 @@ class Parser:
     strex.Charset('ws', '\t ', skip=True),
   ]
 
-  KEYWORDS = ['project', 'configure', 'options', 'eval', 'pool',
+  KEYWORDS = ['project', 'configure', 'options', 'eval', 'pool', 'link_module',
               'export', 'public', 'target', 'requires', 'import']
 
   def parse(self, source, filename='<input>'):
@@ -368,6 +379,11 @@ class Parser:
     elif token.value in self.KEYWORDS:
       raise ParseError(loc, 'unexpected keyword "{}"'.format(token.value))
 
+    return self._parse_assignment(lexer, parent_indent, export=export)
+
+  def _parse_assignment(self, lexer, parent_indent, export=False):
+    token = lexer.token
+    loc = token.cursor
     scope = token.value
     lexer.next('.')
     propname = lexer.next('name').value
@@ -411,14 +427,13 @@ class Parser:
       result = first_line.strip() + '\n' + result
     return result
 
-  def _parse_configure(self, lexer, parent_indent, export=False):
+  def _parse_configure(self, lexer, parent_indent):
     block = Configure(lexer.token.cursor, export=export)
     lexer.next(':')
     block.loads(self._parse_expression(lexer, parent_indent))
     return block
 
-  def _parse_options(self, lexer, parent_indent, export=False):
-    assert not export
+  def _parse_options(self, lexer, parent_indent):
     options = Options(lexer.token.cursor)
     lexer.next(':')
     lexer.next('nl')
@@ -447,8 +462,7 @@ class Parser:
       raise ParseError(lexer.token.cursor, 'expected at least one indented statement')
     return options
 
-  def _parse_eval(self, lexer, parent_indent, export=False):
-    assert not export
+  def _parse_eval(self, lexer, parent_indent):
     loc = lexer.token.cursor
     if_expr = self._parse_block_if_expr(lexer, allow_non_block=True)
     is_remainder = False
@@ -473,15 +487,13 @@ class Parser:
 
     return Eval(loc, source, is_remainder, if_expr)
 
-  def _parse_import(self, lexer, parent_indent, export=False):
-    assert not export
+  def _parse_import(self, lexer, parent_indent):
     assert not parent_indent
     loc = lexer.token.cursor
     source = self._parse_expression(lexer, loc.colno)
     return Eval(loc, 'import ' + source, False)
 
-  def _parse_pool(self, lexer, parent_indent, export=False):
-    assert not export
+  def _parse_pool(self, lexer, parent_indent):
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
     depth = int(lexer.next('number').value)
@@ -521,8 +533,7 @@ class Parser:
       lexer.next('nl', 'eof')
     return dep
 
-  def _parse_export(self, lexer, parent_indent, export=False):
-    assert not export
+  def _parse_export(self, lexer, parent_indent):
     if_expr = self._parse_block_if_expr(lexer)
     if not if_expr:
       lexer.next(':')
@@ -534,6 +545,12 @@ class Parser:
       assert isinstance(child, (Assignment, Dependency))
       export.assignments.append(child)
     return export
+
+  def _parse_link_module(self, lexer, parent_indent):
+    loc = lexer.token.cursor
+    path = lexer.next('string').value.group(1)
+    lexer.next('nl', 'eof')
+    return LinkModule(loc, path)
 
   def _parse_block_if_expr(self, lexer, allow_non_block=False):
     loc = lexer.token.cursor

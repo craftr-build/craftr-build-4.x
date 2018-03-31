@@ -27,11 +27,11 @@ from nr.stream import stream
 import argparse
 import collections
 import json
-import os
 import shlex
 import sys
 
 import dsl from './dsl'
+import {do_link, do_unlink} from './dsl/nodepy_glue'
 
 
 class Context(dsl.Context):
@@ -155,7 +155,12 @@ def main(argv=None):
     return 0
 
   if args.link or args.unlink:
-    return handle_link(args)
+    assert not (args.link and args.unlink)
+    if args.link:
+      return 0 if do_link(args.link) else 1
+    elif args.unlink:
+      return 0 if do_unlink(args.unlink) else 1
+    return 0
 
   # Assign flag implications.
   if args.r:
@@ -183,7 +188,7 @@ def main(argv=None):
 
   # Load the cache file from the build root directory, if it exists.
   root_cachefile = path.join(args.build_root, 'CraftrBuildRoot.json')
-  if os.path.isfile(root_cachefile):
+  if path.isfile(root_cachefile):
     with open(root_cachefile) as fp:
       try:
         root_cache = json.load(fp)
@@ -219,7 +224,7 @@ def main(argv=None):
   if not (args.debug or args.release):
     args.debug = True
   build_variant = 'release' if args.release else 'debug'
-  build_directory = os.path.join('build', build_variant)
+  build_directory = path.join('build', build_variant)
 
   if args.configure:
     if not args.file:
@@ -227,8 +232,8 @@ def main(argv=None):
     # Turn a directory-like file or one that actually points to a directory
     # point to the directories' build.craftr file instead.
     elif args.file.endswith('/') or args.file.endswith('\\') or \
-        os.path.isdir(args.file):
-      args.file = os.path.join(args.file, 'build.craftr')
+        path.isdir(args.file):
+      args.file = path.join(args.file, 'build.craftr')
 
     # Load the build script.
     context = Context(args.build_root, build_variant, build_directory)
@@ -300,47 +305,6 @@ def main(argv=None):
     if res not in (0, None):
       return res
 
-  return 0
-
-
-def handle_link(args):
-  assert not (args.link and args.unlink)
-  manifest = path.join(args.link or args.unlink)
-  build_script = path.join(args.link or args.unlink, 'build.craftr')
-  name = None
-
-  if path.isfile(manifest):
-    with open(manifest) as fp:
-      name = json.load(fp)['name']
-  elif path.isfile(build_script):
-    with open(build_script) as fp:
-      name = dsl.Parser().parse(fp.read(), build_script).name
-
-  # If args.unlink pointed to a directory, overwrite the args.unlink
-  # value to the name that we extracted from the manifest or build script.
-  if name and args.unlink:
-    args.unlink = name
-
-  if name or args.unlink:
-    name = name or args.unlink
-    module_link = path.join('.nodepy', 'modules', name + '.nodepy-link')
-
-  if args.unlink:
-    if not path.isfile(module_link):
-      print('error: can not unlink {!r}'.format(args.unlink))
-      return 1
-    print('unlinking module {!r}'.format(args.unlink))
-    os.remove(module_link)
-    return 0
-
-  if not name:
-    print('error: invalid link source: {!r}'.format(args.link))
-    return 1
-
-  print('linking module {!r} from "{}"'.format(name, args.link))
-  path.makedirs(path.dir(module_link))
-  with open(module_link, 'w') as fp:
-    fp.write(path.canonical(args.link))
   return 0
 
 

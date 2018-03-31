@@ -21,9 +21,11 @@
 This module implements the glue between Node.py and Craftr build scripts.
 """
 
+from nr import path
 from nodepy.utils import pathlib
 from nr.datastructures.mappings import ChainDict, ObjectFromMapping
 
+import os
 import nodepy
 import {Parser} from './parser'
 import {Interpreter} from './interpreter'
@@ -104,3 +106,71 @@ class CraftrModuleLoader(nodepy.resolver.StdResolver.Loader):
 
   def load_module(self, context, package, filename):
     return CraftrModule(self.dsl_context, context, None, pathlib.Path(filename))
+
+
+def get_module_name(module_directory):
+  manifest = path.join(module_directory, 'nodepy.json')
+  build_script = path.join(module_directory, 'build.craftr')
+  name = None
+
+  if path.isfile(manifest):
+    with open(manifest) as fp:
+      return json.load(fp)['name']
+  elif path.isfile(build_script):
+    with open(build_script) as fp:
+      return Parser().parse(fp.read(), build_script).name
+  else:
+    raise ValueError('directory {!r} does not contain nodepy.json or build.craftr')
+
+
+def create_link(source, name=None, module_dir=None, override=False):
+  if name is None:
+    name = get_module_name(source)
+  module_dir = module_dir or require.context.modules_directory
+  if path.isdir(path.join(module_dir, name)):
+    return False
+  link_filename = path.join(module_dir, name + '.nodepy-link')
+  if path.isfile(link_filename) and not override:
+    return False
+  path.makedirs(path.dir(link_filename))
+  with open(link_filename, 'w') as fp:
+    fp.write(path.abs(source))
+  return True
+
+
+def remove_link(source=None, name=None, module_dir=None):
+  if source is None:
+    if name is None:
+      raise TypeError('expect either source or name argument')
+  elif name is None:
+    name = get_module_name(source)
+  module_dir = module_dir or require.context.modules_directory
+  link_filename = path.join(module_dir, name + '.nodepy-link')
+  if path.isfile(link_filename):
+    os.remove(link_filename)
+    return True
+  return False
+
+
+def do_link(source, name=None, module_dir=None, override=False):
+  if not name:
+    name = get_module_name(source)
+  if create_link(source, name, module_dir, override):
+    print('linked module {!r} from "{}"'.format(name, source))
+    return True
+  else:
+    print('skipping link for {!r} from "{}"'.format(name, source))
+    return False
+
+
+def do_unlink(source_or_name, module_dir=None):
+  if path.isdir(source_or_name):
+    source, name = source_or_name, get_module_name(source_or_name)
+  else:
+    source, name = None, source_or_name
+  if remove_link(source, name, module_dir):
+    print('unlinked module {!r}'.format(name))
+    return True
+  else:
+    print('error: no link for {!r} found'.format(name))
+    return False

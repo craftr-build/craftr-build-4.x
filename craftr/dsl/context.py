@@ -23,11 +23,13 @@ the evaluation of Craftr build modules via the Craftr DSL. The DSL context
 creates a child Node.py context with the ability to load Craftr modules.
 """
 
+from nr import path
 from nr.datastructures.mappings import ChainDict, MappingFromObject
 from nodepy.utils import pathlib
 
 import nodepy
-import {CraftrModuleLoader} from './nodepy_glue'
+import shutil
+import {CraftrModuleLoader, do_link} from './nodepy_glue'
 import core from '../core'
 
 STDLIB_DIR = module.package.directory.joinpath('craftr', 'lib')
@@ -107,11 +109,16 @@ class Context(core.Context):
 
   def __init__(self, build_variant, build_directory, load_builtins=True):
     super().__init__()
+    self.module_links_dir = path.join(build_directory, '.module-links')
+
     self.loader = CraftrModuleLoader(self)
     self.nodepy_context = nodepy.context.Context(parent=require.context)
     self.nodepy_context.resolver.loaders.append(self.loader)
-    self.nodepy_context.resolver.paths.append(pathlib.Path(require.context.modules_directory))  # TODO:  Use the nearest available .nodepy/modules directory?
     self.nodepy_context.resolver.paths.append(STDLIB_DIR)
+    self.nodepy_context.resolver.paths.append(pathlib.Path(self.module_links_dir))
+
+    # TODO:  Use the nearest available .nodepy/modules directory?
+    self.nodepy_context.resolver.paths.append(pathlib.Path(require.context.modules_directory))
 
     self.build_variant = build_variant
     self.build_directory = build_directory
@@ -126,6 +133,10 @@ class Context(core.Context):
       for key in module.__builtins__:
         self.builtins[key] = getattr(module, key)
 
+    # Remove the build directories module links directory.
+    if path.isdir(self.module_links_dir):
+      shutil.rmtree(self.module_links_dir)
+
   def load_module(self, name):
     mod = self.require(name + '.craftr', exports=False)
     return mod.craftr_module
@@ -137,6 +148,19 @@ class Context(core.Context):
     if not raw:
       module = module.craftr_module
     return module
+
+  def link_module(self, parent_dir, module_path):
+    """
+    This method is called when a `link_module` statement is used in a Craftr
+    build script in order to establish a temporary link for the current build
+    session to that module.
+
+    This writes a `.nodepy-link` file to the build directories `.module-links`
+    directory which is then scanned on imports by Node.py. Every time the
+    build system is reconfigured, the `.module-links` directory is flushed.
+    """
+
+    do_link(path.canonical(module_path, parent_dir), module_dir=self.module_links_dir)
 
   def report_property_does_not_exist(self, filename, loc, prop_name, propset):
     print('warn: {}:{}:{}: property {} does not exist'.format(

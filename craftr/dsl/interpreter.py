@@ -118,6 +118,8 @@ class Interpreter:
       elif isinstance(node, Configure):
         if self.is_main:
           self.context.options.update(node.data)
+      elif isinstance(node, LinkModule):
+        self.context.link_module(module.directory, node.path)
       else:
         assert False, node
 
