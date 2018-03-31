@@ -3,6 +3,7 @@ eval:>>
 
 import nr.tempfile as tempfile
 import posixpath
+import re
 import requests
 import tarfile
 import zipfile
