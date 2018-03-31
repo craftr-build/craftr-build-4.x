@@ -32,7 +32,7 @@ import shutil
 import {CraftrModuleLoader, do_link} from './nodepy_glue'
 import core from '../core'
 
-STDLIB_DIR = module.package.directory.joinpath('craftr', 'lib')
+STDLIB_DIR = module.package.directory.joinpath('craftr-stdlib')
 
 
 class ModuleOptions:
