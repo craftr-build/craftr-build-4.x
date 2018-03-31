@@ -3,7 +3,6 @@ eval:
   import argparse
   import subprocess
   import sys
-  from craftr import path
 
   error = lambda *a: print(*a, file=sys.stderr)
 
@@ -24,7 +23,7 @@ eval:
       # in site.py (missing __file__ name)).
       if hasattr(sys, 'real_prefix'):
         args.python = [path.join(sys.real_prefix, path.base(sys.executable))]
-      elif hasattr(sys, 'base_prefix') and base_prefix != sys.prefix:
+      elif hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix:
         args.python = [path.join(sys.base_prefix, path.base(sys.executable))]
       else:
         args.python = [sys.executable]

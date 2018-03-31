@@ -404,8 +404,9 @@ class JavaTargetHandler(craftr.TargetHandler):
         command += [data.mainClass] + data.runArgs
       else:
         command = list(data.runArgsPrefix or ['java'])
-        command += ['-p', path.pathsep.join([jmodDir])]  # TODO: Additional JMOD dirs?
-        command += ['-cp', path.pathsep.join(data.binaryJars)]
+        command += ['-p', jmodDir]  # TODO: Additional JMOD dirs?
+        if data.binaryJars:
+          command += ['-cp', path.pathsep.join(data.binaryJars)]
         mod_name = next(iter(data.jmod))
         command += ['-m', mod_name + '/' + data.mainClass] + data.runArgs
 
