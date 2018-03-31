@@ -205,15 +205,16 @@ class Compiler(nr.named.named):
       deps_prefix=self.deps_prefix,
       depfile=self.depfile_name)
 
+    objdir = craftr.get_output_directory(target, 'obj')
     for src in srcs:
       buildset = action.add_buildset()
       buildset.files.add(src, ['in', 'src', 'src.' + lang])
-      self.add_objects_for_source(target, data, lang, src, buildset)
+      self.add_objects_for_source(target, data, lang, src, buildset, objdir)
 
     return action
 
   # @abstract
-  def add_objects_for_source(sefl, target, data, lang, src, buildset):
+  def add_objects_for_source(sefl, target, data, lang, src, buildset, objdir):
     """
     This method is called from #create_compile_action() in order to construct
     the object output filename for the specified C or C++ source file and add

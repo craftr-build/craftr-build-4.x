@@ -143,8 +143,7 @@ class MsvcCompiler(base.Compiler):
     return command
 
   # @override
-  def add_objects_for_source(self, target, data, lang, src, buildset):
-    objdir = craftr.get_output_directory(target, 'obj')
+  def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
     rel = path.rel(src, target.directory)
     obj = path.setsuffix(path.join(objdir, rel), '.obj')
     buildset.files.add(obj, ['out', 'obj'])
