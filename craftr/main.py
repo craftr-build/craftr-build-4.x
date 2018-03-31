@@ -36,10 +36,10 @@ import dsl from './dsl'
 
 class Context(dsl.Context):
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, build_root, *args, **kwargs):
     super().__init__(*args, **kwargs)
+    self.build_root = build_root
     self.backend_name = 'craftr/backends/ninja'
-    self.cache = {}
 
   def to_json(self):
     root = collections.OrderedDict()
@@ -49,7 +49,6 @@ class Context(dsl.Context):
     root['directory'] = self.build_directory
     root['options'] = None  # TODO: Include options specified via the command-line.
     root['graph'] = self.graph.to_json()
-    root['cache'] = self.cache
     return root
 
   def from_json(self, root):
@@ -60,7 +59,6 @@ class Context(dsl.Context):
       print('warning: stored build directory does not match current build directory')
     # TODO: Read options
     self.graph.from_json(root['graph'])
-    self.cache.update(root.get('cache', {}))
 
   def serialize(self):
     path.makedirs(self.build_directory)
@@ -170,7 +168,7 @@ def main(argv=None):
 
   # Handle --tool.
   if args.tool:
-    context = Context(None, None)
+    context = Context(None, None, None)
     set_options(context, args.options)
     sys.argv = ['craftr -t ' + args.tool[0]] + sys.argv[1:]
     try:
@@ -233,14 +231,14 @@ def main(argv=None):
       args.file = os.path.join(args.file, 'build.craftr')
 
     # Load the build script.
-    context = Context(build_variant, build_directory)
+    context = Context(args.build_root, build_variant, build_directory)
     set_options(context, args.options)
     module = context.load_module_from_file(args.file)
     context.translate_targets()
     context.serialize()
 
   else:
-    context = Context(build_variant, build_directory)
+    context = Context(args.build_root, build_variant, build_directory)
     context.deserialize()
     set_options(context, args.options)
 

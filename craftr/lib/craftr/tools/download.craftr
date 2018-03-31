@@ -6,6 +6,8 @@ import posixpath
 import requests
 import tarfile
 import zipfile
+import {root as build_cache} from 'craftr/tools/cache'
+
 
 def get_source_archive(url):
   """
@@ -13,7 +15,7 @@ def get_source_archive(url):
   path to the unpacked directory.
   """
 
-  archive_cache = context.cache.setdefault('get_source_archive', {})
+  archive_cache = build_cache.setdefault('craftr/tools/download', {})
   directory = archive_cache.get(url)
   if directory and path.isdir(directory):
     return directory

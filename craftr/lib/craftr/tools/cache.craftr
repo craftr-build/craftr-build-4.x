@@ -1,0 +1,43 @@
+project "craftr/tools/cache"
+eval:>>
+"""
+This module provides functionality to cache information for the build process
+that can be used for repeated configuration steps. The cache is transactional
+and will be maintained even if the configure step errors at a later point.
+
+When using this API, you can decide whether you want to use the cache level
+that is local to the current build variant or global by using either the
+module's API directly or the same API available under the #variant name.
+"""
+
+import atexit
+import contextlib
+import json
+
+
+class CacheManager(dict):
+
+  def __init__(self, filename):
+    self.filename = filename
+    self.load()
+
+  def load(self):
+    try:
+      with open(self.filename) as fp:
+        self.update(json.load(fp))
+    except FileNotFoundError:
+      pass
+    except json.JSONDecodeError as exc:
+      print('warning: error loading cache "{!r}": {}'.format(filename, exc))
+
+  def save(self):
+    path.makedirs(path.dir(self.filename))
+    with open(self.filename, 'w') as fp:
+      json.dump(self, fp)
+
+
+root = CacheManager(path.join(context.build_root, 'CraftrCacheRoot.json'))
+variant = CacheManager(path.join(context.build_directory, 'CraftrCacheVariant.json'))
+
+atexit.register(root.save)
+atexit.register(variant.save)

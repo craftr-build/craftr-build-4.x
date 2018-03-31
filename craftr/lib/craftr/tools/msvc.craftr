@@ -31,6 +31,7 @@ import logging as log
 
 import sh from '@craftr/craftr-build/utils/sh'
 import {batchvars} from 'craftr/tools/batchvars'
+import {variant as build_cache} from 'craftr/tools/cache'
 
 
 class MsvcInstallation(nr.named.named):
@@ -275,13 +276,14 @@ class MsvcToolkit(nr.named.named):
     sdk_version = options.sdkVersion
 
     cache = None
-    if 'msvc.cache' in context.cache:
-      cache = cls.fromdict(context.cache['msvc.cache'])
+    cache_key = 'craftr/tools/msvc'
+    if cache_key in build_cache:
+      cache = cls.fromdict(build_cache[cache_key])
 
     key_info = (version, arch, platform_type, sdk_version)
     if not cache or cache.key_info != key_info:
       toolkit = cls.from_installation(install, arch, platform_type, sdk_version)
-      context.cache['msvc.cache'] = toolkit.asdict()
+      build_cache[cache_key] = toolkit.asdict()
     else:
       toolkit = cache  # Nothing has changed
 
