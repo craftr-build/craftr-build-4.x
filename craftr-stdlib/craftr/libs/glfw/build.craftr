@@ -1,0 +1,111 @@
+project "craftr/libs/glfw"
+
+options:
+  str sourceDir = ''
+  str binaryDir = ''
+  str version = '3.2.1'
+  str msvcVersion = ''
+  bool fromSource = False
+  bool static = True
+  bool x11 = True
+  bool wayland = True
+
+eval:
+  import cxx from 'craftr/lang/cxx'
+  import {get_source_archive} from 'craftr/tools/download'
+  import {pkg_config} from 'craftr/tools/pkg-config'
+
+  if options.fromSource:
+    mode = 'source'
+    if not options.sourceDir:
+      url = fmt('https://github.com/glfw/glfw/releases/download/{options.version}/glfw-{options.version}.zip')
+      options.sourceDir = get_source_archive(url)
+      options.sourceDir = path.join(path.abs(options.sourceDir), fmt('glfw-{options.version}'))
+
+  elif OS.id == 'nt' and cxx.compiler.id in ('msvc', 'mingw'):
+    mode = 'win32-prebuilt'
+    if not options.binaryDir:
+      winver = 'WIN64' if cxx.compiler.is64bit else 'WIN32'
+      url = fmt('https://github.com/glfw/glfw/releases/download/{options.version}/glfw-{options.version}.bin.{winver}.zip')
+      options.binaryDir = get_source_archive(url.format(**locals()))
+      options.binaryDir = path.join(path.abs(options.binaryDir), fmt('glfw-{options.version}.bin.{winver}'))
+
+  else:
+    mode = 'pkg-config'
+
+public target "glfw":
+  eval if mode == 'pkg-config':
+    pkg_config(target, 'glfw3', static=options.static)
+
+  eval if mode == 'win32-prebuilt':
+    if cxx.compiler.id == 'msvc':
+      if options.msvcVersion is None:
+        options.msvcVersion = cxx.compiler.toolkit.vs_year
+      libdir = 'lib-vc{}'.format(options.msvcVersion)
+    elif cxx.compiler.id == 'mingw':
+      libdir = 'lib-mingw' if cxx.compiler.is32bit else 'lib-mingw-w64'
+    else:
+      error('unsupported compiler for Windows prebuilt GLFW: {!r}'.format(cxx.compiler.id))
+
+    target.set_props(True, {
+      '+cxx.includes': [path.join(options.binaryDir, 'include')],
+      '+cxx.libraryPaths': [path.join(options.binaryDir, libdir)],
+      '+cxx.systemLibraries': ['glfw3' if static else 'glfw3dll']
+    })
+
+  eval if mode == 'source':
+    sources = ['context.c', 'egl_context.c', 'init.c', 'input.c', 'monitor.c',
+               'vulkan.c', 'window.c']
+    syslibs = []
+
+    # CMake header configuration variables.
+    environ = {}
+    environ['_GLFW_VULKAN_STATIC'] = False
+    environ['_GLFW_USE_HYBRID_HPG'] = True
+    environ['_GLFW_USE_RETINA'] = True
+    if not options.static:
+      environ['_GLFW_BUILD_DLL'] = True
+    if OS.id == 'win32':
+      environ['_GLFW_WIN32'] = True
+      sources += ['win32_*.c', 'wgl_context.c']
+      syslibs += windows_syslibs()
+    elif OS.id == 'darwin':
+      environ['_GLFW_COCOA'] = True
+    elif OS.id == 'linux':
+      syslibs += ['dl', 'm']
+      sources += ['glx_context.c', 'posix_*.c', 'linux_joystick.c']
+      if options.x11 or not options.wayland:
+        sources += ['x11_*.c', 'xkb_unicode.c']
+        environ['_GLFW_X11'] = True
+        pkg_config(target, ['x11', 'xcursor', 'xrandr', 'xinerama'])
+      elif wayland:
+        environ['_GLFW_WAYLAND'] = True
+        sources += ['wl_*.c']
+        # TODO: Wayland pkg-config name?
+    else:
+      error('unsupported os: {!r}'.format(OS.id))
+    # TODO: _GLFW_MIR ?
+    # TODO: _GLFW_HAS_XF86VM ?
+
+    sources = glob(sources, parent=path.join(options.sourceDir, 'src'))
+
+    import {configure_file} from 'craftr/tools/cmake'
+    filename = path.join(options.sourceDir, 'src/glfw_config.h.in')
+    config_dir = path.abs(configure_file(filename, environ=environ).directory)
+
+    target.set_props(False, {
+      'cxx.type': 'library',
+      '+cxx.srcs': sources,
+      '+cxx.includes': [config_dir],
+      '+cxx.defines': ['_GLFW_USE_CONFIG_H'],
+      '+cxx.preferredLinkage': 'static' if options.static else 'shared',
+    })
+    target.set_props(True, {
+      '+cxx.includes': [path.join(options.sourceDir, 'include', 'GLFW')],
+      '+cxx.systemLibraries': syslibs,
+    })
+
+  eval if OS.id == 'win32':
+    target.set_props(True, {
+      '+cxx.systemLibraries': ['gdi32', 'shell32']
+    })

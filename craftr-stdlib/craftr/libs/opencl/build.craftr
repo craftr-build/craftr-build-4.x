@@ -1,0 +1,40 @@
+project "craftr/libs/opencl"
+
+options:
+  str vendor = '' if OS.id == 'win32' else 'pkg-config'
+  str intelSdk = 'C:\\Intel\\OpenCL\\sdk' if OS.id == 'win32' else ''
+  str cudaSdk = ''
+
+eval:
+  VALID_VENDORS = ('pkg-config', 'amd', 'intel', 'nvidia')
+  if options.vendor not in VALID_VENDORS:
+    error('invalid vendor: {!r}'.format(options.vendor))
+  if options.vendor == 'intel' and not path.isdir(options.intelSdk):
+    error('intelSdk: directory "{}" does not exist'.format(options.intelSdk))
+  if options.vendor == 'nvidia':
+    if not options.cudaSdk:
+      options.cudaSdk = require('craftr/lang/cuda').options.sdkDir
+    if not os.path.isdir(options.cudaSdk):
+      error('cudaSdk: directory "{}" does not exist'.format(options.cudaSdk))
+
+public target "opencl":
+  requires "craftr/lang/cxx" as cxx
+  eval if options.vendor == 'pkg-config':
+    import {pkg_config} from 'craftr/tools/pkg-config'
+    pkg_config(target, 'OpenCL')
+  eval if options.vendor == 'amd':
+    error('OpenCL vendor "amd" not implemented.')
+  eval if options.vendor == 'intel':
+    if OS.id != 'win32':
+      error('OpenCL vendor "intel" on "{}" not implemented.'.format(OS.id))
+    target.set_props(True, {
+      'cxx.includes': [path.join(options.intelSdk, 'include')],
+      'cxx.libraryPaths': [path.join(options.intelSdk, 'lib', cxx.compiler.arch)],
+      'cxx.systemLibraries': ['OpenCL']
+    })
+  eval if options.vendor == 'nvidia':
+    target.set_props(True, {
+      'cxx.includes': [path.join(options.cudaSdk, 'include')],
+      'cxx.libraryPaths': [path.join(options.cudaSdk, 'lib', 'Win32' if cxx.compiler.is32bit else 'x64')],
+      'cxx.systemLibraries': ['OpenCL']
+    })
