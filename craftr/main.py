@@ -175,7 +175,7 @@ def main(argv=None):
       module = context.load_module(args.tool[0])
     except require.ResolveError as exc:
       try:
-        module = context.load_module('tools/' + args.tool[0])
+        module = context.load_module('craftr/tools/' + args.tool[0])
       except dsl.ModuleNotFoundError:
         raise exc
     module.scope['main'](args.tool[1:])
