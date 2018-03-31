@@ -40,5 +40,5 @@ public target "glew" if OS.id == 'win32':
 
 public target "glew" if OS.id != 'win32':
   eval:
-    import {pkg_config} from '@craftr/pkg-config'
+    import {pkg_config} from 'craftr/tools/pkg-config'
     pkg_config(target, 'glew', static=options.static)
