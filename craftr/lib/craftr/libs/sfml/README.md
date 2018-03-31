@@ -7,6 +7,7 @@
 __Tested on__
 
 * Windows 10
+* Ubuntu 17
 
 __Example build script__
 
