@@ -164,6 +164,11 @@ class CxxTargetHandler(craftr.TargetHandler):
     # Whether to enable runtime type information
     props.add('cxx.enableRtti', craftr.Bool, True)
 
+    # A dictionary that maps symbol names to filenames. The files listed in
+    # the dictionary will be packged into object files and then be available
+    # for use in the C application by externing them.
+    props.add('cxx.embedFiles', craftr.Dict[craftr.String, craftr.Path])
+
     # Apple Settings
     # =======================
 
@@ -271,6 +276,8 @@ class CxxTargetHandler(craftr.TargetHandler):
     data.productFilename = path.join(craftr.get_output_directory(target), data.productName)
 
     self.compiler.translate_target(target, data)
+
+    # TODO: Handle cxx.embedFiles
 
     c_srcs = []
     cpp_srcs = []
