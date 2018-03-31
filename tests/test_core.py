@@ -49,16 +49,16 @@ def test_transitive_exported_properties():
     dep_targets += dep.sources
   assert_equals(dep_targets, [t2])
 
-  assert_equals(t3.get_prop_join('cxx.files'), ['c', 'b'])
+  assert_equals(t3.get_prop('cxx.files', True), ['c', 'b'])
 
   # Exporting t1 will cause t3 inherit the target's exported properties
   # through its depdency on mod1. Note the order of the output.
   t1.public = True
-  assert_equals(t3.get_prop_join('cxx.files'), ['c', 'b'])
+  assert_equals(t3.get_prop('cxx.files', True), ['c', 'b'])
   t1.exported_props['cxx.files'] = t1.get_prop('cxx.files')
-  assert_equals(t3.get_prop_join('cxx.files'), ['c', 'b'])
+  assert_equals(t3.get_prop('cxx.files', True), ['c', 'b'])
   t2.dependencies[0].public = True
-  assert_equals(t3.get_prop_join('cxx.files'), ['c', 'b', 'a'])
+  assert_equals(t3.get_prop('cxx.files', True), ['c', 'b', 'a'])
 
   t1.public = False
   t2.dependencies[0].public = False

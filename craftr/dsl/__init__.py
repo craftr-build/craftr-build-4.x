@@ -23,4 +23,5 @@ This module implements parsing and interpreting the Craftr DSL.
 
 import {Parser} from './parser'
 import {Context} from './context'
+import {CraftrModule} from './nodepy_glue'
 import * from './interpreter'
