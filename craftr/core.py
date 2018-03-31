@@ -304,11 +304,14 @@ class Target:
     action.is_output = output
     return action
 
-  def actions_and_files_tagged(self, tags):
+  def actions_and_files_tagged(self, tags, transitive=False):
     """
     Returns a tuple of (actions, files) where *actions* is a list of actions
     in the target that have at least one buildset where the specified *tags*
     match, and *files* is a list of the files that match these tags.
+
+    If *transitive* is #True, the actions and files of the transitive
+    dependencies are returned instead.
     """
 
     if isinstance(tags, str):
@@ -316,20 +319,26 @@ class Target:
 
     actions = []
     files = []
-    for action in self.actions.values():
-      matched_files = action.all_files_tagged(tags)
-      if matched_files:
-        actions.append(action)
-        files += matched_files
+    if transitive:
+      for target in self.transitive_dependencies().attr('sources').concat():
+        res = target.actions_and_files_tagged(tags)
+        actions += res[0]
+        files += res[1]
+    else:
+      for action in self.actions.values():
+        matched_files = action.all_files_tagged(tags)
+        if matched_files:
+          actions.append(action)
+          files += matched_files
 
     return actions, files
 
-  def files_tagged(self, tags):
+  def files_tagged(self, tags, transitive=False):
     """
     Returns only files with the specified tags.
     """
 
-    return self.actions_and_files_tagged(tags)[1]
+    return self.actions_and_files_tagged(tags, transitive)[1]
 
 
 class Dependency:

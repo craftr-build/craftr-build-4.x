@@ -294,12 +294,7 @@ class Compiler(nr.named.named):
     command = self.get_link_command(target, data, lang)
 
     compile_actions, obj_files = target.actions_and_files_tagged(['out', 'obj'])
-    library_actions, library_files = [], []
-
-    for dep_target in target.transitive_dependencies().attr('sources').concat():
-      a, b = dep_target.actions_and_files_tagged(['out', 'lib'])
-      library_actions += a
-      library_files += b
+    library_actions, library_files = target.actions_and_files_tagged(['out', 'lib'], transitive=True)
 
     link_action = target.add_action(
       action_name,
