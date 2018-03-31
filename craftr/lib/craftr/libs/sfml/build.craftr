@@ -6,10 +6,9 @@ options:
   bool static = True
   bool debug = BUILD.debug
 
-import cxx from 'craftr/lang/cxx'
-
 public target "sfml" if OS.id == 'win32':
   eval:
+    import cxx from 'craftr/lang/cxx'
     import {get_source_archive} from 'craftr/tools/download'
     if cxx.compiler.id in ('msvc', 'mingw'):
       if not options.binaryDir:
