@@ -281,7 +281,7 @@ class Parser:
     strex.Keyword(':', ':'),
     strex.Keyword('>>', '>>'),
     strex.Keyword('.', '.'),
-    strex.Charset('nl', '\n'),
+    strex.Keyword('nl', '\n'),
     strex.Charset('ws', '\t ', skip=True),
   ]
 
@@ -445,7 +445,7 @@ class Parser:
   def _parse_eval(self, lexer, parent_indent, export=False):
     assert not export
     loc = lexer.token.cursor
-    if_expr = self._parse_block_if_expr(lexer)
+    if_expr = self._parse_block_if_expr(lexer, allow_non_block=True)
     is_remainder = False
 
     if not if_expr:
@@ -543,6 +543,9 @@ class Parser:
       elif not allow_non_block:
         raise ParseError(loc, 'missing : at the end of conditional block')
       return result
+    elif allow_non_block:
+      lexer.scanner.restore(token.cursor)  # TODO: Restore previous token?
+      return None
     else:
       raise ParseError(loc, 'expected "if" or ":", got {!r}'.format(token.value))
 
