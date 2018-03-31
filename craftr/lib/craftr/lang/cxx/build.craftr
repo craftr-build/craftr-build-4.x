@@ -20,6 +20,7 @@ options:
 
 eval:>>
 
+import nodepy
 import craftr from 'craftr'
 import base from './impl/base'
 
@@ -249,6 +250,7 @@ class CxxTargetHandler(craftr.TargetHandler):
 
   def translate_target(self, target):
     data = target.get_props('cxx.', as_object=True)
+    build_dir = craftr.get_output_directory(target)
 
     if not data.preferredLinkage:
       data.preferredLinkage = 'static'
@@ -273,11 +275,25 @@ class CxxTargetHandler(craftr.TargetHandler):
       data.productName = data.productName.replace(a, b)
 
     data.productTags = tags
-    data.productFilename = path.join(craftr.get_output_directory(target), data.productName)
+    data.productFilename = path.join(build_dir, data.productName)
 
     self.compiler.translate_target(target, data)
 
-    # TODO: Handle cxx.embedFiles
+    # Handle cxx.embedFiles -- turning data files into C files and add
+    # them to the sources list.
+    embed_files_action = None
+    if data.embedFiles:
+      outfile = path.join(build_dir, 'embed.c')
+      data.srcs.append(outfile)
+
+      bin2c = str(require.resolve('./tools/bin2c').filename)
+      command = nodepy.runtime.exec_args + [bin2c, '-o', outfile]
+      command += ['{}:{}'.format(f, sym) for sym, f in data.embedFiles.items()]
+
+      embed_files_action = target.add_action('cxx.bin2c', commands=[command])
+      buildset = embed_files_action.add_buildset()
+      buildset.files.add(data.embedFiles.values(), ['in'])
+      buildset.files.add(outfile, ['out'])
 
     c_srcs = []
     cpp_srcs = []
@@ -292,6 +308,8 @@ class CxxTargetHandler(craftr.TargetHandler):
       if not srcs: continue
       name = 'cxx.compile' + lang.capitalize()
       action = self.compiler.create_compile_action(target, data, name, lang, srcs)
+      if lang == 'c' and embed_files_action:
+        action.deps.append(embed_files_action)
       compile_actions.append(action)
 
     if compile_actions:
