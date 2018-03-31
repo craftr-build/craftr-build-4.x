@@ -22,7 +22,7 @@ import zipfile
 
 import {quote} from '@craftr/craftr-build/utils/sh'
 import craftr from 'craftr'
-import {ActionServer} from './ActionServer'
+import {ActionServer} from './actionserver'
 import ninja_syntax from './ninja_syntax'
 import {options} from './build.craftr'
 
