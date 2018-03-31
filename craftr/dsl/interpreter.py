@@ -195,6 +195,7 @@ class Interpreter:
       return
     if node.name.startswith('@'):
       sources = [parent_target.module.targets[node.name[1:]]]
+      module = parent_target.module
     else:
       module = self.context.load_module(node.name)
       sources = [x for x in module.targets.values() if x.public]
@@ -203,6 +204,8 @@ class Interpreter:
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
+    if node.assign_to:
+      parent_target.scope[node.assign_to] = module.nodepy_module.namespace
 
   def _export_block(self, node, obj):
     assert isinstance(obj, core.Target)

@@ -111,7 +111,10 @@ public target "lib":
 # `requires "myproject@main"`.
 target "main":
   requires "@lib"
-  cxx.srcs = ['./src/main.cpp']
+  # Assign the module of the dependency to a variable, saves you a separate
+  # import ... from ... statement of the same module.
+  requires "SomeCompany/somelibrary" as somelib
+  cxx.srcs = ['./src/main.cpp'] + somelib.inline_srcs
 ```
 
 ## Conditional Blocks

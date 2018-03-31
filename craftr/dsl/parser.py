@@ -264,10 +264,11 @@ class Export(Node):
 
 class Dependency(Node):
 
-  def __init__(self, loc, name, export, if_expr=None):
+  def __init__(self, loc, name, export, assign_to=None, if_expr=None):
     super().__init__(loc)
     self.name = name
     self.export = export
+    self.assign_to = assign_to
     self.if_expr = if_expr
     self.assignments = []
 
@@ -276,6 +277,8 @@ class Dependency(Node):
     if self.export:
       fp.write('export ')
     fp.write('requires "{}"'.format(self.name))
+    if self.assign_to:
+      fp.write(' as {}'.format(self.assign_to))
     if self.if_expr:
       fp.write(' if ')
       fp.write(self.if_expr)
@@ -519,8 +522,19 @@ class Parser:
   def _parse_requires(self, lexer, parent_indent, export=False):
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
+
+    # Check if there's an "as <name>" portion that will assign the
+    # modules' namespace to that variable in the target block.
+    checkpoint = lexer.scanner.cursor
+    token = lexer.accept('name')
+    if token and token.value == 'as':
+      assign_to = lexer.next('name').value
+    else:
+      lexer.scanner.restore(checkpoint)
+      assign_to = None
+
     if_expr = self._parse_block_if_expr(lexer, allow_non_block=True)
-    dep = Dependency(loc, name, export, if_expr)
+    dep = Dependency(loc, name, export, assign_to, if_expr)
     if if_expr or lexer.accept(':'):
       lexer.next('nl')
       while True:
