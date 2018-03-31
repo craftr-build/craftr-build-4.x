@@ -35,10 +35,10 @@ public target "sfml" if OS.id == 'win32':
     else:
       error('unsupported compiler on Windows: {!r}'.format(cxx.compiler.id))
 
-  cxx.includes = [path.join(options.binaryDir, 'include')]
-  cxx.defines = ['SFML_STATIC'] if options.static else []
-  cxx.libraryPaths = [path.join(options.binaryDir, 'lib')]
-  cxx.systemLibraries = [fmt(x) for x in [
+  export cxx.includes = [path.join(options.binaryDir, 'include')]
+  export cxx.defines = ['SFML_STATIC'] if options.static else []
+  export cxx.libraryPaths = [path.join(options.binaryDir, 'lib')]
+  export cxx.systemLibraries = [fmt(x) for x in [
       'sfml-main{dsfx}',
       'sfml-audio{ssfx}{dsfx}',
       'sfml-graphics{ssfx}{dsfx}',
