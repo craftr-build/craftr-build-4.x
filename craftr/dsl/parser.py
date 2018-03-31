@@ -236,12 +236,17 @@ class Assignment(Node):
 
 class Export(Node):
 
-  def __init__(self, loc):
+  def __init__(self, loc, if_expr=None):
     super().__init__(loc)
     self.assignments = []
+    self.if_expr = if_expr
 
   def render(self, fp, depth):
-    fp.write('  ' * depth + 'export:\n')
+    fp.write('  ' * depth + 'export')
+    if self.if_expr:
+      fp.write(' if ')
+      fp.write(self.if_expr)
+    fp.write(':\n')
     for assign in self.assignments:
       assign.render(fp, depth+1)
 
@@ -518,10 +523,10 @@ class Parser:
 
   def _parse_export(self, lexer, parent_indent, export=False):
     assert not export
-    export = Export(lexer.token.cursor)
     if_expr = self._parse_block_if_expr(lexer)
     if not if_expr:
       lexer.next(':')
+    export = Export(lexer.token.cursor, if_expr)
     while True:
       self._skip(lexer)
       child = self._parse_stmt_or_block(lexer, ['requires'], parent_indent)
