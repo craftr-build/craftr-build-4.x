@@ -1,7 +1,6 @@
 project "exmaples.c-win32"
 
-import "craftr/lang/cxx"
-
 target "main":
+  requires "craftr/lang/cxx"
   cxx.srcs = ['main.c']
   cxx.msvcResourceFiles = ['test.rc']

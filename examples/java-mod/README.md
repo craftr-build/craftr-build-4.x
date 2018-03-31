@@ -1,31 +1,35 @@
 ## examples/java-mod
 
-### Demonstrates
+This example demonstrates how to produce a Java 9 module (`.jmod`) and
+creating a standalone Java runtime with the `jlink` tool.
 
-* Building a Java 9 module (`.jmod`)
-* Creating a Java 9 standalone runtime with `jlink` from the previously
-  generated Java module
+### Build & Run
 
-### Build
+**TODO**: Java does not seem to recognize `.jmod` files built by Craftr...
 
-    # Build the JMOD:
-    $ craftr -cb main:java.jmod
+```
+$ craftr -cf examples/java-mod/ -b main:java.run
+note: writing "build\debug\build.ninja"
+note: Ninja v1.8.2 (build\debug\ninja.exe)
+[0/1] "C:\program files\python36\python.exe" c:\users\niklas\repo...inja\buildslave.py examples.java-mod@main:java.run^11342586680e 0 Error occurred during initialization of boot layer
+java.lang.module.FindException: Module com.greetings not found
 
-    # Run the JMOD (only available when a single JMOD is created by the target)
-    $ craftr -cb main:java.run
-    Hello, World!
+------------------------------------------------------------
+fatal: "examples.java-mod@main:java.run" exited with code 1.
+Command list:
+> $ java -p build\debug\examples.java-mod\main\jmods -m com.greetings/com.greetings.Main
+------------------------------------------------------------
 
-    # Or run the JMOD manually:
-    $ java --module-path build/debug/examples.java-mod/main/jmods -m com.greetings/com.greetings.Main
-    Hello, World!
+FAILED: examples.java_mod_main_java.run
+"C:\program files\python36\python.exe" c:\users\niklas\repositories\nodepy\nodepy\nodepy\main.py C:\Users\niklas\Repositories\craftr-build\craftr\craftr\lib\craftr\backends\ninja\buildslave.py examples.java-mod@main:java.run^11342586680e 0
+ninja: build stopped: subcommand failed.
+```
 
-    # Run jlink to produce a runtime with all your JMODs:
-    $ craftr -cb main:java.jlink
+### Build Standalone Runtime
 
-    # Run the launcher created by jlink:
-    $ build/debug/examples.java-mod/main-1.0.0-runtime/bin/greetings
-    Hello, World!
-
-### To do
-
-* [ ] A way to include resource files in the generated JMOD
+```
+$ craftr -cf examples/java-mod/ -b main:java.jlink
+[...]
+$ build/debug/examples.java-mod/main-1.0.0-runtime/bin/greetings
+Hello, World!
+```

@@ -1,10 +1,8 @@
 project "examples.java-mod"
 
-import "craftr/lang/java"
-
 target "main":
+  requires "craftr/lang/java"
   java.srcs = glob('src/**/*.java')
-  java.artifacts = ['commons-cli:commons-cli:1.4']
   java.mainClass = 'com.greetings.Main'
   java.jmod = {'com.greetings': 'src'}
   java.jlinkModules = ['com.greetings']
