@@ -11,8 +11,14 @@
     "toml": ">=0.9.4",
     "typing": ">=3.6.4"
   },
+  "cfg(dev).dependencies": {
+    "nodepy-nosetests": "git+https://github.com/nodepy/nosetests.git@v0.0.6"
+  },
   "resolve_root": "./craftr",
   "bin": {
     "craftr": "./craftr/main.py"
-  }
+  },
+  "include": [
+    "craftr/**"
+  ]
 }

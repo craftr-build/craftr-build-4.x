@@ -1,5 +1,8 @@
 
-import craftr, craftr.dsl as dsl, craftr.core as core
+import core from '@craftr/craftr-build/core'
+import dsl from '@craftr/craftr-build/dsl'
+import {Bool, String, StringList} from '@craftr/craftr-build/proplib'
+
 import io
 import re
 import textwrap
@@ -181,7 +184,7 @@ def test_module_global_assignment():
     assert False, 'AssignedPropertyDoesNoteExist not raised'
 
   module = ip.create_module(project)
-  context.module_properties.add('foo.exists', craftr.String())
+  context.module_properties.add('foo.exists', String())
   try:
     ip.eval_module(project, module)
   except AssignedPropertyDoesNoteExist as exc:
@@ -192,13 +195,13 @@ def test_module_global_assignment():
     assert False, 'AssignedPropertyDoesNoteExist not raised'
 
   module = ip.create_module(project)
-  context.module_properties.add('foo.bar', craftr.Integer())
+  context.module_properties.add('foo.bar', Integer())
   with assert_raises(dsl.InvalidAssignmentError):
     ip.eval_module(project, module)
 
   module = ip.create_module(project)
   del context.module_properties['foo.bar']
-  context.module_properties.add('foo.bar', craftr.String())
+  context.module_properties.add('foo.bar', String())
   ip.eval_module(project, module)
   assert_equals(module.props['foo.bar'], 'bazinga')
 
@@ -229,10 +232,10 @@ def test_target():
   class CxxHandler(core.TargetHandler):
     def init(self, context):
       props = context.target_properties
-      props.add('cxx.srcs', craftr.StringList)
-      props.add('cxx.includes', craftr.StringList)
+      props.add('cxx.srcs', StringList)
+      props.add('cxx.includes', StringList)
       props = context.dependency_properties
-      props.add('cxx.link', craftr.Bool, True)
+      props.add('cxx.link', Bool, True)
 
   cxx_handler = CxxHandler()
   cxx = core.Module(context, 'cxx', '1.0.0', '.')

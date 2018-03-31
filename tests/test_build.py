@@ -1,7 +1,7 @@
 
 from nose.tools import *
 from nr import path
-from craftr.build import BuildSet
+import {BuildSet} from '@craftr/craftr-build/build'
 
 
 def test_buildset_subst():

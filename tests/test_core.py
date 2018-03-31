@@ -1,7 +1,7 @@
 
 from nose.tools import *
-from craftr.proplib import Bool, StringList
-from craftr.core import Context, Module, TargetHandler
+import {Context, Module, TargetHandler} from '@craftr/craftr-build/core'
+import {Bool, StringList} from '@craftr/craftr-build/proplib'
 
 
 class CxxHandler(TargetHandler):

@@ -5,7 +5,8 @@ python:
 - 3.5
 - 3.6
 install:
-- pip install .
-- pip install nose
+- pip install nodepy-runtime
+- nodepy https://nodepy.org/install-pm.py
+- nodepy-pm install
 script:
 - nosetests
