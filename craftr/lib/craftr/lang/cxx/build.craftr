@@ -91,6 +91,9 @@ class CxxTargetHandler(craftr.TargetHandler):
     # the product of a build target via Craftr.
     props.add('cxx.runPaths', craftr.PathList, options={'inherit': True})
 
+    # Working directory for the cxx.run target.
+    props.add('cxx.runCwd', craftr.Path, optional=True)
+
     # Dynamic libraries to link. You should use target dependencies
     # wherever possible rather than using this property.
     props.add('cxx.dynamicLibraries', craftr.PathList, options={'inherit': True})
@@ -291,9 +294,9 @@ class CxxTargetHandler(craftr.TargetHandler):
       link_action = None
 
     if link_action and data.type == 'executable':
-      command = [data.productFilename]
+      command = [path.abs(data.productFilename)]
       action = target.add_action('cxx.run', commands=[command],
-        explicit=True, syncio=True, output=False)
+        explicit=True, syncio=True, output=False, cwd=data.runCwd)
       action.add_buildset()
 
 

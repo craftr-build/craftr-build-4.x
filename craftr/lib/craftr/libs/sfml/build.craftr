@@ -8,7 +8,7 @@ options:
 
 import cxx from 'craftr/lang/cxx'
 
-target "sfml" if OS.id == 'win32':
+public target "sfml" if OS.id == 'win32':
   eval:
     import {get_source_archive} from 'craftr/tools/download'
     if cxx.compiler.id in ('msvc', 'mingw'):
@@ -62,7 +62,9 @@ target "sfml" if OS.id == 'win32':
       'advapi32'
     ]]
 
-target "sfml" if OS.id != 'win32':
+public target "sfml" if OS.id != 'win32':
   eval:
     import {pkg_config} from 'craftr/tools/pkg-config'
-    pkg_config(target, 'SFML-all', static=options.static)
+    pkg_config(target, 'sfml-all', static=options.static)
+  eval if OS.id == 'linux':
+    target.exported_props['cxx.systemLibraries'] += ['GL']

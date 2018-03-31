@@ -1,0 +1,6 @@
+project "examples.c-sfml"
+
+target "main":
+  requires "craftr/libs/sfml"
+  cxx.srcs = ['main.cpp']
+  cxx.runCwd = '.'
