@@ -89,6 +89,15 @@ class DslTarget(core.Target):
   def scope(self):
     return ChainDict(self._scope, self.module.scope)
 
+  def set_props(self, export, props):
+    container = self.exported_props if export else self.props
+    for key, value in props.items():
+      if key.startswith('+'):
+        key = key[1:]
+        container[key] += value
+      else:
+        container[key] = value
+
 
 class DslDependency(core.Dependency):
 
