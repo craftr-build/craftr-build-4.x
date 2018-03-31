@@ -45,6 +45,11 @@ own inner grammar. Not all blocks can be nested inside each other.
 ```python
 project "myproject" v1.6.4
 
+# Make another directory that contains a Craftr build module available to this
+# and all other modules that depends on this module. This is similar to using
+# the `craftr --link` option.
+link_module "./vendor/mycompany/subproject"
+
 # A block of TOML formatted configuration values. These are applied only
 # when your build script is the builds' entry point.
 configure:
