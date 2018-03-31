@@ -1,0 +1,44 @@
+project "craftr/libs/glew"
+
+options:
+  str version = '2.1.0'
+  str binaryDir = ''
+  bool static = (OS.id == 'win32')
+
+public target "glew" if OS.id == 'win32':
+  eval:
+    import cxx from 'craftr/lang/cxx'
+    import {get_source_archive} from 'craftr/tools/download'
+
+    if cxx.compiler.id in ('msvc', 'mingw', 'gcc'):
+      if not options.binaryDir:
+        url = fmt('https://github.com/nigels-com/glew/releases/download/glew-{options.version}/glew-{options.version}-win32.zip')
+        options.binaryDir = get_source_archive(url)
+        options.binaryDir = path.join(path.abs(options.binaryDir), 'glew-{}'.format(options.version))
+    else:
+      error('unsupported compiler on Windows: {!r}'.format(cxx.compiler.id))
+
+    includes = [path.join(options.binaryDir, 'include')]
+    libpath = [path.join(options.binaryDir, 'lib', 'Release', 'Win32' if cxx.compiler.is32bit else 'x64')]
+    defines = ['GLEW_STATIC'] if options.static else []
+    syslibs = [
+      'glew32s' if options.static else 'glew32',
+      'user32',
+      'opengl32',
+      'Ws2_32',
+      'ole32',
+      'comctl32',
+      'gdi32',
+      'comdlg32',
+      'uuid'
+    ]
+
+  export cxx.includes = includes
+  export cxx.libraryPaths = libpath
+  export cxx.defines = defines
+  export cxx.systemLibraries = syslibs
+
+public target "glew" if OS.id != 'win32':
+  eval:
+    import {pkg_config} from '@craftr/pkg-config'
+    pkg_config(target, 'glew', static=options.static)
