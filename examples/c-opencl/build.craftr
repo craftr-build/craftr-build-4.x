@@ -1,0 +1,14 @@
+project "examples.c-opencl"
+
+target "main":
+  requires "craftr/libs/glew"
+  requires "craftr/libs/glfw"
+  requires "craftr/libs/opencl"
+
+  cxx.embedFiles = {
+    'ClKernel': 'src/kernel.cl',
+    'ScreenVert': 'src/screen.vert',
+    'ScreenFrag': 'src/screen.frag'}
+
+  cxx.srcs = ['src/main.c']
+  cxx.includes = ['src/common']
