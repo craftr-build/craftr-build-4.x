@@ -83,9 +83,9 @@ def set_options(context, options):
       value = 'true'
     if assign and not value:
       # TODO: Unset the option.
-      context.options.pop('{}.{}'.format(scope, name))
+      context.options.pop('{}:{}'.format(scope, name))
     else:
-      context.options['{}.{}'.format(scope, name)] = value
+      context.options['{}:{}'.format(scope, name)] = value
     prev_scope = scope
 
 

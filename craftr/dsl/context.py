@@ -58,7 +58,7 @@ class ModuleOptions:
       super().__setattr__(key, value)
 
   def setdefault(self, key, value):
-    return self._context.options.setdefault(self._name + '.' + key, value)
+    return self._context.options.setdefault(self._name + ':' + key, value)
 
 
 class DslModule(core.Module):

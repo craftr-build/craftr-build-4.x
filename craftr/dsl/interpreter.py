@@ -127,7 +127,7 @@ class Interpreter:
     assert module is self.nodepy_module.craftr_module, (module, self.nodepy_module.craftr_module)
     options = module.options
     for key, (type, value, loc) in node.options.items():
-      option_name = module.name + '.' + key
+      option_name = module.name + ':' + key
       try:
         has_value = self.context.options[option_name]
       except KeyError:
