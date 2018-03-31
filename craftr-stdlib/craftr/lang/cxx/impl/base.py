@@ -1,11 +1,8 @@
 
 from typing import List, Dict, Union, Callable
+from nr.stream import stream
 import nr.named
-import nr.stream
 import craftr, {BUILD} from 'craftr'
-
-concat = nr.stream.stream.concat
-unique = nr.stream.stream.unique
 
 
 def is_sharedlib(data):
@@ -188,7 +185,7 @@ class Compiler(nr.named.named):
     if not BUILD.debug and data.optimization:
       command += self.expand(getattr(self, 'optimize_' + data.optimization + '_flag'))
     if forced_includes:
-      command += concat(self.expand(self.force_include, x) for x in forced_includes)
+      command += stream.concat(self.expand(self.force_include, x) for x in forced_includes)
 
     if self.depfile_args:
       command += self.expand(self.depfile_args)
@@ -287,22 +284,31 @@ class Compiler(nr.named.named):
       else:
         flags += self.expand(runtime.get('dynamic', []))
 
-    flags += concat([self.expand(self.linker_libpath, x) for x in unique(data.libraryPaths)])
+    flags += stream.concat([self.expand(self.linker_libpath, x) for x in stream.unique(data.libraryPaths)])
     if not is_staticlib(data):
-      flags += concat([self.expand(self.linker_lib, x) for x in unique(libs)])
+      flags += stream.concat([self.expand(self.linker_lib, x) for x in stream.unique(libs)])
 
-    return command + ['$in'] + flags #+ additional_input_files
+    return command + ['$in'] + flags
 
   def create_link_action(self, target, data, action_name, lang, compile_actions):
     command = self.get_link_command(target, data, lang)
+
     compile_actions, obj_files = target.actions_and_files_tagged(['out', 'obj'])
+    library_actions, library_files = [], []
+
+    for dep_target in target.transitive_dependencies().attr('sources').concat():
+      a, b = dep_target.actions_and_files_tagged(['out', 'lib'])
+      library_actions += a
+      library_files += b
+
     link_action = target.add_action(
       action_name,
       commands=[command],
       environ=self.linker_env,
-      deps=compile_actions)
+      deps=compile_actions + library_actions)
     buildset = link_action.add_buildset()
     buildset.files.add(obj_files, ['in', 'obj'])
+    buildset.files.add(library_files, ['in', 'lib'])
     buildset.files.add(data.productFilename, ['out', 'product'] + data.productTags)
     self.add_link_outputs(target, data, lang, buildset)
     return link_action
