@@ -45,7 +45,7 @@ class Context:
     self.dependency_properties = proplib.PropertySet()
     Dependency.setup_standard_properties(self.dependency_properties)
     self.handlers = []
-    self.modules = {}
+    self.modules = []
     self.graph = BuildGraph()
 
   def register_handler(self, handler):
@@ -62,25 +62,41 @@ class Context:
       handler.translate_begin()
 
     seen = set()
+    def handle_target(target):
+      if target in seen:
+        return False
+      seen.add(target)
+      for handler in self.handlers:
+        handler.translate_target(target)
+      # Check the layers of the target -- handling them may create new layers.
+      nextround = True
+      while nextround:
+        nextround = False
+        for layer in target.iter_layers():
+          if handle_target(layer):
+            nextround = True
+      return True
     def translate(target):
       for dep in target.dependencies:
         for other_target in dep.sources:
           translate(other_target)
-      if target not in seen:
-        seen.add(target)
-        for handler in self.handlers:
-          handler.translate_target(target)
+      handle_target(target)
 
-    for module in self.modules.values():
+    for module in self.modules:
       for target in module.targets.values():
         translate(target)
 
     for handler in self.handlers:
       handler.translate_end()
 
-    for module in self.modules.values():
+    def add_target_actions(target):
+      self.graph.add_actions(target.actions.values())
+      for layer in target.iter_layers():
+        add_target_actions(layer)
+
+    for module in self.modules:
       for target in module.targets.values():
-        self.graph.add_actions(target.actions.values())
+        add_target_actions(target)
 
 
 class Module:
@@ -141,11 +157,18 @@ class Target:
   @staticmethod
   def setup_standard_properties(propset):
     propset.add('this.directory', proplib.String)
+    propset.add('this.outputDirectory', proplib.String)
     propset.add('this.pool', proplib.String)
     propset.add('this.explicit', proplib.Bool, default=False)
     propset.add('this.syncio', proplib.Bool, default=False)
 
-  def __init__(self, module, name, public):
+  def __init__(self, module, name, public, parent=None, redirect_actions=False):
+    if parent:
+      assert module == parent.module, "differing modules"
+    if redirect_actions and not parent:
+      raise ValueError('"redirect_actions" can not be True without "parent"')
+    self.parent = parent
+    self.redirect_actions = redirect_actions
     self.module = module
     self.name = name
     self.public = public
@@ -153,6 +176,8 @@ class Target:
     self.exported_props = proplib.Properties(module.context.target_properties, self)
     self.dependencies = []
     self.actions = collections.OrderedDict()
+    self.layers = {}
+    self._layers_list = []  # Can be appended to during iteration.
 
   def __repr__(self):
     return 'Target(id={!r}, public={!r})'.format(self.id, self.public)
@@ -163,11 +188,23 @@ class Target:
 
   @property
   def id(self):
-    return '{}@{}'.format(self.module.name, self.name)
+    return '{}@{}'.format(self.module.name, self.full_name)
+
+  @property
+  def full_name(self):
+    if self.parent:
+      return self.parent.full_name + '/' + self.name
+    return self.name
 
   @property
   def directory(self):
-    return self.exported_props['this.directory'] or self.props['this.directory'] or self.module.directory
+    result = self.get_prop('this.directory', default=None)
+    if result is None:
+      if self.parent:
+        result = self.parent.directory
+      else:
+        result = self.module.directory
+    return result
 
   @property
   def output_actions(self):
@@ -189,7 +226,7 @@ class Target:
       result.append(last_default_output)
     return result
 
-  def get_prop(self, prop_name, inherit=False):
+  def get_prop(self, prop_name, inherit=False, default=NotImplemented):
     """
     Returns a property value, preferring the value in the #exported_props.
 
@@ -209,8 +246,12 @@ class Target:
     else:
       if self.exported_props.is_set(prop_name):
         return self.exported_props[prop_name]
-      else:
+      elif self.props.is_set(prop_name):
         return self.props[prop_name]
+      elif default is NotImplemented:
+        return self.context.target_properties[prop_name].get_default()
+      else:
+        return default
 
   def get_props(self, prefix='', as_object=False):
     """
@@ -269,6 +310,9 @@ class Target:
     All other arguments are forwarded to the #Action constructor.
     """
 
+    if self.redirect_actions:
+      return self.parent(name, input=input, output=output, deps=deps, **kwargs)
+
     if name is None:
       # TODO: Automatically add the name of the program in the first command.
       name = str(len(self.actions))
@@ -314,6 +358,9 @@ class Target:
     dependencies are returned instead.
     """
 
+    if self.redirect_actions:
+      return self.parent.actions_and_files_tagged(tags, transitive)
+
     if isinstance(tags, str):
       tags = [x.strip() for x in tags.split(',')]
 
@@ -338,7 +385,24 @@ class Target:
     Returns only files with the specified tags.
     """
 
+    if self.redirect_actions:
+      return self.parent.files_tagged(tags, transitive)
     return self.actions_and_files_tagged(tags, transitive)[1]
+
+  def iter_layers(self):
+    return iter(self._layers_list)
+
+  def add_layer_with_class(self, target_cls, name, public=False, redirect_actions=False):
+    if name in self.layers:
+      raise ValueError('Target layer {!r} already exists'.format(name))
+    target = target_cls(self.module, name, public, parent=self,
+      redirect_actions=redirect_actions)
+    self.layers[name] = target
+    self._layers_list.append(target)
+    return target
+
+  def add_layer(self, *args, **kwargs):
+    return self.add_layer_with_class(type(self), *args, **kwargs)
 
 
 class Dependency:

@@ -111,7 +111,15 @@ def glob(patterns, parent=None, excludes=None):
 
 
 def get_output_directory(target, *subdir):
-  return path.join(context.build_directory, target.module.name, target.name, *subdir)
+  outdir = target.get_prop('this.outputDirectory')
+  if not outdir:
+    outdir = path.join(context.build_directory, target.module.name, target.name, *subdir)
+  return outdir
+
+
+def load_target(name):
+  module, target_name = name.partition('@')[::2]
+  return context.load_module(module).targets[target_name]
 
 
 def relocate_files(parent, files, outdir, suffix, replace_suffix=True):

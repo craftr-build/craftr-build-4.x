@@ -73,7 +73,7 @@ class CraftrModule(nodepy.loader.PythonModule):
     self.craftr_module.init_namespace(self.namespace)
     interpreter.eval_module(project, self.craftr_module)
     assert self.loaded
-    self.dsl_context.modules[self.craftr_module.name] = self.craftr_module
+    self.dsl_context.modules.append(self.craftr_module)
 
   def preprocess_eval_block(self, code):
     return super()._preprocess_code(code)
