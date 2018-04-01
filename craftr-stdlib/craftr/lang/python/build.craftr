@@ -24,6 +24,10 @@ eval:
     config = json.loads(output)
     config['_PYTHON_BIN'] = python_bin
 
+    # TODO: Determine if the Python version is a debug or release version.
+    config['_ISDEBUG'] = False
+    config['_ISRELEASE'] = True
+
     # LIBDIR seems to be absent from Windows installations, so we
     # figure it from the prefix.
     if OS.type == 'nt' and 'LIBDIR' not in config:
@@ -51,6 +55,9 @@ eval:
     python = [options.bin]
 
   cfg = get_python_config(python)
+  if (cfg['_ISDEBUG'] and BUILD.release) or (cfg['_ISRELEASE'] and BUILD.debug):
+    print('warning: Python {} from {} mismatches build variant "{}"'.format(
+      cfg["VERSION"], sh.join(python), BUILD.variant))
 
   files_dir = path.canonical(__file__ + '/../../../tools/python.freeze/Files')
   frozen_main_srcs = [

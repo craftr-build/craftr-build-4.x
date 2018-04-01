@@ -10,7 +10,7 @@ eval:>>
 
 import sys
 import "craftr/lang/cxx"
-import "craftr/lang/python"
+import python from "craftr/lang/python"
 import craftr, {sh} from 'craftr'
 
 if options.binArgs:
@@ -72,7 +72,8 @@ class CythonTargetHandler(craftr.TargetHandler):
         'cxx.srcs': [c],  # TODO: Somehow make the action a dependency of the Cxx target being created.
         'cxx.type': 'library',
         'cxx.preferredLinkage': 'shared',
-        'cxx.productName': base + '$(ext)'
+        'cxx.productName': base + python.cfg['SO'],
+        'cxx.runtimeLibrary': 'dynamic',
       })
 
     for pyx, c in zip(data.main, c_main):
@@ -87,7 +88,8 @@ class CythonTargetHandler(craftr.TargetHandler):
         'this.outputDirectory': build_dir,
         'cxx.srcs': [c],  # TODO: Somehow make the action a dependency of the Cxx target being created.
         'cxx.type': 'executable',
-        'cxx.productName': base + '$(ext)'
+        'cxx.productName': base + '$(ext)',
+        'cxx.runtimeLibrary': 'dynamic',
       })
       # TODO: Add as dependencies to the current buildset the files generated
       #       by the previous buildsets from c_srcs.
