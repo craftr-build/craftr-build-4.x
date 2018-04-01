@@ -1,0 +1,96 @@
+project "craftr/lang/cython"
+
+options:
+  str bin = 'cython'
+  str binArgs = ''
+
+target "foo":
+
+eval:>>
+
+import sys
+import "craftr/lang/cxx"
+import "craftr/lang/python"
+import craftr, {sh} from 'craftr'
+
+if options.binArgs:
+  cython = sh.split(options.binArgs)
+else:
+  cython = [options.bin]
+
+
+class CythonTargetHandler(craftr.TargetHandler):
+
+  def init(self, context):
+    props = context.target_properties
+    props.add('cython.srcs', craftr.PathList)
+    props.add('cython.main', craftr.PathList)
+    props.add('cython.includes', craftr.PathList)
+    props.add('cython.additionalFlags', craftr.Bool)
+    props.add('cython.fastFail', craftr.Bool)
+    props.add('cython.pythonVersion', craftr.String)
+    props.add('cython.cpp', craftr.Bool)
+    props.add('cython.inWorkingTree', craftr.Bool)
+
+  def translate_target(self, target):
+    data = target.get_props('cython.', as_object=True)
+    if not data.srcs and not data.main:
+      return
+
+    if not data.pythonVersion:
+      data.pythonVersion = sys.version[0]
+    if data.pythonVersion not in ('2', '3'):
+      error('invalid cython.pythonVersion: {!r}'.format(data.pythonVersion))
+
+    build_dir = craftr.get_output_directory(target)
+    srcs_dir = path.join(build_dir, "cython-srcs")
+    c_srcs = craftr.relocate_files(target.directory, data.srcs,
+      srcs_dir, '.cpp' if data.cpp else '.c')
+    c_main = craftr.relocate_files(target.directory, data.main,
+      srcs_dir, '.cpp' if data.cpp else '.c')
+
+    data.includes += target.get_prop('cxx.includes', True)
+
+    command = cython + ['$in', '-o', '$out', '-{}'.format(data.pythonVersion)]
+    command += ['-I' + x for x in data.includes]
+    command += ['--fast-fail'] if data.fastFail else []
+    command += ['--cplus'] if data.cpp else []
+    command += ['$embedflag']
+
+    python_target = craftr.load_target('craftr/lang/python@python')
+    action = target.add_action('cython.compile', commands=[command])
+
+    for pyx, c in zip(data.srcs, c_srcs):
+      bset = action.add_buildset()
+      bset.files.add(pyx, ['in'])
+      bset.files.add(c, ['out'])
+      base = path.rmvsuffix(path.base(pyx))
+      layer = target.add_layer(name=base)
+      layer.add_dependency([python_target, target])
+      layer.set_props(False, {
+        'this.outputDirectory': build_dir,
+        'cxx.srcs': [c],  # TODO: Somehow make the action a dependency of the Cxx target being created.
+        'cxx.type': 'library',
+        'cxx.preferredLinkage': 'shared',
+        'cxx.productName': base + '$(ext)'
+      })
+
+    for pyx, c in zip(data.main, c_main):
+      bset = action.add_buildset()
+      bset.files.add(pyx, ['in'])
+      bset.files.add(c, ['out'])
+      bset.vars['embedflag'] = '--embed'
+      base = path.rmvsuffix(path.base(pyx))
+      layer = target.add_layer(name=base)
+      layer.add_dependency([python_target, target])
+      layer.set_props(False, {
+        'this.outputDirectory': build_dir,
+        'cxx.srcs': [c],  # TODO: Somehow make the action a dependency of the Cxx target being created.
+        'cxx.type': 'executable',
+        'cxx.productName': base + '$(ext)'
+      })
+      # TODO: Add as dependencies to the current buildset the files generated
+      #       by the previous buildsets from c_srcs.
+
+
+context.register_handler(CythonTargetHandler())

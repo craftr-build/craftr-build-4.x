@@ -1,0 +1,6 @@
+project "examples.cython"
+
+target "main":
+  requires "craftr/lang/cython"
+  cython.srcs = ['Primes.pyx']
+  cython.main = ['Main.pyx']

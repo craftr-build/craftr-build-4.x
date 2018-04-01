@@ -5,10 +5,12 @@ import "craftr/lang/cxx"
 import sys
 
 options:
-  str pythonBin = sh.quote(sys.executable.replace('\\', '/'))  # for shlex
+  str bin = sys.executable
+  str binArgs = ''
 
 eval:
   import json
+  import re
   import shlex
   import subprocess
   from nr import path
@@ -17,8 +19,8 @@ eval:
     # TODO: Cache result
     pyline = 'import json, distutils.sysconfig; '\
       'print(json.dumps(distutils.sysconfig.get_config_vars()))'
-    command = shlex.split(python_bin) + ['-c', pyline]
-    output = subprocess.check_output(command, shell=True).decode()
+    command = python_bin + ['-c', pyline]
+    output = subprocess.check_output(command, shell=False).decode()
     config = json.loads(output)
     config['_PYTHON_BIN'] = python_bin
 
@@ -28,6 +30,7 @@ eval:
       config['LIBDIR'] = path.join(config['prefix'], 'libs')
 
     config.setdefault('DEFINES', [])
+    config.setdefault('_SYSLIBS', [])
 
     # The name of the Python library is something like "libpython2.7.a",
     # but we only want the "python2.7" part. Also take the library flags
@@ -35,14 +38,19 @@ eval:
     if 'LIBRARY' in config:
       lib = re.search('python\d\.\d(?:d|m|u){0,3}', config['LIBRARY'])
       if lib:
-        target.impl.syslibs.append(lib.group(0))
+        config['_SYSLIBS'].append(lib.group(0))
     elif OS.type == 'nt':
       # This will make pyconfig.h nominate the correct .lib file.
       config['DEFINES'] += ['MS_COREDLL']
 
     return config
 
-  cfg = get_python_config(options.pythonBin)
+  if options.binArgs:
+    python = sh.split(options.binArgs)
+  else:
+    python = [options.bin]
+
+  cfg = get_python_config(python)
 
   files_dir = path.canonical(__file__ + '/../../../tools/python.freeze/Files')
   frozen_main_srcs = [
@@ -54,5 +62,5 @@ public target "python":
   export:
     cxx.includes = [cfg['INCLUDEPY']]
     cxx.defines = cfg['DEFINES']
-    cxx.staticLibraries = [cfg['LIBRARY']] if 'LIBRARY' in cfg else []
     cxx.libraryPaths = [cfg['LIBDIR']]
+    cxx.systemLibraries = cfg['_SYSLIBS']
