@@ -8,11 +8,13 @@
 #elif defined(cl_amd_fp64)  // AMD extension available?
     #pragma OPENCL EXTENSION cl_amd_fp64 : enable
     #define DOUBLE_SUPPORT_AVAILABLE
-#else
-    #error "Double not supported"
 #endif
 
-typedef double2 Complex;
+#ifdef DOUBLE_SUPPORT_AVAILABLE
+    typedef double2 Complex;
+#else
+    typedef float2 Complex;
+#endif
 
 Complex multiply(Complex a, Complex b) {
     return (Complex)(a.s0*b.s0-a.s1*b.s1, a.s1*b.s0+a.s0*b.s1);

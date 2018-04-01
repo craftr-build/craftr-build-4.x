@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
 
   /* Create an OpenCL image from the OpenGL texture. */
   printf("Creating OpenCL image from OpenGL texture ...\n");
-  cl_mem cltex = clCreateFromGLTexture(g_clContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texture, &error);
+  cl_mem cltex = clCreateFromGLTexture2D(g_clContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texture, &error);
   if (error != CL_SUCCESS) {
     fprintf(stderr, "error: OpenGL=>OpenCL image could not be created: %s\n", getErrorString(error));
     return 1;
