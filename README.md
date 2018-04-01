@@ -22,7 +22,6 @@ interfaces for build scripts can change any time. The main goal at the moment
 is to implement/improve support for the following languages:
 
 * C/C++ (GCC, Clang, MSVC)
-* Cython (requires C/C++ support)
 * Java (better Java 9 module support)
 
 Some reference implementations are available in previous Craftr versions and
@@ -54,8 +53,8 @@ manager `nodepy-pm`.
 
 ```python
 project "examples.c"
-import "craftr/lang/cxx"
 target "main":
+  requires "craftr/lang/cxx"
   cxx.srcs = ['main.c']
 ```
 
@@ -65,8 +64,8 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.cpp"
-import "craftr/lang/cxx"
 target "main":
+  requires "craftr/lang/cxx"
   cxx.srcs = ['main.cpp']
 ```
 
@@ -79,8 +78,8 @@ Run as `craftr -cb main:cxx.run`
 
 ```python
 project "examples.csharp"
-import "craftr/lang/csharp"
 target "main":
+  requires "craftr/lang/csharp"
   csharp.srcs = glob('src/*.cs')
   csharp.packages = ['Newtonsoft.JSON:10.0.3']
   csharp.bundle = True
@@ -92,8 +91,8 @@ Run as `craftr -cb main:csharp.runBundle`
 
 ```python
 project "examples.java"
-import "craftr/lang/java"
 target "main":
+  requires "craftr/lang/java"
   java.srcs = glob('src/**/*.java')
   java.artifacts = [
       'org.tensorflow:tensorflow:1.4.0'
@@ -111,8 +110,8 @@ Run as `craftr -cb main:java.runBundle`
 
 ```python
 project "examples.haskell"
-import "craftr/lang/haskell"
 target "main":
+  requires "craftr/lang/haskell"
   haskell.srcs = ['src/Main.hs']
 ```
 
@@ -122,8 +121,8 @@ Run as `craftr -cb main:haskell.run`
 
 ```python
 project "examples.ocaml"
-import "craftr/lang/ocaml"
 target "main":
+  requires "craftr/lang/ocaml"
   ocaml.srcs = ['src/Main.ml']
   # False to produce an OCaml bytecode file
   ocaml.standalone = True
@@ -138,8 +137,8 @@ Run as `craftr -cb main:ocaml.run`
 
 ```python
 project "examples.vala"
-import "craftr/lang/vala"
 target "main":
+  requires "craftr/lang/vala"
   vala.srcs = ['src/Main.vala']
 ```
 
@@ -149,13 +148,13 @@ Run as `craftr -cb main:vala.run`
 
 ```python
 project "example.cython"
-import "craftr/lang/cython"
 target "main":
-  cython.srcs = glob('src/*.pyx')
-  cython.main = 'src/Main.pyx'
+  requires "craftr/lang/cython"
+  cython.srcs = ['src/Primes.pyx']
+  cython.main = ['src/Main.pyx']
 ```
 
-Run as `craftr -cb main:cython.run`
+Run as `craftr -cb main/Main:cxx.run`
 </td>
   </tr>
 </table>
