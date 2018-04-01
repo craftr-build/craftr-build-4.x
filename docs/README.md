@@ -1,6 +1,6 @@
 # Documentation of The Craftr build system
 
-<img align="right" src="../logo.png"/>
+<img align="right" src="logo.png"/>
 
 ## Table of Contents
 

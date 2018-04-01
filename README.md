@@ -1,4 +1,4 @@
-<img align="right" src="logo.png">
+<img align="right" src="docs/logo.png">
 
 ## The Craftr build system
 
