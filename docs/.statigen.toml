@@ -5,3 +5,9 @@ contentDirectory = "content"
 [site]
 title = "The Craftr build system"
 logo = "/static/logo.png"
+github = "craftr-build/craftr"
+
+[author]
+name = "Niklas Rosenstein"
+email = "rosensteinniklas@gmail.com"
+github = "NiklasRosenstein"
