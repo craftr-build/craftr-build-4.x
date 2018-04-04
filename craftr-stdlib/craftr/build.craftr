@@ -59,6 +59,9 @@ def error(*message):
   raise ExplicitRunError(' '.join(map(str, message)))
 
 
+error.Type = ExplicitRunError
+
+
 def fmt(s, frame=None):
   """
   Formats the string *s* with the variables from the parent frame or the

@@ -24,13 +24,16 @@ creates a child Node.py context with the ability to load Craftr modules.
 """
 
 from nr import path
+from nr.strex import Cursor
 from nr.datastructures.mappings import ChainDict, MappingFromObject
 from nodepy.utils import pathlib
 
 import nodepy
 import shutil
+import sys
 import {CraftrModuleLoader, do_link} from './nodepy_glue'
 import core from '../core'
+import proplib from '../proplib'
 
 STDLIB_DIR = module.package.directory.joinpath('craftr-stdlib')
 
@@ -89,14 +92,49 @@ class DslTarget(core.Target):
   def scope(self):
     return ChainDict(self._scope, self.module.scope)
 
-  def set_props(self, export, props):
+  def set_props(self, export_or_props, props=None, on_unknown_property='report'):
+    """
+    set_props(props)
+    set_props(export, props)
+
+    Sets properties on the the target. A property may have several prefixes
+    to determine the write behaviour.
+
+    * `+`: Append to the existing value.
+    * `!`: Write to the exported properties (only really useful with the
+      first method signature)
+    """
+
+    assert on_unknown_property in ('report', 'raise')
+
+    if props is None:
+      export, props = False, export_or_props
+    else:
+      export = export_or_props
+
     container = self.exported_props if export else self.props
     for key, value in props.items():
-      if key.startswith('+'):
+      append = False
+      write_to_exported = False
+      while key.startswith('+') or key.startswith('!'):
+        if key[0] == '+': append = True
+        elif key[0] == '!': write_to_exported = True
         key = key[1:]
-        container[key] += value
-      else:
-        container[key] = value
+
+      write_target = self.exported_props if write_to_exported else container
+      try:
+        if append:
+          write_target[key] += value
+        else:
+          write_target[key] = value
+      except proplib.NoSuchProperty as exc:
+        if on_unknown_property == 'report':
+          filename = sys._getframe(1).f_code.co_filename
+          lineno = sys._getframe(1).f_lineno
+          loc = Cursor(-1, lineno, 0)
+          self.context.report_property_does_not_exist(filename, loc, key, write_target.propset)
+        else:
+          raise
 
 
 class DslDependency(core.Dependency):
