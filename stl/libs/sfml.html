@@ -24,12 +24,14 @@
       
       <li><a class="" href="../../index.html">Home</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../../getting-started.html">Getting Started</a></li>
+      
       
     <ul>
       
@@ -38,12 +40,14 @@
       
       <li><a class="" href="../../tips.html">Tips & Tricks</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../../dsl.html">The Craftr DSL</a></li>
+      
       
     <ul>
       
@@ -52,13 +56,16 @@
       
       <li><a class="" href="../../stl.html">Standard Library</a></li>
       
+      
     <ul>
       
       <li><a class="" >Language Support</a></li>
       
+      
     <ul>
       
       <li><a class="" href="../lang/csharp.html">C#</a></li>
+      
       
     <ul>
       
@@ -67,12 +74,14 @@
       
       <li><a class="" href="../lang/cxx.html">C/C++</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/cython.html">Cython</a></li>
+      
       
     <ul>
       
@@ -81,12 +90,14 @@
       
       <li><a class="" href="../lang/haskell.html">Haskell</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/java.html">Java</a></li>
+      
       
     <ul>
       
@@ -95,12 +106,14 @@
       
       <li><a class="" href="../lang/ocaml.html">Ocaml</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/vala.html">Vala</a></li>
+      
       
     <ul>
       
@@ -112,9 +125,11 @@
       
       <li><a class="" >Libraries</a></li>
       
+      
     <ul>
       
       <li><a class="" href="glew.html">GLEW</a></li>
+      
       
     <ul>
       
@@ -123,6 +138,7 @@
       
       <li><a class="" href="glfw.html">GLFW</a></li>
       
+      
     <ul>
       
     </ul>
@@ -130,12 +146,16 @@
       
       <li><a class="" href="opencl.html">OpenCL</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="active" href="sfml.html">SFML</a></li>
+      
+        <div class="toc"><ul></ul></div>
+      
       
     <ul>
       
@@ -147,9 +167,11 @@
       
       <li><a class="" >Tools</a></li>
       
+      
     <ul>
       
       <li><a class="" href="../tools/cache.html">Build Cache</a></li>
+      
       
     <ul>
       
@@ -158,12 +180,14 @@
       
       <li><a class="" href="../tools/cmake.html">CMake</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../tools/download.html">Download</a></li>
+      
       
     <ul>
       
@@ -172,12 +196,14 @@
       
       <li><a class="" href="../tools/msvc.html">MSVC</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../tools/pkg-config.html">pkg-config</a></li>
+      
       
     <ul>
       
@@ -186,12 +212,14 @@
       
       <li><a class="" href="../tools/platform-commands.html">Platform Commands</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../tools/batchvars.html">Windows Batch Files</a></li>
+      
       
     <ul>
       
@@ -205,6 +233,7 @@
     
       
       <li><a class="" href="../../extending-craftr.html">Extending Craftr</a></li>
+      
       
     <ul>
       
@@ -234,23 +263,25 @@
         
           <h1>SFML</h1>
         
-        <p><code>craftr/libs/sfml</code></p>
+        
+<p><code class="codespan">craftr/libs/sfml</code></p>
 <ul>
 <li>Windows: Downloads the appropriate windows SFML binaries, unless the
-<code>craftr/libs/sfml:binaryDir</code> option is set.</li>
-<li>Linux/macOS:  Uses <code>pkg-config SFML-all</code>.</li>
-</ul>
-<p><strong>Tested on</strong></p>
+<code class="codespan">craftr/libs/sfml:binaryDir</code> option is set.
+</li>
+<li>Linux/macOS:  Uses <code class="codespan">pkg-config SFML-all</code>.
+</li></ul>
+<p><strong><em>Tested on</em></strong></p>
 <ul>
-<li>Windows 10</li>
-<li>Ubuntu 17</li>
-</ul>
-<p><strong>Example build script</strong></p>
-<div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"sfml-example"</span>
+<li>Windows 10
+</li>
+<li>Ubuntu 17
+</li></ul>
+<p><strong><em>Example build script</em></strong></p><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">&quot;sfml-example&quot;</span>
 
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/libs/sfml"</span>
-  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'main.cpp'</span><span class="p">]</span>
+<span class="n">target</span> <span class="s2">&quot;main&quot;</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">&quot;craftr/libs/sfml&quot;</span>
+  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;main.cpp&#39;</span><span class="p">]</span>
 </pre></div>
 
       </div>

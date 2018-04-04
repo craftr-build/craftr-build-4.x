@@ -24,12 +24,14 @@
       
       <li><a class="" href="index.html">Home</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="getting-started.html">Getting Started</a></li>
+      
       
     <ul>
       
@@ -38,12 +40,14 @@
       
       <li><a class="" href="tips.html">Tips & Tricks</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="dsl.html">The Craftr DSL</a></li>
+      
       
     <ul>
       
@@ -52,13 +56,16 @@
       
       <li><a class="" href="stl.html">Standard Library</a></li>
       
+      
     <ul>
       
       <li><a class="" >Language Support</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/lang/csharp.html">C#</a></li>
+      
       
     <ul>
       
@@ -67,12 +74,14 @@
       
       <li><a class="" href="stl/lang/cxx.html">C/C++</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/cython.html">Cython</a></li>
+      
       
     <ul>
       
@@ -81,12 +90,14 @@
       
       <li><a class="" href="stl/lang/haskell.html">Haskell</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/java.html">Java</a></li>
+      
       
     <ul>
       
@@ -95,12 +106,14 @@
       
       <li><a class="" href="stl/lang/ocaml.html">Ocaml</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/vala.html">Vala</a></li>
+      
       
     <ul>
       
@@ -112,9 +125,11 @@
       
       <li><a class="" >Libraries</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/libs/glew.html">GLEW</a></li>
+      
       
     <ul>
       
@@ -123,6 +138,7 @@
       
       <li><a class="" href="stl/libs/glfw.html">GLFW</a></li>
       
+      
     <ul>
       
     </ul>
@@ -130,12 +146,14 @@
       
       <li><a class="" href="stl/libs/opencl.html">OpenCL</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/libs/sfml.html">SFML</a></li>
+      
       
     <ul>
       
@@ -147,9 +165,11 @@
       
       <li><a class="" >Tools</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/tools/cache.html">Build Cache</a></li>
+      
       
     <ul>
       
@@ -158,12 +178,14 @@
       
       <li><a class="" href="stl/tools/cmake.html">CMake</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/download.html">Download</a></li>
+      
       
     <ul>
       
@@ -172,12 +194,14 @@
       
       <li><a class="" href="stl/tools/msvc.html">MSVC</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/pkg-config.html">pkg-config</a></li>
+      
       
     <ul>
       
@@ -186,12 +210,14 @@
       
       <li><a class="" href="stl/tools/platform-commands.html">Platform Commands</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/batchvars.html">Windows Batch Files</a></li>
+      
       
     <ul>
       
@@ -205,6 +231,9 @@
     
       
       <li><a class="active" href="extending-craftr.html">Extending Craftr</a></li>
+      
+        <div class="toc"><ul></ul></div>
+      
       
     <ul>
       
@@ -234,20 +263,20 @@
         
           <h1>Extending Craftr</h1>
         
-        <p>A module that is imported can register a <code>TargetHandler</code> to the Craftr build
+        
+<p>A module that is imported can register a <code class="codespan">TargetHandler</code> to the Craftr build
 context. This TargetHandler can then register properties to the module, target
 and dependency blocks and gets a chance to read the property values to turn
 them into build actions.</p>
 <p>The TargetHandler can be implemented in the build script itself or in another
-Python script that you can <code>import</code>. Note that you will need to import that
-Craftr build context from the build script.</p>
-<table>
-<tr><th>Inline
-</th><th>Separate
-</th></tr>
+Python script that you can <code class="codespan">import</code>. Note that you will need to import that
+Craftr build context from the build script.</p><table>
+<tr><th>
+Inline</th><th>
+Separate</th></tr>
 <tr><td><div class="highlight"><pre><span></span><span class="c1"># java/build.craftr</span>
 <span class="n">project</span> <span class="s2">"java"</span> <span class="n">v1</span><span class="o">.</span><span class="mf">0.0</span>
-<span class="nb">eval</span><span class="p">:</span><span class="o">&gt;&gt;</span>
+<span class="nb">eval</span><span class="p">:</span><span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span><span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span>
 
 <span class="kn">import</span> <span class="nn">craftr</span> <span class="nn">from</span> <span class="s1">'craftr.craftr'</span>
 
@@ -265,34 +294,35 @@ Craftr build context from the build script.</p>
   <span class="c1"># ...</span>
 </pre></div>
 </td></tr>
-</table><p>A target handler must be registered with <code>context.register_handler()</code>.</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">craftr</span><span class="o">,</span> <span class="p">{</span><span class="n">context</span><span class="p">,</span> <span class="n">path</span><span class="p">}</span> <span class="kn">from</span> <span class="s1">'craftr.craftr'</span>
+</table>
+
+<p>A target handler must be registered with <code class="codespan">context.register_handler()</code>.</p><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">craftr</span><span class="o">,</span> <span class="p">{</span><span class="n">context</span><span class="p">,</span> <span class="n">path</span><span class="p">}</span> <span class="kn">from</span> <span class="s1">&#39;craftr.craftr&#39;</span>
 
 <span class="k">class</span> <span class="nc">JavaTargetHandler</span><span class="p">(</span><span class="n">craftr</span><span class="o">.</span><span class="n">TargetHandler</span><span class="p">):</span>
 
   <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="n">props</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">target_properties</span>
-    <span class="n">props</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">'java.srcs'</span><span class="p">,</span> <span class="n">craftr</span><span class="o">.</span><span class="n">StringList</span><span class="p">)</span>
+    <span class="n">props</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;java.srcs&#39;</span><span class="p">,</span> <span class="n">craftr</span><span class="o">.</span><span class="n">StringList</span><span class="p">)</span>
     <span class="c1"># ...</span>
   
   <span class="k">def</span> <span class="nf">translate_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">get_props</span><span class="p">(</span><span class="s1">'java.'</span><span class="p">,</span> <span class="n">as_object</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">get_props</span><span class="p">(</span><span class="s1">&#39;java.&#39;</span><span class="p">,</span> <span class="n">as_object</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">srcs</span><span class="p">:</span>
       <span class="c1"># Generate a build action to compile the Java source files.</span>
       <span class="n">data</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="o">.</span><span class="n">canonical</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">srcs</span><span class="p">]</span>
-      <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="o">.</span><span class="n">setsuffix</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s1">'.class'</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">srcs</span><span class="p">]</span>
-      <span class="n">command</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'javac'</span><span class="p">,</span> <span class="s1">'${in}'</span><span class="p">]</span>
-      <span class="n">action</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">add_action</span><span class="p">(</span><span class="s1">'java.javac'</span><span class="p">,</span> <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="n">command</span><span class="p">])</span>
+      <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="o">.</span><span class="n">setsuffix</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s1">&#39;.class&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">srcs</span><span class="p">]</span>
+      <span class="n">command</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;javac&#39;</span><span class="p">,</span> <span class="s1">&#39;${in}&#39;</span><span class="p">]</span>
+      <span class="n">action</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">add_action</span><span class="p">(</span><span class="s1">&#39;java.javac&#39;</span><span class="p">,</span> <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="n">command</span><span class="p">])</span>
       <span class="n">buildset</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">add_buildset</span><span class="p">()</span>
-      <span class="n">buildset</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">srcs</span><span class="p">,</span> <span class="p">[</span><span class="s1">'in'</span><span class="p">])</span>
-      <span class="n">buildset</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="p">[</span><span class="s1">'out'</span><span class="p">,</span> <span class="s1">'java.class'</span><span class="p">])</span>
+      <span class="n">buildset</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">srcs</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;in&#39;</span><span class="p">])</span>
+      <span class="n">buildset</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">,</span> <span class="s1">&#39;java.class&#39;</span><span class="p">])</span>
 
 <span class="n">context</span><span class="o">.</span><span class="n">register_handler</span><span class="p">(</span><span class="n">JavaTargetHandler</span><span class="p">())</span>
 </pre></div>
+
 <p>Make sure you tag the output files of an action appropriately, as other
 targets can use it to access these files and create further build actions
 with them.</p>
-
       </div>
     </div>
   </body>

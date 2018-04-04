@@ -24,12 +24,14 @@
       
       <li><a class="" href="index.html">Home</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="getting-started.html">Getting Started</a></li>
+      
       
     <ul>
       
@@ -38,12 +40,16 @@
       
       <li><a class="" href="tips.html">Tips & Tricks</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="active" href="dsl.html">The Craftr DSL</a></li>
+      
+        <div class="toc"><ul><li><a href="#Introduction">Introduction</a></li><li><a href="#Syntax-Documentation">Syntax Documentation</a><ul><li><a href="#Example">Example</a></li></ul></li><li><a href="#Conditional-Blocks">Conditional Blocks</a></li><li><a href="#Target-Properties">Target Properties</a></li><li><a href="#Built-in-variables">Built-in variables</a></li></ul></div>
+      
       
     <ul>
       
@@ -52,13 +58,16 @@
       
       <li><a class="" href="stl.html">Standard Library</a></li>
       
+      
     <ul>
       
       <li><a class="" >Language Support</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/lang/csharp.html">C#</a></li>
+      
       
     <ul>
       
@@ -67,12 +76,14 @@
       
       <li><a class="" href="stl/lang/cxx.html">C/C++</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/cython.html">Cython</a></li>
+      
       
     <ul>
       
@@ -81,12 +92,14 @@
       
       <li><a class="" href="stl/lang/haskell.html">Haskell</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/java.html">Java</a></li>
+      
       
     <ul>
       
@@ -95,12 +108,14 @@
       
       <li><a class="" href="stl/lang/ocaml.html">Ocaml</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/vala.html">Vala</a></li>
+      
       
     <ul>
       
@@ -112,9 +127,11 @@
       
       <li><a class="" >Libraries</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/libs/glew.html">GLEW</a></li>
+      
       
     <ul>
       
@@ -123,6 +140,7 @@
       
       <li><a class="" href="stl/libs/glfw.html">GLFW</a></li>
       
+      
     <ul>
       
     </ul>
@@ -130,12 +148,14 @@
       
       <li><a class="" href="stl/libs/opencl.html">OpenCL</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/libs/sfml.html">SFML</a></li>
+      
       
     <ul>
       
@@ -147,9 +167,11 @@
       
       <li><a class="" >Tools</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/tools/cache.html">Build Cache</a></li>
+      
       
     <ul>
       
@@ -158,12 +180,14 @@
       
       <li><a class="" href="stl/tools/cmake.html">CMake</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/download.html">Download</a></li>
+      
       
     <ul>
       
@@ -172,12 +196,14 @@
       
       <li><a class="" href="stl/tools/msvc.html">MSVC</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/pkg-config.html">pkg-config</a></li>
+      
       
     <ul>
       
@@ -186,12 +212,14 @@
       
       <li><a class="" href="stl/tools/platform-commands.html">Platform Commands</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/batchvars.html">Windows Batch Files</a></li>
+      
       
     <ul>
       
@@ -205,6 +233,7 @@
     
       
       <li><a class="" href="extending-craftr.html">Extending Craftr</a></li>
+      
       
     <ul>
       
@@ -234,7 +263,7 @@
         
           <h1>The Craftr DSL</h1>
         
-        <h2>Introduction</h2>
+        <h2 id="Introduction">Introduction</h2>
 <p>Craftr uses its own language to allow you to define build targets. The goal
 of this language is to have a flexible and expressive and yet powerful syntax
 for describing build information.</p>
@@ -243,82 +272,79 @@ assign on the module, target or dependency level is evaluated as a full Python
 expression. The Python used by Craftr has some additional features regarding
 built-in variables and syntax.</p>
 <p>Importing other build scripts or Python scripts can be done using the [Node.py]
-module import syntax, for example:</p>
-<div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"myproject"</span>
-<span class="kn">import</span> <span class="s2">"craftr/lang/java"</span>
-<span class="kn">import</span> <span class="nn">utils</span> <span class="nn">from</span> <span class="s2">"./utils"</span>
+module import syntax, for example:</p><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">&quot;myproject&quot;</span>
+<span class="kn">import</span> <span class="s2">&quot;craftr/lang/java&quot;</span>
+<span class="kn">import</span> <span class="nn">utils</span> <span class="nn">from</span> <span class="s2">&quot;./utils&quot;</span>
 </pre></div>
-<p>Importing other Craftr build scripts always require the <code>.craftr</code> suffix. Once
+
+<p>Importing other Craftr build scripts always require the <code class="codespan">.craftr</code> suffix. Once
 another Craftr module is imported, it is part of the build process.</p>
 <p>The standard library provides a bunch of modules that implement build support
 for various programming languages. Once such a module is imported, properties
 that are supported by that module can be set on modules and dependencies, but
-most of the time on targets.</p>
-<div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"myproject"</span>
-<span class="kn">import</span> <span class="s2">"craftr/lang/java"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">java</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s1">'src/**/*.java'</span><span class="p">)</span>
+most of the time on targets.</p><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">&quot;myproject&quot;</span>
+<span class="kn">import</span> <span class="s2">&quot;craftr/lang/java&quot;</span>
+<span class="n">target</span> <span class="s2">&quot;main&quot;</span><span class="p">:</span>
+  <span class="n">java</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s1">&#39;src/**/*.java&#39;</span><span class="p">)</span>
 </pre></div>
-<h2>Syntax Documentation</h2>
+<h2 id="Syntax-Documentation">Syntax Documentation</h2>
 <p>A build script consists of statements and blocks, and most blocks have their
-own inner grammar. Not all blocks can be nested inside each other.</p>
-<h3>Example</h3>
-<div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"myproject"</span> <span class="n">v1</span><span class="o">.</span><span class="mf">6.4</span>
+own inner grammar. Not all blocks can be nested inside each other.</p><h3 id="Example">Example</h3><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">&quot;myproject&quot;</span> <span class="n">v1</span><span class="o">.</span><span class="mf">6.4</span>
 
 <span class="c1"># Make another directory that contains a Craftr build module available to this</span>
 <span class="c1"># and all other modules that depends on this module. This is similar to using</span>
 <span class="c1"># the `craftr --link` option.</span>
-<span class="n">link_module</span> <span class="s2">"./vendor/mycompany/subproject"</span>
+<span class="n">link_module</span> <span class="s2">&quot;./vendor/mycompany/subproject&quot;</span>
 
 <span class="c1"># A block of TOML formatted configuration values. These are applied only</span>
-<span class="c1"># when your build script is the builds' entry point.</span>
+<span class="c1"># when your build script is the builds&#39; entry point.</span>
 <span class="n">configure</span><span class="p">:</span>
   <span class="p">[</span><span class="n">myproject</span><span class="p">]</span>
   <span class="n">option1</span> <span class="o">=</span> <span class="mi">42</span>
 
 <span class="c1"># A block of options expected by the module. Options without default value</span>
 <span class="c1"># must be set, otherwise there will be an error. The options are made available</span>
-<span class="c1"># as an object called "objects" in the global namespace of the module.</span>
+<span class="c1"># as an object called &quot;objects&quot; in the global namespace of the module.</span>
 <span class="n">options</span><span class="p">:</span>
   <span class="nb">int</span> <span class="n">option1</span>
-  <span class="nb">str</span> <span class="n">option2</span> <span class="o">=</span> <span class="s2">"Hello, World"</span>
+  <span class="nb">str</span> <span class="n">option2</span> <span class="o">=</span> <span class="s2">&quot;Hello, World&quot;</span>
   <span class="nb">bool</span> <span class="n">option3</span> <span class="o">=</span> <span class="bp">False</span>
 
-<span class="nb">eval</span> <span class="k">print</span><span class="p">(</span><span class="s1">'This is a single line of Python code! option2:'</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option2</span><span class="p">)</span>
+<span class="nb">eval</span> <span class="k">print</span><span class="p">(</span><span class="s1">&#39;This is a single line of Python code! option2:&#39;</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option2</span><span class="p">)</span>
 
 <span class="c1"># A block of Node.py-processed Python code.</span>
 <span class="nb">eval</span><span class="p">:</span>
-  <span class="k">print</span><span class="p">(</span><span class="s1">'This is a block of Python code!'</span><span class="p">)</span>
-  <span class="k">print</span><span class="p">(</span><span class="s1">'The options you chose are:'</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option1</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option2</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option3</span><span class="p">)</span>
-  <span class="k">print</span><span class="p">(</span><span class="s1">'You are on'</span><span class="p">,</span> <span class="n">OSNAME</span><span class="p">)</span>
-  <span class="n">includes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'./include'</span><span class="p">]</span>
+  <span class="k">print</span><span class="p">(</span><span class="s1">&#39;This is a block of Python code!&#39;</span><span class="p">)</span>
+  <span class="k">print</span><span class="p">(</span><span class="s1">&#39;The options you chose are:&#39;</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option1</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option2</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">option3</span><span class="p">)</span>
+  <span class="k">print</span><span class="p">(</span><span class="s1">&#39;You are on&#39;</span><span class="p">,</span> <span class="n">OSNAME</span><span class="p">)</span>
+  <span class="n">includes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;./include&#39;</span><span class="p">]</span>
 
 <span class="c1"># An import-line, the same can be put inside an eval: block.</span>
 <span class="c1"># Allows you to import other Craftr build modules, Python or Node.py modules.</span>
-<span class="kn">import</span> <span class="s2">"craftr/lang/cxx"</span>
+<span class="kn">import</span> <span class="s2">&quot;craftr/lang/cxx&quot;</span>
 
 <span class="c1"># Declare a pool where targets can be assigned to.</span>
-<span class="n">pool</span> <span class="s2">"myPool"</span> <span class="mi">4</span>
+<span class="n">pool</span> <span class="s2">&quot;myPool&quot;</span> <span class="mi">4</span>
 
 <span class="c1"># Declare a public target. Exported targets are publicly visible and</span>
 <span class="c1"># automatically depended on when declaring a dependency to the module in</span>
 <span class="c1"># another target.</span>
-<span class="n">public</span> <span class="n">target</span> <span class="s2">"lib"</span><span class="p">:</span>
+<span class="n">public</span> <span class="n">target</span> <span class="s2">&quot;lib&quot;</span><span class="p">:</span>
 
-  <span class="c1"># Declare an exported dependency to the module "libcurl.craftr".</span>
+  <span class="c1"># Declare an exported dependency to the module &quot;libcurl.craftr&quot;.</span>
   <span class="c1"># Exported dependencies are inherited transitively by other targets.</span>
-  <span class="n">export</span> <span class="n">requires</span> <span class="s2">"libcurl"</span><span class="p">:</span>
-    <span class="n">cxx</span><span class="o">.</span><span class="n">link</span> <span class="o">=</span> <span class="bp">True</span>  <span class="c1"># That's the default</span>
+  <span class="n">export</span> <span class="n">requires</span> <span class="s2">&quot;libcurl&quot;</span><span class="p">:</span>
+    <span class="n">cxx</span><span class="o">.</span><span class="n">link</span> <span class="o">=</span> <span class="bp">True</span>  <span class="c1"># That&#39;s the default</span>
 
   <span class="c1"># Assign the target to a pool. Note that this may not always be respected</span>
   <span class="c1"># by the target build handler.</span>
-  <span class="n">this</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="s2">"myPool"</span>
+  <span class="n">this</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="s2">&quot;myPool&quot;</span>
 
   <span class="c1"># Set property values -- note that these properties can only be set because</span>
-  <span class="c1"># the "cxx.craftr" module was imported previously.</span>
-  <span class="n">cxx</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s1">'library'</span>
-  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">([</span><span class="s1">'./src/*.cpp'</span><span class="p">,</span> <span class="s1">'./src/'</span> <span class="o">+</span> <span class="n">OSNAME</span> <span class="o">+</span> <span class="s1">'/*.cpp'</span><span class="p">],</span>
-    <span class="n">excludes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'./src/main.cpp'</span><span class="p">])</span>
+  <span class="c1"># the &quot;cxx.craftr&quot; module was imported previously.</span>
+  <span class="n">cxx</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s1">&#39;library&#39;</span>
+  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">([</span><span class="s1">&#39;./src/*.cpp&#39;</span><span class="p">,</span> <span class="s1">&#39;./src/&#39;</span> <span class="o">+</span> <span class="n">OSNAME</span> <span class="o">+</span> <span class="s1">&#39;/*.cpp&#39;</span><span class="p">],</span>
+    <span class="n">excludes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;./src/main.cpp&#39;</span><span class="p">])</span>
 
   <span class="c1"># Exported properties CAN be inherited transitively by targets that</span>
   <span class="c1"># depend on this target. Whether the information is considered is up</span>
@@ -328,121 +354,61 @@ own inner grammar. Not all blocks can be nested inside each other.</p>
     <span class="n">cxx</span><span class="o">.</span><span class="n">includePaths</span> <span class="o">=</span> <span class="n">includes</span>
 
 <span class="c1"># Declare a non-public target. Can still be explicity depended on using</span>
-<span class="c1"># `requires "myproject@main"`.</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"@lib"</span>
+<span class="c1"># `requires &quot;myproject@main&quot;`.</span>
+<span class="n">target</span> <span class="s2">&quot;main&quot;</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">&quot;@lib&quot;</span>
   <span class="c1"># Assign the module of the dependency to a variable, saves you a separate</span>
   <span class="c1"># import ... from ... statement of the same module.</span>
-  <span class="n">requires</span> <span class="s2">"SomeCompany/somelibrary"</span> <span class="k">as</span> <span class="n">somelib</span>
-  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'./src/main.cpp'</span><span class="p">]</span> <span class="o">+</span> <span class="n">somelib</span><span class="o">.</span><span class="n">inline_srcs</span>
+  <span class="n">requires</span> <span class="s2">&quot;SomeCompany/somelibrary&quot;</span> <span class="k">as</span> <span class="n">somelib</span>
+  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;./src/main.cpp&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">somelib</span><span class="o">.</span><span class="n">inline_srcs</span>
 </pre></div>
-<h2>Conditional Blocks</h2>
-<p>The following blocks can be made condition by appending a Python <code>if ...</code>
+<h2 id="Conditional-Blocks">Conditional Blocks</h2>
+<p>The following blocks can be made condition by appending a Python <code class="codespan">if ...</code>
 statement</p>
 <ul>
-<li>export</li>
-<li>eval</li>
-<li>target</li>
-<li>requires</li>
-</ul>
-<p>Example:</p>
-<div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"sfml"</span>
-<span class="kn">import</span> <span class="s2">"craftr/lang/cxx"</span>
-<span class="kn">import</span> <span class="p">{</span><span class="n">pkg_config</span><span class="p">}</span> <span class="kn">from</span> <span class="s2">"craftr/tools/pkg-config"</span>
+<li>export
+</li>
+<li>eval
+</li>
+<li>target
+</li>
+<li>requires
+</li></ul>
+<p>Example:</p><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">&quot;sfml&quot;</span>
+<span class="kn">import</span> <span class="s2">&quot;craftr/lang/cxx&quot;</span>
+<span class="kn">import</span> <span class="p">{</span><span class="n">pkg_config</span><span class="p">}</span> <span class="kn">from</span> <span class="s2">&quot;craftr/tools/pkg-config&quot;</span>
 <span class="nb">eval</span> <span class="k">if</span> <span class="bp">False</span><span class="p">:</span>
-  <span class="k">print</span><span class="p">(</span><span class="s2">"This gets never executed"</span><span class="p">)</span>
-<span class="n">target</span> <span class="s2">"sfml"</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">!=</span> <span class="s1">'win32'</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"somelib"</span> <span class="k">if</span> <span class="n">some_condition</span><span class="p">:</span>
-    <span class="n">prop</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">"here"</span>
-  <span class="n">requires</span> <span class="s2">"anotherlib"</span> <span class="k">if</span> <span class="n">another_condition</span>
-  <span class="nb">eval</span> <span class="n">pkg_config</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s1">'SFML-all'</span><span class="p">)</span>
-<span class="n">target</span> <span class="s2">"sfml"</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">'win32'</span><span class="p">:</span>
+  <span class="k">print</span><span class="p">(</span><span class="s2">&quot;This gets never executed&quot;</span><span class="p">)</span>
+<span class="n">target</span> <span class="s2">&quot;sfml&quot;</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">!=</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">&quot;somelib&quot;</span> <span class="k">if</span> <span class="n">some_condition</span><span class="p">:</span>
+    <span class="n">prop</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;here&quot;</span>
+  <span class="n">requires</span> <span class="s2">&quot;anotherlib&quot;</span> <span class="k">if</span> <span class="n">another_condition</span>
+  <span class="nb">eval</span> <span class="n">pkg_config</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s1">&#39;SFML-all&#39;</span><span class="p">)</span>
+<span class="n">target</span> <span class="s2">&quot;sfml&quot;</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
   <span class="n">cxx</span><span class="o">.</span><span class="n">includes</span> <span class="o">=</span> <span class="o">...</span>
   <span class="c1"># etc etc</span>
 </pre></div>
-<h2>Target Properties</h2>
+<h2 id="Target-Properties">Target Properties</h2>
 <p>Target blocks have a set of default properties.</p>
-<table>
-<thead>
-<tr>
-<th>Property</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
+<table><thead>
+<tr><td>Property</td><td>Type</td><td>Description</td></tr></thead>
 <tbody>
-<tr>
-<td><code>this.pool</code></td>
-<td>str</td>
-<td>The name of a job pool to execute the target in. Note that some target handlers may provide their own properties to override the pool for certain parts of the build.</td>
-</tr>
-<tr>
-<td><code>this.syncio</code></td>
-<td>bool</td>
-<td>Synchronize the standard input/output of commands executed by the target with the console. This does not pair with the <code>pool</code> option.</td>
-</tr>
-<tr>
-<td><code>this.explicit</code></td>
-<td>bool</td>
-<td>Do not build this target unless it is required by another target or it is explicitly specified on the command-line.</td>
-</tr>
-<tr>
-<td><code>this.directory</code></td>
-<td>str</td>
-<td>The directory to consider relative paths relative to. A relative path will still be considered relative to the original path.</td>
-</tr>
-</tbody>
-</table>
-<h2>Built-in variables</h2>
-<p>These variables are available inside Craftr build scripts – not in normal
+<tr><td><code class="codespan">this.pool</code></td><td>str</td><td>The name of a job pool to execute the target in. Note that some target handlers may provide their own properties to override the pool for certain parts of the build.</td></tr>
+<tr><td><code class="codespan">this.syncio</code></td><td>bool</td><td>Synchronize the standard input/output of commands executed by the target with the console. This does not pair with the <code class="codespan">pool</code> option.</td></tr>
+<tr><td><code class="codespan">this.explicit</code></td><td>bool</td><td>Do not build this target unless it is required by another target or it is explicitly specified on the command-line.</td></tr>
+<tr><td><code class="codespan">this.directory</code></td><td>str</td><td>The directory to consider relative paths relative to. A relative path will still be considered relative to the original path.</td></tr></tbody></table><h2 id="Built-in-variables">Built-in variables</h2>
+<p>These variables are available inside Craftr build scripts &ndash; not in normal
 Node.py/Python scripts.</p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
+<table><thead>
+<tr><td>Name</td><td>Type</td><td>Description</td></tr></thead>
 <tbody>
-<tr>
-<td><code>path</code></td>
-<td>module</td>
-<td>The <code>nr.path</code> module – available for convenience.</td>
-</tr>
-<tr>
-<td><code>options</code></td>
-<td><code>ModuleOptions</code></td>
-<td>A <code>ModuleOptions</code> object. This will be filled with the actual option values after the first <code>options:</code> block. You can use this in an <code>eval:</code> block before the first <code>options:</code> block to initialize default values.</td>
-</tr>
-<tr>
-<td><code>OS</code></td>
-<td><code>OsInfo</code></td>
-<td>An <code>OsInfo</code> object that contains the name, id, type and arch of the current operating system. Possible names are <code>windows</code>, <code>macos</code> and <code>linux</code>. Possible IDs are <code>win32</code>, <code>darwin</code> and <code>linux</code>. Possible types are <code>nt</code> and <code>posix</code>. Note that on Windows Cygwin, the type will also be <code>posix</code>.  Possible architectures are <code>x86_64</code> and <code>x86</code>.</td>
-</tr>
-<tr>
-<td><code>BUILD</code></td>
-<td><code>BuildInfo</code></td>
-<td>A <code>BuildInfo</code> object that tells you whether this is a release or debug build. Members of this object are <code>mode</code>, <code>debug</code> and <code>release</code>.</td>
-</tr>
-<tr>
-<td><code>error(message)</code></td>
-<td>function</td>
-<td>Raise an error (<code>craftr.dsl.ExplicitRunError</code>) with the specified message.</td>
-</tr>
-<tr>
-<td><code>fmt(format)</code></td>
-<td>function</td>
-<td>Expects a Python <code>str.format()</code> string that will be substituted in the context of the current global and local variables.</td>
-</tr>
-<tr>
-<td><code>glob(patterns, excludes=[], parent=None)</code></td>
-<td>function</td>
-<td>Match glob patterns relative to <code>parent</code>. If <code>parent</code> is omitted, defaults to directory of the build script or the target if explicitly set with <code>this.directory</code>.</td>
-</tr>
-</tbody>
-</table>
-
+<tr><td><code class="codespan">path</code></td><td>module</td><td>The <code class="codespan">nr.path</code> module &ndash; available for convenience.</td></tr>
+<tr><td><code class="codespan">options</code></td><td><code class="codespan">ModuleOptions</code></td><td>A <code class="codespan">ModuleOptions</code> object. This will be filled with the actual option values after the first <code class="codespan">options:</code> block. You can use this in an <code class="codespan">eval:</code> block before the first <code class="codespan">options:</code> block to initialize default values.</td></tr>
+<tr><td><code class="codespan">OS</code></td><td><code class="codespan">OsInfo</code></td><td>An <code class="codespan">OsInfo</code> object that contains the name, id, type and arch of the current operating system. Possible names are <code class="codespan">windows</code>, <code class="codespan">macos</code> and <code class="codespan">linux</code>. Possible IDs are <code class="codespan">win32</code>, <code class="codespan">darwin</code> and <code class="codespan">linux</code>. Possible types are <code class="codespan">nt</code> and <code class="codespan">posix</code>. Note that on Windows Cygwin, the type will also be <code class="codespan">posix</code>.  Possible architectures are <code class="codespan">x86_64</code> and <code class="codespan">x86</code>.</td></tr>
+<tr><td><code class="codespan">BUILD</code></td><td><code class="codespan">BuildInfo</code></td><td>A <code class="codespan">BuildInfo</code> object that tells you whether this is a release or debug build. Members of this object are <code class="codespan">mode</code>, <code class="codespan">debug</code> and <code class="codespan">release</code>.</td></tr>
+<tr><td><code class="codespan">error(message)</code></td><td>function</td><td>Raise an error (<code class="codespan">craftr.dsl.ExplicitRunError</code>) with the specified message.</td></tr>
+<tr><td><code class="codespan">fmt(format)</code></td><td>function</td><td>Expects a Python <code class="codespan">str.format()</code> string that will be substituted in the context of the current global and local variables.</td></tr>
+<tr><td><code class="codespan">glob(patterns, excludes=[], parent=None)</code></td><td>function</td><td>Match glob patterns relative to <code class="codespan">parent</code>. If <code class="codespan">parent</code> is omitted, defaults to directory of the build script or the target if explicitly set with <code class="codespan">this.directory</code>.</td></tr></tbody></table>
       </div>
     </div>
   </body>

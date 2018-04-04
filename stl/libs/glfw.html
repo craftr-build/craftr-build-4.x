@@ -24,12 +24,14 @@
       
       <li><a class="" href="../../index.html">Home</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../../getting-started.html">Getting Started</a></li>
+      
       
     <ul>
       
@@ -38,12 +40,14 @@
       
       <li><a class="" href="../../tips.html">Tips & Tricks</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../../dsl.html">The Craftr DSL</a></li>
+      
       
     <ul>
       
@@ -52,13 +56,16 @@
       
       <li><a class="" href="../../stl.html">Standard Library</a></li>
       
+      
     <ul>
       
       <li><a class="" >Language Support</a></li>
       
+      
     <ul>
       
       <li><a class="" href="../lang/csharp.html">C#</a></li>
+      
       
     <ul>
       
@@ -67,12 +74,14 @@
       
       <li><a class="" href="../lang/cxx.html">C/C++</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/cython.html">Cython</a></li>
+      
       
     <ul>
       
@@ -81,12 +90,14 @@
       
       <li><a class="" href="../lang/haskell.html">Haskell</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/java.html">Java</a></li>
+      
       
     <ul>
       
@@ -95,12 +106,14 @@
       
       <li><a class="" href="../lang/ocaml.html">Ocaml</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/vala.html">Vala</a></li>
+      
       
     <ul>
       
@@ -112,9 +125,11 @@
       
       <li><a class="" >Libraries</a></li>
       
+      
     <ul>
       
       <li><a class="" href="glew.html">GLEW</a></li>
+      
       
     <ul>
       
@@ -123,6 +138,9 @@
       
       <li><a class="active" href="glfw.html">GLFW</a></li>
       
+        <div class="toc"><ul><li><a href="#Notes">Notes</a></li><li><a href="#To-do">To do</a></li></ul></div>
+      
+      
     <ul>
       
     </ul>
@@ -130,12 +148,14 @@
       
       <li><a class="" href="opencl.html">OpenCL</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="sfml.html">SFML</a></li>
+      
       
     <ul>
       
@@ -147,9 +167,11 @@
       
       <li><a class="" >Tools</a></li>
       
+      
     <ul>
       
       <li><a class="" href="../tools/cache.html">Build Cache</a></li>
+      
       
     <ul>
       
@@ -158,12 +180,14 @@
       
       <li><a class="" href="../tools/cmake.html">CMake</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../tools/download.html">Download</a></li>
+      
       
     <ul>
       
@@ -172,12 +196,14 @@
       
       <li><a class="" href="../tools/msvc.html">MSVC</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../tools/pkg-config.html">pkg-config</a></li>
+      
       
     <ul>
       
@@ -186,12 +212,14 @@
       
       <li><a class="" href="../tools/platform-commands.html">Platform Commands</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../tools/batchvars.html">Windows Batch Files</a></li>
+      
       
     <ul>
       
@@ -205,6 +233,7 @@
     
       
       <li><a class="" href="../../extending-craftr.html">Extending Craftr</a></li>
+      
       
     <ul>
       
@@ -234,20 +263,18 @@
         
           <h1>GLFW</h1>
         
-        <p><code>craftr/libs/glfw</code></p>
-<h3>Notes</h3>
+        
+<p><code class="codespan">craftr/libs/glfw</code></p><h3 id="Notes">Notes</h3>
 <ul>
 <li>When compiling from source, check the dependency information in the <a href="http://www.glfw.org/docs/latest/compile.html#compile_deps_x11">GLFW
-documentation</a>.</li>
-</ul>
-<h3>To do</h3>
+documentation</a>.
+</li></ul><h3 id="To-do">To do</h3>
 <ul>
 <li>Building from source on Linux rebuilds everything everytime after the
 build was reconfigured with the same settings (seems like some data is
 stored inconsistently eg. in an unordered set/map). Reproducible with
-<code>craftr -cf examples/c-opencl/ -o craftr/libs/glfw:fromSource=true -b main:cxx.link</code></li>
-</ul>
-
+<code class="codespan">craftr -cf examples/c-opencl/ -o craftr/libs/glfw:fromSource=true -b main:cxx.link</code>
+</li></ul>
       </div>
     </div>
   </body>

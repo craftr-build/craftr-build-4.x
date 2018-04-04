@@ -24,12 +24,14 @@
       
       <li><a class="" href="../../index.html">Home</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../../getting-started.html">Getting Started</a></li>
+      
       
     <ul>
       
@@ -38,12 +40,14 @@
       
       <li><a class="" href="../../tips.html">Tips & Tricks</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../../dsl.html">The Craftr DSL</a></li>
+      
       
     <ul>
       
@@ -52,13 +56,16 @@
       
       <li><a class="" href="../../stl.html">Standard Library</a></li>
       
+      
     <ul>
       
       <li><a class="" >Language Support</a></li>
       
+      
     <ul>
       
       <li><a class="" href="../lang/csharp.html">C#</a></li>
+      
       
     <ul>
       
@@ -67,12 +74,14 @@
       
       <li><a class="" href="../lang/cxx.html">C/C++</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/cython.html">Cython</a></li>
+      
       
     <ul>
       
@@ -81,12 +90,14 @@
       
       <li><a class="" href="../lang/haskell.html">Haskell</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/java.html">Java</a></li>
+      
       
     <ul>
       
@@ -95,12 +106,14 @@
       
       <li><a class="" href="../lang/ocaml.html">Ocaml</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../lang/vala.html">Vala</a></li>
+      
       
     <ul>
       
@@ -112,9 +125,11 @@
       
       <li><a class="" >Libraries</a></li>
       
+      
     <ul>
       
       <li><a class="" href="../libs/glew.html">GLEW</a></li>
+      
       
     <ul>
       
@@ -123,6 +138,7 @@
       
       <li><a class="" href="../libs/glfw.html">GLFW</a></li>
       
+      
     <ul>
       
     </ul>
@@ -130,12 +146,14 @@
       
       <li><a class="" href="../libs/opencl.html">OpenCL</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="../libs/sfml.html">SFML</a></li>
+      
       
     <ul>
       
@@ -147,9 +165,11 @@
       
       <li><a class="" >Tools</a></li>
       
+      
     <ul>
       
       <li><a class="" href="cache.html">Build Cache</a></li>
+      
       
     <ul>
       
@@ -158,12 +178,14 @@
       
       <li><a class="" href="cmake.html">CMake</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="download.html">Download</a></li>
+      
       
     <ul>
       
@@ -172,12 +194,16 @@
       
       <li><a class="" href="msvc.html">MSVC</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="active" href="pkg-config.html">pkg-config</a></li>
+      
+        <div class="toc"><ul><li><a href="#API">API</a><ul><li><a href="#code-class-codespan-pkg_config-target-pkg_name-static-False-code"><code class="codespan">pkg_config(target, pkg_name, static=False)</code></a></li></ul></li></ul></div>
+      
       
     <ul>
       
@@ -186,12 +212,14 @@
       
       <li><a class="" href="platform-commands.html">Platform Commands</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="batchvars.html">Windows Batch Files</a></li>
+      
       
     <ul>
       
@@ -205,6 +233,7 @@
     
       
       <li><a class="" href="../../extending-craftr.html">Extending Craftr</a></li>
+      
       
     <ul>
       
@@ -234,22 +263,20 @@
         
           <h1>pkg-config</h1>
         
-        <p><code>craftr/tools/pkg-config</code></p>
+        
+<p><code class="codespan">craftr/tools/pkg-config</code></p>
 <p>This Craftr module allows you to use pkg-config in your build scripts.</p>
-<p>Example (excerpt from <code>craftr/libs/sfml</code>):</p>
-<div class="highlight"><pre><span></span><span class="n">public</span> <span class="n">target</span> <span class="s2">"sfml"</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">!=</span> <span class="s1">'win32'</span><span class="p">:</span>
+<p>Example (excerpt from <code class="codespan">craftr/libs/sfml</code>):</p><div class="highlight"><pre><span></span><span class="n">public</span> <span class="n">target</span> <span class="s2">&quot;sfml&quot;</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">!=</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
   <span class="nb">eval</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="p">{</span><span class="n">pkg_config</span><span class="p">}</span> <span class="kn">from</span> <span class="s1">'craftr/tools/pkg-config'</span>
-    <span class="n">pkg_config</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s1">'sfml-all'</span><span class="p">,</span> <span class="n">static</span><span class="o">=</span><span class="n">options</span><span class="o">.</span><span class="n">static</span><span class="p">)</span>
-  <span class="nb">eval</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">'linux'</span><span class="p">:</span>
-    <span class="n">target</span><span class="o">.</span><span class="n">exported_props</span><span class="p">[</span><span class="s1">'cxx.systemLibraries'</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">'GL'</span><span class="p">]</span>
+    <span class="kn">import</span> <span class="p">{</span><span class="n">pkg_config</span><span class="p">}</span> <span class="kn">from</span> <span class="s1">&#39;craftr/tools/pkg-config&#39;</span>
+    <span class="n">pkg_config</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s1">&#39;sfml-all&#39;</span><span class="p">,</span> <span class="n">static</span><span class="o">=</span><span class="n">options</span><span class="o">.</span><span class="n">static</span><span class="p">)</span>
+  <span class="nb">eval</span> <span class="k">if</span> <span class="n">OS</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="s1">&#39;linux&#39;</span><span class="p">:</span>
+    <span class="n">target</span><span class="o">.</span><span class="n">exported_props</span><span class="p">[</span><span class="s1">&#39;cxx.systemLibraries&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;GL&#39;</span><span class="p">]</span>
 </pre></div>
-<h3>API</h3>
-<h4><code>pkg_config(target, pkg_name, static=False)</code></h4>
-<p>Uses <code>pkg-config</code> to retrieve information about <em>pkg_name</em> and appends the
-information to the <code>cxx.*</code> properties of the specified <em>target</em>. Can be
+<h3 id="API">API</h3><h4 id="code-class-codespan-pkg_config-target-pkg_name-static-False-code"><code class="codespan">pkg_config(target, pkg_name, static=False)</code></h4>
+<p>Uses <code class="codespan">pkg-config</code> to retrieve information about <em>pkg_name</em> and appends the
+information to the <code class="codespan">cxx.*</code> properties of the specified <em>target</em>. Can be
 used multiple times with the same target.</p>
-
       </div>
     </div>
   </body>

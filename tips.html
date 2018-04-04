@@ -24,12 +24,14 @@
       
       <li><a class="" href="index.html">Home</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="getting-started.html">Getting Started</a></li>
+      
       
     <ul>
       
@@ -38,12 +40,16 @@
       
       <li><a class="active" href="tips.html">Tips & Tricks</a></li>
       
+        <div class="toc"><ul><li><a href="#Using-Git-submodules-to-manage-dependencies">Using Git submodules to manage dependencies</a></li></ul></div>
+      
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="dsl.html">The Craftr DSL</a></li>
+      
       
     <ul>
       
@@ -52,13 +58,16 @@
       
       <li><a class="" href="stl.html">Standard Library</a></li>
       
+      
     <ul>
       
       <li><a class="" >Language Support</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/lang/csharp.html">C#</a></li>
+      
       
     <ul>
       
@@ -67,12 +76,14 @@
       
       <li><a class="" href="stl/lang/cxx.html">C/C++</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/cython.html">Cython</a></li>
+      
       
     <ul>
       
@@ -81,12 +92,14 @@
       
       <li><a class="" href="stl/lang/haskell.html">Haskell</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/java.html">Java</a></li>
+      
       
     <ul>
       
@@ -95,12 +108,14 @@
       
       <li><a class="" href="stl/lang/ocaml.html">Ocaml</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/lang/vala.html">Vala</a></li>
+      
       
     <ul>
       
@@ -112,9 +127,11 @@
       
       <li><a class="" >Libraries</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/libs/glew.html">GLEW</a></li>
+      
       
     <ul>
       
@@ -123,6 +140,7 @@
       
       <li><a class="" href="stl/libs/glfw.html">GLFW</a></li>
       
+      
     <ul>
       
     </ul>
@@ -130,12 +148,14 @@
       
       <li><a class="" href="stl/libs/opencl.html">OpenCL</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/libs/sfml.html">SFML</a></li>
+      
       
     <ul>
       
@@ -147,9 +167,11 @@
       
       <li><a class="" >Tools</a></li>
       
+      
     <ul>
       
       <li><a class="" href="stl/tools/cache.html">Build Cache</a></li>
+      
       
     <ul>
       
@@ -158,12 +180,14 @@
       
       <li><a class="" href="stl/tools/cmake.html">CMake</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/download.html">Download</a></li>
+      
       
     <ul>
       
@@ -172,12 +196,14 @@
       
       <li><a class="" href="stl/tools/msvc.html">MSVC</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/pkg-config.html">pkg-config</a></li>
+      
       
     <ul>
       
@@ -186,12 +212,14 @@
       
       <li><a class="" href="stl/tools/platform-commands.html">Platform Commands</a></li>
       
+      
     <ul>
       
     </ul>
     
       
       <li><a class="" href="stl/tools/batchvars.html">Windows Batch Files</a></li>
+      
       
     <ul>
       
@@ -205,6 +233,7 @@
     
       
       <li><a class="" href="extending-craftr.html">Extending Craftr</a></li>
+      
       
     <ul>
       
@@ -234,29 +263,31 @@
         
           <h1>Tips & Tricks</h1>
         
-        <h2>Using Git submodules to manage dependencies</h2>
+        <h2 id="Using-Git-submodules-to-manage-dependencies">Using Git submodules to manage dependencies</h2>
 <p>Git submodules can be useful to keep track of a projects dependencies.
 For example, consider your project requires a library from GitHub that
 comes with a Craftr build script:</p>
-<pre><code>git submodule add https://github.com/mycompany/somelibrary.git vendor/mycompany/somelibrary</code></pre>
-<p>If the module provides a <code>nodepy.json</code>, you could use the Node.py package
+<pre><code>git submodule add https://github.com/mycompany/somelibrary.git vendor/mycompany/somelibrary
+</pre></code>
+<p>If the module provides a <code class="codespan">nodepy.json</code>, you could use the Node.py package
 manager to link the module into the build system.</p>
-<pre><code>nodepy-pm install -e vendor/mycompany/somelibrary</code></pre>
-<p>If the project however only contains a <code>build.craftr</code> script, you can use
-the <code>craftr --link</code> command, which essentially does the same and derives
+<pre><code>nodepy-pm install -e vendor/mycompany/somelibrary
+</pre></code>
+<p>If the project however only contains a <code class="codespan">build.craftr</code> script, you can use
+the <code class="codespan">craftr --link</code> command, which essentially does the same and derives
 the Node.py module name from the project name defined in the build script.</p>
-<pre><code>craftr --link vendor/mycompany/somelibrary</code></pre>
-<p>The cleanest way however would be to use the <code>link_module</code> statement provided
-by the Craftr DSL. It basically does the same as the <code>craftr --link</code> command,
+<pre><code>craftr --link vendor/mycompany/somelibrary
+</pre></code>
+<p>The cleanest way however would be to use the <code class="codespan">link_module</code> statement provided
+by the Craftr DSL. It basically does the same as the <code class="codespan">craftr --link</code> command,
 but it will do the linking step in a temporary directory every time that you
 configure the build. Also, if multiple modules try to link other modules with
 the same name, the order matters and the first one to link a module takes
-precedence.</p>
-<div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"myproject"</span>
-<span class="n">link_module</span> <span class="s2">"./vendor/mycompany/somelibrary"</span>
+precedence.</p><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">&quot;myproject&quot;</span>
+<span class="n">link_module</span> <span class="s2">&quot;./vendor/mycompany/somelibrary&quot;</span>
 
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"mycompany/somelibrary"</span>
+<span class="n">target</span> <span class="s2">&quot;main&quot;</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">&quot;mycompany/somelibrary&quot;</span>
   <span class="c1"># ...</span>
 </pre></div>
 

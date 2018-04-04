@@ -21,7 +21,7 @@ a {
 table {
   border-collapse: collapse;
 }
-table th {
+table th, thead td {
   color: #444;
   background-color: white;
 }
