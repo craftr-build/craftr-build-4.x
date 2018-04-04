@@ -8,5 +8,6 @@ install:
 - pip install nodepy-runtime
 - nodepy https://nodepy.org/install-pm.py
 - nodepy-pm install
+- export PATh="$PATH:$(nodepy-pm bin)"
 script:
-- nosetests
+- nodepy-nosetests

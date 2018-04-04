@@ -7,6 +7,8 @@ environment:
 
 build_script:
 - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
-- pip install .
-- pip install nose
-- nosetests
+- pip install nodepy-runtime
+- nodepy https://nodepy.org/install-pm.py
+- nodepy-pm install
+- set PATH=%PATH%;.nodepy\bin
+- nodepy-nosetests
