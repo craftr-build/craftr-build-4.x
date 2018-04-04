@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8">
+    <title>Home</title>
+    <link href="static/style.css" rel="stylesheet">
+    <link href="static/pygments.css" rel="stylesheet">
+  </head>
+  <body>
+    
+    <div class="sidebar">
+      
+      <div class="logo">
+        <img src="static/logo.png">
+      </div>
+      
+      <div class="title">
+        <p><a href="index.html">The Craftr build system</a></p>
+      </div>
+      <hr/>
+      <div class="toc">
+        
+    <ul>
+      
+      <li><a class="active" href="index.html">Home</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="getting-started.html">Getting Started</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="tips.html">Tips & Tricks</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="dsl.html">The Craftr DSL</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl.html">Standard Library</a></li>
+      
+    <ul>
+      
+      <li><a class="" >Language Support</a></li>
+      
+    <ul>
+      
+      <li><a class="" href="stl/lang/csharp.html">C#</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/lang/cxx.html">C/C++</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/lang/cython.html">Cython</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/lang/haskell.html">Haskell</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/lang/java.html">Java</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/lang/ocaml.html">Ocaml</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/lang/vala.html">Vala</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+    </ul>
+    
+      
+      <li><a class="" >Libraries</a></li>
+      
+    <ul>
+      
+      <li><a class="" href="stl/libs/glew.html">GLEW</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/libs/glfw.html">GLFW</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/libs/opencl.html">OpenCL</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/libs/sfml.html">SFML</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+    </ul>
+    
+      
+      <li><a class="" >Tools</a></li>
+      
+    <ul>
+      
+      <li><a class="" href="stl/tools/cache.html">Build Cache</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/tools/cmake.html">CMake</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/tools/download.html">Download</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/tools/msvc.html">MSVC</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/tools/pkg-config.html">pkg-config</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/tools/platform-commands.html">Platform Commands</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+      <li><a class="" href="stl/tools/batchvars.html">Windows Batch Files</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+    </ul>
+    
+      
+    </ul>
+    
+      
+      <li><a class="" href="extending-craftr.html">Extending Craftr</a></li>
+      
+    <ul>
+      
+    </ul>
+    
+      
+    </ul>
+    
+      </div>
+      
+      <hr/>
+      <div class="statigen-notice">Built with <a href="https://github.com/NiklasRosenstein/statigen">statigen</a>.</div>
+    </div>
+    <div class="content">
+      <div class="content-inner">
+        
+        <h1>Welcome to the Craftr documentation!</h1>
+<p>Craftr is a modular software build system written in Python that has native
+support for C/C++, C#, Cython, Java and other languages. Craftr uses <a href="https://github.com/ninja-build/ninja">Ninja</a>
+as its build backbone.</p>
+<h3>How to Install  Craftr</h3>
+<p>Craftr builds on the <a href="https://github.com/nodepy/nodepy">Node.py</a> runtime and must be installed via its package
+manager <code>nodepy-pm</code>.</p>
+<pre><code>$ pip install nodepy-runtime
+$ nodepy https://nodepy.org/install-pm.py
+$ nodepy-pm install git+https://github.com/craftr-build/craftr.git</code></pre>
+<hr/>
+<h3>Examples</h3>
+<table>
+<tr><th>C
+</th><th>C++
+</th></tr>
+<tr>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.c"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/cxx"</span>
+  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'main.c'</span><span class="p">]</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:cxx.run</code></p>
+</td>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.cpp"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/cxx"</span>
+  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'main.cpp'</span><span class="p">]</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:cxx.run</code></p>
+</td>
+</tr>
+<tr><th>C#
+</th><th>Java
+</th></tr>
+<tr>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.csharp"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/csharp"</span>
+  <span class="n">csharp</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s1">'src/*.cs'</span><span class="p">)</span>
+  <span class="n">csharp</span><span class="o">.</span><span class="n">packages</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Newtonsoft.JSON:10.0.3'</span><span class="p">]</span>
+  <span class="n">csharp</span><span class="o">.</span><span class="n">bundle</span> <span class="o">=</span> <span class="bp">True</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:csharp.runBundle</code></p>
+</td>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.java"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/java"</span>
+  <span class="n">java</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s1">'src/**/*.java'</span><span class="p">)</span>
+  <span class="n">java</span><span class="o">.</span><span class="n">artifacts</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="s1">'org.tensorflow:tensorflow:1.4.0'</span>
+    <span class="p">]</span>
+  <span class="n">java</span><span class="o">.</span><span class="n">mainClass</span> <span class="o">=</span> <span class="s1">'Main'</span>
+  <span class="n">java</span><span class="o">.</span><span class="n">bundleType</span> <span class="o">=</span> <span class="s1">'merge'</span>  <span class="c1"># Or 'onejar'</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:java.runBundle</code></p>
+</td>
+</tr>
+<tr><th>Haskell
+</th><th>OCaml
+</th></tr>
+<tr>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.haskell"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/haskell"</span>
+  <span class="n">haskell</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.hs'</span><span class="p">]</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:haskell.run</code></p>
+</td>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.ocaml"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/ocaml"</span>
+  <span class="n">ocaml</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.ml'</span><span class="p">]</span>
+  <span class="c1"># False to produce an OCaml bytecode file</span>
+  <span class="n">ocaml</span><span class="o">.</span><span class="n">standalone</span> <span class="o">=</span> <span class="bp">True</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:ocaml.run</code></p>
+</td>
+</tr>
+<tr><th>Vala
+</th><th>Cython
+</th></tr>
+<tr>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.vala"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/vala"</span>
+  <span class="n">vala</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.vala'</span><span class="p">]</span>
+</pre></div>
+<p>Run as <code>craftr -cb main:vala.run</code></p>
+</td>
+<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"example.cython"</span>
+<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
+  <span class="n">requires</span> <span class="s2">"craftr/lang/cython"</span>
+  <span class="n">cython</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Primes.pyx'</span><span class="p">]</span>
+  <span class="n">cython</span><span class="o">.</span><span class="n">main</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.pyx'</span><span class="p">]</span>
+</pre></div>
+<p>Run as <code>craftr -cb main/Main:cxx.run</code></p>
+</td>
+</tr>
+</table>
+      </div>
+    </div>
+  </body>
+</html>
