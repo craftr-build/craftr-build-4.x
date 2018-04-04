@@ -1,4 +1,7 @@
-# Tips & Trick
++++
+title = "Tips & Tricks"
+ordering = 2
++++
 
 ## Using Git submodules to manage dependencies
 

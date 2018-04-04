@@ -1,4 +1,8 @@
-## craftr/tools/cmake
++++
+title = "CMake"
++++
+
+`craftr/libs/cmake`
 
 This module provides the `configure_file()` option that can render a CMake
 `.in` header file.

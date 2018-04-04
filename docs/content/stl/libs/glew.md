@@ -1,4 +1,8 @@
-## craftr/libs/glew
++++
+title = "GLEW"
++++
+
+`craftr/libs/glew`
 
 Craftr build script for using GLEW in C/C++ project.
 

@@ -1,4 +1,9 @@
-## SFML Bindings for Craftr
++++
+title = "SFML"
++++
+
+`craftr/libs/sfml`
+
 
 * Windows: Downloads the appropriate windows SFML binaries, unless the
   `craftr/libs/sfml:binaryDir` option is set.

@@ -1,4 +1,9 @@
-## craftr/libs/opencl
++++
+title = "OpenCL"
++++
+
+`craftr/libs/opencl`
+
 
 Generic build module for using with OpenCL from various vendors.
 

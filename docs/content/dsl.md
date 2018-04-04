@@ -1,4 +1,7 @@
-# The Craftr build language
++++
+title = "The Craftr DSL"
+ordering = 3
++++
 
 ## Introduction
 
@@ -163,7 +166,7 @@ These variables are available inside Craftr build scripts -- not in normal
 Node.py/Python scripts.
 
 | Name | Type | Description |
-| - | - | - |
+| ---- | ---- | ----------- |
 | `path` | module | The `nr.path` module -- available for convenience. |
 | `options` | `ModuleOptions` | A `ModuleOptions` object. This will be filled with the actual option values after the first `options:` block. You can use this in an `eval:` block before the first `options:` block to initialize default values. |
 | `OS` | `OsInfo` | An `OsInfo` object that contains the name, id, type and arch of the current operating system. Possible names are `windows`, `macos` and `linux`. Possible IDs are `win32`, `darwin` and `linux`. Possible types are `nt` and `posix`. Note that on Windows Cygwin, the type will also be `posix`.  Possible architectures are `x86_64` and `x86`. |

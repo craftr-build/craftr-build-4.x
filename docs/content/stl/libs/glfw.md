@@ -1,4 +1,8 @@
-## craftr/libs/glfw
++++
+title = "GLFW"
++++
+
+`craftr/libs/glfw`
 
 ### Notes
 

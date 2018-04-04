@@ -1,0 +1,7 @@
+[statigen]
+template = "default/docs"
+contentDirectory = "content"
+
+[site]
+title = "The Craftr build system"
+logo = "/static/logo.png"

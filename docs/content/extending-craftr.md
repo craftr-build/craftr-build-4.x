@@ -1,4 +1,7 @@
-# Extending Craftr
++++
+title = "Extending Craftr"
+ordering = 5
++++
 
 A module that is imported can register a `TargetHandler` to the Craftr build
 context. This TargetHandler can then register properties to the module, target

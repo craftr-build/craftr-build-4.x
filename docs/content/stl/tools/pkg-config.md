@@ -1,4 +1,8 @@
-## craftr/tools/pkg-config
++++
+title = "pkg-config"
++++
+
+`craftr/tools/pkg-config`
 
 This Craftr module allows you to use pkg-config in your build scripts.
 
