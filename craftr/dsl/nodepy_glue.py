@@ -120,7 +120,7 @@ def get_module_name(module_directory):
     with open(build_script) as fp:
       return Parser().parse(fp.read(), build_script).name
   else:
-    raise ValueError('directory {!r} does not contain nodepy.json or build.craftr')
+    raise ValueError('directory {!r} does not contain nodepy.json or build.craftr'.format(module_directory))
 
 
 def create_link(source, name=None, module_dir=None, override=False):
