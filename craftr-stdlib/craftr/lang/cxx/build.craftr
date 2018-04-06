@@ -56,6 +56,12 @@ class CxxTargetHandler(craftr.TargetHandler):
     # `lib` on OSX and macOS but with an empty string on Windows.
     props.add('cxx.productName', craftr.String)
 
+    # The output directory for the product. If not specified, defaults
+    # to the targets build output directory. Note that this is a path
+    # property that will automatically convert relative to absolute paths
+    # from the target's or module's directory.
+    props.add('cxx.productDirectory', craftr.Path, optional=True)
+
     # The C and/or C++ input files for the target. If this property is not
     # set, the target will not be considered a C/C++ build target.
     props.add('cxx.srcs', craftr.PathList, options={'inherit': True})
@@ -274,8 +280,10 @@ class CxxTargetHandler(craftr.TargetHandler):
     for a, b in repl.items():
       data.productName = data.productName.replace(a, b)
 
+    if not data.productDirectory:
+      data.productDirectory = build_dir
     data.productTags = tags
-    data.productFilename = path.join(build_dir, data.productName)
+    data.productFilename = path.join(data.productDirectory, data.productName)
 
     self.compiler.translate_target(target, data)
 
