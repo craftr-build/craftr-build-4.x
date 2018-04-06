@@ -26,6 +26,7 @@ from nodepy.utils import pathlib
 from nr.datastructures.mappings import ChainDict, ObjectFromMapping
 
 import os
+import json
 import nodepy
 import {Parser} from './parser'
 import {Interpreter} from './interpreter'
