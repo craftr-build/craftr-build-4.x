@@ -244,7 +244,7 @@ class CsharpTargetHandler(craftr.TargetHandler):
       #       allow the .NET runtime to find the assemblies in other directories?
       action = target.add_action('csharp.run', commands=[command], explicit=True,
         syncio=True, output=False)
-      action.add_buildset()
+      action.add_buildset(name=data.productFilename)
 
     # Action to merge the generated references into one file.
     if data.bundleFilename and data.bundle:
@@ -261,7 +261,7 @@ class CsharpTargetHandler(craftr.TargetHandler):
       command += data.runArgs
       action = target.add_action('csharp.runBundle', commands=[command],
         explicit=True, syncio=True, output=False)
-      action.add_buildset()
+      action.add_buildset(name=data.bundleFilename)
 
   def __install(self, packages):
     packages = [nupkg.Dependency.from_str(x) for x in packages]

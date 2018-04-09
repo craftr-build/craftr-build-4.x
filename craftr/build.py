@@ -323,7 +323,7 @@ class Action:
       assert isinstance(buildset, BuildSet)
       self.builds.append(buildset)
     else:
-      buildset = BuildSet(name)
+      buildset = BuildSet(name=name)
       self.builds.append(buildset)
     return buildset
 

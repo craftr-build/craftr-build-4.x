@@ -183,18 +183,22 @@ def export_action(build_directory, writer, graph, action, non_explicit):
     command,
     pool = 'console' if action.syncio else None,  # TODO: Support for pools in modules
     depfile = action.depfile,
-    deps = 'gcc' if action.depfile else ('msvc' if action.deps_prefix else None)
+    deps = 'gcc' if action.depfile else ('msvc' if action.deps_prefix else None),
+    description = '$desc'
   )
   if action.deps_prefix:
     writer.variable('msvc_deps_prefix', action.deps_prefix, indent=1)
 
   for index, build in enumerate(action.builds):
+    desc = build.name
+    if not desc:
+      desc = '{}:{}#{}'.format(action.target, action.name, index)
     writer.build(
       outputs = list(build.files.tagged('out')) or [phony_name],
       rule = rule_name,
       inputs = list(build.files.tagged('in,!optional')),
       implicit = implicit_deps + list(build.files.tagged('in,optional')),
-      variables = {'index': str(index)}
+      variables = {'index': str(index), 'desc': desc}
     )
 
   output_files = action.all_files_tagged('out')

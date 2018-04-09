@@ -212,7 +212,7 @@ class JavaTargetHandler(craftr.TargetHandler):
           action = module.targets['artifacts'].add_action(
             str(artifact).replace(':', '_'), commands=[command],
             input=False, deps=[])
-          build = action.add_buildset()
+          build = action.add_buildset(name='Downloading {} ...'.format(artifact.to_local_path('jar')))
           build.files.add(binary_jar, ['out'])
           self.artifact_actions[binary_jar] = action
           artifactActions.append(action)
@@ -320,7 +320,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       for root in classFiles.keys():
         command += ['-C', path.join(classDir, root), '.']
       jar_action = target.add_action('java.jar', commands=[command], deps=javac_actions)
-      build = jar_action.add_buildset()
+      build = jar_action.add_buildset(name=jarFilename)
       build.files.add(stream.concat(classFiles.values()), ['in'])
       build.files.add(jarFilename, ['out', 'java.library'])
 
@@ -336,7 +336,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         commands.append(platform_commands.rm(mod_filename, force=True))
         commands.append(['jmod', 'create', '--class-path', mod_dir, mod_filename])
         action = target.add_action('java.jmod-' + mod_name, commands=commands, deps=javac_actions)
-        buildset = action.add_buildset()
+        buildset = action.add_buildset(name=mod_name)
         #buildset.files.add(..., ['in', 'java.class'])
         buildset.files.add(mod_filename, ['out', 'java.jmod'])
         jmod_actions.append(action)
@@ -361,7 +361,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       else:
         raise ValueError('invalid bundleType: {!r}'.format(data.bundleType))
       bundle_action = target.add_action('java.bundle', commands=[command])
-      build = bundle_action.add_buildset()
+      build = bundle_action.add_buildset(name=bundleFilename)
       build.files.add(inputs, ['in'])
       build.files.add(bundleFilename, ['out', 'java.bundle'])
 
@@ -392,7 +392,7 @@ class JavaTargetHandler(craftr.TargetHandler):
 
       jlink_action = target.add_action('java.jlink', commands=commands,
         deps=jmod_actions + [jar_action], explicit=True, syncio=True, output=True)
-      build = jlink_action.add_buildset()
+      build = jlink_action.add_buildset(name='Creating Java Runtime "{}" ...'.format(data.jlinkName))
       # TODO: Determine input/output files?
 
     if (len(data.jmod) == 1 or jarFilename) and data.mainClass:
@@ -402,6 +402,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         classpath = data.binaryJars + [jarFilename]
         command += ['-cp', path.pathsep.join(classpath)]
         command += [data.mainClass] + data.runArgs
+        running = data.mainClass
       else:
         command = list(data.runArgsPrefix or ['java'])
         command += ['-p', jmodDir]  # TODO: Additional JMOD dirs?
@@ -409,10 +410,11 @@ class JavaTargetHandler(craftr.TargetHandler):
           command += ['-cp', path.pathsep.join(data.binaryJars)]
         mod_name = next(iter(data.jmod))
         command += ['-m', mod_name + '/' + data.mainClass] + data.runArgs
+        running = '{}/{}'.format(mod_name, data.mainClass)
 
       run_action = target.add_action('java.run', commands=[command],
         deps=[jar_action] + jmod_actions, explicit=True, syncio=True, output=False)
-      run_action.add_buildset()
+      run_action.add_buildset(name=craftr.sh.join(command))
 
     if bundleFilename and data.mainClass:
       # An action to execute the bundled JAR.
@@ -426,7 +428,7 @@ class JavaTargetHandler(craftr.TargetHandler):
       command += data.runArgs
       run_bundle_action = target.add_action('java.runBundle', commands=[command],
         deps=[bundle_action], explicit=True, syncio=True, output=False)
-      run_bundle_action.add_buildset()
+      run_bundle_action.add_buildset(name=bundleFilename)
 
 
 context.register_handler(JavaTargetHandler())

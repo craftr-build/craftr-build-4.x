@@ -330,7 +330,7 @@ class CxxTargetHandler(craftr.TargetHandler):
       command = [path.abs(data.productFilename)]
       action = target.add_action('cxx.run', commands=[command],
         explicit=True, syncio=True, output=False, cwd=data.runCwd)
-      action.add_buildset()
+      action.add_buildset(name=data.productFilename)
 
 
 handler = CxxTargetHandler()

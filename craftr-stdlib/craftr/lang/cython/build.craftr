@@ -61,7 +61,7 @@ class CythonTargetHandler(craftr.TargetHandler):
     action = target.add_action('cython.compile', commands=[command])
 
     for pyx, c in zip(data.srcs, c_srcs):
-      bset = action.add_buildset()
+      bset = action.add_buildset(name=pyx)
       bset.files.add(pyx, ['in'])
       bset.files.add(c, ['out'])
       base = path.rmvsuffix(path.base(pyx))
@@ -77,7 +77,7 @@ class CythonTargetHandler(craftr.TargetHandler):
       })
 
     for pyx, c in zip(data.main, c_main):
-      bset = action.add_buildset()
+      bset = action.add_buildset(name=pyx)
       bset.files.add(pyx, ['in'])
       bset.files.add(c, ['out'])
       bset.vars['embedflag'] = '--embed'

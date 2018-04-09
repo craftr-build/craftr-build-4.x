@@ -40,7 +40,7 @@ class HaskellTargetHandler(craftr.TargetHandler):
       command = [data.productFilename]
       action = target.add_action('haskell.run', commands=[command],
         explicit=True, syncio=True, output=False)
-      action.add_buildset()
+      action.add_buildset(name=data.productFilename)
 
 
 context.register_handler(HaskellTargetHandler())

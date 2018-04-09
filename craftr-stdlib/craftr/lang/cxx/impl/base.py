@@ -204,9 +204,10 @@ class Compiler(nr.named.named):
 
     objdir = craftr.get_output_directory(target, 'obj')
     for src in srcs:
-      buildset = action.add_buildset()
+      buildset = action.add_buildset(name=src)
       buildset.files.add(src, ['in', 'src', 'src.' + lang])
       self.add_objects_for_source(target, data, lang, src, buildset, objdir)
+      buildset.name = next(buildset.files.tagged('in,obj'), src)
 
     return action
 
@@ -301,7 +302,7 @@ class Compiler(nr.named.named):
       commands=[command],
       environ=self.linker_env,
       deps=compile_actions + library_actions)
-    buildset = link_action.add_buildset()
+    buildset = link_action.add_buildset(name=data.productFilename)
     buildset.files.add(obj_files, ['in', 'obj'])
     buildset.files.add(library_files, ['in', 'lib'])
     buildset.files.add(data.productFilename, ['out', 'product'] + data.productTags)
