@@ -173,7 +173,8 @@ def main(argv=None):
 
   # Handle --tool.
   if args.tool:
-    context = Context(None, None, None)
+    context = Context(build_root='build', build_variant='debug',
+                      build_directory='build/debug')
     set_options(context, args.options)
     sys.argv = ['craftr -t ' + args.tool[0]] + sys.argv[1:]
     try:
