@@ -2,7 +2,12 @@
 from typing import List, Dict, Union, Callable
 from nr.stream import stream
 import nr.named
-import craftr, {BUILD} from 'craftr'
+import craftr, {BUILD, path} from 'craftr'
+
+
+def short_path(x):
+  y = path.rel(x, par=True)
+  return x if len(x) < len(y) else y
 
 
 def is_sharedlib(data):
@@ -130,7 +135,7 @@ class Compiler(nr.named.named):
     elif data.type == 'library' and data.preferredLinkage == 'static':
       defines += list(data.definesForStaticBuild)
 
-    includes = list(data.includes)
+    includes = [short_path(x) for x in data.includes]
     flags = list(data.compilerFlags)
     forced_includes = list(data.prefixHeaders)
 
