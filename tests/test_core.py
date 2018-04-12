@@ -5,9 +5,11 @@ import {Bool, StringList} from '@craftr/craftr-build/proplib'
 
 
 class CxxHandler(TargetHandler):
-  def init(self, context):
+  def on_register(self, context):
     context.target_properties.add('cxx.files', StringList)
     context.dependency_properties.add('cxx.link', Bool)
+  def on_target_translate(self, context, target):
+    pass
 
 
 def test_target_handler_inheritance():
