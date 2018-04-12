@@ -91,6 +91,7 @@ def set_options(parser, context, options):
 
 def get_argument_parser():
   parser = argparse.ArgumentParser(prog='craftr')
+  parser.add_argument('--version', action='version', version=module.package.payload['version'])
   parser.add_argument('--build-root', default='build', help='The build root directory. Defaults to build/')
   parser.add_argument('-f', '--file', default=None, help='The Craftr build script to execute. Onlt with --configure. Can be omitted when the configure step was peformed once and then --reconfigure is used.')
   parser.add_argument('-c', '--configure', action='store_true', help='Enable the configure step. This causes the build scripts to be executed and the files for the build step to be generated.')
