@@ -8,7 +8,9 @@ environment:
 build_script:
 - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 - pip install nodepy-runtime
-- nodepy https://nodepy.org/install-pm.py
+- nodepy https://nodepy.org/install-pm.py develop
 - nodepy-pm install
 - set PATH=%PATH%;.nodepy\bin
-- nodepy-nosetests
+# TODO: Globbing doesn't work for some reason...
+- nodepy-nosetests tests\test_build.py tests\test_core.py tests\test_dsl.py
+- craftr --version
