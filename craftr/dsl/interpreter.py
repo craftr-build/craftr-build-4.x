@@ -196,8 +196,12 @@ class Interpreter:
     if node.name.startswith('@'):
       sources = [parent_target.module.targets[node.name[1:]]]
       module = parent_target.module
+    elif '@' in node.name:
+      module_name, target_name = node.name.partition('@')[::2]
+      module = parent_target.module.load_module(module_name)
+      sources = [module.targets[target_name]]
     else:
-      module = self.context.load_module(node.name)
+      module = parent_target.module.load_module(node.name)
       sources = [x for x in module.targets.values() if x.public]
     dep = parent_target.add_dependency_with_class(
       self.context.dependency_class, sources, override_export or node.export)

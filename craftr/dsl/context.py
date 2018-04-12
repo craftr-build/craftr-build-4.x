@@ -76,6 +76,10 @@ class DslModule(core.Module):
     ns.module = self
     ns.options = self.options
 
+  def load_module(self, name):
+    mod = self.nodepy_module.require(name + '.craftr', exports=False)
+    return mod.craftr_module
+
   @property
   def scope(self):
     assert self.nodepy_module, "DslModule.nodepy_module is not set"
