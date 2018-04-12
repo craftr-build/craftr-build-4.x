@@ -50,6 +50,9 @@ class CxxTargetHandler(craftr.TargetHandler):
     # Specifies the target type. Either `executable` or `library`.
     props.add('cxx.type', craftr.String, 'executable')
 
+    # Link object files to an executable/library.
+    props.add('cxx.link', craftr.Bool, default=True)
+
     # The name of the output file. This string may contain the string
     # `$(ext)` which will be replaced with the platform's proper extension.
     # It may also contain the string `$(lib)` which will be replaced by
@@ -310,6 +313,18 @@ class CxxTargetHandler(craftr.TargetHandler):
       if filename.endswith('.cpp') or filename.endswith('.cc'):
         cpp_srcs.append(filename)
 
+    if data.combineCSources:
+      unity_c_file = path.join(build_dir, 'unity.c')
+      with craftr.AutoRestoreMtimeFile(unity_c_file, 'w') as fp:
+        [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
+      c_srcs = [unity_c_file]
+
+    if data.combineCppSources:
+      unity_cpp_file = path.join(build_dir, 'unity.cpp')
+      with craftr.AutoRestoreMtimeFile(unity_cpp_file, 'w') as fp:
+        [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
+      cpp_srcs = [unity_cpp_file]
+
     compile_actions = []
     obj_files = []
     for (srcs, lang) in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
@@ -320,7 +335,7 @@ class CxxTargetHandler(craftr.TargetHandler):
         action.deps.append(embed_files_action)
       compile_actions.append(action)
 
-    if compile_actions:
+    if compile_actions and data.link:
       lang = 'cpp' if cpp_srcs else 'c'
       link_action = self.compiler.create_link_action(target, data, 'cxx.link', lang, compile_actions)
     else:
