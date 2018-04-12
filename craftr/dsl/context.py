@@ -193,6 +193,7 @@ class Context(core.Context):
     return mod.craftr_module
 
   def load_module_from_file(self, filename, raw=False):
+    filename = pathlib.Path(path.canonical(filename))
     module = self.loader.load_module(self.nodepy_context, None, filename)
     self.nodepy_context.register_module(module)
     self.nodepy_context.load_module(module)
