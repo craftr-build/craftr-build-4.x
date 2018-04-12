@@ -53,9 +53,10 @@ project "myproject" v1.6.4
 # the `craftr --link` option.
 link_module "./vendor/mycompany/subproject"
 
-# A block of TOML formatted configuration values. These are applied only
-# when your build script is the builds' entry point.
-configure:
+# A block of TOML formatted configuration values. The `if` expression is
+# optional, but using `if module.is_main` is recommended if you want your
+# module to be reusable in other projects.
+configure if module.is_main:
   [myproject]
   option1 = 42
 
