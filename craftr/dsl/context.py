@@ -81,6 +81,10 @@ class DslModule(core.Module):
     return mod.craftr_module
 
   @property
+  def is_main(self):
+    return self.nodepy_module.is_main
+
+  @property
   def scope(self):
     assert self.nodepy_module, "DslModule.nodepy_module is not set"
     return MappingFromObject(self.nodepy_module.namespace)
@@ -206,9 +210,10 @@ class Context(core.Context):
     mod = self.require(name + '.craftr', exports=False)
     return mod.craftr_module
 
-  def load_module_from_file(self, filename, raw=False):
+  def load_module_from_file(self, filename, raw=False, is_main=False):
     filename = pathlib.Path(path.canonical(filename))
     module = self.loader.load_module(self.nodepy_context, None, filename)
+    module.is_main = is_main
     self.nodepy_context.register_module(module)
     self.nodepy_context.load_module(module)
     if not raw:

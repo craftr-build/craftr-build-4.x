@@ -95,19 +95,23 @@ class LinkModule(Node):
 
 class Configure(Node):
 
-  def __init__(self, loc, export):
+  def __init__(self, loc, if_expr):
     self.loc = loc
     self.data = collections.OrderedDict()
-    self.export = export
+    self.if_expr = if_expr
 
   def loads(self, source):
-    self.data = toml.loads(source, _dict=collections.OrderedDict)
+    data = toml.loads(source, _dict=collections.OrderedDict)
+    for section, values in data.items():
+      for key, value in values.items():
+        self.data[section + ':' + key] = value
 
   def render(self, fp, depth):
     assert depth == 0
-    if self.export:
-      fp.write('export ')
-    fp.write('configure:\n')
+    fp.write('configure')
+    if self.if_expr:
+      fp.write(' if ' + self.if_expr)
+    fp.write(':\n')
     for line in toml.dumps(self.data).split('\n'):
       fp.write('  ' + line)
 
@@ -431,8 +435,10 @@ class Parser:
     return result
 
   def _parse_configure(self, lexer, parent_indent):
-    block = Configure(lexer.token.cursor, export=export)
+    loc = lexer.token.cursor
+    if_expr = self._parse_block_if_expr(lexer, allow_non_block=False)
     lexer.next(':')
+    block = Configure(loc, if_expr)
     block.loads(self._parse_expression(lexer, parent_indent))
     return block
 

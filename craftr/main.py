@@ -239,7 +239,7 @@ def main(argv=None):
     # Load the build script.
     context = Context(args.build_root, build_variant, build_directory)
     set_options(parser, context, args.options)
-    module = context.load_module_from_file(args.file)
+    module = context.load_module_from_file(args.file, is_main=True)
     context.translate_targets()
     context.serialize()
 

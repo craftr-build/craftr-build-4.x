@@ -81,12 +81,11 @@ class Interpreter:
   Interpreter for projects.
   """
 
-  def __init__(self, nodepy_module, context, filename, is_main=False):
+  def __init__(self, nodepy_module, context, filename):
     self.nodepy_module = nodepy_module
     self.context = context
     self.filename = filename
     self.directory = path.dir(filename)
-    self.is_main = is_main
 
   def __call__(self, namespace):
     module = self.create_module(namespace)
@@ -117,7 +116,7 @@ class Interpreter:
       elif isinstance(node, Export):
         self._export_block(node, module)
       elif isinstance(node, Configure):
-        if self.is_main:
+        if self._test_if_expr(node, module):
           self.context.options.update(node.data)
       elif isinstance(node, LinkModule):
         self.context.link_module(module.directory, node.path)

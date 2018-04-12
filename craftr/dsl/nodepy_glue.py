@@ -47,10 +47,11 @@ class CraftrModule(nodepy.loader.PythonModule):
     object that contains all properties and targets.
   """
 
-  def __init__(self, dsl_context, *args, **kwargs):
+  def __init__(self, dsl_context, *args, is_main=False, **kwargs):
     super().__init__(*args, **kwargs)
     self.dsl_context = dsl_context
     self.craftr_module = None
+    self.is_main = is_main
     self._members = {}
 
   def create_namespace(self):
@@ -64,12 +65,11 @@ class CraftrModule(nodepy.loader.PythonModule):
 
   def _exec_code(self, code):
     assert self.loaded
-    is_main = False
     code = code.replace('\r\n', '\n')
     project = Parser().parse(code, str(self.filename))
     if project.name in self.dsl_context.modules:
       raise RuntimeError('modules {!r} already loaded'.format(project.name))
-    interpreter = Interpreter(self, self.dsl_context, str(self.filename), is_main)
+    interpreter = Interpreter(self, self.dsl_context, str(self.filename))
     self.craftr_module = interpreter.create_module(project)
     self.craftr_module.init_namespace(self.namespace)
     interpreter.eval_module(project, self.craftr_module)
