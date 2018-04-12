@@ -506,9 +506,8 @@ class Parser:
     loc = lexer.token.cursor
     name = lexer.next('string').value.group(1)
     if_expr = self._parse_block_if_expr(lexer)
-    if not if_expr:
-      lexer.next(':')
-      lexer.next('nl')
+    lexer.next(':')
+    lexer.next('nl')
     subblocks = ['requires', 'eval', 'export']
     target = Target(loc, name, public, if_expr)
     while True:
