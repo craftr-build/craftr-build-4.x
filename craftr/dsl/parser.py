@@ -535,7 +535,7 @@ class Parser:
 
     if_expr = self._parse_block_if_expr(lexer, allow_non_block=True)
     dep = Dependency(loc, name, export, assign_to, if_expr)
-    if if_expr or lexer.accept(':'):
+    if lexer.accept(':'):
       lexer.next('nl')
       while True:
         self._skip(lexer)
@@ -571,10 +571,12 @@ class Parser:
     token = lexer.accept('name')
     if not token: return None
     if token.value == 'if':
-      result = lexer.scanner.readline()
-      result = result.partition('#')[0].strip()
+      line = lexer.scanner.readline()
+      result = line.partition('#')[0].strip()
       if result.endswith(':'):
         result = result[:-1]
+        lexer.scanner.seek(len(result)-len(line), 'cur')
+      elif line.endswith('\n'):
         lexer.scanner.seek(-1, 'cur')
       elif not allow_non_block:
         raise ParseError(loc, 'missing : at the end of conditional block')
