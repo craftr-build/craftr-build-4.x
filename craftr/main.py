@@ -71,14 +71,14 @@ class Context(dsl.Context):
     self.from_json(root)
 
 
-def set_options(context, options):
+def set_options(parser, context, options):
   prev_scope = None
   for item in options:
     name, assign, value = item.partition('=')
     scope, name = name.rpartition(':')[::2]
     if not scope: scope = prev_scope
     if not scope or not name:
-      parser.error('--options: invalid argument: {}'.format(item))
+      parser.error('-o, --options: invalid argument: {}'.format(item))
     if not assign:
       value = 'true'
     if assign and not value:
@@ -175,7 +175,7 @@ def main(argv=None):
   if args.tool:
     context = Context(build_root='build', build_variant='debug',
                       build_directory='build/debug')
-    set_options(context, args.options)
+    set_options(parser, context, args.options)
     sys.argv = ['craftr -t ' + args.tool[0]] + sys.argv[1:]
     try:
       module = context.load_module(args.tool[0])
@@ -238,7 +238,7 @@ def main(argv=None):
 
     # Load the build script.
     context = Context(args.build_root, build_variant, build_directory)
-    set_options(context, args.options)
+    set_options(parser, context, args.options)
     module = context.load_module_from_file(args.file)
     context.translate_targets()
     context.serialize()
@@ -246,7 +246,7 @@ def main(argv=None):
   else:
     context = Context(args.build_root, build_variant, build_directory)
     context.deserialize()
-    set_options(context, args.options)
+    set_options(parser, context, args.options)
 
   # Handle --show.
   if args.show:

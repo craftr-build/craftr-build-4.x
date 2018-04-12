@@ -92,6 +92,12 @@ class DslTarget(core.Target):
     super().__init__(*args, **kwargs)
     self._scope = {'target': self}
 
+  def __getitem__(self, key):
+    return self.get_prop('this.directory')
+
+  def __setitem__(self, key, value):
+    self.set_props({key: value})
+
   @property
   def scope(self):
     return ChainDict(self._scope, self.module.scope)
