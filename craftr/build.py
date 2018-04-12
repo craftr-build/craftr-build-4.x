@@ -34,6 +34,12 @@ import warnings
 import proplib from './proplib'
 
 
+def split_filetags(tags, set_cls=frozenset):
+  if isinstance(tags, str):
+    tags = (x.strip() for x in tags.split(','))
+  return set_cls(tags)
+
+
 class TaggedFile:
   """
   Represents a file attached with zero or more tags.
@@ -63,8 +69,7 @@ class TaggedFile:
     return set(self._tags)
 
   def matches(self, tags):
-    if isinstance(tags, str):
-      tags = [x.strip() for x in tags.split(',')]
+    tags = split_filetags(tags)
     for tag in tags:
       if not tag: continue
       if tag[0] == '!':
@@ -99,7 +104,7 @@ class FileSet:
     del self._files[name]
 
   def __iter__(self):
-    return self._files.values()
+    return iter(self._files.values())
 
   def name(self):
     return self._name
@@ -122,8 +127,7 @@ class FileSet:
     return result
 
   def tagged(self, tags):
-    if isinstance(tags, str):
-      tags = [x.strip() for x in tags.split(',')]
+    tags = split_filetags(tags)
     for tf in self._files.values():
       if tf.matches(tags):
         yield tf.name
@@ -218,16 +222,98 @@ class BuildSet:
         if '&' in tags:
           msg = 'legacy tag syntax using `&` character in buildset {!r}: {!r}'
           warnings.warn(msg.format(self.name, tags))
-          tags = tags.split('&')
+          tags = set(tags.split('&'))
         else:
-          tags = tags.split(',')
+          tags = split_filetags(tags)
         files = list(self.files.tagged(tags))
         result += [px+x+sx for x in self.files.tagged(tags)]
-        if len(tags) == 1 and tags[0] in self.vars:
-          result += [px+x+sx for x in self.vars[tags[0]]]
+        if len(tags) == 1 and next(iter(tags)) in self.vars:
+          result += [px+x+sx for x in self.vars[next(iter(tags))]]
       else:
         result.append(string)
     return result
+
+
+class ActionSet:
+  """
+  Represents a collection of #Action objects and a set of file tag strings.
+  """
+
+  def __init__(self, tags):
+    self.tags = split_filetags(tags, set)
+    self.actions = set()
+    self._files = None
+
+  def __repr__(self):
+    return 'ActionSet(tags="{}", actions={!r})'.format(
+      ','.join(self.tags), self.actions)
+
+  def __iter__(self):
+    return iter(self.actions)
+
+  def __or__(self, other):
+    if not isinstance(other, ActionSet):
+      raise NotImplementedError
+    res = ActionSet(self.tags | other.tags)
+    res.actions = self.actions | other.actions
+    return res
+
+  def __ior__(self, other):
+    if not isinstance(other, ActionSet):
+      raise NotImplementedError
+    getstate = lambda: (len(self.tags), len(self.actions))
+    state = getstate()
+    self.tags |= other.tags
+    self.actions |= other.actions
+    if state != getstate():
+      self.reset_cache()
+    return self
+
+  @property
+  def files(self):
+    """
+    Returns a list of files that matched the tags in the #ActionSet. This
+    list of files is cached. This cache is only cleared when new actions or
+    tags are added to the set.
+
+    If you add tags or actions manually to the #ActionSet, make sure to call
+    the #reset_cache() method.
+    """
+
+    if self._files is None:
+      self._files = list(stream.concat(
+        x.all_files_tagged(self.tags) for x in self.actions))
+    return self._files
+
+  def reset_cache(self):
+    """
+    Resets the #files cache of the #ActionSet. This must be called when
+    manually modifying the ActionSet's #tags or #actions.
+    """
+
+    self._files = None
+
+  def tag(self, add_tags):
+    """
+    Add a tag to all the files matched by this #ActionSet.
+    """
+
+    add_tags = split_filetags(add_tags)
+    for action in self.actions:
+      for build in action.builds:
+        for filename in build.files.tagged(self.tags):
+          build.files.add(filename, add_tags)
+
+  def add(self, action):
+    """
+    Add an action to the set. This invalidates the #files cache.
+    """
+
+    getstate = lambda: len(self.actions)
+    state = getstate()
+    self.actions.add(action)
+    if state != getstate():
+      self.reset_cache()
 
 
 class Action:
@@ -330,12 +416,19 @@ class Action:
     return buildset
 
   def all_files_tagged(self, tags):
-    if isinstance(tags, str):
-      tags = [x.strip() for x in tags.split(',')]
+    tags = split_filetags(tags)
     files = []
     for build in self.builds:
       files += build.files.tagged(tags)
     return files
+
+  def has_files_tagged(self, tags):
+    tags = split_filetags(tags)
+    for build in self.builds:
+      for file in build.files:
+        if file.matches(tags):
+          return True
+    return False
 
   def to_json(self):
     return {

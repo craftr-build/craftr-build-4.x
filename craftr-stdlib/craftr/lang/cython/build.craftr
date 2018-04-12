@@ -21,7 +21,7 @@ else:
 
 class CythonTargetHandler(craftr.TargetHandler):
 
-  def init(self, context):
+  def on_register(self, context):
     props = context.target_properties
     props.add('cython.srcs', craftr.PathList)
     props.add('cython.main', craftr.PathList)
@@ -32,7 +32,7 @@ class CythonTargetHandler(craftr.TargetHandler):
     props.add('cython.cpp', craftr.Bool)
     props.add('cython.inWorkingTree', craftr.Bool)
 
-  def translate_target(self, target):
+  def on_target_translate(self, context, target):
     data = target.get_props('cython.', as_object=True)
     if not data.srcs and not data.main:
       return
@@ -42,7 +42,7 @@ class CythonTargetHandler(craftr.TargetHandler):
     if data.pythonVersion not in ('2', '3'):
       error('invalid cython.pythonVersion: {!r}'.format(data.pythonVersion))
 
-    build_dir = craftr.get_output_directory(target)
+    build_dir = target.output_directory
     srcs_dir = path.join(build_dir, "cython-srcs")
     c_srcs = craftr.relocate_files(target.directory, data.srcs,
       srcs_dir, '.cpp' if data.cpp else '.c')
@@ -59,6 +59,7 @@ class CythonTargetHandler(craftr.TargetHandler):
 
     python_target = craftr.load_target('craftr/lang/python@python')
     action = target.add_action('cython.compile', commands=[command])
+    module_layers = []
 
     for pyx, c in zip(data.srcs, c_srcs):
       bset = action.add_buildset(name=pyx)
@@ -67,14 +68,16 @@ class CythonTargetHandler(craftr.TargetHandler):
       base = path.rmvsuffix(path.base(pyx))
       layer = target.add_layer(name=base)
       layer.add_dependency([python_target, target])
+      layer.add_input_action(action)
       layer.set_props(False, {
         'this.outputDirectory': build_dir,
-        'cxx.srcs': [c],  # TODO: Somehow make the action a dependency of the Cxx target being created.
+        'cxx.srcs': [c],
         'cxx.type': 'library',
         'cxx.preferredLinkage': 'shared',
         'cxx.productName': base + python.cfg['SO'],
         'cxx.runtimeLibrary': 'dynamic',
       })
+      module_layers.append(layer)
 
     for pyx, c in zip(data.main, c_main):
       bset = action.add_buildset(name=pyx)
@@ -84,9 +87,11 @@ class CythonTargetHandler(craftr.TargetHandler):
       base = path.rmvsuffix(path.base(pyx))
       layer = target.add_layer(name=base)
       layer.add_dependency([python_target, target])
+      layer.add_dependency(module_layers)
+      layer.add_input_action(action)
       layer.set_props(False, {
         'this.outputDirectory': build_dir,
-        'cxx.srcs': [c],  # TODO: Somehow make the action a dependency of the Cxx target being created.
+        'cxx.srcs': [c],
         'cxx.type': 'executable',
         'cxx.productName': base + '$(ext)',
         'cxx.runtimeLibrary': 'dynamic',

@@ -160,7 +160,7 @@ class JavaTargetHandler(craftr.TargetHandler):
     self.artifacts = ArtifactResolver()
     self.artifact_actions = {}  # Cache to avoid producing the same action multiple times.
 
-  def init(self, context):
+  def on_register(self, context):
     props = context.target_properties
     props.add('java.srcs', craftr.PathList, options={'inherit': True})
     props.add('java.srcRoots', craftr.StringList, options={'inherit': True})
@@ -182,12 +182,13 @@ class JavaTargetHandler(craftr.TargetHandler):
     props = context.dependency_properties
     props.add('java.bundle', craftr.Bool())
 
-  def target_created(self, target):
+  def on_target_created(self, context, target):
+    # TODO: Only if this target is actually a JAVA target.
     target.add_dependency([module.targets['artifacts']])
 
-  def translate_target(self, target):
+  def on_target_translate(self, context, target):
     src_dir = path.abs(target.directory)
-    build_dir = craftr.get_output_directory(target)
+    build_dir = target.output_directory
     cache_dir = path.join(context.build_directory, module.name, 'artifacts')
 
     data = target.get_props('java.', as_object=True)
@@ -219,6 +220,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         data.binaryJars.append(binary_jar)
         bundleBinaryJars.append(binary_jar)
 
+    input_lib_actions = []
     jar_action = None
     javac_actions = []
     jmod_actions = []
@@ -276,12 +278,13 @@ class JavaTargetHandler(craftr.TargetHandler):
       for dep in target.transitive_dependencies():
         doBundle = dep.props['java.bundle']
         for dep_target in dep.sources:
-          libs = dep_target.files_tagged(['out', 'java.library'])
-          data.binaryJars += libs
+          libs = dep_target.actions_for('out,java.library')
+          input_lib_actions += libs.actions
+          data.binaryJars += libs.files
           if doBundle:
-            bundleBinaryJars += libs
+            bundleBinaryJars += libs.files
           else:
-            nobundleBinaryJars += libs
+            nobundleBinaryJars += libs.files
       data.binaryJars = list(stream.unique(data.binaryJars))
 
     if data.srcs and classFiles:
@@ -296,7 +299,7 @@ class JavaTargetHandler(craftr.TargetHandler):
         command += shlex.split(options.compilerFlags) + data.compilerFlags
 
         action = target.add_action('java.javac-' + root, commands=[command],
-          input=True, deps=artifactActions)
+          input=True, deps=artifactActions + input_lib_actions)
 
         build = action.add_buildset()
         build.files.add(data.srcs, ['in'])  # TODO: Select only the files in the current source root

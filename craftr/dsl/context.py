@@ -92,15 +92,19 @@ class DslTarget(core.Target):
     super().__init__(*args, **kwargs)
     self._scope = {'target': self}
 
-  def __getitem__(self, key):
-    return self.get_prop('this.directory')
-
   def __setitem__(self, key, value):
     self.set_props({key: value})
 
   @property
   def scope(self):
     return ChainDict(self._scope, self.module.scope)
+
+  @property
+  def output_directory(self):
+    outdir = self.get_prop('this.outputDirectory')
+    if not outdir:
+      outdir = path.join(self.context.build_directory, self.module.name, self.name)
+    return outdir
 
   def set_props(self, export_or_props, props=None, on_unknown_property='report'):
     """
@@ -164,6 +168,10 @@ class Context(core.Context):
   target_class = DslTarget
   dependency_class = DslDependency
 
+  current_module = None
+  current_target = None
+  current_dependency = None
+
   def __init__(self, build_variant, build_directory, load_builtins=True):
     super().__init__()
     self.module_links_dir = path.join(build_directory, '.module-links')
@@ -174,7 +182,7 @@ class Context(core.Context):
     self.nodepy_context.resolver.paths.append(STDLIB_DIR)
     self.nodepy_context.resolver.paths.append(pathlib.Path(self.module_links_dir))
 
-    # TODO:  Use the nearest available .nodepy/modules directory?
+    # TODO: Use the nearest available .nodepy/modules directory?
     self.nodepy_context.resolver.paths.append(pathlib.Path(require.context.modules_directory))
 
     self.build_variant = build_variant

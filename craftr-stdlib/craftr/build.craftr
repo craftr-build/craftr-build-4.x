@@ -7,6 +7,8 @@ eval:>>
 __all__ = __builtins__ = ['BUILD', 'OS', 'path', 'error', 'fmt', 'glob']
 
 from nr import path
+from nr.named import named
+from nr.stream import stream
 
 import collections
 import os
@@ -15,47 +17,18 @@ import sys
 import types
 
 import {BuildBackend} from '@craftr/craftr-build/build'
-import {Target, Dependency, Module, TargetHandler} from '@craftr/craftr-build/core'
+import {TargetHandler} from '@craftr/craftr-build/core'
 import {ExplicitRunError} from '@craftr/craftr-build/dsl'
 import {Bool, Integer, String, Path, List, Dict, StringList, PathList} from '@craftr/craftr-build/proplib'
-import {AutoRestoreMtimeFile} from '@craftr/craftr-build/utils/io'
+import io from '@craftr/craftr-build/utils/io'
 import sh from '@craftr/craftr-build/utils/sh'
-
-OsInfo = collections.namedtuple('OsInfo', 'name id type arch')
-
-
-class BuildInfo(collections.namedtuple('_BuildInfo', 'variant')):
-
-  @property
-  def debug(self):
-    return self.variant == 'debug'
-
-  @property
-  def release(self):
-    return self.variant == 'release'
-
-
-def get_call_context(stackdepth=1, dependency=True, target=True, module=True):
-  """
-  Returns the #Module, #Target or #Dependency from the
-  parent stackframe. Raises a #RuntimeError if it can not be determined.
-  """
-
-  f= sys._getframe(stackdepth+1)
-  scope = sys._getframe(stackdepth+1).f_globals
-  if '__dict__' in scope:
-    # For code evaluated with nr.ast.dynamic_eval().
-    scope = scope['__dict__']
-  if dependency and isinstance(scope.get('self'), Dependency):
-    return scope['dependency']
-  elif target and isinstance(scope.get('target'), Target):
-    return scope['target']
-  elif module and isinstance(scope.get('module'), Module):
-    return scope['module']
-  raise RuntimeError('Call context could not be determined')
 
 
 def error(*message):
+  """
+  Raises an #ExplicitRunError with the specified message.
+  """
+
   raise ExplicitRunError(' '.join(map(str, message)))
 
 
@@ -108,16 +81,9 @@ def fmt(s, frame=None):
 
 def glob(patterns, parent=None, excludes=None):
   if not parent:
-    obj = get_call_context(dependency=False)
+    obj = context.current_target or context.current_module
     parent = obj.directory
   return path.glob(patterns, parent, excludes)
-
-
-def get_output_directory(target, *subdir):
-  outdir = target.get_prop('this.outputDirectory')
-  if not outdir:
-    outdir = path.join(context.build_directory, target.module.name, target.name, *subdir)
-  return outdir
 
 
 def load_target(name):
@@ -145,14 +111,39 @@ def relocate_files(parent, files, outdir, suffix, replace_suffix=True):
   return result
 
 
-if sys.platform.startswith('win32'):
-  OS = OsInfo('windows', 'win32', os.name, 'x86_64' if os.environ.get('ProgramFiles(x86)') else 'x86')
-elif sys.platform.startswith('darwin'):
-  OS = OsInfo('macos', 'darwin', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
-elif sys.platform.startswith('linux'):
-  OS = OsInfo('linux', 'linux', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
-else:
-  raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
+class OsInfo(named):
+  __annotations__ = [
+    ('name', str),
+    ('id', str),
+    ('type', str),
+    ('arch', str)
+  ]
+
+  @classmethod
+  def new(cls):
+    if sys.platform.startswith('win32'):
+      return cls('windows', 'win32', os.name, 'x86_64' if os.environ.get('ProgramFiles(x86)') else 'x86')
+    elif sys.platform.startswith('darwin'):
+      return cls('macos', 'darwin', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
+    elif sys.platform.startswith('linux'):
+      return cls('linux', 'linux', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
+    else:
+      raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 
 
+class BuildInfo(named):
+  __annotations__ = [
+    ('variant', str)
+  ]
+
+  @property
+  def debug(self):
+    return self.variant == 'debug'
+
+  @property
+  def release(self):
+    return self.variant == 'release'
+
+
+OS = OsInfo.new()
 BUILD = BuildInfo(context.build_variant)

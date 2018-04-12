@@ -5,6 +5,7 @@ eval:>>
 Allows you to include CMake projects in your build pipeline.
 """
 
+from nr.datastructures.mappings import ChainDict
 import collections
 import os
 import re
@@ -24,21 +25,24 @@ def configure_file(input, output=None, environ={}, inherit_environ=True):
   filename. The ``.in`` suffix from #input will be removed if it
   exists.
 
-  :param input: Absolute path to the CMake config file.
-  :param output: Name of the output file. Will be automatically
-    generated if omitted.
-  :param environ: A dictionary containing the variables for
-    rendering the CMake configuration file. Non-existing
-    variables are considered undefined.
-  :param inherit_environ: If True, the environment variables of the
-    Craftr process are additionally taken into account.
-  :return: A :class:`ConfigResult` object.
+  # Parameters
+  input (str):
+    Path to the CMake file that should be rendered.
+  output (str, None):
+    Name of the output file. Will be automatically generated if not
+    specified.
+  environ (dict):
+    A dictionary of variables for the CMake template rendering.
+  inherit_environ (bool):
+    If #True, the environment variables of the Craftr process are taken
+    into account in additon to *environ*.
+  return (ConfigResult)
   """
 
-  input = path.canonical(input, craftr.get_call_context().directory)
+  input = path.canonical(input, context.current_target)
 
   if not output:
-    build_dir = craftr.get_output_directory(craftr.get_call_context())
+    build_dir = context.current_target.output_directory
     output = path.join(build_dir, 'include', path.base(input))
     if output.endswith('.in'):
       output = output[:-3]
@@ -46,10 +50,7 @@ def configure_file(input, output=None, environ={}, inherit_environ=True):
       output = output[:-6]
 
   if inherit_environ:
-    new_env = os.environ.copy()
-    new_env.update(environ)
-    environ = new_env
-    del new_env
+    environ = ChainDict(environ, os.environ)
 
   output_dir = path.dir(output)
   path.makedirs(output_dir)

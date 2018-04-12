@@ -160,7 +160,7 @@ class CsharpTargetHandler(craftr.TargetHandler):
   def __init__(self, csc):
     self.csc = csc
 
-  def init(self, context):
+  def on_register(self, context):
     props = context.target_properties
     props.add('csharp.srcs', craftr.PathList, options={'inherit': True})
     props.add('csharp.type', craftr.String, 'exe')  # appcontainer, exe, library, module, winexe, winmdobj
@@ -176,7 +176,7 @@ class CsharpTargetHandler(craftr.TargetHandler):
     props = context.dependency_properties
     props.add('csharp.bundle', craftr.Bool, True)
 
-  def translate_target(self, target):
+  def on_target_translate(self, context, target):
     build_dir = path.join(context.build_directory, target.module.name)
     data = target.get_props('csharp.', as_object=True)
 
@@ -208,15 +208,20 @@ class CsharpTargetHandler(craftr.TargetHandler):
       modules = []
       bundleReferences = list(data.dynamicLibraries)
       references = []
-      for dep in target.transitive_dependencies():
-        depData = dep.handler_data(self)
-        for dep_target in dep.sources:
-          files = dep_target.files_tagged(['out', 'csharp.module'])[1]
-          if depData.bundle: bundleModules += files
-          else: modules += files
-          files = dep_target.files_tagged(['out', '!csharp.module', 'csharp.*'])[1]
-          if depData.bundle: bundleReferences += files
-          else: references += files
+      input_actions = []
+
+      for pair in target.transitive_target_pairs():
+        do_bundle = pair.dep['csharp.bundle']
+
+        modules = pair.target.actions_for('out,csharp.module')
+        if do_bundle: bundleModules += modules.files
+        else: modules += modules.files
+        input_actions += modules
+
+        references = pair.target.actions_for('out,!csharp.module,cshar.*')
+        if do_bundle: bundleReferences += modules.files
+        else: references += modules.files
+        input_actions += modules
 
       # Action to compile the C# sources into the target product type.
       command = self.csc.program + ['-nologo', '-target:' + data.type]

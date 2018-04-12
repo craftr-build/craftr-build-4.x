@@ -39,7 +39,7 @@ class CxxTargetHandler(craftr.TargetHandler):
     print('Selected compiler: {} ({}) {} for {}'.format(
       self.compiler.name, self.compiler.id, self.compiler.version, self.compiler.arch))
 
-  def init(self, context):
+  def on_register(self, context):
     props = context.target_properties
     # Largely inspired by the Qbs cpp module.
     # https://doc.qt.io/qbs/cpp-module.html
@@ -257,9 +257,9 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     self.compiler.init(context)
 
-  def translate_target(self, target):
+  def on_target_translate(self, context, target):
     data = target.get_props('cxx.', as_object=True)
-    build_dir = craftr.get_output_directory(target)
+    build_dir = target.output_directory
 
     if not data.preferredLinkage:
       data.preferredLinkage = 'static'
@@ -290,12 +290,16 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     self.compiler.translate_target(target, data)
 
+    c_srcs = []
+    cpp_srcs = []
+    c_actions = []
+    cpp_actions = []
+
     # Handle cxx.embedFiles -- turning data files into C files and add
     # them to the sources list.
-    embed_files_action = None
     if data.embedFiles:
       outfile = path.join(build_dir, 'embed.c')
-      data.srcs.append(outfile)
+      c_srcs.append(outfile)
 
       bin2c = str(require.resolve('./tools/bin2c').filename)
       command = nodepy.runtime.exec_args + [bin2c, '-o', outfile]
@@ -306,12 +310,25 @@ class CxxTargetHandler(craftr.TargetHandler):
       buildset.files.add(data.embedFiles.values(), ['in'])
       buildset.files.add(outfile, ['out'])
 
-    c_srcs = []
-    cpp_srcs = []
+      c_actions.append(embed_files_action)
+
     for filename in data.srcs:
-      if filename.endswith('.c'): c_srcs.append(filename)
-      if filename.endswith('.cpp') or filename.endswith('.cc'):
+      if filename.endswith('.c'):
+        c_srcs.append(filename)
+      elif filename.endswith('.cpp') or filename.endswith('.cc'):
         cpp_srcs.append(filename)
+      # TODO: Issue a warning?
+
+    # Take generated C/C++ files into account.
+    actions = target.actions_for('out,cxx.c,!used')
+    c_actions += actions
+    c_srcs += actions.files
+    actions.tag('used')
+
+    actions = target.actions_for('out,cxx.cpp,!used')
+    cpp_actions += actions
+    cpp_srcs += actions.files
+    actions.tag('used')
 
     if data.combineCSources:
       unity_c_file = path.join(build_dir, 'unity.c')
@@ -327,12 +344,11 @@ class CxxTargetHandler(craftr.TargetHandler):
 
     compile_actions = []
     obj_files = []
-    for (srcs, lang) in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
+    for (srcs, lang, actions) in ((c_srcs, 'c', c_actions), (cpp_srcs, 'cpp', cpp_actions)):
       if not srcs: continue
       name = 'cxx.compile' + lang.capitalize()
       action = self.compiler.create_compile_action(target, data, name, lang, srcs)
-      if lang == 'c' and embed_files_action:
-        action.deps.append(embed_files_action)
+      action.deps += actions
       compile_actions.append(action)
 
     if compile_actions and data.link:

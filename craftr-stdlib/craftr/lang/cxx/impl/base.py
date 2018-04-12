@@ -207,7 +207,7 @@ class Compiler(nr.named.named):
       deps_prefix=self.deps_prefix,
       depfile=self.depfile_name)
 
-    objdir = craftr.get_output_directory(target, 'obj')
+    objdir = path.join(target.output_directory, 'obj')
     for src in srcs:
       buildset = action.add_buildset(name=src)
       buildset.files.add(src, ['in', 'src', 'src.' + lang])
@@ -299,19 +299,22 @@ class Compiler(nr.named.named):
   def create_link_action(self, target, data, action_name, lang, compile_actions):
     command = self.get_link_command(target, data, lang)
 
-    compile_actions, obj_files = target.actions_and_files_tagged(['out', 'obj'])
-    library_actions, library_files = target.actions_and_files_tagged(['out', 'lib'], transitive=True)
+    obj = target.actions_for('out,obj,!used')
+    lib = target.actions_for('out,lib,!used')
 
     link_action = target.add_action(
       action_name,
       commands=[command],
       environ=self.linker_env,
-      deps=compile_actions + library_actions)
+      deps=obj | lib)
     buildset = link_action.add_buildset(name=data.productFilename)
-    buildset.files.add(obj_files, ['in', 'obj'])
-    buildset.files.add(library_files, ['in', 'lib'])
+    buildset.files.add(obj.files, ['in', 'obj'])
+    buildset.files.add(lib.files, ['in', 'lib'])
     buildset.files.add(data.productFilename, ['out', 'product'] + data.productTags)
     self.add_link_outputs(target, data, lang, buildset)
+
+    obj.tag('used')
+    lib.tag('used')
     return link_action
 
   def add_link_outputs(self, target, data, lang, buildset):

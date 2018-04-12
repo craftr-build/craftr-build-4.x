@@ -96,7 +96,7 @@ class MsvcCompiler(base.Compiler):
   # @override
   def translate_target(self, target, data):
     src_dir = target.directory
-    obj_dir = craftr.get_output_directory(target, 'obj')
+    obj_dir = path.join(target.output_directory, 'obj')
     if data.msvcResourceFiles:
       outfiles = craftr.relocate_files(src_dir, data.msvcResourceFiles, obj_dir, '.res')
       command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']

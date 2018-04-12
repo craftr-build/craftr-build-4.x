@@ -25,10 +25,9 @@ from the aspect of Craftr DSL.
 from nr.stream import stream
 from nr.datastructures.mappings import ObjectFromMapping
 
+import abc
 import collections
-import warnings
-
-import {Action, BuildGraph, FileSet} from './build'
+import {Action, ActionSet, BuildGraph, FileSet} from './build'
 import proplib from './proplib'
 
 
@@ -49,30 +48,39 @@ class Context:
     self.graph = BuildGraph()
 
   def register_handler(self, handler):
-    handler.init(self)
-    self.handlers.append(handler)
+    """
+    Register a #TargetHandler to the Context. The handler will be inserted
+    at the first position into the #handlers list and
+    #TargetHandler.on_register() will be called.
+
+    Note: The reverse order of registration is the order in which target
+    handlers will be invoked during the translation process.
+    """
+
+    handler.on_register(self)
+    self.handlers.insert(0, handler)
 
   def iter_targets(self):
     """
-    Iterates over all targets in the context in post-order.
+    Iterates over all targets in the context in post-order, including layers.
     """
 
     seen = set()
 
     def recurse_target(target):
-      for dep in target.transitive_dependencies().attr('sources').concat():
-        if dep not in seen:
-          seen.add(dep)
-          yield dep
-          yield from recurse_layers(dep)
-          yield from recurse_target(dep)
+      for dep in target.transitive_targets():
+        if dep in seen: continue
+        seen.add(dep)
+        yield dep
+        yield from recurse_layers(dep)
+        yield from recurse_target(dep)
 
     def recurse_layers(target):
       for layer in target.iter_layers():
-        if layer not in seen:
-          seen.add(layer)
-          yield from recurse_target(layer)
-          yield layer
+        if layer in seen: continue
+        seen.add(layer)
+        yield layer
+        yield from recurse_target(layer)
 
     for module in self.modules:
       for target in module.targets.values():
@@ -82,8 +90,9 @@ class Context:
 
   def iter_targets_additive(self):
     """
-    Iterates over all targets in the context in post-order, until no more new
-    targets are created.
+    Iterates over all targets in the context in post-order, including layers,
+    until no more targets are unseen. This is used during #translate_targets()
+    to account for new layers being created in targets during iteration.
     """
 
     seen = set()
@@ -98,31 +107,17 @@ class Context:
 
   def translate_targets(self):
     """
-    Invokes the translation process for all targets in all modules in the
-    Context.
+    Performs the translation process for all targets in all modules. It uses
+    #iter_targets_additive() to account for new layers that are created during
+    the translation process.
     """
 
-    for handler in self.handlers:
-      handler.translate_begin()
-
     for target in self.iter_targets_additive():
       for handler in self.handlers:
-        handler.preprocess_target(target)
-    for target in self.iter_targets_additive():
-      for handler in self.handlers:
-        handler.translate_target(target)
+        handler.on_target_translate(self, target)
 
-    for handler in self.handlers:
-      handler.translate_end()
-
-    def add_target_actions(target):
+    for target in self.iter_targets():
       self.graph.add_actions(target.actions.values())
-      for layer in target.iter_layers():
-        add_target_actions(layer)
-
-    for module in self.modules:
-      for target in module.targets.values():
-        add_target_actions(target)
 
 
 class Module:
@@ -158,7 +153,7 @@ class Module:
     target = target_cls(self, name, public)
     self.targets[target.name] = target
     for handler in self.context.handlers:
-      handler.target_created(target)
+      handler.on_target_created(self.context, target)
     return target
 
   def add_target(self, *args, **kwargs):
@@ -202,11 +197,17 @@ class Target:
     self.exported_props = proplib.Properties(module.context.target_properties, self)
     self.dependencies = []
     self.actions = collections.OrderedDict()
-    self.layers = {}
+    self.input_actions = []
+    self.layers = collections.OrderedDict()
     self._layers_list = []  # Can be appended to during iteration.
 
   def __repr__(self):
     return 'Target(id={!r}, public={!r})'.format(self.id, self.public)
+
+  def __getitem__(self, prop_name):
+    prop = self.context.target_properties[prop_name]
+    inherit = prop.options.get('inherit', False)
+    return self.get_prop(prop_name, inherit=inherit)
 
   @property
   def context(self):
@@ -224,6 +225,15 @@ class Target:
 
   @property
   def directory(self):
+    """
+    Returns the value of the `this.directory` property of the target. If the
+    property is not explicitly set, falls back on the directory of the parent
+    target or that of the owning #Module.
+
+    The `this.directory` property will be used to convert any relative paths
+    to absolute paths in properties of type #proplib.Path or #proplib.PathList.
+    """
+
     result = self.get_prop('this.directory', default=None)
     if result is None:
       if self.parent:
@@ -254,11 +264,17 @@ class Target:
 
   def get_prop(self, prop_name, inherit=False, default=NotImplemented):
     """
-    Returns a property value, preferring the value in the #exported_props.
+    Returns a property value. If a value exists in #exported_props and #props,
+    the #exported_props takes preference.
 
     If *inherit* is #True, the property must be a #proplib.List property
     and the values in the exported and non-exported property containers as
     well as transitive dependencies are respected.
+
+    Note that this method does not take property options into account, so
+    even if you specified `options={'inherit': True}` on the property you
+    want to retrieve, you will need to pass `inherit=True` explicitly to this
+    method. If you want this to happen automatically, use the #__getitem__().
     """
 
     if inherit:
@@ -281,16 +297,24 @@ class Target:
 
   def get_props(self, prefix='', as_object=False):
     """
-    Returns a dictionary that contains all property values, optionally from
-    the specified prefix.
+    Creates a dictionary from all property values in the Target that start
+    with the specified *prefix*. If *as_object* is #True, an object that wraps
+    the dictionary will be returned instead. Modifying the returned dictionary
+    does not have an effect on the actualy property values of the Target.
+
+    The prefix will be stripped from the keys (or attributes) of the returned
+    dictionary (or object).
+
+    # Parameters
+    prefix (str): The prefix to filter properties.
+    as_object (bool): Return an object instead of a dictionary.
+    return (dict, ObjectFromMapping)
     """
 
     result = {}
     propset = self.context.target_properties
     for prop in filter(lambda x: x.name.startswith(prefix), propset.values()):
-      inherit = prop.options.get('inherit', False)
-      value = self.get_prop(prop.name, inherit)
-      result[prop.name[len(prefix):]] = value
+      result[prop.name[len(prefix):]] = self[prop.name]
 
     if as_object:
       result = ObjectFromMapping(result)
@@ -298,6 +322,24 @@ class Target:
     return result
 
   def transitive_dependencies(self):
+    """
+    Returns an iterator that yields the #Dependencies<Dependency> of the
+    Target including transitively inherited dependencies. The returned
+    iterator is a #stream instance, thus you can use any streaming operations
+    on the returned object.
+
+    For example, to iterate over all targets contained in the dependencies,
+    you can use
+
+    ```python
+    for other_target in target.transitive_dependencies()\
+                          .attr('sources').concat().unique():
+      # ...
+    ```
+
+    But there's a shortcut for that one: #transitive_targets().
+    """
+
     def worker(target, private=False):
       for dep in target.dependencies:
         if dep.public or private:
@@ -306,12 +348,55 @@ class Target:
           yield from worker(t)
     return stream.unique(worker(self, private=True))
 
+  def transitive_targets(self):
+    """
+    Returns an iterator that yields a namedtuple of #Dependency and #Target
+    objects listed in the dependencies of this target. The returned iterator
+    is a #stream instance, thus you can use any streaming operations on the
+    object.
+    """
+
+    return self.transitive_dependencies().attr('sources').concat().unique()
+
+  def transitive_target_pairs(self):
+    """
+    Similar to #transitive_targets(), but yields pairs of #Dependency and
+    #Target objects instead.
+    """
+
+    DependencyTargetPair = collections.namedtuple(
+      'DependencyTargetPair', ('dep', 'target'))
+
+    def generate():
+      seen = ()
+      for dependency in self.transitive_dependencies():
+        for target in dependency.sources:
+          if target not in seen:
+            yield DependencyTargetPair(dependency, target)
+            seen.add(target)
+
+    return stream(generate())
+
   def add_dependency_with_class(self, dependency_cls, sources, public=False):
     dep = dependency_cls(self, sources, public)
     self.dependencies.append(dep)
     return dep
 
   def add_dependency(self, *args, **kwargs):
+    """
+    Add a new dependency to this target that references the targets specified
+    in the *sources* parameter.
+
+    # Parameters
+    sources (Target, list of Target):
+      A target or a list of targets that the dependency references.
+    public (bool):
+      Pass #True if you want the dependency to be public, which means that
+      targets that depend on _this_ target will inherit the dependency in
+      #transitive_dependencies().
+    return (Dependency)
+    """
+
     return self.add_dependency_with_class(Dependency, *args, **kwargs)
 
   def add_action(self, name=None, *, input=None, output=None, deps=None, **kwargs):
@@ -355,9 +440,9 @@ class Target:
       deps_was_unset = False
       deps = list(deps)
     if input:
-      for dep in self.transitive_dependencies():
-        for target in dep.sources:
-          deps += target.output_actions
+      for target in self.transitive_targets():
+        deps += target.output_actions
+      deps = list(stream.chain(deps, self.input_actions).unique())
     elif deps_was_unset and self.actions:
       output_actions = self.output_actions
       if output_actions:
@@ -374,49 +459,26 @@ class Target:
     action.is_output = output
     return action
 
-  def actions_and_files_tagged(self, tags, transitive=False):
+  def add_input_action(self, action):
     """
-    Returns a tuple of (actions, files) where *actions* is a list of actions
-    in the target that have at least one buildset where the specified *tags*
-    match, and *files* is a list of the files that match these tags.
-
-    If *transitive* is #True, the actions and files of the transitive
-    dependencies are returned instead.
+    Adds an #Action to this target as an explicit input action. This action
+    is taken into account when using #add_action() the same as for the output
+    actions of the target's dependencies.
     """
 
-    if self.redirect_actions:
-      return self.parent.actions_and_files_tagged(tags, transitive)
+    assert isinstance(action, Action)
+    self.input_actions.append(action)
 
-    if isinstance(tags, str):
-      tags = [x.strip() for x in tags.split(',')]
-
-    actions = []
-    files = []
-    if transitive:
-      for target in self.transitive_dependencies().attr('sources').concat():
-        res = target.actions_and_files_tagged(tags)
-        actions += res[0]
-        files += res[1]
-    else:
-      for action in self.actions.values():
-        matched_files = action.all_files_tagged(tags)
-        if matched_files:
-          actions.append(action)
-          files += matched_files
-
-    return actions, files
-
-  def files_tagged(self, tags, transitive=False):
+  def iter_layers(self, recursive=False):
     """
-    Returns only files with the specified tags.
+    Returns an iterator for the layers in this target. If *recursive* is
+    #True, the iterator will include layers of layers.
     """
 
-    if self.redirect_actions:
-      return self.parent.files_tagged(tags, transitive)
-    return self.actions_and_files_tagged(tags, transitive)[1]
-
-  def iter_layers(self):
-    return iter(self._layers_list)
+    for layer in self._layers_list:
+      yield layer
+      if recursive:
+        yield from layer.layers(True)
 
   def add_layer_with_class(self, target_cls, name, public=False, redirect_actions=False):
     if name in self.layers:
@@ -428,7 +490,77 @@ class Target:
     return target
 
   def add_layer(self, *args, **kwargs):
+    """
+    Add a new layer to the Target. A layer is also just a Target, but listed
+    as a child of the current target. This layer can be used to specify new
+    properties that can be taken into account by #TargetHandler implementations
+    independent of the parent target.
+
+    If you want the parent target to be taken into account when the layer
+    is translated, add it as a dependency with #add_dependency().
+
+    # Parameters
+    name (str):
+      The name of the layer. This name must be unique inside the layers of
+      this target.
+    public (bool):
+      Whether the new layer is a public target that will be referenced by
+      default when declaring a dependency to the owning module.
+    redirect_actions (bool):
+      If this is #True, actions created in the layer will be added to the
+      parent target instead. This is usually not recommended.
+    return (Target)
+    """
+
     return self.add_layer_with_class(type(self), *args, **kwargs)
+
+  def actions_for(self, tags, transitive=False):
+    """
+    Returns a set of #Action#s that that have a buildset with files that
+    match the specified *tags*. If *transitive* is #True, the actions of
+    the target's dependencies will be taken into account as well.
+
+    #TargetHandler implementations should use this method to take into
+    account any generated files that they might be able to handle further.
+    For example, a #TargetHandler that preprocesses C++ source code should
+    tag the output files as `out,cxx.cpp` so that the Cxx #TargetHandler can
+    retrieve these files with `out,cxx.cpp,!used` and include them in the
+    compilation.
+
+    Note that the files taken into account should then be tagged as `used`
+    in order to avoid other targets inheriting these files as well. This
+    can be done conveniently with the #ActionSet.tag() method.
+
+    In order to get a list of the files that matches the tags, use the
+    #ActionSet.files iterator. Make sure that when you use this method in
+    a #TargetHandler to retrieve additional input files that you add the
+    returned actions to the actions that your handler creates (with
+    #ActionSet.__iter__()).
+
+    # Parameters
+    tags (str, list of str):
+      A file tag string or list of file tags.
+    transitive (bool):
+      If #True, take actions of the target's dependencies into account as well.
+    return (ActionSet)
+    """
+
+    if self.redirect_actions:
+      return self.parent.actions_and_files_tagged(tags, transitive)
+
+    if isinstance(tags, str):
+      tags = [x.strip() for x in tags.split(',')]
+
+    result = ActionSet(tags)
+    if transitive:
+      for target in self.transitive_targets():
+        result |= target.actions_for(tags, transitive=False)
+    else:
+      for action in self.actions.values():
+        if action.has_files_tagged(tags):
+          result.add(action)
+
+    return result
 
 
 class Dependency:
@@ -458,27 +590,66 @@ class Dependency:
     return self.target.context
 
 
-class TargetHandler:
+class TargetHandler(metaclass=abc.ABCMeta):
   """
-  Interface for target handlers -- the objects that are capable of taking
-  target properties and their dependencies and converting them to build
-  actions.
+  TargetHandlers are responsible for taking into account the properties on
+  a target and translating that information to actions in the build graph.
+
+  Every TargetHandler gets the chance to register new properties in the
+  #on_register() method. These properties should have a common prefix.
+
+  Some TargetHandlers may want to run before others. This is entirely
+  based on the order that handlers are registered with
+  #Context.register_handler(). If you want your target handler to run
+  before another, make sure to import the module that implements the
+  target handler before you register your handler.
   """
 
-  def init(self, context):
+  @abc.abstractmethod
+  def on_register(self, context):
+    """
+    This method is called when the TargetHandler is registered to the
+    context with #Context.register_handler(). This is the chance for the
+    the TargetHandler to register any properties that it can support on
+    modules, targets and dependencies.
+    """
+
     pass
 
-  def target_created(self, target):
+  def on_target_created(self, context, target):
+    """
+    This method is called when a target is created with #Module.add_target().
+    Note that it can only be called for targets that are created after the
+    TargetHandler was registered.
+    """
+
     pass
 
-  def translate_begin(self):
-    pass
+  @abc.abstractmethod
+  def on_target_translate(self, context, target):
+    """
+    This method is called when the target is supposed to be translated into
+    build actions. Use the #Target.add_action() method to create a build
+    action.
 
-  def preprocess_target(self, target):
-    pass
+    The TargetHandler may also add another layer to the target using the
+    #Target.add_layer() method. This returns a new #Target instance which
+    is a child of the original target, and it will go through the same
+    translation process after this method completes. Note that it is not
+    garuanteed that the layer will be handled right after this method.
+    Generally speaking, the current target will be run through all handlers
+    before continuing with the newly created layer. TargetHandlers usually
+    add the parent target as to the new layers as a dependency with
+    #Target.add_dependency().
 
-  def translate_target(self, target):
-    pass
+    Also keep in mind that a layer introduces a new target name (the
+    parent target name and the layer name separated by a slash).
 
-  def translate_end(self):
+    TargetHandlers usually not only take the properties of the current target
+    into account, but also the properties and output files of the targets that
+    are listed as dependencies. Use the #Target.transitive_dependencies()
+    method to iterate over all #Dependency objects of the target that should
+    be taken into account.
+    """
+
     pass
