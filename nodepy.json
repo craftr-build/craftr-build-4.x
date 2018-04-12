@@ -4,6 +4,10 @@
   "license": "MIT",
   "authors": ["Niklas Rosenstein <rosensteinniklas@gmail.com>"],
   "description": "The Craftr build system.",
+  "engines": [
+    "nodepy>=2.0.2",
+    "python>=3.4"
+  ],
   "pip_dependencies": {
     "glob2": ">=0.6",
     "nr": ">=2.0.5",
