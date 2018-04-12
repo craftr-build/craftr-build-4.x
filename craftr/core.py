@@ -52,6 +52,50 @@ class Context:
     handler.init(self)
     self.handlers.append(handler)
 
+  def iter_targets(self):
+    """
+    Iterates over all targets in the context in post-order.
+    """
+
+    seen = set()
+
+    def recurse_target(target):
+      for dep in target.transitive_dependencies().attr('sources').concat():
+        if dep not in seen:
+          seen.add(dep)
+          yield dep
+          yield from recurse_layers(dep)
+          yield from recurse_target(dep)
+
+    def recurse_layers(target):
+      for layer in target.iter_layers():
+        if layer not in seen:
+          seen.add(layer)
+          yield from recurse_target(layer)
+          yield layer
+
+    for module in self.modules:
+      for target in module.targets.values():
+        yield from recurse_target(target)
+        yield target
+        yield from recurse_layers(target)
+
+  def iter_targets_additive(self):
+    """
+    Iterates over all targets in the context in post-order, until no more new
+    targets are created.
+    """
+
+    seen = set()
+    has_new_targets = True
+    while has_new_targets:
+      has_new_targets = False
+      for target in self.iter_targets():
+        if target not in seen:
+          seen.add(target)
+          yield target
+          has_new_targets = True
+
   def translate_targets(self):
     """
     Invokes the translation process for all targets in all modules in the
@@ -61,30 +105,12 @@ class Context:
     for handler in self.handlers:
       handler.translate_begin()
 
-    seen = set()
-    def handle_target(target):
-      if target in seen:
-        return False
-      seen.add(target)
+    for target in self.iter_targets_additive():
+      for handler in self.handlers:
+        handler.preprocess_target(target)
+    for target in self.iter_targets_additive():
       for handler in self.handlers:
         handler.translate_target(target)
-      # Check the layers of the target -- handling them may create new layers.
-      nextround = True
-      while nextround:
-        nextround = False
-        for layer in target.iter_layers():
-          if handle_target(layer):
-            nextround = True
-      return True
-    def translate(target):
-      for dep in target.dependencies:
-        for other_target in dep.sources:
-          translate(other_target)
-      handle_target(target)
-
-    for module in self.modules:
-      for target in module.targets.values():
-        translate(target)
 
     for handler in self.handlers:
       handler.translate_end()
@@ -446,6 +472,9 @@ class TargetHandler:
     pass
 
   def translate_begin(self):
+    pass
+
+  def preprocess_target(self, target):
     pass
 
   def translate_target(self, target):
