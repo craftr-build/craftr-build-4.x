@@ -470,12 +470,11 @@ class Parser:
     if_expr = self._parse_block_if_expr(lexer, allow_non_block=True)
     is_remainder = False
 
-    if not if_expr:
-      if lexer.accept(':'):
-        if lexer.accept('>>'):
-          is_remainder = True
-        lexer.next('nl')
-        loc.lineno += 1
+    if (if_expr and lexer.next(':')) or (not if_expr and lexer.accept(':')):
+      if lexer.accept('>>'):
+        is_remainder = True
+      lexer.next('nl')
+      loc.lineno += 1
 
     if is_remainder and parent_indent:
       raise ParseError(lexer.token.cursor, 'eval:>> block only on top-level')
@@ -572,7 +571,7 @@ class Parser:
     if not token: return None
     if token.value == 'if':
       line = lexer.scanner.readline()
-      result = line.partition('#')[0].strip()
+      result = line.partition('#')[0].rstrip()
       if result.endswith(':'):
         result = result[:-1]
         lexer.scanner.seek(len(result)-len(line), 'cur')
@@ -580,7 +579,7 @@ class Parser:
         lexer.scanner.seek(-1, 'cur')
       elif not allow_non_block:
         raise ParseError(loc, 'missing : at the end of conditional block')
-      return result
+      return result.lstrip()
     elif allow_non_block:
       lexer.scanner.restore(token.cursor)  # TODO: Restore previous token?
       return None
