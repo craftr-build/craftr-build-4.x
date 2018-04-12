@@ -144,8 +144,8 @@ class Module:
     self.props = proplib.Properties(context.module_properties, self)
 
   def __repr__(self):
-    return 'Module(name={!r}, version={!r}, directory={!r})'.format(
-      self.name, self.version, self.directory)
+    return '{}(name={!r}, version={!r}, directory={!r})'.format(
+      type(self).__name__, self.name, self.version, self.directory)
 
   def add_target_with_class(self, target_cls, name, public=False):
     if name in self.targets:
@@ -202,7 +202,8 @@ class Target:
     self._layers_list = []  # Can be appended to during iteration.
 
   def __repr__(self):
-    return 'Target(id={!r}, public={!r})'.format(self.id, self.public)
+    return '{}(id={!r}, public={!r})'.format(
+      type(self).__name__, self.id, self.public)
 
   def __getitem__(self, prop_name):
     prop = self.context.target_properties[prop_name]
@@ -582,8 +583,8 @@ class Dependency:
     self.props = proplib.Properties(target.context.dependency_properties, self)
 
   def __repr__(self):
-    return 'Dependency({!r}, {!r}, public={!r})'.format(
-      self.target, self.sources, self.public)
+    return '{}({!r}, {!r}, public={!r})'.format(
+      type(self).__name__, self.target, self.sources, self.public)
 
   @property
   def context(self):
