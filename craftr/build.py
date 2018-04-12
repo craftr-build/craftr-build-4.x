@@ -21,6 +21,8 @@
 This module implementations the representation of final build information.
 """
 
+from nr.stream import stream
+
 import collections
 import hashlib
 import json
@@ -388,13 +390,37 @@ class BuildGraph:
     for action in actions:
       self._actions[action.identifier()] = action
 
+  def resolve(self, action_name):
+    """
+    Returns a list of actions matching the specified *action_name*. If a
+    target does not provide the specified action exactyly, the targets layers
+    are searched and a list of the actions is returned.
+
+    Never returns an empty list, instead raises a #ValueError if there was
+    no matching action(s).
+    """
+
+    if action_name in self._actions:
+      return [self._actions[action_name]]
+
+    target, action = action_name.partition(':')[::2]
+    target += '/'
+    actions = [x for x in self._actions.values() if x.target.startswith(target)]
+    if action:
+      actions = [x for x in actions if x.name == action]
+    else:
+      actions = [x for x in actions if not x.explicit]
+
+    if not actions:
+      raise ValueError('no actions matching {!r}'.format(action_name))
+
+    return actions
+
   def select(self, action_name):
-    if action_name not in self._actions:
-      raise KeyError(action_name)
-    self._selected.add(action_name)
+    self._selected |= set(x.identifier() for x in self.resolve(action_name))
 
   def selected(self):
-    return (self._actions[x] for x in self._selected)
+    return (self[x] for x in self._selected)
 
   def to_json(self):
     root = {}
