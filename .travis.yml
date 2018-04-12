@@ -6,8 +6,9 @@ python:
 - 3.6
 install:
 - pip install nodepy-runtime
-- nodepy https://nodepy.org/install-pm.py
+- nodepy https://nodepy.org/install-pm.py develop
 - nodepy-pm install
-- export PATh="$PATH:$(nodepy-pm bin)"
+- export PATH="$PATH:$(nodepy-pm bin)"
 script:
 - nodepy-nosetests
+- craftr --version
