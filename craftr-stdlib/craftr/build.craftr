@@ -4,8 +4,7 @@
 project "craftr" v1.0.0
 eval:>>
 
-__builtins__ = ['BUILD', 'OS', 'path', 'error', 'fmt', 'glob']
-__all__ = __builtins__ + ['option_default', 'get_output_directory', 'relocate_files', 'sh']
+__all__ = __builtins__ = ['BUILD', 'OS', 'path', 'error', 'fmt', 'glob']
 
 from nr import path
 
