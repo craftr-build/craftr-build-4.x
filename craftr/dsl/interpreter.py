@@ -101,7 +101,7 @@ class Interpreter:
     return module
 
   def eval_module(self, namespace, module):
-    self.context.current_module = module
+    self.context.current_modules.append(module)
     for node in namespace.children:
       if isinstance(node, Eval):
         self._eval_block(node, module)
@@ -122,7 +122,7 @@ class Interpreter:
         self.context.link_module(module.directory, node.path)
       else:
         assert False, node
-    self.context.current_module = None
+    assert self.context.current_modules.pop() is module
 
   def _options(self, node, module):
     assert module is self.nodepy_module.craftr_module, (module, self.nodepy_module.craftr_module)
@@ -179,7 +179,7 @@ class Interpreter:
       return
     target = module.add_target_with_class(
       self.context.target_class, node.name, node.public)
-    self.context.current_target = target
+    self.context.current_targets.append(target)
     for node in node.children:
       if isinstance(node, Eval):
         self._eval_block(node, target)
@@ -191,7 +191,7 @@ class Interpreter:
         self._export_block(node, target)
       else:
         assert False, node
-    self.context.current_target = None
+    assert self.context.current_targets.pop() is target
 
   def _dependency(self, node, parent_target, override_export=False):
     if not self._test_if_expr(node, parent_target):
@@ -208,13 +208,13 @@ class Interpreter:
       sources = [x for x in module.targets.values() if x.public]
     dep = parent_target.add_dependency_with_class(
       self.context.dependency_class, sources, override_export or node.export)
-    self.context.current_dependency = dep
+    self.context.current_dependencies.append(dep)
     for assign in node.assignments:
       assert isinstance(assign, Assignment), assign
       self._assignment(assign, dep)
     if node.assign_to:
       parent_target.scope[node.assign_to] = module.nodepy_module.namespace
-    self.context.current_dependency = None
+    assert self.context.current_dependencies.pop() is dep
 
   def _export_block(self, node, obj):
     assert isinstance(obj, core.Target)

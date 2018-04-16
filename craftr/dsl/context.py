@@ -172,12 +172,23 @@ class Context(core.Context):
   target_class = DslTarget
   dependency_class = DslDependency
 
-  current_module = None
-  current_target = None
-  current_dependency = None
+  @property
+  def current_module(self):
+    return self.current_modules[-1] if self.current_modules else None
+
+  @property
+  def current_target(self):
+    return self.current_targets[-1] if self.current_targets else None
+
+  @property
+  def current_dependency(self):
+    return self.current_dependencies[-1] if self.current_dependencies else None
 
   def __init__(self, build_variant, build_directory, load_builtins=True):
     super().__init__()
+    self.current_modules = []
+    self.current_targets = []
+    self.current_dependencies = []
     self.module_links_dir = path.join(build_directory, '.module-links')
 
     self.loader = CraftrModuleLoader(self)
