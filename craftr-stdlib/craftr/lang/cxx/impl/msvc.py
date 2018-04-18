@@ -91,7 +91,7 @@ class MsvcCompiler(base.Compiler):
     props.add('cxx.msvcLinkerFlags', craftr.StringList)
     props.add('cxx.msvcNoDefaultLib', craftr.StringList)
     props.add('cxx.msvcResourceFiles', craftr.PathList)
-    props.add('cxx.msvcConformance', craftr.StringList, default=['wchar_t'], options={'inherit': True})
+    props.add('cxx.msvcConformance', craftr.StringList, options={'inherit': True})
 
   # @override
   def translate_target(self, target, data):
@@ -139,7 +139,9 @@ class MsvcCompiler(base.Compiler):
     command += ['/we' + str(x) for x in unique(data.msvcWaringsAsErrors)]
     command += data.msvcCompilerFlags
 
-    command += ['/Zc:' + x for x in unique(data.msvcConformance)]
+    for conf in data.msvcConformance:
+      arg = '/Zc:' + conf
+      command.append(arg)
 
     if self.deps_prefix:
       command += ['/showIncludes']

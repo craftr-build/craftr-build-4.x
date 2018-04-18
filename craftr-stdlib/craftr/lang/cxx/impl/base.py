@@ -299,8 +299,8 @@ class Compiler(nr.named.named):
   def create_link_action(self, target, data, action_name, lang, compile_actions):
     command = self.get_link_command(target, data, lang)
 
-    obj = target.actions_for('out,obj,!used')
-    lib = target.actions_for('out,lib,!used')
+    obj = target.actions_for('out,obj,!used', transitive=False)
+    lib = target.actions_for('out,lib,!used', transitive=True)
 
     link_action = target.add_action(
       action_name,
@@ -314,7 +314,6 @@ class Compiler(nr.named.named):
     self.add_link_outputs(target, data, lang, buildset)
 
     obj.tag('used')
-    lib.tag('used')
     return link_action
 
   def add_link_outputs(self, target, data, lang, buildset):
