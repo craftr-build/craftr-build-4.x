@@ -21,7 +21,7 @@
 Implements the Craftr command-line interface.
 """
 
-from nr import path
+from nr import fs as path
 from nr.stream import stream
 
 import argparse

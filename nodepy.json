@@ -10,7 +10,11 @@
   ],
   "pip_dependencies": {
     "glob2": ">=0.6",
-    "nr": ">=2.0.5",
+    "nr.ast": ">=1.0.0",
+    "nr.fs": ">=1.0.0",
+    "nr.parse": ">=1.0.0",
+    "nr.stream": ">=1.0.0",
+    "nr.types": ">=1.0.4",
     "requests": ">=2.18.4",
     "toml": ">=0.9.4",
     "typing": ">=3.6.4"

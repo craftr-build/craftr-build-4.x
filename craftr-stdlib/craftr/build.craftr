@@ -6,8 +6,8 @@ eval:>>
 
 __all__ = __builtins__ = ['BUILD', 'OS', 'path', 'error', 'fmt', 'glob']
 
-from nr import path
-from nr.named import named
+from nr import fs as path
+from nr.types import Named
 from nr.stream import stream
 
 import collections
@@ -111,7 +111,7 @@ def relocate_files(parent, files, outdir, suffix, replace_suffix=True):
   return result
 
 
-class OsInfo(named):
+class OsInfo(Named):
   __annotations__ = [
     ('name', str),
     ('id', str),
@@ -131,7 +131,7 @@ class OsInfo(named):
       raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 
 
-class BuildInfo(named):
+class BuildInfo(Named):
   __annotations__ = [
     ('variant', str)
   ]

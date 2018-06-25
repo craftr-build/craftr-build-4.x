@@ -26,7 +26,7 @@ from nr.stream import stream
 import collections
 import hashlib
 import json
-import nr.path as path
+import nr.fs as path
 import re
 import sys
 import warnings

@@ -21,9 +21,9 @@
 This module implements the glue between Node.py and Craftr build scripts.
 """
 
-from nr import path
+from nr import fs as path
 from nodepy.utils import pathlib
-from nr.datastructures.mappings import ChainDict, ObjectFromMapping
+from nr.types import ChainMap, MapAsObject
 
 import os
 import json
@@ -55,7 +55,7 @@ class CraftrModule(nodepy.loader.PythonModule):
     self._members = {}
 
   def create_namespace(self):
-    return ObjectFromMapping(ChainDict(self._members, self.dsl_context.builtins), self.name)
+    return MapAsObject(ChainMap(self._members, self.dsl_context.builtins), self.name)
 
   def _preprocess_code(self, code):
     return code

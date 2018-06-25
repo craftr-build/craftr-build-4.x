@@ -21,7 +21,7 @@
 This module implements the parser for the Craftr DSL.
 """
 
-from nr import strex
+from nr import parse
 
 import collections
 import contextlib
@@ -57,8 +57,8 @@ class Node:
   """
 
   def __init__(self, loc):
-    if not isinstance(loc, strex.Cursor):
-      raise TypeError('expected strex.Cursor')
+    if not isinstance(loc, parse.Cursor):
+      raise TypeError('expected parse.Cursor')
     self.loc = loc
 
   def __repr__(self):
@@ -294,34 +294,34 @@ class Dependency(Node):
 class Parser:
 
   rules = [
-    strex.Regex('comment', '#.*', skip=True),
-    strex.Regex('string', '"([^"]*)"'),
-    strex.Regex('string', "'([^']*)'"),
-    strex.Regex('version', 'v(\d+\.\d+\.\d+)'),
-    strex.Charset('number', string.digits),
-    strex.Charset('name', string.ascii_letters + string.digits + '_'),
-    strex.Keyword('=', '='),
-    strex.Keyword(':', ':'),
-    strex.Keyword('>>', '>>'),
-    strex.Keyword('.', '.'),
-    strex.Keyword('nl', '\n'),
-    strex.Charset('ws', '\t ', skip=True),
+    parse.Regex('comment', '#.*', skip=True),
+    parse.Regex('string', '"([^"]*)"'),
+    parse.Regex('string', "'([^']*)'"),
+    parse.Regex('version', 'v(\d+\.\d+\.\d+)'),
+    parse.Charset('number', string.digits),
+    parse.Charset('name', string.ascii_letters + string.digits + '_'),
+    parse.Keyword('=', '='),
+    parse.Keyword(':', ':'),
+    parse.Keyword('>>', '>>'),
+    parse.Keyword('.', '.'),
+    parse.Keyword('nl', '\n'),
+    parse.Charset('ws', '\t ', skip=True),
   ]
 
   KEYWORDS = ['project', 'configure', 'options', 'eval', 'pool', 'link_module',
               'export', 'public', 'target', 'requires', 'import']
 
   def parse(self, source, filename='<input>'):
-    lexer = strex.Lexer(strex.Scanner(source), self.rules)
+    lexer = parse.Lexer(parse.Scanner(source), self.rules)
     # TODO: Catch TokenizationError, UnexpectedTokenError
     try:
       return self._parse_project(lexer)
     except ParseError as e:
       e.filename = filename
       raise
-    except strex.TokenizationError as e:
+    except parse.TokenizationError as e:
       raise ParseError(e.token.cursor, repr(e.token.value), filename)
-    except strex.UnexpectedTokenError as e:
+    except parse.UnexpectedTokenError as e:
       raise ParseError(e.token.cursor, 'unexpected token "{}"'.format(e.token.type), filename)
 
   def _skip(self, lexer):
@@ -595,7 +595,7 @@ class Parser:
 class ParseError(Exception):
 
   def __init__(self, loc, message, filename='<input>'):
-    assert isinstance(loc, strex.Cursor)
+    assert isinstance(loc, parse.Cursor)
     self.loc = loc
     self.message = message
     self.filename = filename

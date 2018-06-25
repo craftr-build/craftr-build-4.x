@@ -23,9 +23,9 @@ the evaluation of Craftr build modules via the Craftr DSL. The DSL context
 creates a child Node.py context with the ability to load Craftr modules.
 """
 
-from nr import path
-from nr.strex import Cursor
-from nr.datastructures.mappings import ChainDict, MappingFromObject
+from nr import fs as path
+from nr.parse import Cursor
+from nr.types import ChainMap, ObjectAsMap
 from nodepy.utils import pathlib
 
 import nodepy
@@ -87,7 +87,7 @@ class DslModule(core.Module):
   @property
   def scope(self):
     assert self.nodepy_module, "DslModule.nodepy_module is not set"
-    return MappingFromObject(self.nodepy_module.namespace)
+    return ObjectAsMap(self.nodepy_module.namespace)
 
 
 class DslTarget(core.Target):
@@ -101,7 +101,7 @@ class DslTarget(core.Target):
 
   @property
   def scope(self):
-    return ChainDict(self._scope, self.module.scope)
+    return ChainMap(self._scope, self.module.scope)
 
   @property
   def output_directory(self):
@@ -163,7 +163,7 @@ class DslDependency(core.Dependency):
 
   @property
   def scope(self):
-    return ChainDict(self._scope, self.target.scope)
+    return ChainMap(self._scope, self.target.scope)
 
 
 class Context(core.Context):

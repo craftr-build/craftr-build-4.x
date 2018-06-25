@@ -1,7 +1,7 @@
 
 from typing import List, Dict, Union, Callable
 from nr.stream import stream
-import nr.named
+import nr.types
 import craftr, {BUILD, path} from 'craftr'
 
 
@@ -18,7 +18,7 @@ def is_staticlib(data):
   return data.type == 'library' and data.preferredLinkage == 'static'
 
 
-class Compiler(nr.named.named):
+class Compiler(nr.types.Named):
   """
   Represents the flags necessary to support the compilation and linking with
   a compiler in Craftr. Flag-information that expects an argument may have a
@@ -77,7 +77,7 @@ class Compiler(nr.named.named):
 
     # A dictionary for flags {lang: {static: [], dynamic: []}}
     # Non-existing keys will have appropriate default values.
-    ('linker_runtime', Dict[str, Dict[str, List[str]]], nr.named.initializer(dict)),
+    ('linker_runtime', Dict[str, Dict[str, List[str]]], nr.types.Named.Initializer(dict)),
 
     # XXX support MSVC /WHOLEARCHIVE
 

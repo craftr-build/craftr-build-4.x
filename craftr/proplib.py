@@ -22,8 +22,8 @@ This module implements the #PropertySet class which is used to describe
 properties and their datatype.
 """
 
-from nr import path
-from nr.generic import GenericMeta
+from nr import fs as path
+from nr.types.generic import GenericMeta
 
 import builtins
 import collections

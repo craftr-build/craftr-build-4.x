@@ -1,6 +1,6 @@
 
 from nose.tools import *
-from nr import path
+from nr import fs as path
 import {BuildSet} from '@craftr/craftr-build/build'
 
 

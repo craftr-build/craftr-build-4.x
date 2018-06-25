@@ -13,7 +13,7 @@ eval:
   import re
   import shlex
   import subprocess
-  from nr import path
+  from nr import fs as path
 
   def get_python_config(python_bin):
     # TODO: Cache result

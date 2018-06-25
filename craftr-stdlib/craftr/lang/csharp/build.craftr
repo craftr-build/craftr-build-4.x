@@ -9,7 +9,7 @@ options:
 eval:>>
 
 import functools
-import nr.named
+import nr.types
 import os
 import re
 import requests
@@ -27,7 +27,7 @@ else:
 artifacts_dir = path.join(context.build_directory, 'csharp', 'nuget')
 
 
-class CscInfo(nr.named.named):
+class CscInfo(nr.types.Named):
 
   __annotations__ = [
     ('impl', str),

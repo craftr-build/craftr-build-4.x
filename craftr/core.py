@@ -23,7 +23,7 @@ from the aspect of Craftr DSL.
 """
 
 from nr.stream import stream
-from nr.datastructures.mappings import ObjectFromMapping
+from nr.types import MapAsObject
 
 import abc
 import collections
@@ -309,7 +309,7 @@ class Target:
     # Parameters
     prefix (str): The prefix to filter properties.
     as_object (bool): Return an object instead of a dictionary.
-    return (dict, ObjectFromMapping)
+    return (dict, MapAsObject)
     """
 
     result = {}
@@ -318,7 +318,7 @@ class Target:
       result[prop.name[len(prefix):]] = self[prop.name]
 
     if as_object:
-      result = ObjectFromMapping(result)
+      result = MapAsObject(result)
 
     return result
 

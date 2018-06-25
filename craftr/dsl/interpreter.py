@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from nr import path
+from nr import fs as path
 from nr.ast.dynamic_eval import dynamic_exec, dynamic_eval
 from nodepy.utils.path import pathlib
 

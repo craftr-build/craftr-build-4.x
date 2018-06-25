@@ -16,9 +16,9 @@ Detect MSVC installations on the current system (Windows only).
 import contextlib
 import functools
 import json
-import nr.named
-import nr.path as path
-import nr.tempfile
+import nr.types
+import nr.fs
+import nr.fs as path
 import operator
 import os
 import platform
@@ -34,7 +34,7 @@ import {batchvars} from 'craftr/tools/batchvars'
 import {variant as build_cache} from 'craftr/tools/cache'
 
 
-class MsvcInstallation(nr.named.named):
+class MsvcInstallation(nr.types.Named):
   """
   Represents an MSVC installation directory.
   """
@@ -156,7 +156,7 @@ class AsDictJSONEncoder(json.JSONEncoder):
     return super().default(obj)
 
 
-class ClInfo(nr.named.named):
+class ClInfo(nr.types.Named):
 
   __annotations__ = [
     ('version', str),
@@ -221,7 +221,7 @@ class ClInfo(nr.named.named):
     )
 
 
-class MsvcToolkit(nr.named.named):
+class MsvcToolkit(nr.types.Named):
   """
   Similar to a #MsvcInstallation, this class represents an MSVC
   installation, however it is fixed to a specific target architecture and
@@ -349,7 +349,7 @@ class MsvcToolkit(nr.named.named):
     # Determine the msvc_deps_prefix by making a small test. The
     # compilation will not succeed since no entry point is defined.
     deps_prefix = None
-    with nr.tempfile.tempfile(suffix='.cpp', text=True) as fp:
+    with nr.fs.tempfile(suffix='.cpp', text=True) as fp:
       fp.write('#include <stddef.h>\n')
       fp.close()
       command = ['cl', '/Zs', '/showIncludes', fp.name, '/nologo']

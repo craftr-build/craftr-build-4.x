@@ -3,11 +3,10 @@
 # avoiding the need to read the whole build graph for every build that
 # Ninja runs.
 
-from nr import path
-
 import argparse
 import io
 import json
+import nr.fs as path
 import os
 import re
 import socket

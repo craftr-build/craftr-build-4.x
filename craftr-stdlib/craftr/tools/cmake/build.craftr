@@ -5,7 +5,7 @@ eval:>>
 Allows you to include CMake projects in your build pipeline.
 """
 
-from nr.datastructures.mappings import ChainDict
+from nr.types import ChainMap
 import collections
 import os
 import re
@@ -50,7 +50,7 @@ def configure_file(input, output=None, environ={}, inherit_environ=True):
       output = output[:-6]
 
   if inherit_environ:
-    environ = ChainDict(environ, os.environ)
+    environ = ChainMap(environ, os.environ)
 
   output_dir = path.dir(output)
   path.makedirs(output_dir)

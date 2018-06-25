@@ -1,7 +1,7 @@
 
 from typing import Union, List
 import logging as log
-import nr.path as path
+import nr.fs as path
 import nr.stream
 import craftr, {BUILD} from 'craftr'
 import base from './base'
