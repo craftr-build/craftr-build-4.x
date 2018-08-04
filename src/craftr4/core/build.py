@@ -35,7 +35,7 @@ generated. The public properties of targets can be inherited by another target
 via inclusion.
 """
 
-__all__ = ['BuildSet', 'Operator', 'Target', 'DiskInterface']
+__all__ = ['Behaviour', 'BuildSet', 'Operator', 'Target', 'Master']
 
 import nr.fs
 import re
