@@ -528,3 +528,66 @@ def dump_dotviz(obj, root=True, fp=None):
 
   indent -= 1
   print('}')
+
+
+def topo_sort(master):
+  """
+  Topologically sort all build sets in the build graph contained in the
+  #Master node. Returns a generator yielding #BuildSet objects in order.
+  """
+
+  # A mirror of the inputs for every build set, allowing us to remove
+  # edge for this algorithm without actually modifying the graph.
+  bset_inputs = {}
+
+  # A dictionary that reverses the dependencies between build sets.
+  bset_reverse = {}
+
+  # A set of build sets that have no input.
+  bset_start = set()
+
+  for target in master.targets:
+    for op in target.operators:
+      queue = list(op.build_sets)
+      while queue:
+        bset = queue.pop()
+        if bset in bset_inputs:
+          continue
+        bset_inputs[bset] = list(bset.inputs)
+        bset_reverse.setdefault(bset, set())
+        for x in bset.inputs:
+          bset_reverse.setdefault(x, set()).add(bset)
+        if not bset.inputs:
+          bset_start.add(bset)
+        queue += bset.inputs
+
+  while bset_start:
+    bset = bset_start.pop()
+    yield bset
+    for x in bset_reverse[bset]:
+      bset_inputs[x].remove(bset)
+      if not bset_inputs[x]:
+        bset_start.add(x)
+    bset_reverse[bset] = set()
+
+
+def execute(master):
+  """
+  Executes the full build graph -- useful for development tests.
+  """
+
+  import shlex
+  import subprocess
+
+  for build_set in topo_sort(master):
+    if not build_set.operator:
+      continue
+    prefix = '[{}/{}]'.format(build_set.operator.target.name, build_set.operator.name)
+    if build_set.description:
+      print(prefix, build_set.get_description())
+    else:
+      print(prefix)
+    commands = build_set.get_commands()
+    for cmd in commands:
+      print('  $', ' '.join(shlex.quote(x) for x in cmd))
+      subprocess.check_call(cmd)
