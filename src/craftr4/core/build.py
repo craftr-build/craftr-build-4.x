@@ -41,7 +41,7 @@ import nr.fs
 import re
 
 from nr.types.set import OrderedSet
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 class Behaviour:
@@ -59,11 +59,11 @@ class Behaviour:
 
     return nr.fs.canonical(path)
 
-  def expand_placeholders(self, commands: List[List[str]],
-                          build_set: 'BuildSet'):
+  def substitute(self, arg: str, build_set: 'BuildSet', single: bool = True):
     """
-    Substitutes the placeholders in the list of *commands* with the variables
-    and files in the specified build set.
+    Subsitute a placeholder in the string *arg*.
+
+    TODO: Support multiple placeholders in the string.
 
     The default implementation replaces variables in the following format:
 
@@ -78,33 +78,44 @@ class Behaviour:
     Currently only a single placeholder per argument is supported.
     """
 
+    import shlex
     regex = re.compile(r'\$([@<]?\w+)|\$\{([@<].*?)\}')
+
+    if single:
+      return ' '.join(self.multi_substitute(shlex.split(arg), build_set))
+
     result = []
-    for command in commands:
-      result.append([])
-      for arg in command:
-        match = regex.search(arg)
-        if not match:
-          result[-1].append(arg)
-          continue
+    match = regex.search(arg)
+    if not match:
+      result.append(arg)
+      return result
 
-        prefix = arg[:match.start()]
-        suffix = arg[match.end():]
-        var = match.group(1) or match.group(2)
+    prefix = arg[:match.start()]
+    suffix = arg[match.end():]
+    var = match.group(1) or match.group(2)
 
-        if var[0] == '<':
-          value = build_set.get_input_file_set(var[1:])
-        elif var[0] == '@':
-          value = build_set.get_file_set(var[1:])
-        else:
-          value = build_set.variables[var]
+    if var[0] == '<':
+      value = build_set.get_input_file_set(var[1:])
+    elif var[0] == '@':
+      value = build_set.get_file_set(var[1:])
+    else:
+      value = build_set.variables[var]
 
-        if isinstance(value, (list, tuple, set, OrderedSet)):
-          for x in value:
-            result[-1].append(prefix + x + suffix)
-        else:
-          result[-1].append(prefix + str(value) + suffix)
+    if isinstance(value, (list, tuple, set, OrderedSet)):
+      for x in value:
+        result.append(prefix + x + suffix)
+    else:
+      result.append(prefix + str(value) + suffix)
 
+    return result
+
+  def multi_substitute(self, arg: List, build_set: 'BuildSet'):
+    result = []
+    for x in arg:
+      if isinstance(x, str):
+        result += self.substitute(x, build_set, False)
+      else:
+        result.append(self.multi_substitute(x, build_set))
     return result
 
 
@@ -120,7 +131,8 @@ class BuildSet:
   """
 
   def __init__(self, master: 'Master',
-               inputs: List['BuildSet']):
+               inputs: List['BuildSet'],
+               description: Optional[str] = None):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
@@ -133,13 +145,18 @@ class BuildSet:
       if x not in self._inputs:
         self._inputs.append(x)
 
+    if description is not None and not isinstance(description, str):
+      raise TypeError('expected str, got {}'.format(
+        type(description).__name__))
+    self._description = description
+
     self._operator = None
     self._files = {}
     self._vars = {}
 
   def __repr__(self):
-    return '<{} len(inputs)={} operator={}>'.format(
-      type(self).__name__, len(self._inputs), self._operator)
+    return '<{} file_sets={} operator={}>'.format(
+      type(self).__name__, self.file_sets, self._operator)
 
   @property
   def master(self):
@@ -164,6 +181,10 @@ class BuildSet:
   @property
   def variables(self):
     return self._vars
+
+  @property
+  def description(self):
+    return self._description
 
   def get_file_set(self, set_name):
     """
@@ -208,6 +229,26 @@ class BuildSet:
     self._operator._build_sets.remove(self)
     self._operator = None
 
+  def get_commands(self):
+    """
+    Return the expanded commands for the build set from the operator.
+    This method raises a #RuntimeError if the build set is not attached
+    to an operator.
+    """
+
+    if not self._operator:
+      raise TypeError('build set is not attached to an operator')
+    return self._master.behaviour.multi_substitute(self._operator._commands, self)
+
+  def get_description(self):
+    """
+    Return the description of the build set with variables expanded.
+    """
+
+    if not self._operator:
+      return self._description
+    return self._master.behaviour.substitute(self._description, self)
+
 
 class Operator:
   """
@@ -245,6 +286,10 @@ class Operator:
     self._target = None
     self._build_sets = []
 
+  def __repr__(self):
+    return '<Operator name={!r} target={!r}>'.format(
+      self._name, self._target._name)
+
   @property
   def name(self):
     return self._name
@@ -275,17 +320,6 @@ class Operator:
     self._build_sets.append(build_set)
     return build_set
 
-  def expand_placeholders(self, build_set, strict=True):
-    """
-    A shortcut for #Behaviour.expand_placeholders().
-    """
-
-    if strict and (
-        build_set._operator is not self or
-        build_set not in self._build_sets):
-      raise RuntimeError('(strict=True) BuildSet is not related to this operator')
-    return self._master.behaviour.expand_placeholders(self._commands, build_set)
-
 
 class Target:
   """
@@ -305,6 +339,9 @@ class Target:
     self._master = master
 
     self._operators = {}
+
+  def __repr__(self):
+    return '<Target name={!r}>'.format(self._name)
 
   @property
   def name(self):
