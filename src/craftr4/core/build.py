@@ -44,22 +44,15 @@ from nr.types.set import OrderedSet
 from typing import List, Optional, Union
 
 
-class Behaviour:
+class Substitutor:
   """
-  This interface implements some methods that influence the behaviour of the
-  build graph components. The default implementation is usually sufficient.
+  This class implements substition of files and variables with data from
+  a #BuildSet.
   """
 
-  def canonicalize_path(self, path):
-    """
-    Canonicalize the specified *path*, turning it absolute and reducing it
-    to the most relevant and normalized form. The default implementation
-    acts as an alias to #nr.fs.canonical().
-    """
+  _regex = re.compile(r'\$([@<]?\w+)|\$\{([@<].*?)\}')
 
-    return nr.fs.canonical(path)
-
-  def substitute(self, arg: str, build_set: 'BuildSet', single: bool = True):
+  def subst(self, arg: str, build_set: 'BuildSet', single: bool = False):
     """
     Subsitute a placeholder in the string *arg*.
 
@@ -79,13 +72,12 @@ class Behaviour:
     """
 
     import shlex
-    regex = re.compile(r'\$([@<]?\w+)|\$\{([@<].*?)\}')
 
-    if single:
+    if not single:
       return ' '.join(self.multi_substitute(shlex.split(arg), build_set))
 
     result = []
-    match = regex.search(arg)
+    match = self._regex.search(arg)
     if not match:
       result.append(arg)
       return result
@@ -109,14 +101,62 @@ class Behaviour:
 
     return result
 
-  def multi_substitute(self, arg: List, build_set: 'BuildSet'):
+  def multi_subst(self, arg: List, build_set: 'BuildSet'):
     result = []
     for x in arg:
       if isinstance(x, str):
-        result += self.substitute(x, build_set, False)
+        result += self.subst(x, build_set, True)
       else:
-        result.append(self.multi_substitute(x, build_set))
+        result.append(self.multi_subst(x, build_set))
     return result
+
+  def occurences(self, arg: str, single: bool = False):
+    import shlex
+
+    if not single:
+      return ' '.join(self.multi_occurences(shlex.split(arg)))
+
+    match = self._regex.search(arg)
+    if not match:
+      return [], [], []
+    var = match.group(1) or match.group(2)
+    if var[0] == '@':
+      return [], [var[1:]], []
+    elif var[0] == '<':
+      return [var[1:]], [], []
+    else:
+      return [], [], [var]
+
+  def multi_occurences(self, arg: List):
+    in_files, out_files, vars = set(), set(), set()
+    for x in arg:
+      if isinstance(x, str):
+        r = self.occurences(x, True)
+      else:
+        r = self.multi_occurences(x)
+      in_files.update(r[0])
+      out_files.update(r[1])
+      vars.update(r[2])
+    return in_files, out_files, vars
+
+
+class Behaviour:
+  """
+  This interface implements some methods that influence the behaviour of the
+  build graph components. The default implementation is usually sufficient.
+  """
+
+  def canonicalize_path(self, path):
+    """
+    Canonicalize the specified *path*, turning it absolute and reducing it
+    to the most relevant and normalized form. The default implementation
+    acts as an alias to #nr.fs.canonical().
+    """
+
+    return nr.fs.canonical(path)
+
+  def get_substitutor(self):
+    return Substitutor()
 
 
 class BuildSet:
@@ -238,7 +278,8 @@ class BuildSet:
 
     if not self._operator:
       raise TypeError('build set is not attached to an operator')
-    return self._master.behaviour.multi_substitute(self._operator._commands, self)
+    subst = self._master.behaviour.get_substitutor()
+    return subst.multi_subst(self._operator._commands, self)
 
   def get_description(self):
     """
@@ -247,7 +288,8 @@ class BuildSet:
 
     if not self._operator:
       return self._description
-    return self._master.behaviour.substitute(self._description, self)
+    subst = self._master.behaviour.get_substitutor()
+    return subst.subst(self._description, self)
 
 
 class Operator:
@@ -260,7 +302,7 @@ class Operator:
   """
 
   def __init__(self, name: str,
-               master: Behaviour,
+               master: 'Master',
                commands: List[List[str]]):
 
     if not isinstance(name, str):
