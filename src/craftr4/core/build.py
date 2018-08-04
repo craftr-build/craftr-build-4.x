@@ -97,7 +97,7 @@ class Behaviour:
         elif var[0] == '@':
           value = build_set.get_file_set(var[1:])
         else:
-          value = build_set.get_variable(var)
+          value = build_set.variables[var]
 
         if isinstance(value, (list, tuple, set, OrderedSet)):
           for x in value:
@@ -120,8 +120,7 @@ class BuildSet:
   """
 
   def __init__(self, master: 'Master',
-               inputs: List['BuildSet'],
-               operator: Optional['Operator']):
+               inputs: List['BuildSet']):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
@@ -134,11 +133,7 @@ class BuildSet:
       if x not in self._inputs:
         self._inputs.append(x)
 
-    if operator is not None and not isinstance(operator, Operator):
-      raise TypeError('expected Operator, got {}'
-        .format(type(operator).__name__))
-    self._operator = operator
-
+    self._operator = None
     self._files = {}
     self._vars = {}
 
@@ -165,6 +160,10 @@ class BuildSet:
     """
 
     return set(self._files.keys())
+
+  @property
+  def variables(self):
+    return self._vars
 
   def get_file_set(self, set_name):
     """
@@ -221,7 +220,6 @@ class Operator:
 
   def __init__(self, name: str,
                master: Behaviour,
-               target: 'Target',
                commands: List[List[str]]):
 
     if not isinstance(name, str):
@@ -234,10 +232,6 @@ class Operator:
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     self._master = master
 
-    if not isinstance(target, Target):
-      raise TypeError('expected Target, got {}'.format(type(target).__name__))
-    self._target = target
-
     if not isinstance(commands, list):
       raise TypeError('expected list, got {}'.format(type(commands).__name__))
     for x in commands:
@@ -248,6 +242,7 @@ class Operator:
           raise TypeError('expected str, got {}'.format(type(y).__name__))
     self._commands = commands
 
+    self._target = None
     self._build_sets = []
 
   @property
@@ -271,8 +266,10 @@ class Operator:
     return self._build_sets[:]
 
   def add_build_set(self, build_set):
+    if build_set._operator is None:
+      build_set._operator = self
     if build_set._operator is not self:
-      raise ValueError('add_build_set(): BuildSet.operator must be self')
+      raise ValueError('add_build_set(): BuildSet belongs to another Operator')
     if build_set in self._build_sets:
       raise RuntimeError('add_build_set(): BuildSet is already added')
     self._build_sets.append(build_set)
@@ -325,6 +322,10 @@ class Target:
     if not isinstance(operator, Operator):
       raise TypeError('expected Operator, got {}'.format(
         type(operator).__name__))
+    if operator._target is None:
+      operator._target = self
+    if operator._target is not self:
+      raise RuntimeError('add_operator(): Operator belongs to another target')
     if operator._name in self._operators:
       raise TypeError('Operator name {!r} already occupied in Target {!r}'
         .format(operator._name, self._name))
@@ -362,38 +363,131 @@ class Master:
     return target
 
 
-def dump_dotviz(obj, root=True, fp=None, seen=None):
-  if seen is None:
-    seen = set()
+def dump_dotviz(obj, root=True, fp=None):
   import builtins
-  print = lambda *a: builtins.print(*a, file=fp)
-  if root:
-    print('digraph {')
+  import shlex
+  import sys
+
+  def print(*args):
+    frame = sys._getframe(1)
+    while 'indent' not in frame.f_locals:
+      frame = frame.f_back
+    indent = frame.f_locals['indent']
+    builtins.print('  ' * indent + ' '.join(map(str, args)), file=fp)
+
+  seen = set()
+
+  indent = 0
+  print('digraph {')
+  indent = 1
+  print('graph [fontsize=10 fontname="monospace"];')
+  print('node [shape=record fontsize=10 fontname="monospace"];')
+
+  def node(node_id, **attrs):
+    attrs = ' '.join(attr(k, v, False) for k, v in attrs.items())
+    print('"{}" [{}];'.format(node_id, attrs))
+
+  def edge(src_id, dst_id, **attrs):
+    attrs = ' '.join(attr(k, v, False) for k, v in attrs.items())
+    print('"{}" -> "{}" [{}];'.format(src_id, dst_id, attrs))
+
+  def attr(key, value, semicolon=True):
+    value = str(value)
+    value = value.replace('"', '\\"').replace('{', '\\{').replace('}', '\\}')
+    value = value.replace('\n', '\\n')
+    res = '{}="{}"'.format(key, value)
+    if semicolon:
+      res += ';'
+    return res
+
+  def target_key(target):
+    return 'Target:{}'.format(target.name)
+
+  def operator_key(op):
+    return 'Operator:{}/{}'.format(op.target.name, op.name)
+
+  def build_set_key(bset):
+    return id(bset)
+
+  def handle_master(master, indent):
+    [handle_target(x, indent) for x in master.targets]
+
+  def handle_target(target, indent):
+    key = target_key(target)
+    print('subgraph "cluster_{}" {{'.format(key))
+    indent += 1
+    print(attr('label', 'Target: {}'.format(target.name)))
+    print(attr('color', 'seagreen3'))
+    print(attr('fillcolor', 'seagreen1'))
+    print(attr('style', 'filled'))
+    [handle_operator(x, indent) for x in target.operators]
+    indent -= 1
+    print('}')
+
+  def handle_operator(op, indent):
+    key = operator_key(op)
+    print('subgraph "cluster_{}" {{'.format(key))
+    indent += 1
+    print(attr('label', 'Operator: {}'.format(op.name)))
+    print(attr('color', 'skyblue4'))
+    print(attr('fillcolor', 'skyblue'))
+    print(attr('style', 'filled'))
+    lines = []
+    for cmd in op.commands:
+      lines.append(' '.join(shlex.quote(x) for x in cmd))
+    attrs = {'label': '\n'.join(lines), 'shape': 'rectangle',
+             'color': 'skyblue4', 'fillcolor': 'skyblue4',
+             'style': 'filled,rounded'}
+    node(key, **attrs)
+    for bset in op.build_sets:
+      #edge(key, build_set_key(bset), style='dashed', color='darkorange')
+      handle_build_set(bset, indent)
+    print('{')
+    indent += 1
+    print(attr('rank', 'same'))
+    node(key, group=key)
+    for bset in op.build_sets:
+      node(build_set_key(bset), group=key)
+    indent -= 1
+    print('}')
+    indent -= 1
+    print('}')
+
+  def handle_build_set(bset, indent):
+    if bset in seen:
+      return
+    seen.add(bset)
+    key = build_set_key(bset)
+    lines = []
+    for set_name in bset.file_sets:
+      lines.append('{} = {}'.format(set_name, [nr.fs.base(x) for x in bset.get_file_set(set_name)]))
+    for k, v in bset.variables.items():
+      lines.append('{} = {!r}'.format(k, v))
+    attrs = {'label': '\n'.join(lines), 'style': 'filled'}
+    if not bset.operator and bset.inputs:
+      attrs['color'] = 'gray72'
+      attrs['fillcolor'] = 'gray86'
+    elif not bset.operator:
+      attrs['color'] = 'orange4'
+      attrs['fillcolor'] = 'orange2'
+    else:
+      attrs['color'] = 'slateblue3'
+      attrs['fillcolor'] = 'slateblue1'
+    node(key, **attrs)
+    for other in bset.inputs:
+      handle_build_set(other, indent)
+      edge(build_set_key(other), key)
+
   if isinstance(obj, Master):
-    key = 'MASTER'
-    for target in obj.targets:
-      target_key = dump_dotviz(target, False, fp, seen)
-      print('  "{}" -> "{}";'.format(target_key, key))
+    handle_master(obj, indent)
   elif isinstance(obj, Target):
-    key = 'Target:{}'.format(obj.name)
-    for operator in obj.operators:
-      op_key = dump_dotviz(operator, False, fp, seen)
-      print('  "{}" -> "{}";'.format(op_key, key))
+    handle_target(obj, indent)
   elif isinstance(obj, Operator):
-    key = 'Operator:{}'.format(obj.name)
-    for build_set in obj.build_sets:
-      set_key = dump_dotviz(build_set, False, fp, seen)
-      print('  "{}" -> "{}";'.format(set_key, key))
+    handle_operator(obj, indent)
   elif isinstance(obj, BuildSet):
-    key = 'BuildSet:{}'.format(id(obj))
-    if obj not in seen:
-      seen.add(obj)
-      for build_set in obj.inputs:
-        set_key = dump_dotviz(build_set, False, fp, seen)
-        print('  "{}" -> "{}";'.format(set_key, key))
+    handle_build_set(obj, indent)
   else:
     raise TypeError(type(obj))
-  print('  "{}";'.format(key))
-  if root:
-    print('}')
-  return key
+
+  indent -= 1
+  print('}')
