@@ -1,0 +1,28 @@
+
+from craftr4.api import *
+from nr.fs import glob
+
+with target('lib') as lib:
+  build_set(
+    srcs=glob('test/*.c')
+  )
+  transform('m4',
+    update="x + '.gen.c'",
+    for_each=True,
+    command='m4 $<srcs $@srcs',
+  )
+  transform('compile',
+    update='x + ".obj"',
+    command='gcc -c $<srcs $@objs'
+  )
+
+
+with target('main'):
+  session.current_scope.current_target.current_build_sets = set(lib.get_operator('compile').build_sets)
+  transform('link',
+    update="x + '.exe'",
+    command='gcc foo $<srcs $@out'
+  )
+
+from craftr4.core.build import dump_dotviz
+dump_dotviz(session.build_master)
