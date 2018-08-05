@@ -448,7 +448,7 @@ class Master:
     return self._targets[name]
 
 
-def dump_dotviz(obj, root=True, fp=None):
+def dump_graphviz(obj, root=True, fp=None):
   import builtins
   import shlex
   import sys

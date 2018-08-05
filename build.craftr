@@ -23,6 +23,3 @@ with target('main'):
     update="x + '.exe'",
     command='gcc foo $<srcs $@out'
   )
-
-from craftr4.core.build import dump_dotviz
-dump_dotviz(session.build_master)
