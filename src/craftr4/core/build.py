@@ -411,6 +411,9 @@ class Target:
     self._operators[operator._name] = operator
     return operator
 
+  def get_operator(self, name):
+    return self._operators[name]
+
 
 class Master:
   """
@@ -440,6 +443,9 @@ class Master:
       raise ValueError('Target name {!r} already occupied'.format(target._name))
     self._targets[target._name] = target
     return target
+
+  def get_target(self, name):
+    return self._targets[name]
 
 
 def dump_dotviz(obj, root=True, fp=None):
