@@ -1,5 +1,5 @@
 
-from craftr4.api import *
+from craftr.api import *
 from nr.fs import glob
 
 with target('lib') as lib:

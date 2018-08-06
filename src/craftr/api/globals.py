@@ -128,7 +128,7 @@ def transform(name: str, update: Union[str, callable],
     outset.add_files(out_set, out_files)
     build_sets.append(outset)
 
-  from craftr4.core.build import Operator
+  from craftr.core.build import Operator
   op = target.add_operator(Operator(name, session.build_master, commands))
   [op.add_build_set(x) for x in build_sets]
 

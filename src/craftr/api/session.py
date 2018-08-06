@@ -23,7 +23,7 @@
 
 import contextlib
 
-from craftr4.core.build import Master, BuildSet as _BuildSet, Target as _Target
+from craftr.core.build import Master, BuildSet as _BuildSet, Target as _Target
 
 
 class Session:

@@ -2,9 +2,9 @@
 import argparse
 import sys
 
-from craftr4.api.globals import _session_stack, session
-from craftr4.api.session import Session
-from craftr4.core.build import dump_graphviz
+from craftr.api.globals import _session_stack, session
+from craftr.api.session import Session
+from craftr.core.build import dump_graphviz
 
 
 def get_argument_parser(prog=None):
