@@ -448,7 +448,7 @@ class Master:
     return self._targets[name]
 
 
-def dump_graphviz(obj, root=True, fp=None):
+def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
   import builtins
   import shlex
   import sys
@@ -566,9 +566,10 @@ def dump_graphviz(obj, root=True, fp=None):
       edge(build_set_key(other), key)
 
   if isinstance(obj, Master):
-    for bset in topo_sort(obj):
-      #if not bset.operator:
-      handle_build_set(bset, indent)
+    if build_sets_outside:
+      for bset in topo_sort(obj):
+        #if not bset.operator:
+        handle_build_set(bset, indent)
     handle_master(obj, indent)
   elif isinstance(obj, Target):
     handle_target(obj, indent)
