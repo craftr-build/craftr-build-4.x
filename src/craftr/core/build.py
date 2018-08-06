@@ -178,12 +178,12 @@ class BuildSet:
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     self._master = master
 
-    self._inputs = []
+    self._inputs = set()
     for x in inputs:
       if not isinstance(x, BuildSet):
         raise TypeError('expected BuildSet, got {}'.format(type(x).__name__))
       if x not in self._inputs:
-        self._inputs.append(x)
+        self._inputs.add(x)
 
     if description is not None and not isinstance(description, str):
       raise TypeError('expected str, got {}'.format(
@@ -204,7 +204,7 @@ class BuildSet:
 
   @property
   def inputs(self):
-    return self._inputs[:]
+    return list(self._inputs)
 
   @property
   def operator(self):
@@ -257,6 +257,17 @@ class BuildSet:
     file_set = self._files.setdefault(set_name, OrderedSet())
     for file in files:
       file_set.add(self._master.behaviour.canonicalize_path(file))
+
+  def add_from(self, build_set: 'BuildSet'):
+    """
+    Adds all files from the specified *build_set* to this set and adds it
+    as an input to this set.
+    """
+
+    self._inputs.add(build_set)
+    for set_name, files in build_set._files.items():
+      file_set = self._files.setdefault(set_name, OrderedSet())
+      file_set |= files
 
   def remove(self):
     """

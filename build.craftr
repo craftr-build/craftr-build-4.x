@@ -2,24 +2,18 @@
 from craftr.api import *
 from nr.fs import glob
 
-with target('lib') as lib:
-  build_set(
-    srcs=glob('test/*.c')
-  )
-  transform('m4',
-    update="x + '.gen.c'",
-    for_each=True,
-    command='m4 $<srcs $@srcs',
-  )
-  transform('compile',
-    update='x + ".obj"',
-    command='gcc -c $<srcs $@objs'
-  )
+def compile(name='cxx.compile'):
+  target = current_target()
+  bset = current_buildset()
+  op = target.add_operator(Operator(name, commands=[['gcc', '-c', '$<srcs', '-o', '$@objs']]))
+  for infile in bset.get_file_set('srcs'):
+    outfile = infile + '.c'
+    op.add_build_set(new_buildset(inputs=[new_buildset(inputs=[bset], srcs=[infile])], srcs=[outfile]))
+  buildset(from_=op.build_sets)
 
 
-with target('main'):
-  session.current_scope.current_target.current_build_sets = set(lib.get_operator('compile').build_sets)
-  transform('link',
-    update="x + '.exe'",
-    command='gcc foo $<srcs $@out'
-  )
+target('main')
+buildset(srcs=glob('test/*.c'))
+compile()
+
+compile('foo')

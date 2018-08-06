@@ -30,111 +30,91 @@ on a global thread local that binds the current build graph master, target,
 etc. so they do not have to be explicitly declared and passed around.
 """
 
-__all__ = ['session', 'target', 'build_set', 'transform']
+#__all__ = ['session', 'target', 'build_set', 'transform']
+
 
 import contextlib
-import shlex
-
-from .session import Session, BuildSet, Target
-from typing import List, Union
-from werkzeug.local import LocalStack, LocalProxy
-
-_session_stack = LocalStack()
-session = LocalProxy(lambda: _session_stack.top)
+from craftr.core import build as _build
 
 
-@contextlib.contextmanager
+class Session(_build.Master):
+
+  def __init__(self, behaviour = None):
+    super().__init__(behaviour or _build.Behaviour())
+    self._current_scopes = []
+
+  @contextlib.contextmanager
+  def enter_scope(self, name):
+    self._current_scopes.append({'name': name, 'target': None})
+    try: yield
+    finally:
+      assert self._current_scopes.pop()['name'] == name
+
+  def current_scope(self):
+    return self._current_scopes[-1] if self._current_scopes else None
+
+
+class Target(_build.Target):
+
+  def __init__(self, name):
+    super().__init__(name, current_session())
+    self._current_buildset = None
+
+  def current_buildset(self):
+    return self._current_buildset
+
+
+class Operator(_build.Operator):
+
+  def __init__(self, name, commands):
+    super().__init__(name, current_session(), commands)
+
+
+_session = None
+
+def current_session():
+  return _session
+
+def current_scope():
+  return _session.current_scope()
+
+def current_target():
+  return current_scope()['target']
+
+def current_buildset():
+  return current_target().current_buildset()
+
+
 def target(name):
+  scope = current_scope()
+  target = current_session().add_target(Target(scope['name'] + '@' + name))
+  current_scope()['target'] = target
+  return target
+
+def buildset(**kwargs):
   """
-  Creates a new target in the current scope and sets it active. The function
-  must be used as a context-manager. Nesting multiple calls to this function
-  in the same scope is not allowed and raises a #RuntimeError.
-  """
+  Creates a new #~_build.BuildSet that is set as the current build set in
+  the current target. This is the build set that will be used by functions
+  that produce operators.
 
-  if session.current_scope.current_target:
-    raise RuntimeError('nesting target()s in the same scope is not allowed')
-
-  target = Target(session(), session.current_scope, name)
-  with session.current_scope.enter_target(target):
-    yield target
-
-
-def build_set(alias=None, inputs=None, **file_sets):
-  """
-  Creates a new build set in the current target that will be streamed into
-  the next operator. The currently selected build sets can be retrievd with
-  #selected_build_sets() and modified with #select_build_sets().
+  inputs (list of BuildSet): A list of build sets that this one depends on.
+  description (str): The description of the build set, only import for build
+    sets that are attached to operators.
+  from_ (list of BuildSet): A list of build sets that will be joined in the
+    new build set. They will also be used as inputs.
+  kwargs (list of str): A list of filenames to add to the build set.
   """
 
-  bset = BuildSet(alias, session.build_master, inputs or [])
-  for key, value in file_sets.items():
+  bset = new_buildset(**kwargs)
+  current_target()._current_buildset = bset
+  return bset
+
+def new_buildset(*, inputs=(), description=None, from_=(), **kwargs):
+  bset = _build.BuildSet(current_session(), inputs, description)
+  for key, value in kwargs.items():
     if isinstance(value, str):
       bset.variables[key] = value
     else:
       bset.add_files(key, value)
-
-  target = session.current_scope.current_target
-  target.add_build_set(bset)
-  target.current_build_sets.add(bset)
+  [bset.add_from(x) for x in from_]
   return bset
-
-
-def transform(name: str, update: Union[str, callable],
-              command: Union[str, List[str]] = None,
-              commands: Union[List[str], List[List[str]]] = None,
-              for_each: bool = False):
-  """
-  Creates an operator that transforms the currently selected build sets
-  using the specified *command* or *commands*.
-  """
-
-  if isinstance(update, str):
-    update = eval('lambda x: '+  update)
-
-  if command:
-    if isinstance(command, str):
-      command = shlex.split(command)
-    commands = [command]
-  elif commands:
-    for i, x in enumerate(commands):
-      if isinstance(x, str):
-        commands[i] = shlex.split(x)
-
-  subst = session.build_master.behaviour.get_substitutor()
-  in_sets, out_sets, vars = subst.multi_occurences(commands)
-
-  if len(in_sets) != 1:
-    raise ValueError('need exactly one input set')
-  if len(out_sets) != 1:
-    raise ValueError('need exactly one output set')
-  in_set = next(iter(in_sets))
-  out_set = next(iter(out_sets))
-
-
-  target = session.current_scope.current_target
-  files = [y for x in target.current_build_sets for y in x.get_file_set(in_set)]
-  out_files = [update(x) for x in files]
-  build_sets = []
-
-  if for_each:
-    for infile, outfile in zip(files, out_files):
-      inset = BuildSet(None, session.build_master, target.current_build_sets)
-      inset.add_files(in_set, [infile])
-      outset = BuildSet(None, session.build_master, [inset])
-      outset.add_files(out_set, [outfile])
-      build_sets.append(outset)
-  else:
-    outset = BuildSet(None, session.build_master, target.current_build_sets)
-    outset.add_files(out_set, out_files)
-    build_sets.append(outset)
-
-  from craftr.core.build import Operator
-  op = target.add_operator(Operator(name, session.build_master, commands))
-  [op.add_build_set(x) for x in build_sets]
-
-  target.current_build_sets = set(build_sets)
-
-  return op
-
-  #out_files = []
-  #for filename in set(*zip(
