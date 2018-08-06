@@ -502,6 +502,7 @@ def dump_graphviz(obj, root=True, fp=None):
     print('subgraph "cluster_{}" {{'.format(key))
     indent += 1
     print(attr('label', 'Target: {}'.format(target.name)))
+    print(attr('labeljust', 'l'))
     print(attr('color', 'seagreen3'))
     print(attr('fillcolor', 'seagreen1'))
     print(attr('style', 'filled'))
@@ -514,6 +515,7 @@ def dump_graphviz(obj, root=True, fp=None):
     print('subgraph "cluster_{}" {{'.format(key))
     indent += 1
     print(attr('label', 'Operator: {}'.format(op.name)))
+    print(attr('labeljust', 'l'))
     print(attr('color', 'skyblue4'))
     print(attr('fillcolor', 'skyblue'))
     print(attr('style', 'filled'))
