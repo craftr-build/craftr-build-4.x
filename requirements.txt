@@ -1,0 +1,4 @@
+glob2>=0.6
+nr.fs>=1.0.3
+nr.types>=1.0.6
+werkzeug>=0.14.1
