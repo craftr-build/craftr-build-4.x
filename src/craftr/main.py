@@ -1,10 +1,23 @@
 
 import argparse
+import contextlib
+import io
 import nr.fs
+import subprocess
 import sys
 
 from craftr import api
 from craftr.core.build import dump_graphviz
+
+@contextlib.contextmanager
+def open_cli_file(filename, mode):
+  if not filename:
+    # TODO: Handle r/rb/w/w/b
+    yield sys.stdout
+  else:
+    with open(filename, mode) as fp:
+      yield fp
+
 
 def get_argument_parser(prog=None):
   parser = argparse.ArgumentParser(prog=prog)
@@ -19,11 +32,12 @@ def get_argument_parser(prog=None):
 
   # Meta options
 
-  parser.add_argument('--dump-graphviz', action='store_true',
+  parser.add_argument('--dump-graphviz', nargs='?', default=...,
     help='Dump a GraphViz representation of the build graph to stdout.')
-  parser.add_argument('--dump-svg', action='store_true',
+  parser.add_argument('--dump-svg', nargs='?', default=...,
     help='Render an SVG file of the build graph\'s GraphViz representation. '
          'Requires the `dot` command to be available.')
+
   return parser
 
 
@@ -44,16 +58,17 @@ def main(argv=None, prog=None):
       m = types.ModuleType('build')
       exec(compile(fp.read(), 'build.craftr', 'exec'), vars(m))
 
-  if args.dump_graphviz:
-    dump_graphviz(session)
+  if args.dump_graphviz is not ...:
+    with open_cli_file(args.dump_graphviz, 'w') as fp:
+      dump_graphviz(session, fp=fp)
     return 0
 
-  if args.dump_svg:
-    import io, subprocess
-    fp = io.StringIO()
-    dump_graphviz(session, fp=fp)
-    p = subprocess.Popen(['dot', '-T', 'svg'], stdin=subprocess.PIPE)
-    p.communicate(fp.getvalue().encode('utf8'))
+  if args.dump_svg is not ...:
+    dotstr = dump_graphviz(session, to_str=True).encode('utf8')
+    with open_cli_file(args.dump_svg, 'w') as fp:
+      command = ['dot', '-T', 'svg']
+      p = subprocess.Popen(command, stdout=fp, stdin=subprocess.PIPE)
+      p.communicate(dotstr)
     return 0
 
 

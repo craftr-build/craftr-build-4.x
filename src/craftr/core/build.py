@@ -37,6 +37,7 @@ via inclusion.
 
 __all__ = ['Behaviour', 'BuildSet', 'Operator', 'Target', 'Master']
 
+import io
 import nr.fs
 import re
 
@@ -475,7 +476,10 @@ class Master:
     """
 
 
-def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
+def dump_graphviz(obj, root=True, fp=None, to_str=False, build_sets_outside=False):
+  if to_str:
+    fp = io.StringIO()
+
   import builtins
   import shlex
   import sys
@@ -624,6 +628,9 @@ def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
 
   indent -= 1
   print('}')
+
+  if to_str:
+    return fp.getvalue()
 
 
 def topo_sort(master):
