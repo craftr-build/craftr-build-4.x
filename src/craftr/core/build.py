@@ -563,7 +563,7 @@ def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
     for cmd in op.commands:
       lines.append(' '.join(shlex.quote(x) for x in cmd))
     attrs = {'label': '\n'.join(lines), 'shape': 'rectangle',
-             'color': 'brown4', 'fillcolor': 'brown3',
+             'color': 'brown4', 'fillcolor': 'brown2',
              'style': 'filled,rounded'}
     node(key, **attrs)
     for bset in op.build_sets:

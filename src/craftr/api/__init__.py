@@ -39,6 +39,7 @@ __all__ = [
   'session',
   'create_target',
   'create_build_set',
+  'glob'
 ]
 
 import contextlib
@@ -57,8 +58,10 @@ class Session(_build.Master):
   scopes current directory and every scope gets its own build output directory.
   """
 
-  def __init__(self, behaviour = None):
+  def __init__(self, build_directory: str,
+               behaviour: _build.Behaviour = None):
     super().__init__(behaviour or _build.Behaviour())
+    self._build_directory = nr.fs.canonical(build_directory)
     self._current_scopes = []
     self._build_sets = []  # Registers all build sets
 
@@ -199,3 +202,14 @@ def create_build_set(**kwargs):
   bset = BuildSet(**kwargs)
   session.current_target.current_build_set = bset
   return bset
+
+
+# Path API that takes the current scope's directory as the
+# current "working" directory.
+
+def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
+         ignore_false_excludes=False):
+  if not parent:
+    parent = session.current_scope.directory
+  return nr.fs.glob(patterns, parent, excludes, include_dotfiles,
+                    ignore_false_excludes)

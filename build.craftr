@@ -1,6 +1,5 @@
 
 from craftr.api import *
-from nr.fs import glob
 
 def compile(name='cxx.compile'):
   target = session.current_target
