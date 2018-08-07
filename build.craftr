@@ -3,17 +3,14 @@ from craftr.api import *
 from nr.fs import glob
 
 def compile(name='cxx.compile'):
-  target = current_target()
-  bset = current_buildset()
-  op = target.add_operator(Operator(name, commands=[['gcc', '-c', '$<srcs', '-o', '$@objs']]))
-  for infile in bset.get_file_set('srcs'):
-    outfile = infile + '.c'
-    op.add_build_set(new_buildset(inputs=[new_buildset(inputs=[bset], srcs=[infile])], srcs=[outfile]))
-  buildset(from_=op.build_sets)
+  target = session.current_target
+  build_set = target.current_build_set
+  op = target.new_operator(name, commands=[['gcc', '-c', '$<srcs', '-o', '$@objs']])
+  for infile in build_set.get_file_set('srcs'):
+    outfile = infile + '.obj'
+    op.new_build_set(inputs=[BuildSet(inputs=[build_set], srcs=[infile])], objs=[outfile])
+  create_build_set(from_=op.build_sets, inputs=[build_set])
 
-
-target('main')
-buildset(srcs=glob('test/*.c'))
+create_target('main')
+create_build_set(srcs=glob('test/*.c'))
 compile()
-
-compile('foo')

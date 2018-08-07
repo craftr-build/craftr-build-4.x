@@ -172,7 +172,8 @@ class BuildSet:
 
   def __init__(self, master: 'Master',
                inputs: List['BuildSet'],
-               description: Optional[str] = None):
+               description: Optional[str] = None,
+               alias: str = None):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
@@ -190,6 +191,10 @@ class BuildSet:
         type(description).__name__))
     self._description = description
 
+    if alias is not None and not isinstance(alias, str):
+      raise TypeError('expected str, got {}'.format(type(alias).__name__))
+    self._alias = alias
+
     self._operator = None
     self._files = {}
     self._vars = {}
@@ -205,6 +210,10 @@ class BuildSet:
   @property
   def inputs(self):
     return list(self._inputs)
+
+  @property
+  def alias(self):
+    return self._alias
 
   @property
   def operator(self):
@@ -458,6 +467,13 @@ class Master:
   def get_target(self, name):
     return self._targets[name]
 
+  def event(self, name: str, data: object):
+    """
+    This method is called for example by the #dump_graphviz() function to
+    allow some additional output based on the #Master implementation without
+    the need of adding a specific interface function.
+    """
+
 
 def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
   import builtins
@@ -507,6 +523,19 @@ def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
 
   def handle_master(master, indent):
     [handle_target(x, indent) for x in master.targets]
+    master.event('dump_graphviz', {
+      'print': print,
+      'node': node,
+      'edge': edge,
+      'attr': attr,
+      'target_key': target_key,
+      'operator_key': operator_key,
+      'build_set_key': build_set_key,
+      'handle_target': handle_target,
+      'handle_operator': handle_operator,
+      'handle_build_set': handle_build_set,
+      'indent': indent + 1
+    })
 
   def handle_target(target, indent):
     key = target_key(target)
@@ -557,6 +586,8 @@ def dump_graphviz(obj, root=True, fp=None, build_sets_outside=False):
     seen.add(bset)
     key = build_set_key(bset)
     lines = []
+    if bset.alias:
+      lines.append('BuildSet: {}'.format(bset.alias))
     for set_name in bset.file_sets:
       lines.append('{} = {}'.format(set_name, [nr.fs.base(x) for x in bset.get_file_set(set_name)]))
     for k, v in bset.variables.items():

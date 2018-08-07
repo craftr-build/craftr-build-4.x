@@ -2,9 +2,8 @@
 import argparse
 import sys
 
-from craftr.api import globals as _globals
+from craftr import api
 from craftr.core.build import dump_graphviz
-
 
 def get_argument_parser(prog=None):
   parser = argparse.ArgumentParser(prog=prog)
@@ -21,10 +20,10 @@ def main(argv=None, prog=None):
   args = parser.parse_args(argv)
 
   # Create a new session.
-  session = _globals._session = _globals.Session()
+  session = api.session = api.Session()
 
   # TODO: Determine scope name and version.
-  with session.enter_scope('main'):
+  with session.enter_scope('main', '1.0-0', '.'):
     with open('build.craftr') as fp:
       import types
       m = types.ModuleType('build')
