@@ -164,7 +164,7 @@ class BuildSet(_build.BuildSet):
       self._inputs.update(inputs)
     for key, value in kwargs.items():
       if isinstance(value, str):
-        self._variables[key] = value
+        self.variables[key] = value
       else:
         self.add_files(key, value)
     session._build_sets.append(self)
@@ -177,6 +177,39 @@ class BuildSet(_build.BuildSet):
       if cls._has_transitive_input(x, build_set):
         return True
     return False
+
+  def partite(self, *on_sets):
+    """
+    Partite the build set into a set per file in the file sets specified
+    with *on_sets*. If multiple file set names are specified, the size of
+    these sets must be equal.
+
+    A set name can be suffixed with a question mark (`?`) to indicate that
+    the file set is not required to exist, in which case #None is yielded
+    for the respective file set name instead of a #BuildSet per item.
+    """
+
+    sets = []
+    names = []
+    for name in on_sets:
+      optional = name[-1] == '?'
+      if optional: name = name[:-1]
+      if optional and not self.has_file_set(name):
+        sets.append(None)
+      else:
+        sets.append(self.get_file_set(name))
+      names.append(name)
+
+    if len(set(len(x) for x in sets if x is not None)) != 1:
+      raise RuntimeError('mismatching set sizes ({})'.format(on_sets))
+
+    sets = [iter(x) if x is not None else None for x in sets]
+    while True:
+      try:
+        item = {names[i]: [next(sets[i])] for i in range(len(sets)) if sets[i] is not None}
+      except StopIteration:
+        break
+      yield BuildSet(inputs=[self], **item)
 
 
 # API for declaring targets

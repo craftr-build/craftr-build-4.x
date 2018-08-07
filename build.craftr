@@ -4,10 +4,13 @@ from craftr.api import *
 def compile(name='cxx.compile'):
   target = session.current_target
   build_set = target.current_build_set
-  op = target.new_operator(name, commands=[['gcc', '-c', '$<srcs', '-o', '$@objs']])
-  for infile in build_set.get_file_set('srcs'):
-    outfile = infile + '.obj'
-    op.new_build_set(inputs=[BuildSet(inputs=[build_set], srcs=[infile])], objs=[outfile])
+  cmd = ['gcc', '-c', '$<srcs', '-o', '$@objs']
+  op = target.new_operator(name, commands=[cmd])
+  for inset in build_set.partite('srcs', 'objs?'):
+    outfile = next(iter(inset.get_file_set('objs')), None)
+    if not outfile:
+      outfile = next(iter(inset.get_file_set('srcs'))) + '.obj'
+    op.new_build_set(inputs=[inset], objs=[outfile])
   create_build_set(from_=op.build_sets, inputs=[build_set])
 
 create_target('main')

@@ -236,6 +236,9 @@ class BuildSet:
   def description(self):
     return self._description
 
+  def has_file_set(self, set_name):
+    return set_name in self._files
+
   def get_file_set(self, set_name):
     """
     Return a copy of the file set with the name *set_name*. If the set does
