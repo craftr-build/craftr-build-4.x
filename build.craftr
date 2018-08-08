@@ -1,24 +1,10 @@
 
 from craftr.api import *
+project('test', '1.0-0')
 
-def compile(name='cxx.compile'):
-  build_set = current_build_set()
-  if not build_set.has_file_set('objs'):
-    build_set.add_files('objs', [x+'.obj' for x in build_set.get_file_set('srcs')])
-  cmd = ['gcc', '-c', '$<srcs', '-o', '$@objs']
-  create_operator(name=name, commands=[cmd], for_each=True)
-
-
-def link(name='cxx.link'):
-  build_set = current_build_set()
-  if not build_set.has_file_set('binary'):
-    build_set.add_files('binary', ['main'])
-  cmd = ['gcc', '$<objs', '-o', '$@binary']
-  create_operator(name=name, commands=[cmd])
-
+cxx = require('craftr/stdlib/lang/cxx')
 
 create_target('main')
 create_build_set(srcs=glob('test/*.c'))
-compile()
-update_build_set(binary=['test/main'])
-link()
+set_properties('cxx', type='staticLibrary', public__includes=['test/include'])
+cxx.build()
