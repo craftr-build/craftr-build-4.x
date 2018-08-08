@@ -341,7 +341,7 @@ def create_operator(*, for_each=False, **kwargs):
       operator.add_build_set(BuildSet(inputs=[split_set], **files))
   else:
     files = {name: build_set.get_file_set(name)
-             for name in outsets}
+             for name in outsets if build_set.has_file_set(name)}
     operator.add_build_set(BuildSet(inputs=[build_set], **files))
 
   if for_each:

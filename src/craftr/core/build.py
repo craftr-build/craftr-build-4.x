@@ -259,6 +259,12 @@ class BuildSet:
     except KeyError:
       return OrderedSet()
 
+  def has_input_file_set(self, set_name):
+    for x in self._inputs:
+      if set_name in x:
+        return True
+    return False
+
   def get_input_file_set(self, set_name):
     """
     Returns a concatenated file set from the inputs of this build set.
@@ -356,6 +362,8 @@ class Operator:
         if not isinstance(y, str):
           raise TypeError('expected str, got {}'.format(type(y).__name__))
     self._commands = commands
+    self._input_filesets, self._output_filesets, self._vars = \
+        master.behaviour.get_substitutor().multi_occurences(commands)
 
     self._target = None
     self._build_sets = []
@@ -391,6 +399,14 @@ class Operator:
       raise ValueError('add_build_set(): BuildSet belongs to another Operator')
     if build_set in self._build_sets:
       raise RuntimeError('add_build_set(): BuildSet is already added')
+    for set_name in self._input_filesets:
+      if not build_set.has_input_file_set(set_name):
+        raise RuntimeError('operator requires ${{<{}}} which is not '
+                           'provided by this build set'.format(set_name))
+    for set_name in self._output_filesets:
+      if not build_set.has_file_set(set_name):
+        raise RuntimeError('operator requires ${{@{}}} which is not '
+                           'provided by this build set'.format(set_name))
     self._build_sets.append(build_set)
     return build_set
 
