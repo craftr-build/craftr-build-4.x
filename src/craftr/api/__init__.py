@@ -47,14 +47,22 @@ __all__ = [
   'create_operator',
   'create_build_set',
   'update_build_set',
+  'set_properties',
+  'project',
   'glob',
 ]
 
 import collections
 import contextlib
+import nodepy
 import nr.fs
 
 from craftr.core import build as _build
+from nodepy.utils import pathlib
+from .modules import CraftrModuleLoader
+from .proplib import PropertySet, Properties, NoSuchProperty
+
+STDLIB_DIR = nr.fs.join(nr.fs.dir(nr.fs.dir(nr.fs.dir(__file__))))
 
 session = None  # The current #Session
 
@@ -73,6 +81,22 @@ class Session(_build.Master):
     self._build_directory = nr.fs.canonical(build_directory)
     self._current_scopes = []
     self._build_sets = []  # Registers all build sets
+    self.loader = CraftrModuleLoader(self)
+    self.nodepy_context = nodepy.context.Context()
+    self.nodepy_context.resolver.loaders.append(self.loader)
+    self.nodepy_context.resolver.paths.append(pathlib.Path(STDLIB_DIR))
+    self.target_props = PropertySet()
+
+  def load_module(self, name):
+    return self.nodepy_context.require(name + '.craftr', exports=False)
+
+  def load_module_from_file(self, filename, is_main=False):
+    filename = pathlib.Path(nr.fs.canonical(filename))
+    module = self.loader.load_module(self.nodepy_context, None, filename)
+    module.is_main = is_main
+    self.nodepy_context.register_module(module)
+    self.nodepy_context.load_module(module)
+    return module
 
   @contextlib.contextmanager
   def enter_scope(self, name, version, directory):
@@ -103,6 +127,9 @@ class Scope:
   """
   A scope basically represents a Craftr build module. The name of a scope is
   usually determined by the Craftr module loader.
+
+  Note that a scope may be created with a name and version set to #None. The
+  scope must be initialized with the #module_id() build script function.
   """
 
   def __init__(self, session: Session, name: str, version: str, directory: str):
@@ -127,10 +154,9 @@ class Target(_build.Target):
   def __init__(self, name: str):
     super().__init__(name, session)
     self.current_build_set = None
+    self.properties = Properties(session.target_props, owner=current_scope())
+    self.public_properties = Properties(session.target_props, owner=current_scope())
     self._operator_name_counter = collections.defaultdict(lambda: 1)
-
-  def new_operator(self, *args, **kwargs):
-    return self.add_operator(Operator(*args, **kwargs))
 
 
 class Operator(_build.Operator):
@@ -141,9 +167,6 @@ class Operator(_build.Operator):
 
   def __init__(self, name, commands):
     super().__init__(name, session, commands)
-
-  def new_build_set(self, **kwargs):
-    return self.add_build_set(BuildSet(**kwargs))
 
 
 class BuildSet(_build.BuildSet):
@@ -222,20 +245,36 @@ class BuildSet(_build.BuildSet):
       yield BuildSet(inputs=[self], **item)
 
 
-def current_session():
+def current_session(do_raise=True):
+  if do_raise and session is None:
+    raise RuntimeError('no current session')
   return session
 
 
-def current_scope():
-  return session.current_scope
+def current_scope(do_raise=True):
+  scope = session.current_scope
+  if do_raise and scope is None:
+    raise RuntimeError('no current scope')
+  if not scope.name or not scope.version:
+    raise RuntimeError('current scope has no name/version, use '
+                       'project() function to initialize')
+  return scope
 
 
-def current_target():
-  return session.current_scope.current_target
+def current_target(do_raise=True):
+  scope = current_scope(do_raise)
+  target = scope and scope.current_target
+  if do_raise and target is None:
+    raise RuntimeError('no current target')
+  return target
 
 
-def current_build_set():
-  return current_target().current_build_set
+def current_build_set(do_raise=True):
+  target = current_target(do_raise)
+  build_set = target and target.current_build_set
+  if do_raise and build_set is None:
+    raise RuntimeError('no current build set')
+  return build_set
 
 
 def bind_target(target):
@@ -254,7 +293,7 @@ def bind_build_set(build_set):
   current_target().current_build_set = build_set
 
 
-# API for declaring targets
+# Creation API
 
 def create_target(name, bind=True):
   """
@@ -262,7 +301,7 @@ def create_target(name, bind=True):
   set it as the current target.
   """
 
-  scope = session.current_scope
+  scope = current_scope()
   target = session.add_target(Target(scope.name + '@' + name))
   if bind:
     bind_target(target)
@@ -299,11 +338,11 @@ def create_operator(*, for_each=False, **kwargs):
     for split_set in build_set.partite(*insets, *outsets):
       files = {name: [next(iter(split_set.get_file_set(name)))]
                for name in outsets}
-      operator.new_build_set(inputs=[split_set], **files)
+      operator.add_build_set(BuildSet(inputs=[split_set], **files))
   else:
     files = {name: build_set.get_file_set(name)
              for name in outsets}
-    operator.new_build_set(inputs=[build_set], **files)
+    operator.add_build_set(BuildSet(inputs=[build_set], **files))
 
   if for_each:
     create_build_set(from_=operator.build_sets)
@@ -339,6 +378,66 @@ def update_build_set(**kwargs):
       build_set.variables[key] = value
     else:
       build_set.add_files(key, value)
+
+
+def set_properties(_scope, _props=None, _target=None, **kwarg_props):
+  """
+  Sets properties of the specified *_scope* in the current target or the
+  specified *_target*. The scope must be a string that reflects a property
+  prefix, for example "cpp" or "cython".
+
+  _scope (str): The property prefix (without the separating dot).
+  _props (dict): A dictionary of properties to set. The keys in the
+      dictionary can have special syntax to mark a property as publicly
+      visible (prefix with `@`) and/or to append to existing values in
+      the same target (suffix with `+`).
+  _target (Target): The target to set the properties in. Defaults to
+      the currently active target.
+  kwarg_props: Keyword-argument style property values. Similar to the
+      *_props* dictionary, keys in this dictionary may be prefixed with
+      `public__` and/or suffixed with `__append`.
+  """
+
+  if not isinstance(_scope, str):
+    raise TypeError('expected str, got {}'.format(type(_scope).__name__))
+
+  target = _target or current_target()
+  props = {}
+
+  # Prepare the parameters from both sources.
+  for key, value in (_props or {}).items():
+    public = key[0] == '@'
+    if public: key = key[1:]
+    append = key[-1] == '+'
+    if append: key = key[:-1]
+    props.setdefault(key, []).append((value, public, append))
+  for key, value in kwarg_props.items():
+    public = key.startswith('public__')
+    if public: key = key[8:]
+    append = key.endswith('__append')
+    if append: key = key[:-8]
+    props.setdefault(key, []).append((value, public, append))
+
+  for key, operations in props.items():
+    key = _scope + '.' + key
+    for value, public, append in operations:
+      dest = target.public_properties if public else target.properties
+      if append and dest.is_set(key):
+        prop = dest.propset[key]
+        value = prop.coerce(value, dest.owner)
+        value = dest.propset[key].type.inherit(key, [dest[key], value])
+      try:
+        dest[key] = value
+      except NoSuchProperty as exc:
+        print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
+
+
+# Module metadata
+
+def project(name, version):
+  scope = session.current_scope
+  scope.name = name
+  scope.version = version
 
 
 # Path API that takes the current scope's directory as the

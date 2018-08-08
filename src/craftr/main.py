@@ -52,12 +52,7 @@ def main(argv=None, prog=None):
   # Create a new session.
   session = api.session = api.Session(args.build_directory)
 
-  # TODO: Determine scope name and version.
-  with session.enter_scope('main', '1.0-0', '.'):
-    with open('build.craftr') as fp:
-      import types
-      m = types.ModuleType('build')
-      exec(compile(fp.read(), 'build.craftr', 'exec'), vars(m))
+  module = session.load_module_from_file('build.craftr', is_main=True)
 
   if args.dump_graphviz is not NotImplemented:
     with open_cli_file(args.dump_graphviz, 'w') as fp:

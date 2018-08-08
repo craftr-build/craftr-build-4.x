@@ -204,6 +204,12 @@ class BuildSet:
     return '<{} file_sets={} operator={}>'.format(
       type(self).__name__, self.file_sets, self._operator)
 
+  def __contains__(self, set_name):
+    return set_name in self._files
+
+  def __getitem__(self, set_name):
+    return list(self._files[set_name])
+
   @property
   def master(self):
     return self._master
