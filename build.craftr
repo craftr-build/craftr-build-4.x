@@ -20,4 +20,5 @@ def link(name='cxx.link'):
 create_target('main')
 create_build_set(srcs=glob('test/*.c'))
 compile()
+update_build_set(binary=['test/main'])
 link()

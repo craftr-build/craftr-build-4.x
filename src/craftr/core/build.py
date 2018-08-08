@@ -236,6 +236,9 @@ class BuildSet:
   def description(self):
     return self._description
 
+  def remove_file_set(self, set_name):
+    self._files.pop(set_name, None)
+
   def has_file_set(self, set_name):
     return set_name in self._files
 

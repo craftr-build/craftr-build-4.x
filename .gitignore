@@ -1,3 +1,4 @@
 /.venv*
 /test.*
+/test
 *.egg-info

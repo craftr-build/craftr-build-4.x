@@ -46,6 +46,7 @@ __all__ = [
   'create_target',
   'create_operator',
   'create_build_set',
+  'update_build_set',
   'glob',
 ]
 
@@ -308,6 +309,25 @@ def create_build_set(*, bind=True, **kwargs):
     bind_build_set(build_set)
   return build_set
 
+
+def update_build_set(**kwargs):
+  """
+  Updates a build set. Passing a callable will apply the callable for every
+  file in the set. Passing #None will reomve the file set.
+  """
+
+  build_set = current_build_set()
+  for key, value in kwargs.items():
+    if callable(value):
+      files = build_set.get_file_set(key)
+      build_set.remove_file_set(key)
+      build_set.add_files(key, [value(x) for x in files])
+    elif value is None:
+      build_set.remove_file_set(key)
+    elif isinstance(value, str):
+      build_set.variables[key] = value
+    else:
+      build_set.add_files(key, value)
 
 
 # Path API that takes the current scope's directory as the
