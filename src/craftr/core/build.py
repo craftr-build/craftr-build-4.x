@@ -288,8 +288,7 @@ class BuildSet:
 
     self._inputs.add(build_set)
     for set_name, files in build_set._files.items():
-      file_set = self._files.setdefault(set_name, OrderedSet())
-      file_set |= files
+      self._files.setdefault(set_name, OrderedSet()).update(files)
 
   def remove(self):
     """
