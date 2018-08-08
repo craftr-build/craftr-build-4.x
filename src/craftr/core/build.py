@@ -368,7 +368,7 @@ class Operator:
         if not isinstance(y, str):
           raise TypeError('expected str, got {}'.format(type(y).__name__))
     self._commands = commands
-    self._input_filesets, self._output_filesets, self._vars = \
+    self._input_filesets, self._output_filesets, self._varnames = \
         master.behaviour.get_substitutor().multi_occurences(commands)
 
     self._target = None
@@ -418,6 +418,10 @@ class Operator:
       if not build_set.has_file_set(set_name):
         raise RuntimeError('operator requires ${{@{}}} which is not '
                            'provided by this build set'.format(set_name))
+    for var_name in self._varnames:
+      if var_name not in self._vars and var_name not in build_set._vars:
+        raise RuntimeError('operator requires ${{{}}} which is not provided '
+                           'by this build set'.format(var_name))
     self._build_sets.append(build_set)
     return build_set
 

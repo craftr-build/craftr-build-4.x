@@ -20,8 +20,8 @@ def build():
   input_libs = set(stream.concat(x['binary'] for x in input_libs))
 
   cmd = ['gcc', '-I$includes', '-c', '$<srcs', '-o', '$@objs']
-  operator = create_operator(name='cxx.compile', commands=[cmd], for_each=True)
-  operator.variables['includes'] = target['cxx.includes']
+  operator = create_operator(name='cxx.compile', commands=[cmd], for_each=True,
+                             variables={'includes': target['cxx.includes']})
 
   type = target.properties['cxx.type']
   cmd = ['gcc', '$<objs', '-o', '$@binary', '$inputLibs']
@@ -38,8 +38,8 @@ def build():
   if not 'binary' in build_set:
     build_set.add_files('binary', [chfdir('main' + binaryExt)]) # TODO
 
-  operator = create_operator(name='cxx.link', commands=[cmd])
-  operator.variables['inputLibs'] = input_libs
+  operator = create_operator(name='cxx.link', commands=[cmd],
+                             variables={'inputLibs': input_libs})
 
   if type == 'staticLibrary':
     set_properties('cxx', {'@outStaticLibs+': [current_build_set()]})

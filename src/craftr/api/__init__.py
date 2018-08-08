@@ -401,7 +401,7 @@ def create_target(name, bind=True):
   return target
 
 
-def create_operator(*, for_each=False, **kwargs):
+def create_operator(*, for_each=False, variables=None, **kwargs):
   """
   This function is not usually called from a build script unless you want
   to hard code a command. It will inspect the commands list for input and
@@ -427,6 +427,7 @@ def create_operator(*, for_each=False, **kwargs):
 
   build_set = current_build_set()
   operator = target.add_operator(Operator(**kwargs))
+  operator.variables.update(variables or {})
   if for_each:
     for split_set in build_set.partite(*insets, *outsets):
       files = {name: [next(iter(split_set.get_file_set(name)))]
