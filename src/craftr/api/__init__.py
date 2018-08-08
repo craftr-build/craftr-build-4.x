@@ -37,9 +37,16 @@ __all__ = [
   'Operator',
   'BuildSet',
   'session',
+  'current_session',
+  'current_scope',
+  'current_target',
+  'current_build_set',
+  'bind_target',
+  'bind_build_set',
   'create_target',
+  'create_operator',
   'create_build_set',
-  'glob'
+  'glob',
 ]
 
 import contextlib
@@ -212,9 +219,41 @@ class BuildSet(_build.BuildSet):
       yield BuildSet(inputs=[self], **item)
 
 
+def current_session():
+  return session
+
+
+def current_scope():
+  return session.current_scope
+
+
+def current_target():
+  return session.current_scope.current_target
+
+
+def current_build_set():
+  return current_target().current_build_set
+
+
+def bind_target(target):
+  """
+  Binds the specified *target* as the current target in the current scope.
+  """
+
+  session.current_scope.current_target = target
+
+
+def bind_build_set(build_set):
+  """
+  Binds the specified *build_set* in the currently active target.
+  """
+
+  current_target().current_build_set = build_set
+
+
 # API for declaring targets
 
-def create_target(name):
+def create_target(name, bind=True):
   """
   Create a new target with the specified *name* in the current scope and
   set it as the current target.
@@ -222,19 +261,53 @@ def create_target(name):
 
   scope = session.current_scope
   target = session.add_target(Target(scope.name + '@' + name))
-  scope.current_target = target
+  if bind:
+    bind_target(target)
   return target
 
 
-def create_build_set(**kwargs):
+def create_operator(*, for_each=False, **kwargs):
+  """
+  This function is not usually called from a build script unless you want
+  to hard code a command. It will inspect the commands list for input and
+  output files and respectively generate new build sets accordingly.
+
+  for_each (bool): If this is set to #True, all inputs and outputs will be
+    partitioned into separate build sets.
+  kwargs: Additional arguments passed to the #Operator constructor.
+  """
+
+  commands = kwargs['commands']
+  subst = session.behaviour.get_substitutor()
+  insets, outsets, varnames = subst.multi_occurences(commands)
+
+  build_set = current_build_set()
+  operator = current_target().add_operator(Operator(**kwargs))
+  if for_each:
+    for split_set in build_set.partite(*insets, *outsets):
+      files = {name: [next(iter(split_set.get_file_set(name)))]
+               for name in outsets}
+      operator.new_build_set(inputs=[split_set], **files)
+  else:
+    files = {name: build_set.get_file_set(name)
+             for name in outsets}
+    operator.new_build_set(inputs=[build_set], **files)
+
+  if for_each:
+    create_build_set(from_=operator.build_sets)
+
+
+def create_build_set(*, bind=True, **kwargs):
   """
   Creates a new #BuildSet and sets it as the current build set in the current
   target.
   """
 
-  bset = BuildSet(**kwargs)
-  session.current_target.current_build_set = bset
-  return bset
+  build_set = BuildSet(**kwargs)
+  if bind:
+    bind_build_set(build_set)
+  return build_set
+
 
 
 # Path API that takes the current scope's directory as the

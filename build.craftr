@@ -2,17 +2,22 @@
 from craftr.api import *
 
 def compile(name='cxx.compile'):
-  target = session.current_target
-  build_set = target.current_build_set
+  build_set = current_build_set()
+  if not build_set.has_file_set('objs'):
+    build_set.add_files('objs', [x+'.obj' for x in build_set.get_file_set('srcs')])
   cmd = ['gcc', '-c', '$<srcs', '-o', '$@objs']
-  op = target.new_operator(name, commands=[cmd])
-  for inset in build_set.partite('srcs', 'objs?'):
-    outfile = next(iter(inset.get_file_set('objs')), None)
-    if not outfile:
-      outfile = next(iter(inset.get_file_set('srcs'))) + '.obj'
-    op.new_build_set(inputs=[inset], objs=[outfile])
-  create_build_set(from_=op.build_sets, inputs=[build_set])
+  create_operator(name=name, commands=[cmd], for_each=True)
+
+
+def link(name='cxx.link'):
+  build_set = current_build_set()
+  if not build_set.has_file_set('binary'):
+    build_set.add_files('binary', ['main'])
+  cmd = ['gcc', '$<objs', '-o', '$@binary']
+  create_operator(name=name, commands=[cmd])
+
 
 create_target('main')
 create_build_set(srcs=glob('test/*.c'))
 compile()
+link()
