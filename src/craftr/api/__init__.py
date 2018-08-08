@@ -50,6 +50,7 @@ __all__ = [
   'glob',
 ]
 
+import collections
 import contextlib
 import nr.fs
 
@@ -126,6 +127,7 @@ class Target(_build.Target):
   def __init__(self, name: str):
     super().__init__(name, session)
     self.current_build_set = None
+    self._operator_name_counter = collections.defaultdict(lambda: 1)
 
   def new_operator(self, *args, **kwargs):
     return self.add_operator(Operator(*args, **kwargs))
@@ -278,12 +280,21 @@ def create_operator(*, for_each=False, **kwargs):
   kwargs: Additional arguments passed to the #Operator constructor.
   """
 
+  target = current_target()
+
   commands = kwargs['commands']
   subst = session.behaviour.get_substitutor()
   insets, outsets, varnames = subst.multi_occurences(commands)
 
+  name = kwargs['name']
+  if '#' not in name:
+    count = target._operator_name_counter[name]
+    target._operator_name_counter[name] = count + 1
+    name += '#' + str(count)
+    kwargs['name'] = name
+
   build_set = current_build_set()
-  operator = current_target().add_operator(Operator(**kwargs))
+  operator = target.add_operator(Operator(**kwargs))
   if for_each:
     for split_set in build_set.partite(*insets, *outsets):
       files = {name: [next(iter(split_set.get_file_set(name)))]
