@@ -717,6 +717,9 @@ def execute(master):
       print(prefix, build_set.get_description())
     else:
       print(prefix)
+    for set_name in build_set.file_sets:
+      for filename in build_set[set_name]:
+        nr.fs.makedirs(nr.fs.dir(filename))
     commands = build_set.get_commands()
     for cmd in commands:
       print('  $', ' '.join(shlex.quote(x) for x in cmd))
