@@ -48,8 +48,10 @@ __all__ = [
   'create_build_set',
   'update_build_set',
   'set_properties',
+  'depends',
   'project',
   'glob',
+  'chfdir',
 ]
 
 import collections
@@ -59,6 +61,7 @@ import nr.fs
 
 from craftr.core import build as _build
 from nodepy.utils import pathlib
+from nr.stream import stream
 from .modules import CraftrModuleLoader
 from .proplib import PropertySet, Properties, NoSuchProperty
 
@@ -86,6 +89,7 @@ class Session(_build.Master):
     self.nodepy_context.resolver.loaders.append(self.loader)
     self.nodepy_context.resolver.paths.append(pathlib.Path(STDLIB_DIR))
     self.target_props = PropertySet()
+    self.dependency_props = PropertySet()
 
   def load_module(self, name):
     return self.nodepy_context.require(name + '.craftr', exports=False)
@@ -97,6 +101,10 @@ class Session(_build.Master):
     self.nodepy_context.register_module(module)
     self.nodepy_context.load_module(module)
     return module
+
+  @property
+  def build_directory(self):
+    return self._build_directory
 
   @contextlib.contextmanager
   def enter_scope(self, name, version, directory):
@@ -151,12 +159,97 @@ class Target(_build.Target):
   operator.
   """
 
+  class Dependency:
+    def __init__(self, target, public):
+      self.target = target
+      self.public = public
+      self.properties = Properties(session.dependency_props, owner=current_scope())
+
   def __init__(self, name: str):
     super().__init__(name, session)
     self.current_build_set = None
     self.properties = Properties(session.target_props, owner=current_scope())
     self.public_properties = Properties(session.target_props, owner=current_scope())
+    self._dependencies = []
     self._operator_name_counter = collections.defaultdict(lambda: 1)
+
+  def __getitem__(self, prop_name):
+    """
+    Read a (combined) property value from the target.
+    """
+
+    prop = self.properties.propset[prop_name]
+    inherit = prop.options.get('inherit', False)
+    return self.get_prop(prop_name, inherit=inherit)
+
+  @property
+  def dependencies(self):
+    return list(self._dependencies)
+
+  def add_dependency(self, target: 'Target', public: bool):
+    """
+    Adds another target as a dependency to this target. This will cause public
+    properties to be inherited when using the #prop() method.
+    """
+
+    if not isinstance(target, Target):
+      raise TypeError('expected Target, got {}'.format(
+        type(target).__name__))
+
+    for x in self._dependencies:
+      if x.target is target:
+        raise RuntimeError('dependency to "{}" already exists'.format(target.name))
+    dep = Target.Dependency(target, public)
+    self._dependencies.append(dep)
+    return dep
+
+  def get_prop(self, prop_name, inherit=False, default=NotImplemented):
+    """
+    Returns a property value. If a value exists in #exported_props and #props,
+    the #exported_props takes preference.
+
+    If *inherit* is #True, the property must be a #proplib.List property
+    and the values in the exported and non-exported property containers as
+    well as transitive dependencies are respected.
+
+    Note that this method does not take property options into account, so
+    even if you specified `options={'inherit': True}` on the property you
+    want to retrieve, you will need to pass `inherit=True` explicitly to this
+    method. If you want this to happen automatically, use the #__getitem__().
+    """
+
+    if inherit:
+      def iter_values():
+        yield self.public_properties[prop_name]
+        yield self.properties[prop_name]
+        for target in self.transitive_dependencies().attr('target'):
+          yield target.public_properties[prop_name]
+      prop = self.properties.propset[prop_name]
+      return prop.type.inherit(prop_name, iter_values())
+    else:
+      if self.public_properties.is_set(prop_name):
+        return self.public_properties[prop_name]
+      elif self.properties.is_set(prop_name):
+        return self.properties[prop_name]
+      elif default is NotImplemented:
+        return self.properties.propset[prop_name].get_default()
+      else:
+        return default
+
+  def transitive_dependencies(self):
+    """
+    Returns an iterator that yields the #Dependency objects of this target
+    and all of their (public) transitive dependencies. The returned iterator
+    is a #stream instance, thus you can use any streaming operations on the
+    returned object.
+    """
+
+    def worker(target, private=False):
+      for dep in target.dependencies:
+        if dep.public or private:
+          yield dep
+        yield from worker(dep.target)
+    return stream.unique(worker(self, private=True))
 
 
 class Operator(_build.Operator):
@@ -346,6 +439,7 @@ def create_operator(*, for_each=False, **kwargs):
 
   if for_each:
     create_build_set(from_=operator.build_sets)
+  return operator
 
 
 def create_build_set(*, bind=True, **kwargs):
@@ -432,6 +526,20 @@ def set_properties(_scope, _props=None, _target=None, **kwarg_props):
         print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
 
 
+def depends(target, public=False):
+  """
+  Add *target* as a dependency to the current target.
+  """
+
+  if isinstance(target, str):
+    scope, name = target.partition(':')[::2]
+    if not scope:
+      scope = current_scope().name
+    target = session.get_target(scope + '@' + name)
+
+  return current_target().add_dependency(target, public)
+
+
 # Module metadata
 
 def project(name, version):
@@ -449,3 +557,9 @@ def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
     parent = session.current_scope.directory
   return nr.fs.glob(patterns, parent, excludes, include_dotfiles,
                     ignore_false_excludes)
+
+
+def chfdir(filename):
+  if nr.fs.isabs(filename):
+    filename = nr.fs.rel(filename, current_scope().directory)
+  return nr.fs.join(current_scope().build_directory, filename)

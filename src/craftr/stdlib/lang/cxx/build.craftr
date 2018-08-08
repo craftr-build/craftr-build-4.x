@@ -1,9 +1,11 @@
 
 from craftr.api import *
 from craftr.api import proplib
+from nr.stream import stream
 
 session.target_props.add('cxx.type', proplib.String)
-session.target_props.add('cxx.includes', proplib.PathList)
+session.target_props.add('cxx.includes', proplib.PathList, options={'inherit': True})
+session.target_props.add('cxx.outStaticLibs', proplib.List, options={'inherit': True})
 
 
 def build():
@@ -11,13 +13,18 @@ def build():
   build_set = current_build_set()
   if 'objs' not in build_set:
     # TODO
-    build_set.add_files('objs', [x+'.o' for x in build_set.get_file_set('srcs')])
+    build_set.add_files('objs', [chfdir(x+'.o') for x in build_set.get_file_set('srcs')])
 
-  cmd = ['gcc', '-c', '$<srcs', '-o', '$@objs']
-  create_operator(name='cxx.compile', commands=[cmd], for_each=True)
+  input_libs = target['cxx.outStaticLibs']
+  build_set.add_inputs(input_libs)
+  input_libs = set(stream.concat(x['binary'] for x in input_libs))
+
+  cmd = ['gcc', '-I$includes', '-c', '$<srcs', '-o', '$@objs']
+  operator = create_operator(name='cxx.compile', commands=[cmd], for_each=True)
+  operator.variables['includes'] = target['cxx.includes']
 
   type = target.properties['cxx.type']
-  cmd = ['gcc', '$<objs', '-o', '$@binary']
+  cmd = ['gcc', '$<objs', '-o', '$@binary', '$inputLibs']
   if type == 'sharedLibrary':
     binaryExt = '.so'
     cmd += ['-shared']
@@ -29,6 +36,10 @@ def build():
 
   build_set = current_build_set()
   if not 'binary' in build_set:
-    build_set.add_files('binary', ['main' + binaryExt]) # TODO
+    build_set.add_files('binary', [chfdir('main' + binaryExt)]) # TODO
 
-  create_operator(name='cxx.link', commands=[cmd])
+  operator = create_operator(name='cxx.link', commands=[cmd])
+  operator.variables['inputLibs'] = input_libs
+
+  if type == 'staticLibrary':
+    set_properties('cxx', {'@outStaticLibs+': [current_build_set()]})

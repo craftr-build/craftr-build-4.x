@@ -92,7 +92,10 @@ class Substitutor:
     elif var[0] == '@':
       value = build_set.get_file_set(var[1:])
     else:
-      value = build_set.variables[var]
+      if var in build_set.variables:
+        value = build_set.variables[var]
+      else:
+        value = build_set.operator.variables[var]
 
     if isinstance(value, (list, tuple, set, OrderedSet)):
       for x in value:
@@ -296,6 +299,9 @@ class BuildSet:
     for set_name, files in build_set._files.items():
       self._files.setdefault(set_name, OrderedSet()).update(files)
 
+  def add_inputs(self, build_sets):
+    self._inputs.update(build_sets)
+
   def remove(self):
     """
     Removes the build set from the operator.
@@ -367,6 +373,7 @@ class Operator:
 
     self._target = None
     self._build_sets = []
+    self._vars = {}
 
   def __repr__(self):
     return '<Operator name={!r} target={!r}>'.format(
@@ -387,6 +394,10 @@ class Operator:
   @property
   def commands(self):
     return [x[:] for x in self._commands]
+
+  @property
+  def variables(self):
+    return self._vars
 
   @property
   def build_sets(self):
