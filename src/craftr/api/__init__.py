@@ -42,16 +42,7 @@ __all__ = [
   'current_target',
   'current_build_set',
   'bind_target',
-  'bind_build_set',
-  'create_target',
-  'create_operator',
-  'create_build_set',
-  'update_build_set',
-  'set_properties',
-  'depends',
-  'project',
-  'glob',
-  'chfdir',
+  'bind_build_set'
 ]
 
 import collections
@@ -62,6 +53,7 @@ import nr.fs
 from craftr.core import build as _build
 from nodepy.utils import pathlib
 from nr.stream import stream
+from nr.types import OrderedSet
 from .modules import CraftrModuleLoader
 from .proplib import PropertySet, Properties, NoSuchProperty
 
@@ -83,6 +75,7 @@ class Session(_build.Master):
     def handle_master(self, master):
       super().handle_master(master)
       [self.handle_build_set(x) for x in master._build_sets]
+      [self.handle_file_set(x) for x in master._file_sets]
 
   def __init__(self, build_directory: str,
                behaviour: _build.Behaviour = None):
@@ -90,6 +83,7 @@ class Session(_build.Master):
     self._build_directory = nr.fs.canonical(build_directory)
     self._current_scopes = []
     self._build_sets = []  # Registers all build sets
+    self._file_sets = []  # Registers all file sets
     self.loader = CraftrModuleLoader(self)
     self.nodepy_context = nodepy.context.Context()
     self.nodepy_context.resolver.loaders.append(self.loader)
@@ -273,6 +267,7 @@ class BuildSet(_build.BuildSet):
   convenient construction.
   """
 
+  """
   def __init__(self, inputs: list = (),
                from_: list = None,
                description: str = None,
@@ -297,7 +292,8 @@ class BuildSet(_build.BuildSet):
         self.variables[key] = value
       else:
         self.add_files(key, value)
-    session._build_sets.append(self)
+    session._build_sets.append(self)  # TODO
+  """
 
   @classmethod
   def _has_transitive_input(cls, self, build_set):
@@ -308,38 +304,68 @@ class BuildSet(_build.BuildSet):
         return True
     return False
 
-  def partite(self, *on_sets):
+  def partite(self, *on_sets, fizzle=True):
     """
-    Partite the build set into a set per file in the file sets specified
-    with *on_sets*. If multiple file set names are specified, the size of
-    these sets must be equal.
+    Partite the build set into a #BuildSet per input/output file combination.
 
-    A set name can be suffixed with a question mark (`?`) to indicate that
-    the file set is not required to exist, in which case #None is yielded
-    for the respective file set name instead of a #BuildSet per item.
+    If *on_sets* is specified, it must specify the set names on which the
+    1-to-1 partition occurs, other sets will be contained unpartitioned in
+    every build set that is returned by this function.
+
+    Otherwise, the partition will be performed over all file sets and the
+    cardinality of all file sets must be the same.
+
+    The link between the build sets is removed unless *fizzle* is False.
     """
 
-    sets = []
-    names = []
-    for name in on_sets:
-      optional = name[-1] == '?'
-      if optional: name = name[:-1]
-      if optional and not self.has_file_set(name):
-        sets.append(None)
-      else:
-        sets.append(self.get_file_set(name))
-      names.append(name)
+    partition_inputs = []
+    partition_outputs = []
+    copy_inputs = []
+    copy_outputs = []
 
-    if len(set(len(x) for x in sets if x is not None)) != 1:
-      raise RuntimeError('mismatching set sizes ({})'.format(on_sets))
+    if not on_sets:
+      on_sets = set(self.inputs.keys()) | set(self.outputs.keys())
+    else:
+      on_sets = OrderedSet(on_sets)
 
-    sets = [iter(x) if x is not None else None for x in sets]
-    while True:
-      try:
-        item = {names[i]: [next(sets[i])] for i in range(len(sets)) if sets[i] is not None}
-      except StopIteration:
-        break
-      yield BuildSet(inputs=[self], **item)
+    for name in self.inputs:
+      (partition_inputs if name in on_sets else copy_inputs).append(name)
+    for name in self.outputs:
+      (partition_outputs if name in on_sets else copy_outputs).append(name)
+
+    if not partition_inputs or not partition_outputs:
+      raise ValueError('no inputs or outputs to partition')
+
+    # Ensure that the cardinality of all sets that the partition is
+    # run on is the same.
+    counts = set(len(self.inputs[x]) for x in partition_inputs)
+    counts |= set(len(self.outputs[x]) for x in partition_outputs)
+    if len(counts) != 1:
+      raise ValueError('cardinality of sets that are to be partitioned '
+                       'must match (input sets: {}, output sets: {}, counts: {})'
+                       .format(partition_inputs, partition_outputs, counts))
+
+    if fizzle:
+      self.fizzle()
+
+    for i in range(counts.pop()):
+      insets = {}
+      outsets = {}
+      for name in partition_inputs:
+        insets[name] = file_set([self.inputs[name][i]], [self.inputs[name]])
+      for name in partition_outputs:
+        outsets[name] = file_set([self.outputs[name][i]], [self.outputs[name]])
+      for name in copy_inputs:
+        insets[name] = self.inputs[name]
+      for name in copy_outputs:
+        outsets[name] = self.outputs[name]
+      yield build_set(insets, outsets, self.variables, description=self._description)
+
+  # _build.BuildSet
+
+  def fizzle(self):
+    session._build_sets.remove(self)  # TODO
+    super().fizzle()
 
 
 def current_session(do_raise=True):
@@ -390,9 +416,29 @@ def bind_build_set(build_set):
   current_target().current_build_set = build_set
 
 
-# Creation API
+# Public API Level 1 (Build Scripts)
+# ==================================
 
-def create_target(name, bind=True):
+__all__ += [
+  'project',
+  'target',
+  'file_set',
+  'join_file_sets',
+  'properties',
+  'depends',
+  'build_set',
+  'glob',
+  'chfdir'
+]
+
+
+def project(name, version):
+  scope = session.current_scope
+  scope.name = name
+  scope.version = version
+
+
+def target(name, bind=True):
   """
   Create a new target with the specified *name* in the current scope and
   set it as the current target.
@@ -403,6 +449,131 @@ def create_target(name, bind=True):
   if bind:
     bind_target(target)
   return target
+
+
+def file_set(files, inputs=None):
+  """
+  Create a new file set. File sets are usually passed as values into
+  target properties using the #properties() method.
+  """
+
+  directory = current_scope().directory
+  files = [nr.fs.abs(x, directory) for x in files]
+  fset = _build.FileSet(session, files, inputs)
+  session._file_sets.append(fset)
+  return fset
+
+
+def join_file_sets(sets):
+  """
+  Joins multiple #FileSet objects into one. If *sets* contains only a single
+  set, that set is returned as is.
+  """
+
+  if len(sets) == 1:
+    return sets[0]
+
+  files = [y for x in sets for y in x]
+  return file_set(files, sets)
+
+
+def extract_file_sets(set_name, build_sets):
+  """
+  Extract
+  """
+
+
+def properties(_props=None, _target=None, **kwarg_props):
+  """
+  Sets properties in the current target.
+
+  _props (dict): A dictionary of properties to set. The keys in the
+      dictionary can have special syntax to mark a property as publicly
+      visible (prefix with `@`) and/or to append to existing values in
+      the same target (suffix with `+`).
+  _target (Target): The target to set the properties in. Defaults to
+      the currently active target.
+  kwarg_props: Keyword-argument style property values. Similar to the
+      *_props* dictionary, keys in this dictionary may be prefixed with
+      `public__` and/or suffixed with `__append`.
+  """
+
+  target = _target or current_target()
+  props = {}
+
+  # Prepare the parameters from both sources.
+  for key, value in (_props or {}).items():
+    public = key[0] == '@'
+    if public: key = key[1:]
+    append = key[-1] == '+'
+    if append: key = key[:-1]
+    props.setdefault(key, []).append((value, public, append))
+  for key, value in kwarg_props.items():
+    public = key.startswith('public__')
+    if public: key = key[8:]
+    append = key.endswith('__append')
+    if append: key = key[:-8]
+    props.setdefault(key, []).append((value, public, append))
+
+  for key, operations in props.items():
+    for value, public, append in operations:
+      dest = target.public_properties if public else target.properties
+      if append and dest.is_set(key):
+        prop = dest.propset[key]
+        value = prop.coerce(value, dest.owner)
+        value = dest.propset[key].type.inherit(key, [dest[key], value])
+      try:
+        dest[key] = value
+      except NoSuchProperty as exc:
+        print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
+
+
+def depends(target, public=False):
+  """
+  Add *target* as a dependency to the current target.
+  """
+
+  if isinstance(target, str):
+    scope, name = target.partition(':')[::2]
+    if not scope:
+      scope = current_scope().name
+    target = session.get_target(scope + '@' + name)
+
+  return current_target().add_dependency(target, public)
+
+
+def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
+         ignore_false_excludes=False):
+  if not parent:
+    parent = session.current_scope.directory
+  return nr.fs.glob(patterns, parent, excludes, include_dotfiles,
+                    ignore_false_excludes)
+
+
+def chfdir(filename):
+  if nr.fs.isabs(filename):
+    filename = nr.fs.rel(filename, current_scope().directory)
+  return nr.fs.join(current_scope().build_directory, filename)
+
+
+# Public API Level 2 (Build Modules)
+# ==================================
+
+__all__ += [
+  'build_set',
+  'create_operator'
+]
+
+
+def build_set(inputs, outputs, variables=None, alias=None, description=None):
+  """
+  Create a new #BuildSet.
+  """
+
+  bset = BuildSet(session, alias, description, inputs, outputs, variables)
+  session._build_sets.append(bset)
+  bind_build_set(bset)
+  return bset
 
 
 def create_operator(*, for_each=False, variables=None, **kwargs):
@@ -434,137 +605,8 @@ def create_operator(*, for_each=False, variables=None, **kwargs):
   operator.variables.update(variables or {})
   if for_each:
     for split_set in build_set.partite(*insets, *outsets):
-      files = {name: [next(iter(split_set.get_file_set(name)))]
-               for name in outsets}
-      operator.add_build_set(BuildSet(inputs=[split_set], **files))
+      operator.add_build_set(split_set)
   else:
-    files = {name: build_set.get_file_set(name)
-             for name in outsets if build_set.has_file_set(name)}
-    operator.add_build_set(BuildSet(inputs=[build_set], **files))
+    operator.add_build_set(build_set)
 
-  if for_each:
-    create_build_set(from_=operator.build_sets)
   return operator
-
-
-def create_build_set(*, bind=True, **kwargs):
-  """
-  Creates a new #BuildSet and sets it as the current build set in the current
-  target.
-  """
-
-  build_set = BuildSet(**kwargs)
-  if bind:
-    bind_build_set(build_set)
-  return build_set
-
-
-def update_build_set(**kwargs):
-  """
-  Updates a build set. Passing a callable will apply the callable for every
-  file in the set. Passing #None will reomve the file set.
-  """
-
-  build_set = current_build_set()
-  for key, value in kwargs.items():
-    if callable(value):
-      files = build_set.get_file_set(key)
-      build_set.remove_file_set(key)
-      build_set.add_files(key, [value(x) for x in files])
-    elif value is None:
-      build_set.remove_file_set(key)
-    elif isinstance(value, str):
-      build_set.variables[key] = value
-    else:
-      build_set.add_files(key, value)
-
-
-def set_properties(_scope, _props=None, _target=None, **kwarg_props):
-  """
-  Sets properties of the specified *_scope* in the current target or the
-  specified *_target*. The scope must be a string that reflects a property
-  prefix, for example "cpp" or "cython".
-
-  _scope (str): The property prefix (without the separating dot).
-  _props (dict): A dictionary of properties to set. The keys in the
-      dictionary can have special syntax to mark a property as publicly
-      visible (prefix with `@`) and/or to append to existing values in
-      the same target (suffix with `+`).
-  _target (Target): The target to set the properties in. Defaults to
-      the currently active target.
-  kwarg_props: Keyword-argument style property values. Similar to the
-      *_props* dictionary, keys in this dictionary may be prefixed with
-      `public__` and/or suffixed with `__append`.
-  """
-
-  if not isinstance(_scope, str):
-    raise TypeError('expected str, got {}'.format(type(_scope).__name__))
-
-  target = _target or current_target()
-  props = {}
-
-  # Prepare the parameters from both sources.
-  for key, value in (_props or {}).items():
-    public = key[0] == '@'
-    if public: key = key[1:]
-    append = key[-1] == '+'
-    if append: key = key[:-1]
-    props.setdefault(key, []).append((value, public, append))
-  for key, value in kwarg_props.items():
-    public = key.startswith('public__')
-    if public: key = key[8:]
-    append = key.endswith('__append')
-    if append: key = key[:-8]
-    props.setdefault(key, []).append((value, public, append))
-
-  for key, operations in props.items():
-    key = _scope + '.' + key
-    for value, public, append in operations:
-      dest = target.public_properties if public else target.properties
-      if append and dest.is_set(key):
-        prop = dest.propset[key]
-        value = prop.coerce(value, dest.owner)
-        value = dest.propset[key].type.inherit(key, [dest[key], value])
-      try:
-        dest[key] = value
-      except NoSuchProperty as exc:
-        print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
-
-
-def depends(target, public=False):
-  """
-  Add *target* as a dependency to the current target.
-  """
-
-  if isinstance(target, str):
-    scope, name = target.partition(':')[::2]
-    if not scope:
-      scope = current_scope().name
-    target = session.get_target(scope + '@' + name)
-
-  return current_target().add_dependency(target, public)
-
-
-# Module metadata
-
-def project(name, version):
-  scope = session.current_scope
-  scope.name = name
-  scope.version = version
-
-
-# Path API that takes the current scope's directory as the
-# current "working" directory.
-
-def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
-         ignore_false_excludes=False):
-  if not parent:
-    parent = session.current_scope.directory
-  return nr.fs.glob(patterns, parent, excludes, include_dotfiles,
-                    ignore_false_excludes)
-
-
-def chfdir(filename):
-  if nr.fs.isabs(filename):
-    filename = nr.fs.rel(filename, current_scope().directory)
-  return nr.fs.join(current_scope().build_directory, filename)

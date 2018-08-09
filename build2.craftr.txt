@@ -1,0 +1,22 @@
+
+
+cxx = require('craftr/stdlib/lang/cxx')
+m4 = require('craftr/stdlib/lang/m4')
+
+link_module('./modules/net.maxon.c4d')
+
+target('plugin')
+build_set(srcs=glob('source/**/*.cpp', excludes=['source/loader.cpp']))
+m4.preprocess()
+depends('net.maxon.c4d:c4d')
+properties({
+  'cxx.type': 'library',
+  'cxx.preferredLinkage': 'shared',
+  'cxx.defines': ['CRUNCHERSDK_DLL_USE', '_WINDOWS', '__64BIT', 'PSAPI_VERSION=1', '_WIN64', '_UNICODE', 'UNICODE']  # '_CRT_SECURE_NO_WARNINGS',
+  'cxx.includes': ['source', 'PolygonCruncher/res', 'vendor/polygon-cruncher-sdk/SDK/Includes', 'vendor/NiklasRosenstein/nr.utils/include'],
+  'cxx.systemLibraries': ['VS2017-PolygonCruncherSDK'],
+  'cxx.productName': 'polygoncruncher$(ext)',
+  'cxx.productDirectory': '.',
+  'cxx.msvcConformance': ['wchar_t']
+})
+cxx.build()

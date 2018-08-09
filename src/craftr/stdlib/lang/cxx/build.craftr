@@ -4,25 +4,33 @@ from craftr.api import proplib
 from nr.stream import stream
 
 session.target_props.add('cxx.type', proplib.String)
+session.target_props.add('cxx.srcs', proplib.FileSetList)
+session.target_props.add('cxx.objs', proplib.FileSetList)
 session.target_props.add('cxx.includes', proplib.PathList, options={'inherit': True})
 session.target_props.add('cxx.outStaticLibs', proplib.List, options={'inherit': True})
 
 
 def build():
   target = current_target()
-  build_set = current_build_set()
-  if 'objs' not in build_set:
-    # TODO
-    build_set.add_files('objs', [chfdir(x+'.o') for x in build_set.get_file_set('srcs')])
 
-  input_libs = target['cxx.outStaticLibs']
-  build_set.add_inputs(input_libs)
-  input_libs = set(stream.concat(x['binary'] for x in input_libs))
+  srcs = join_file_sets(target['cxx.srcs'])
+  objs = join_file_sets(target['cxx.objs'])
+  objs.fill_for(srcs, lambda x: chfdir(x + '.o'))
+  bset = build_set({'srcs': srcs}, {'objs': objs})
 
-  cmd = ['gcc', '-I$includes', '-c', '$<srcs', '-o', '$@objs']
-  operator = create_operator(name='cxx.compile', commands=[cmd], for_each=True,
-                             variables={'includes': target['cxx.includes']})
+  op = create_operator(
+    name='cxx.compile',
+    commands=[['gcc', '-I$includes', '-c', '$<srcs', '-o', '$@objs']],
+    for_each=True,
+    variables={'includes': target['cxx.includes']}
+  )
 
+  objs = extract_file_sets(op.build_sets, 'objs')
+
+
+
+
+  """
   type = target.properties['cxx.type']
   cmd = ['gcc', '$<objs', '-o', '$@binary', '$inputLibs']
   if type == 'sharedLibrary':
@@ -34,12 +42,18 @@ def build():
   else:
     binaryExt = ''
 
+  input_libs = join_file_sets(target['cxx.outStaticLibs'])
+  #, 'inputLibs': input_libs}
+
   build_set = current_build_set()
   if not 'binary' in build_set:
     build_set.add_files('binary', [chfdir('main' + binaryExt)]) # TODO
 
+  print(build_set._inputs)
+  print(build_set)
   operator = create_operator(name='cxx.link', commands=[cmd],
                              variables={'inputLibs': input_libs})
 
   if type == 'staticLibrary':
     set_properties('cxx', {'@outStaticLibs+': [current_build_set()]})
+  """

@@ -4,13 +4,18 @@ project('test', '1.0-0')
 
 cxx = require('craftr/stdlib/lang/cxx')
 
-create_target('lib')
-create_build_set(srcs=glob('test/lib/*.c'))
-set_properties('cxx', type='staticLibrary', public__includes=['test/lib'])
+target('lib')
+properties({
+  'cxx.type': 'staticLibrary',
+  'cxx.srcs': [file_set(glob('test/lib/*.c'))],
+  '@cxx.includes': ['test/lib']
+})
 cxx.build()
 
-create_target('main')
-create_build_set(srcs=['test/main.c'])
-set_properties('cxx', type='executable')
+target('main')
 depends(':lib')
+properties({
+  'cxx.type': 'executable',
+  'cxx.srcs': [file_set(['test/main.c'])]
+})
 cxx.build()

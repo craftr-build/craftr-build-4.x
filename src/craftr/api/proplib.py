@@ -261,6 +261,10 @@ class InstanceOf(PropType, metaclass=GenericMeta):
     raise NotImplementedError
 
 
+from craftr.core.build import FileSet
+FileSetList = List[InstanceOf[FileSet]]
+
+
 class PropertySet:
   """
   The #PropertySet describes a set of properties. It does not contain actual

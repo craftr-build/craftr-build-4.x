@@ -43,7 +43,7 @@ import re
 import shlex
 
 from nr.types.set import OrderedSet
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 
 class Substitutor:
@@ -160,10 +160,84 @@ class Behaviour:
     return Substitutor()
 
 
+class FileSet:
+  """
+  Represents an ordered set of files. File sets are combined to create a
+  #BuildSet that, together with an #Operator, form a single build action.
+  Files in the set are stored only in canonical form using
+  #Behaviour.canonicalize_path().
+
+  Linking file sets is not mandatory but highly recommended for debugging
+  purposes.
+
+  Adding a #FileSet to a #BuildSet will establish links in the #build_sets_in
+  and #build_sets_out.
+  """
+
+  def __init__(self, master: 'Master',
+               files: List[str] = None,
+               inputs: List['FileSet'] = None):
+
+    if not isinstance(master, Master):
+      raise TypeError('expected Master, got {}'.format(type(master).__name__))
+    self._master = master
+
+    if inputs is None:
+      inputs = []
+    self._inputs = OrderedSet()
+    if not isinstance(inputs, list):
+      raise TypeError('expected list, got {}'.format(type(inputs).__name__))
+    for x in inputs:
+      if not isinstance(x, FileSet):
+        raise TypeError('expected FileSet, got {}'.format(type(x).__name__))
+      self._inputs.add(x)
+
+    self._files = OrderedSet()
+    self.add_files(files or [])
+
+    self._build_sets_in = {}
+    self._build_sets_out = {}
+
+  def __repr__(self):
+    return '{}({{{}}})'.format(
+      type(self).__name__, ', '.join(repr(x) for x in self._files))
+
+  def __len__(self):
+    return len(self._files)
+
+  def __getitem__(self, index):
+    return self._files[index]
+
+  def __iter__(self):
+    return iter(self._files)
+
+  @property
+  def inputs(self):
+    return self._inputs
+
+  @property
+  def aliases(self):
+    return set(self._build_sets_in.values()) | set(self._build_sets_out.values())
+
+  def add_file(self, filename: str):
+    self._files.add(self._master.behaviour.canonicalize_path(filename))
+
+  def add_files(self, files: List[str]):
+    canonical = self._master.behaviour.canonicalize_path
+    self._files.update(canonical(x) for x in files)
+
+  def clear(self):
+    self._files.clear()
+
+  def fill_for(self, ref_set: 'FileSet', update: callable):
+    while len(self) < len(ref_set):
+      self.add_file(update(ref_set[len(self)]))
+
+
 class BuildSet:
   """
-  A build set is a collection of named sets that contain absolute filenames,
-  as well as a collection of variables and a list of dependent build sets.
+  A build set is a collection of named #FileSet objects in either an input
+  or output slot.
 
   Build sets may be attached to an #Operator in which case they represent the
   files produced by the commands specified in the operator. In any other case,
@@ -172,37 +246,49 @@ class BuildSet:
   """
 
   def __init__(self, master: 'Master',
-               inputs: List['BuildSet'],
+               alias: str = None,
                description: Optional[str] = None,
-               alias: str = None):
+               inputs: Dict[str, FileSet] = None,
+               outputs: Dict[str, FileSet] = None,
+               variables: Dict[str, object] = None):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     self._master = master
 
-    self._inputs = set()
-    for x in inputs:
-      if not isinstance(x, BuildSet):
-        raise TypeError('expected BuildSet, got {}'.format(type(x).__name__))
-      if x not in self._inputs:
-        self._inputs.add(x)
+    self._inputs = {}
+    for key, value in (inputs or {}).items():
+      if not isinstance(value, FileSet):
+        raise TypeError('expected FileSet, got {}'.format(type(value).__name__))
+      self._inputs[key] = value
+      value._build_sets_in[self] = key
+
+    self._outputs = {}
+    for key, value in (outputs or {}).items():
+      if not isinstance(value, FileSet):
+        raise TypeError('expected FileSet, got {}'.format(type(value).__name__))
+      self._outputs[key] = value
+      value._build_sets_out[self] = key
+
+    if variables is not None and not isinstance(variables, dict):
+      raise TypeError('expected dict, got {}'.format(type(variables).__name__))
+    self._variables = dict(variables or {})
+
+    if alias is not None and not isinstance(alias, str):
+      raise TypeError('expected str, got {}'.format(type(alias).__name__))
+    self._alias = alias
 
     if description is not None and not isinstance(description, str):
       raise TypeError('expected str, got {}'.format(
         type(description).__name__))
     self._description = description
 
-    if alias is not None and not isinstance(alias, str):
-      raise TypeError('expected str, got {}'.format(type(alias).__name__))
-    self._alias = alias
-
     self._operator = None
-    self._files = {}
-    self._vars = {}
 
   def __repr__(self):
-    return '<{} file_sets={} operator={}>'.format(
-      type(self).__name__, self.file_sets, self._operator)
+    return '<{} operator={} inputs={} outputs={} variables={}>'.format(
+      type(self).__name__, self.operator, set(self._inputs.keys()),
+      set(self._outputs.keys()), set(self._variables.keys()))
 
   def __contains__(self, set_name):
     return set_name in self._files
@@ -216,99 +302,27 @@ class BuildSet:
 
   @property
   def inputs(self):
-    return list(self._inputs)
+    return self._inputs
+
+  @property
+  def outputs(self):
+    return self._outputs
+
+  @property
+  def variables(self):
+    return self._variables
 
   @property
   def alias(self):
     return self._alias
 
   @property
-  def operator(self):
-    return self._operator
-
-  @property
-  def file_sets(self):
-    """
-    Returns a set of the file set names.
-    """
-
-    return set(self._files.keys())
-
-  @property
-  def variables(self):
-    return self._vars
-
-  @property
   def description(self):
     return self._description
 
-  def remove_file_set(self, set_name):
-    self._files.pop(set_name, None)
-
-  def has_file_set(self, set_name):
-    return set_name in self._files
-
-  def get_file_set(self, set_name):
-    """
-    Return a copy of the file set with the name *set_name*. If the set does
-    not exist in the operator, an empty set is returned instead.
-    """
-
-    try:
-      return OrderedSet(self._files[set_name])
-    except KeyError:
-      return OrderedSet()
-
-  def has_input_file_set(self, set_name):
-    for x in self._inputs:
-      if set_name in x:
-        return True
-    return False
-
-  def get_input_file_set(self, set_name):
-    """
-    Returns a concatenated file set from the inputs of this build set.
-    """
-
-    result = OrderedSet()
-    for x in self._inputs:
-      result |= x.get_file_set(set_name)
-    return result
-
-  def add_files(self, set_name, files):
-    """
-    Add a number of *files* to the set with the name *set_name*. All files
-    added to a set in the file operator are canonicalized using the
-    #Behaviour.canonicalize_path() method.
-    """
-
-    file_set = self._files.setdefault(set_name, OrderedSet())
-    for file in files:
-      file_set.add(self._master.behaviour.canonicalize_path(file))
-
-  def add_from(self, build_set: 'BuildSet'):
-    """
-    Adds all files from the specified *build_set* to this set and adds it
-    as an input to this set.
-    """
-
-    self._inputs.add(build_set)
-    for set_name, files in build_set._files.items():
-      self._files.setdefault(set_name, OrderedSet()).update(files)
-
-  def add_inputs(self, build_sets):
-    self._inputs.update(build_sets)
-
-  def remove(self):
-    """
-    Removes the build set from the operator.
-    """
-
-    if not self._operator:
-      return
-
-    self._operator._build_sets.remove(self)
-    self._operator = None
+  @property
+  def operator(self):
+    return self._operator
 
   def get_commands(self):
     """
@@ -331,6 +345,21 @@ class BuildSet:
       return self._description
     subst = self._master.behaviour.get_substitutor()
     return subst.subst(self._description, self)
+
+  def fizzle(self):
+    """
+    Fizzle any connection, removing the build set from any operator that
+    it is attached to as well as removing the links between itself and its
+    file sets.
+    """
+
+    if self._operator:
+      self._operator._build_sets.remove(self)
+      self._operator = None
+    for fset in self._inputs.values():
+      fset._build_sets_in.pop(self)
+    for fset in self._outputs.values():
+      fset._build_sets_out.pop(self)
 
 
 class Operator:
@@ -408,11 +437,11 @@ class Operator:
     if build_set in self._build_sets:
       raise RuntimeError('add_build_set(): BuildSet is already added')
     for set_name in self._input_filesets:
-      if not build_set.has_input_file_set(set_name):
+      if set_name not in build_set.inputs:
         raise RuntimeError('operator requires ${{<{}}} which is not '
                            'provided by this build set'.format(set_name))
     for set_name in self._output_filesets:
-      if not build_set.has_file_set(set_name):
+      if set_name not in build_set.outputs:
         raise RuntimeError('operator requires ${{@{}}} which is not '
                            'provided by this build set'.format(set_name))
     for var_name in self._varnames:
@@ -516,6 +545,7 @@ class GraphvizExporter:
     self._seen = set()
 
   def node(self, node_id, **attrs):
+    if 'BuildSet' in node_id: import pdb; pdb.set_trace()
     attrs = ' '.join(self.attr(k, v, False) for k, v in attrs.items())
     return '"{}" [{}];'.format(node_id, attrs)
 
@@ -537,6 +567,8 @@ class GraphvizExporter:
       return '{}'.format(obj.name)
     elif isinstance(obj, Operator):
       return '{}/{}'.format(obj.target.name, obj.name)
+    elif isinstance(obj, FileSet):
+      return 'FileSet:{}'.format(id(obj))
     elif isinstance(obj, BuildSet):
       return 'BuildSet:{}'.format(id(obj))
     else:
@@ -549,7 +581,7 @@ class GraphvizExporter:
     self.print('digraph {')
     self._indent += 1
     self.print('graph [fontsize=10 fontname="monospace"];')
-    self.print('node [shape=record fontsize=10 fontname="monospace"];')
+    self.print('node [shape=record fontsize=10 fontname="monospace" style="filled"];')
 
   def epilogue(self):
     self._indent -= 1
@@ -590,6 +622,8 @@ class GraphvizExporter:
     for bset in op.build_sets:
       #edge(key, build_set_key(bset), style='dashed', color='darkorange')
       self.handle_build_set(bset)
+
+    """
     self.print('{')
     self._indent += 1
     self.print(self.attr('rank', 'same'))
@@ -598,6 +632,8 @@ class GraphvizExporter:
       self.print(self.node(self.key_of(bset), group=key))
     self._indent -= 1
     self.print('}')
+    """
+
     self._indent -= 1
     self.print('}')
 
@@ -606,26 +642,36 @@ class GraphvizExporter:
       return
     self._seen.add(bset)
     key = self.key_of(bset)
-    lines = []
-    if bset.alias:
-      lines.append('BuildSet: {}'.format(bset.alias))
-    for set_name in bset.file_sets:
-      lines.append('{} = {}'.format(set_name, [nr.fs.base(x) for x in bset.get_file_set(set_name)]))
-    for k, v in bset.variables.items():
-      lines.append('{} = {!r}'.format(k, v))
-    attrs = {'label': '\n'.join(lines), 'style': 'filled'}
-    if not bset.operator and bset.inputs:
-      attrs['color'] = 'gray72'
-      attrs['fillcolor'] = 'gray86'
-    elif not bset.operator:
-      attrs['color'] = 'orange4'
-      attrs['fillcolor'] = 'orange2'
-    else:
-      attrs['color'] = 'slateblue3'
-      attrs['fillcolor'] = 'slateblue1'
+
+    self.print('subgraph "cluster_{}" {{'.format(key))
+    self._indent += 1
+    self.print(self.attr('label', ''))
+    self.print(self.attr('labeljust', 'l'))
+    self.print(self.attr('style', 'filled,rounded'))
+    self.print(self.attr('fillcolor', 'goldenrod2'))
+    self.print(self.attr('color', 'goldenrod4'))
+
+    for fset in bset.inputs.values():
+      self.handle_file_set(fset)
+    for fset in bset.outputs.values():
+      self.handle_file_set(fset)
+
+    self._indent -= 1
+    self.print('}')
+
+  def handle_file_set(self, fset):
+    if fset in self._seen:
+      return
+    self._seen.add(fset)
+    key = self.key_of(fset)
+    alias = ', '.join(fset.aliases)
+    lines = ([alias] if alias else []) + [repr([nr.fs.base(x) for x in fset])]
+    attrs = {'label': '\n'.join(lines), 'fillcolor': 'chocolate1', 'color': 'chocolate3'}
     self.print(self.node(key, **attrs))
-    for other in bset.inputs:
-      self.handle_build_set(other)
+    for bset in fset._build_sets_in: self.handle_build_set(bset)
+    for bset in fset._build_sets_out: self.handle_build_set(bset)
+    for other in fset.inputs:
+      self.handle_file_set(other)
       self.print(self.edge(self.key_of(other), key))
 
 
