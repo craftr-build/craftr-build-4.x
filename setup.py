@@ -3,7 +3,7 @@ import io
 import setuptools
 
 with io.open('requirements.txt') as fp:
-  requirements = fp.readlines()
+  requirements = [x.strip() for x in fp.readlines()]
 
 setuptools.setup(
   name = 'craftr-build',
