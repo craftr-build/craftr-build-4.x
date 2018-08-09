@@ -672,8 +672,6 @@ class GraphvizExporter:
     lines = ([alias] if alias else []) + [repr([nr.fs.base(x) for x in fset])]
     attrs = {'label': '\n'.join(lines), 'fillcolor': 'chocolate1', 'color': 'chocolate3'}
     self.print(self.node(key, **attrs))
-    for bset in fset._build_sets_in: self.handle_build_set(bset)
-    for bset in fset._build_sets_out: self.handle_build_set(bset)
     for other in fset.inputs:
       self.handle_file_set(other)
       self.print(self.edge(self.key_of(other), key))

@@ -452,7 +452,7 @@ def target(name, bind=True):
   return target
 
 
-def file_set(files, inputs=None):
+def file_set(files=[], inputs=None, from_=None):
   """
   Create a new file set. File sets are usually passed as values into
   target properties using the #properties() method.
@@ -461,6 +461,8 @@ def file_set(files, inputs=None):
   directory = current_scope().directory
   files = [nr.fs.abs(x, directory) for x in files]
   fset = _build.FileSet(session, files, inputs)
+  for x in (from_ or ()):
+    fset.add_from(x)
   session._file_sets.append(fset)
   return fset
 
@@ -485,10 +487,8 @@ def extract_file_set(set_name, build_sets):
 
   if isinstance(build_sets, _build.BuildSet):
     build_sets = [build_sets]
-  fset = file_set([])
-  for x in build_sets:
-    fset.add_from(x.outputs[set_name])
-  return fset
+  file_sets = [x.outputs[set_name] for x in build_sets]
+  return file_set(from_=file_sets)
 
 
 def properties(_props=None, _target=None, **kwarg_props):
