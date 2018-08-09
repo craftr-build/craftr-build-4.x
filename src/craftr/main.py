@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 from craftr import api
-from craftr.core.build import dump_graphviz, execute
+from craftr.core.build import execute
 
 
 @contextlib.contextmanager
@@ -56,11 +56,11 @@ def main(argv=None, prog=None):
 
   if args.dump_graphviz is not NotImplemented:
     with open_cli_file(args.dump_graphviz, 'w') as fp:
-      dump_graphviz(session, fp=fp)
+      session.dump_graphviz(fp=fp)
     return 0
 
   if args.dump_svg is not NotImplemented:
-    dotstr = dump_graphviz(session, to_str=True).encode('utf8')
+    dotstr = session.dump_graphviz(to_str=True).encode('utf8')
     with open_cli_file(args.dump_svg, 'w') as fp:
       command = ['dot', '-T', 'svg']
       p = subprocess.Popen(command, stdout=fp, stdin=subprocess.PIPE)

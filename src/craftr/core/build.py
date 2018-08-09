@@ -40,6 +40,7 @@ __all__ = ['Behaviour', 'BuildSet', 'Operator', 'Target', 'Master']
 import io
 import nr.fs
 import re
+import shlex
 
 from nr.types.set import OrderedSet
 from typing import List, Optional, Union
@@ -71,8 +72,6 @@ class Substitutor:
 
     Currently only a single placeholder per argument is supported.
     """
-
-    import shlex
 
     if not single:
       return ' '.join(self.multi_substitute(shlex.split(arg), build_set))
@@ -115,8 +114,6 @@ class Substitutor:
     return result
 
   def occurences(self, arg: str, single: bool = False):
-    import shlex
-
     if not single:
       return ' '.join(self.multi_occurences(shlex.split(arg)))
 
@@ -510,46 +507,23 @@ class Master:
   def get_target(self, name):
     return self._targets[name]
 
-  def event(self, name: str, data: object):
-    """
-    This method is called for example by the #dump_graphviz() function to
-    allow some additional output based on the #Master implementation without
-    the need of adding a specific interface function.
-    """
 
+class GraphvizExporter:
 
-def dump_graphviz(obj, root=True, fp=None, to_str=False, build_sets_outside=False):
-  if to_str:
-    fp = io.StringIO()
+  def __init__(self, fp):
+    self._indent = 0
+    self._fp = fp
+    self._seen = set()
 
-  import builtins
-  import shlex
-  import sys
+  def node(self, node_id, **attrs):
+    attrs = ' '.join(self.attr(k, v, False) for k, v in attrs.items())
+    return '"{}" [{}];'.format(node_id, attrs)
 
-  def print(*args):
-    frame = sys._getframe(1)
-    while 'indent' not in frame.f_locals:
-      frame = frame.f_back
-    indent = frame.f_locals['indent']
-    builtins.print('  ' * indent + ' '.join(map(str, args)), file=fp)
+  def edge(self, src_id, dst_id, **attrs):
+    attrs = ' '.join(self.attr(k, v, False) for k, v in attrs.items())
+    return '"{}" -> "{}" [{}];'.format(src_id, dst_id, attrs)
 
-  seen = set()
-
-  indent = 0
-  print('digraph {')
-  indent = 1
-  print('graph [fontsize=10 fontname="monospace"];')
-  print('node [shape=record fontsize=10 fontname="monospace"];')
-
-  def node(node_id, **attrs):
-    attrs = ' '.join(attr(k, v, False) for k, v in attrs.items())
-    print('"{}" [{}];'.format(node_id, attrs))
-
-  def edge(src_id, dst_id, **attrs):
-    attrs = ' '.join(attr(k, v, False) for k, v in attrs.items())
-    print('"{}" -> "{}" [{}];'.format(src_id, dst_id, attrs))
-
-  def attr(key, value, semicolon=True):
+  def attr(self, key, value, semicolon=True):
     value = str(value)
     value = value.replace('"', '\\"').replace('{', '\\{').replace('}', '\\}')
     value = value.replace('\n', '\\n')
@@ -558,79 +532,80 @@ def dump_graphviz(obj, root=True, fp=None, to_str=False, build_sets_outside=Fals
       res += ';'
     return res
 
-  def target_key(target):
-    return 'Target:{}'.format(target.name)
+  def key_of(self, obj):
+    if isinstance(obj, Target):
+      return '{}'.format(obj.name)
+    elif isinstance(obj, Operator):
+      return '{}/{}'.format(obj.target.name, obj.name)
+    elif isinstance(obj, BuildSet):
+      return 'BuildSet:{}'.format(id(obj))
+    else:
+      raise TypeError(type(obj))
 
-  def operator_key(op):
-    return 'Operator:{}/{}'.format(op.target.name, op.name)
+  def print(self, *args):
+    print('  ' * self._indent + '  '.join(map(str, args)), file=self._fp)
 
-  def build_set_key(bset):
-    return id(bset)
+  def preamble(self):
+    self.print('digraph {')
+    self._indent += 1
+    self.print('graph [fontsize=10 fontname="monospace"];')
+    self.print('node [shape=record fontsize=10 fontname="monospace"];')
 
-  def handle_master(master, indent):
-    [handle_target(x, indent) for x in master.targets]
-    master.event('dump_graphviz', {
-      'print': print,
-      'node': node,
-      'edge': edge,
-      'attr': attr,
-      'target_key': target_key,
-      'operator_key': operator_key,
-      'build_set_key': build_set_key,
-      'handle_target': handle_target,
-      'handle_operator': handle_operator,
-      'handle_build_set': handle_build_set,
-      'indent': indent + 1
-    })
+  def epilogue(self):
+    self._indent -= 1
+    self.print('}')
 
-  def handle_target(target, indent):
-    key = target_key(target)
-    print('subgraph "cluster_{}" {{'.format(key))
-    indent += 1
-    print(attr('label', 'Target: {}'.format(target.name)))
-    print(attr('labeljust', 'l'))
-    print(attr('color', 'seagreen3'))
-    print(attr('fillcolor', 'seagreen1'))
-    print(attr('style', 'filled'))
-    [handle_operator(x, indent) for x in target.operators]
-    indent -= 1
-    print('}')
+  def handle_master(self, master):
+    [self.handle_target(x) for x in master.targets]
 
-  def handle_operator(op, indent):
-    key = operator_key(op)
-    print('subgraph "cluster_{}" {{'.format(key))
-    indent += 1
-    print(attr('label', 'Operator: {}'.format(op.name)))
-    print(attr('labeljust', 'l'))
-    print(attr('color', 'skyblue4'))
-    print(attr('fillcolor', 'skyblue'))
-    print(attr('style', 'filled'))
+  def handle_target(self, target):
+    key = self.key_of(target)
+    self.print('subgraph "cluster_{}" {{'.format(key))
+    self._indent += 1
+    self.print(self.attr('label', 'Target: {}'.format(target.name)))
+    self.print(self.attr('labeljust', 'l'))
+    self.print(self.attr('color', 'seagreen3'))
+    self.print(self.attr('fillcolor', 'seagreen1'))
+    self.print(self.attr('style', 'filled'))
+    [self.handle_operator(x) for x in target.operators]
+    self._indent -= 1
+    self.print('}')
+
+  def handle_operator(self, op):
+    key = self.key_of(op)
+    self.print('subgraph "cluster_{}" {{'.format(key))
+    self._indent += 1
+    self.print(self.attr('label', 'Operator: {}'.format(op.name)))
+    self.print(self.attr('labeljust', 'l'))
+    self.print(self.attr('color', 'skyblue4'))
+    self.print(self.attr('fillcolor', 'skyblue'))
+    self.print(self.attr('style', 'filled'))
     lines = []
     for cmd in op.commands:
       lines.append(' '.join(shlex.quote(x) for x in cmd))
     attrs = {'label': '\n'.join(lines), 'shape': 'rectangle',
              'color': 'brown4', 'fillcolor': 'brown2',
              'style': 'filled,rounded'}
-    node(key, **attrs)
+    self.print(self.node(key, **attrs))
     for bset in op.build_sets:
       #edge(key, build_set_key(bset), style='dashed', color='darkorange')
-      handle_build_set(bset, indent)
-    print('{')
-    indent += 1
-    print(attr('rank', 'same'))
-    node(key, group=key)
+      self.handle_build_set(bset)
+    self.print('{')
+    self._indent += 1
+    self.print(self.attr('rank', 'same'))
+    self.print(self.node(key, group=key))
     for bset in op.build_sets:
-      node(build_set_key(bset), group=key)
-    indent -= 1
-    print('}')
-    indent -= 1
-    print('}')
+      self.print(self.node(self.key_of(bset), group=key))
+    self._indent -= 1
+    self.print('}')
+    self._indent -= 1
+    self.print('}')
 
-  def handle_build_set(bset, indent):
-    if bset in seen:
+  def handle_build_set(self, bset):
+    if bset in self._seen:
       return
-    seen.add(bset)
-    key = build_set_key(bset)
+    self._seen.add(bset)
+    key = self.key_of(bset)
     lines = []
     if bset.alias:
       lines.append('BuildSet: {}'.format(bset.alias))
@@ -648,28 +623,36 @@ def dump_graphviz(obj, root=True, fp=None, to_str=False, build_sets_outside=Fals
     else:
       attrs['color'] = 'slateblue3'
       attrs['fillcolor'] = 'slateblue1'
-    node(key, **attrs)
+    self.print(self.node(key, **attrs))
     for other in bset.inputs:
-      handle_build_set(other, indent)
-      edge(build_set_key(other), key)
+      self.handle_build_set(other)
+      self.print(self.edge(self.key_of(other), key))
+
+
+def dump_graphviz(obj, fp=None, to_str=False, build_sets_outside=False,
+                  exporter_class=GraphvizExporter):
+  if to_str:
+    fp = io.StringIO()
+
+  exp = exporter_class(fp)
+  exp.preamble()
 
   if isinstance(obj, Master):
     if build_sets_outside:
       for bset in topo_sort(obj):
         #if not bset.operator:
-        handle_build_set(bset, indent)
-    handle_master(obj, indent)
+        exp.handle_build_set(bset)
+    exp.handle_master(obj)
   elif isinstance(obj, Target):
-    handle_target(obj, indent)
+    exp.handle_target(obj)
   elif isinstance(obj, Operator):
-    handle_operator(obj, indent)
+    exp.handle_operator(obj)
   elif isinstance(obj, BuildSet):
-    handle_build_set(obj, indent)
+    epx.handle_build_set(obj)
   else:
     raise TypeError(type(obj))
 
-  indent -= 1
-  print('}')
+  exp.epilogue()
 
   if to_str:
     return fp.getvalue()

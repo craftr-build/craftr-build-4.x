@@ -78,6 +78,12 @@ class Session(_build.Master):
   scopes current directory and every scope gets its own build output directory.
   """
 
+  class _GraphvizExporter(_build.GraphvizExporter):
+
+    def handle_master(self, master):
+      super().handle_master(master)
+      [self.handle_build_set(x) for x in master._build_sets]
+
   def __init__(self, build_directory: str,
                behaviour: _build.Behaviour = None):
     super().__init__(behaviour or _build.Behaviour())
@@ -124,11 +130,9 @@ class Session(_build.Master):
       return self._current_scopes[-1].current_target
     return None
 
-  # _build.Master
-
-  def event(self, name: str, data: object):
-    if name == 'dump_graphviz':
-      [data['handle_build_set'](x, data['indent']) for x in self._build_sets]
+  def dump_graphviz(self, *args, **kwargs):
+    return _build.dump_graphviz(self, *args,
+      exporter_class=self._GraphvizExporter, **kwargs)
 
 
 class Scope:
