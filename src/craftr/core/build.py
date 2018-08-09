@@ -233,7 +233,9 @@ class FileSet:
   def clear(self):
     self._files.clear()
 
-  def fill_for(self, ref_set: 'FileSet', update: callable):
+  def fill_for(self, ref_set: 'FileSet', update: callable, add_as_input: bool = True):
+    if len(self) < len(ref_set) and add_as_input:
+      self._inputs.add(ref_set)
     while len(self) < len(ref_set):
       self.add_file(update(ref_set[len(self)]))
 
@@ -541,169 +543,47 @@ class Master:
     return self._targets[name]
 
 
-class GraphvizExporter:
+def to_graph(master):
+  from craftr.utils import graphviz as G
+  g = G.Graph(bidirectional=False)
+  g.setting('graph', fontsize=10, fontname='monospace')
+  g.setting('node', shape='record', style='filled', fontsize=10, fontname='monospace')
 
-  def __init__(self, fp):
-    self._indent = 0
-    self._fp = fp
-    self._seen = set()
+  def create_file_set(file_set, cluster=None):
+    ident = 'FileSet:{}'.format(id(file_set))
+    if ident in g.nodes:
+      return g.nodes[ident]
+    alias = ', '.join(file_set.aliases)
+    lines = ([alias] if alias else []) + [repr([nr.fs.base(x) for x in file_set])]
+    return g.node(ident, cluster, label='\n'.join(lines))
 
-  def node(self, node_id, **attrs):
-    if 'BuildSet' in node_id: import pdb; pdb.set_trace()
-    attrs = ' '.join(self.attr(k, v, False) for k, v in attrs.items())
-    return '"{}" [{}];'.format(node_id, attrs)
+  for target in master.targets:
+    target_cluster = g.cluster(target.name,
+      label='Target: {}'.format(target.name), labeljust='l')
+    for operator in target.operators:
+      op_cluster = target_cluster.subcluster('{}@{}'.format(target.name, operator.name),
+        label='Operator: {}@{}'.format(target.name, operator.name))
+      for build_set in operator.build_sets:
+        build_node = op_cluster.node('BuildSet:{}'.format(id(build_set)),
+          label='BuildSet', style='filled', fillcolor='grey')
 
-  def edge(self, src_id, dst_id, **attrs):
-    attrs = ' '.join(self.attr(k, v, False) for k, v in attrs.items())
-    return '"{}" -> "{}" [{}];'.format(src_id, dst_id, attrs)
 
-  def attr(self, key, value, semicolon=True):
-    value = str(value)
-    value = value.replace('"', '\\"').replace('{', '\\{').replace('}', '\\}')
-    value = value.replace('\n', '\\n')
-    res = '{}="{}"'.format(key, value)
-    if semicolon:
-      res += ';'
-    return res
+        print(build_set)
+        for file_set in build_set.outputs.values():
+          print('  ', file_set)
+          i =create_file_set(file_set).id
+          g.edge(build_node.id, i)
+        for file_set in build_set.inputs.values():
+          i = create_file_set(file_set).id
+          g.edge(i, build_node.id)
 
-  def key_of(self, obj):
-    if isinstance(obj, Target):
-      return '{}'.format(obj.name)
-    elif isinstance(obj, Operator):
-      return '{}/{}'.format(obj.target.name, obj.name)
-    elif isinstance(obj, FileSet):
-      return 'FileSet:{}'.format(id(obj))
-    elif isinstance(obj, BuildSet):
-      return 'BuildSet:{}'.format(id(obj))
-    else:
-      raise TypeError(type(obj))
-
-  def print(self, *args):
-    print('  ' * self._indent + '  '.join(map(str, args)), file=self._fp)
-
-  def preamble(self):
-    self.print('digraph {')
-    self._indent += 1
-    self.print('graph [fontsize=10 fontname="monospace"];')
-    self.print('node [shape=record fontsize=10 fontname="monospace" style="filled"];')
-
-  def epilogue(self):
-    self._indent -= 1
-    self.print('}')
-
-  def handle_master(self, master):
-    [self.handle_target(x) for x in master.targets]
-
-  def handle_target(self, target):
-    key = self.key_of(target)
-    self.print('subgraph "cluster_{}" {{'.format(key))
-    self._indent += 1
-    self.print(self.attr('label', 'Target: {}'.format(target.name)))
-    self.print(self.attr('labeljust', 'l'))
-    self.print(self.attr('color', 'seagreen3'))
-    self.print(self.attr('fillcolor', 'seagreen1'))
-    self.print(self.attr('style', 'filled'))
-    [self.handle_operator(x) for x in target.operators]
-    self._indent -= 1
-    self.print('}')
-
-  def handle_operator(self, op):
-    key = self.key_of(op)
-    self.print('subgraph "cluster_{}" {{'.format(key))
-    self._indent += 1
-    self.print(self.attr('label', 'Operator: {}'.format(op.name)))
-    self.print(self.attr('labeljust', 'l'))
-    self.print(self.attr('color', 'skyblue4'))
-    self.print(self.attr('fillcolor', 'skyblue'))
-    self.print(self.attr('style', 'filled'))
-    lines = []
-    for cmd in op.commands:
-      lines.append(' '.join(shlex.quote(x) for x in cmd))
-    attrs = {'label': '\n'.join(lines), 'shape': 'rectangle',
-             'color': 'brown4', 'fillcolor': 'brown2',
-             'style': 'filled,rounded'}
-    self.print(self.node(key, **attrs))
-    for bset in op.build_sets:
-      #edge(key, build_set_key(bset), style='dashed', color='darkorange')
-      self.handle_build_set(bset)
-
-    """
-    self.print('{')
-    self._indent += 1
-    self.print(self.attr('rank', 'same'))
-    self.print(self.node(key, group=key))
-    for bset in op.build_sets:
-      self.print(self.node(self.key_of(bset), group=key))
-    self._indent -= 1
-    self.print('}')
-    """
-
-    self._indent -= 1
-    self.print('}')
-
-  def handle_build_set(self, bset):
-    if bset in self._seen:
-      return
-    self._seen.add(bset)
-    key = self.key_of(bset)
-
-    self.print('subgraph "cluster_{}" {{'.format(key))
-    self._indent += 1
-    self.print(self.attr('label', ''))
-    self.print(self.attr('labeljust', 'l'))
-    self.print(self.attr('style', 'filled,rounded'))
-    self.print(self.attr('fillcolor', 'goldenrod2'))
-    self.print(self.attr('color', 'goldenrod4'))
-
-    for fset in bset.inputs.values():
-      self.handle_file_set(fset)
-    for fset in bset.outputs.values():
-      self.handle_file_set(fset)
-
-    self._indent -= 1
-    self.print('}')
-
-  def handle_file_set(self, fset):
-    if fset in self._seen:
-      return
-    self._seen.add(fset)
-    key = self.key_of(fset)
-    alias = ', '.join(fset.aliases)
-    lines = ([alias] if alias else []) + [repr([nr.fs.base(x) for x in fset])]
-    attrs = {'label': '\n'.join(lines), 'fillcolor': 'chocolate1', 'color': 'chocolate3'}
-    self.print(self.node(key, **attrs))
+  # TODO: Only for the craftr.api.Session subclass ..
+  for fset in master._file_sets:
+    node = create_file_set(fset)
     for other in fset.inputs:
-      self.handle_file_set(other)
-      self.print(self.edge(self.key_of(other), key))
+      g.edge(create_file_set(other).id, node.id)
 
-
-def dump_graphviz(obj, fp=None, to_str=False, build_sets_outside=False,
-                  exporter_class=GraphvizExporter):
-  if to_str:
-    fp = io.StringIO()
-
-  exp = exporter_class(fp)
-  exp.preamble()
-
-  if isinstance(obj, Master):
-    if build_sets_outside:
-      for bset in topo_sort(obj):
-        #if not bset.operator:
-        exp.handle_build_set(bset)
-    exp.handle_master(obj)
-  elif isinstance(obj, Target):
-    exp.handle_target(obj)
-  elif isinstance(obj, Operator):
-    exp.handle_operator(obj)
-  elif isinstance(obj, BuildSet):
-    epx.handle_build_set(obj)
-  else:
-    raise TypeError(type(obj))
-
-  exp.epilogue()
-
-  if to_str:
-    return fp.getvalue()
+  return g
 
 
 def topo_sort(master):

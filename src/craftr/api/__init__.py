@@ -70,13 +70,6 @@ class Session(_build.Master):
   scopes current directory and every scope gets its own build output directory.
   """
 
-  class _GraphvizExporter(_build.GraphvizExporter):
-
-    def handle_master(self, master):
-      super().handle_master(master)
-      [self.handle_build_set(x) for x in master._build_sets]
-      [self.handle_file_set(x) for x in master._file_sets]
-
   def __init__(self, build_directory: str,
                behaviour: _build.Behaviour = None):
     super().__init__(behaviour or _build.Behaviour())
@@ -123,10 +116,6 @@ class Session(_build.Master):
     if self._current_scopes:
       return self._current_scopes[-1].current_target
     return None
-
-  def dump_graphviz(self, *args, **kwargs):
-    return _build.dump_graphviz(self, *args,
-      exporter_class=self._GraphvizExporter, **kwargs)
 
 
 class Scope:
@@ -354,7 +343,7 @@ class BuildSet(_build.BuildSet):
       for name in partition_inputs:
         insets[name] = file_set([self.inputs[name][i]], [self.inputs[name]])
       for name in partition_outputs:
-        outsets[name] = file_set([self.outputs[name][i]], [self.outputs[name]])
+        outsets[name] = file_set([self.outputs[name][i]], [self.outputs[name]])# + [insets[x] for x in partition_inputs])
       for name in copy_inputs:
         insets[name] = self.inputs[name]
       for name in copy_outputs:
@@ -488,6 +477,8 @@ def extract_file_set(set_name, build_sets):
   if isinstance(build_sets, _build.BuildSet):
     build_sets = [build_sets]
   file_sets = [x.outputs[set_name] for x in build_sets]
+  if len(file_sets) == 1:
+    return file_sets[0]
   return file_set(from_=file_sets)
 
 
