@@ -87,16 +87,16 @@ class Substitutor:
     var = match.group(1) or match.group(2)
 
     if var[0] == '<':
-      value = build_set.get_input_file_set(var[1:])
+      value = build_set.inputs[var[1:]]
     elif var[0] == '@':
-      value = build_set.get_file_set(var[1:])
+      value = build_set.outputs[var[1:]]
     else:
       if var in build_set.variables:
         value = build_set.variables[var]
       else:
         value = build_set.operator.variables[var]
 
-    if isinstance(value, (list, tuple, set, OrderedSet)):
+    if isinstance(value, (list, tuple, set, OrderedSet, FileSet)):
       for x in value:
         result.append(prefix + x + suffix)
     else:
@@ -225,6 +225,10 @@ class FileSet:
   def add_files(self, files: List[str]):
     canonical = self._master.behaviour.canonicalize_path
     self._files.update(canonical(x) for x in files)
+
+  def add_from(self, file_set: 'FileSet'):
+    self._inputs.add(file_set)
+    self._files.update(file_set._files)
 
   def clear(self):
     self._files.clear()
@@ -706,9 +710,11 @@ def dump_graphviz(obj, fp=None, to_str=False, build_sets_outside=False,
 
 def topo_sort(master):
   """
-  Topologically sort all build sets in the build graph contained in the
-  #Master node. Returns a generator yielding #BuildSet objects in order.
+  Topologically sort all build sets in the build graph from the connections
+  between file sets.
   """
+
+  from nr.stream import stream
 
   # A mirror of the inputs for every build set, allowing us to remove
   # edge for this algorithm without actually modifying the graph.
@@ -727,13 +733,13 @@ def topo_sort(master):
         bset = queue.pop()
         if bset in bset_inputs:
           continue
-        bset_inputs[bset] = list(bset.inputs)
+        bset_inputs[bset] = set(stream.concat(x._build_sets_out.keys() for x in bset.inputs.values()))
         bset_reverse.setdefault(bset, set())
-        for x in bset.inputs:
+        for x in bset_inputs[bset]:
           bset_reverse.setdefault(x, set()).add(bset)
-        if not bset.inputs:
+        if not bset_inputs[bset]:
           bset_start.add(bset)
-        queue += bset.inputs
+        queue += bset_inputs[bset]
 
   while bset_start:
     bset = bset_start.pop()
@@ -761,8 +767,8 @@ def execute(master):
       print(prefix, build_set.get_description())
     else:
       print(prefix)
-    for set_name in build_set.file_sets:
-      for filename in build_set[set_name]:
+    for files in build_set.outputs.values():
+      for filename in files:
         nr.fs.makedirs(nr.fs.dir(filename))
     commands = build_set.get_commands()
     for cmd in commands:

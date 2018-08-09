@@ -424,6 +424,7 @@ __all__ += [
   'target',
   'file_set',
   'join_file_sets',
+  'extract_file_set',
   'properties',
   'depends',
   'build_set',
@@ -477,10 +478,17 @@ def join_file_sets(sets):
   return file_set(files, sets)
 
 
-def extract_file_sets(set_name, build_sets):
+def extract_file_set(set_name, build_sets):
   """
-  Extract
+  Extract a single file set from the outputs of one or multiple build sets.
   """
+
+  if isinstance(build_sets, _build.BuildSet):
+    build_sets = [build_sets]
+  fset = file_set([])
+  for x in build_sets:
+    fset.add_from(x.outputs[set_name])
+  return fset
 
 
 def properties(_props=None, _target=None, **kwarg_props):

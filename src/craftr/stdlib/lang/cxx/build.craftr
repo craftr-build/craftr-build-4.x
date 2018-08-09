@@ -7,7 +7,9 @@ session.target_props.add('cxx.type', proplib.String)
 session.target_props.add('cxx.srcs', proplib.FileSetList)
 session.target_props.add('cxx.objs', proplib.FileSetList)
 session.target_props.add('cxx.includes', proplib.PathList, options={'inherit': True})
-session.target_props.add('cxx.outStaticLibs', proplib.List, options={'inherit': True})
+session.target_props.add('cxx.outStaticLibs', proplib.FileSetList, options={'inherit': True})
+session.target_props.add('cxx.outSharedLibs', proplib.FileSetList, options={'inherit': True})
+session.target_props.add('cxx.outExecutables', proplib.FileSetList, options={'inherit': True})
 
 
 def build():
@@ -25,35 +27,34 @@ def build():
     variables={'includes': target['cxx.includes']}
   )
 
-  objs = extract_file_sets(op.build_sets, 'objs')
+  objs = extract_file_set('objs', op.build_sets)
+  input_libs = join_file_sets(target['cxx.outStaticLibs'])
 
-
-
-
-  """
   type = target.properties['cxx.type']
-  cmd = ['gcc', '$<objs', '-o', '$@binary', '$inputLibs']
-  if type == 'sharedLibrary':
-    binaryExt = '.so'
-    cmd += ['-shared']
+  if type in ('executable', 'sharedLibrary'):
+    cmd = ['gcc', '$<objs', '-o', '$@binary', '$<inputLibs']
+    if type == 'sharedLibrary':
+      binaryExt = '.so'
+      cmd += ['-shared']
+    else:
+      binaryExt = ''
   elif type == 'staticLibrary':
     binaryExt = '.a'
     cmd = ['ar', '-rcs', '$@binary', '$<objs']
   else:
-    binaryExt = ''
+    raise ValueError('type: {!r}'.format(type))
 
-  input_libs = join_file_sets(target['cxx.outStaticLibs'])
-  #, 'inputLibs': input_libs}
-
-  build_set = current_build_set()
-  if not 'binary' in build_set:
-    build_set.add_files('binary', [chfdir('main' + binaryExt)]) # TODO
-
-  print(build_set._inputs)
-  print(build_set)
-  operator = create_operator(name='cxx.link', commands=[cmd],
-                             variables={'inputLibs': input_libs})
+  binary = chfdir('main' + binaryExt)
+  bset = build_set({'objs': objs, 'inputLibs': input_libs}, {'binary': file_set([binary])})
+  op = create_operator(
+    name='cxx.link',
+    commands=[cmd]
+  )
 
   if type == 'staticLibrary':
-    set_properties('cxx', {'@outStaticLibs+': [current_build_set()]})
-  """
+    target = '@cxx.outStaticLibs+'
+  elif type == 'sharedLibrary':
+    target = '@cxx.outSharedLibs+'
+  elif type == 'executable':
+    target = '@cxx.outExecutables+'
+  properties({target: [extract_file_set('binary', op.build_sets)]})
