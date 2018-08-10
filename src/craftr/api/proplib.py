@@ -38,12 +38,7 @@ class Prop:
 
   def __init__(self, name, type, default=NotImplemented, optional=True,
                readonly=False, options=None):
-    if isinstance(type, builtins.type):
-      if not issubclass(type, PropType):
-        raise TypeError('expected PropType subclass', type)
-      type = type()
-    elif not isinstance(type, PropType):
-      raise TypeError('expected PropType instance', builtins.type(type))
+    type = prop_type(type)
     if default is NotImplemented:
       if not optional:
         raise ValueError('property is not optional, need default value')
