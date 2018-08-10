@@ -12,6 +12,9 @@ class CraftrModule(nodepy.loader.PythonModule):
   def _exec_code(self, code):
     assert self.loaded
     assert isinstance(code, str), type(code)
+    from craftr import api
+    for name in api.__all__:
+      setattr(self.namespace, name, getattr(api, name))
     with self.session.enter_scope(None, None, str(self.directory)):
       super()._exec_code(code)
 
