@@ -33,6 +33,7 @@ only be listed once in the outputs of a BuildSet.
 
 __all__ = ['BuildSet', 'Commands', 'Operator', 'Target', 'Master']
 
+import collections
 import io
 import nr.fs
 import re
@@ -41,7 +42,7 @@ import subprocess
 
 from nr.types.map import ChainMap, ValueIterableMap
 from nr.stream import stream
-from typing import List
+from typing import Iterable, List, Union
 from .template import TemplateCompiler
 
 
@@ -359,6 +360,11 @@ class Master:
                        'co-exist ({}, filename={!r})'.format(build_set, filename))
     self._output_files[filename] = build_set
 
+  def all_build_sets(self) -> Iterable[BuildSet]:
+    for target in self.targets:
+      for op in target.operators:
+        yield from op.build_sets
+
 
 def to_graph(master):
   from craftr.utils import graphviz as G
@@ -403,12 +409,17 @@ def to_graph(master):
   return g
 
 
-def topo_sort(master):
+def topo_sort(build_sets: Union[Master, List[BuildSet]]):
   """
-  Topologically sort all build sets in the build graph from the connections
-  between file sets.
+  Topologically sort the build sets in the specified list.
+
+  If a #Master is specified, all build sets of that build master that are
+  not explicit are used.
   """
 
+  if isinstance(build_sets, Master):
+    build_sets = [x for x in build_sets.all_build_sets()
+                  if not x.operator.explicit]
 
   # A mirror of the inputs for every build set, allowing us to remove
   # edge for this algorithm without actually modifying the graph.
@@ -420,21 +431,19 @@ def topo_sort(master):
   # A set of build sets that have no input.
   bset_start = set()
 
-  for target in master.targets:
-    for op in target.operators:
-      queue = list(op.build_sets)
-      while queue:
-        bset = queue.pop()
-        if bset in bset_inputs:
-          continue
-        bset_inputs[bset] = bset.get_input_build_sets()
-        bset_reverse.setdefault(bset, set())
-        for x in bset_inputs[bset]:
-          bset_reverse.setdefault(x, set()).add(bset)
-        if not bset_inputs[bset]:
-          bset_start.add(bset)
-        else:
-          queue += bset_inputs[bset]
+  queue = collections.deque(build_sets)
+  while queue:
+    bset = queue.pop()
+    if bset in bset_inputs:
+      continue
+    bset_inputs[bset] = bset.get_input_build_sets()
+    bset_reverse.setdefault(bset, set())
+    for x in bset_inputs[bset]:
+      bset_reverse.setdefault(x, set()).add(bset)
+    if not bset_inputs[bset]:
+      bset_start.add(bset)
+    else:
+      queue += bset_inputs[bset]
 
   while bset_start:
     bset = bset_start.pop()
@@ -446,12 +455,15 @@ def topo_sort(master):
     bset_reverse[bset] = set()
 
 
-def execute(master):
+def execute(master, build_sets=None):
   """
   Executes the full build graph -- useful for development tests.
   """
 
-  for build_set in topo_sort(master):
+  if build_sets is None:
+    build_sets = master
+
+  for build_set in topo_sort(build_sets):
     if not build_set.operator:
       continue
 

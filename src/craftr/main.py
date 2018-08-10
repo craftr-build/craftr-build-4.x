@@ -46,7 +46,7 @@ def get_argument_parser(prog=None):
 
 def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
-  args = parser.parse_args(argv)
+  args, selection = parser.parse_known_args(argv)
 
   if not args.build_directory:
     args.build_directory = nr.fs.join('build', args.variant)
@@ -62,6 +62,25 @@ def main(argv=None, prog=None):
   print()
 
   module = session.load_module_from_file(args.project, is_main=True)
+
+  # Determine the build sets that are supposed to be built.
+  if selection:
+    build_sets = []
+    for name in selection:
+      if '@' in name:
+        scope, name = name.partition('@')[::2]
+      else:
+        scope = module.scope.name
+      if ':' in name:
+        target_name, op_name = name.partition(':')[::2]
+      else:
+        target_name, op_name = name, None
+      target = session.targets[scope + '@' + target_name]
+      for op in target.operators:
+        if (not op_name and not op.explicit) or op.id.partition('#')[0] == op_name:
+          build_sets += op.build_sets
+  else:
+    build_sets = [x for x in session.all_build_sets() if not x.operator.explicit]
 
   if args.dump_graphviz is not NotImplemented:
     with open_cli_file(args.dump_graphviz, 'w') as fp:
@@ -80,7 +99,7 @@ def main(argv=None, prog=None):
   print('===== STARTING BUILD')
   print()
 
-  execute(session)
+  execute(session, build_sets)
 
   print()
   print('===== END')
