@@ -1,16 +1,81 @@
 environment:
+  PYTHON: "C:\\Python36-x64"
   matrix:
     - PYTHON: "C:\\Python33-x64"
     - PYTHON: "C:\\Python34-x64"
     - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
 
+    - BUILD_MODULE: examples/java
+      BUILD_OPTIONS: -b main:java.run
+      ADD_PATH: C:\Program Files\Java\jdk1.8.0\bin
+      ALLOW_FAILURE: true  # JVM runs out of RAM when using onejar + tensorflow
+
+    - BUILD_MODULE: examples/csharp
+      BUILD_OPTIONS: -b main:csharp.runBundle
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+    - BUILD_MODULE: examples/csharp
+      BUILD_OPTIONS: -b main:csharp.runBundle
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
+    ###
+    # NuGet Version is too low in this image to run the C# example.
+    # Newtonsoft.Json requires NuGet 2.12 but 2.8 is installed.
+    ###
+
+    #- BUILD_MODULE: examples/csharp
+    #  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+
+    - BUILD_MODULE: examples/csharp
+      BUILD_OPTIONS: -o craftr/lang/csharp:impl=mono :csc=mcs -b main:csharp.runBundle
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # 2013 and 2015 have support for Mono
+      ADD_PATH: C:\Program Files (x86)\Mono\bin
+
+    - BUILD_MODULE: examples/csharp
+      BUILD_OPTIONS: -o craftr/lang/csharp:impl=mono :csc=mcs -b main:csharp.runBundle
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
+    - BUILD_MODULE: examples/c
+      BUILD_OPTIONS: -b main:cxx.run
+
+    - BUILD_MODULE: examples/cxx-win32
+      BUILD_OPTIONS: -b main:cxx.run
+
+    - BUILD_MODULE: examples/cxx
+      BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw -b main:cxx.run
+
+    #- BUILD_MODULE: examples/cxx-win32
+    #  BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw -b main:cxx.run
+
+    - BUILD_MODULE: examples/c-sfml
+
+    #- BUILD_MODULE: examples/c-sfml
+    #  BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw#C:/MinGW/bin
+
+    #- BUILD_MODULE: examples/c-sfml
+    #  BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw#C:/mingw-w64/i686-5.3.0-posix-dwarf-rt_v4-rev0/mingw64/bin
+
+    #- BUILD_MODULE: examples/c-sfml
+    #  BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw#C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw64/bin
+
+    #- BUILD_MODULE: examples/c-sfml
+    #  BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw#C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64/bin
+
+    #- BUILD_MODULE: examples/c-sfml
+    #  BUILD_OPTIONS: -o craftr/lang/cxx:toolchain=mingw
+
+matrix:
+  allow_failures:
+    - ALLOW_FAILURE: true
+
 build_script:
-- set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
-- pip install nodepy-runtime
-- nodepy https://nodepy.org/install-pm.py develop
-- nodepy-pm install
-- set PATH=%PATH%;.nodepy\bin
+- cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+- cmd: pip install nodepy-runtime
+- cmd: nodepy https://nodepy.org/install-pm.py develop
+- cmd: nodepy-pm install
+- cmd: set PATH=%PATH%;.nodepy\bin
+- cmd: craftr --version
+
 # TODO: Globbing doesn't work for some reason...
-- nodepy-nosetests tests\test_build.py tests\test_core.py tests\test_dsl.py
-- craftr --version
+- ps: if ($BUILD_MODULE) { craftr -c "$BUILD_MODULE" -b $BUILD_OPTIONS } else { nodepy-nosetests tests\test_build.py tests\test_core.py tests\test_dsl.py }

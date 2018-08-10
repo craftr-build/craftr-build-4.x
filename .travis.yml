@@ -4,11 +4,31 @@ python:
 - 3.4
 - 3.5
 - 3.6
+addons:
+  apt:
+    sources:
+      - sourceline: deb http://download.mono-project.com/repo/debian trusty/snapshots/5.2.0.224 main
+        key_url: http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xA6A19B38D3D831EF
+      - sourceline: deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-trusty-prod trusty main
+        key_url: https://packages.microsoft.com/keys/microsoft.asc
+env:
+- BUILD_MODULE= BUILD_OPTIONS=
+- BUILD_MODULE=examples/java BUILD_OPTIONS="-b main:java.run"
+- BUILD_MODULE=examples/csharp BUILD_OPTIONS="-b main:csharp.runBundle"
+- BUILD_MODULE=examples/c BUILD_OPTIONS="-b main:cxx.run"
 install:
+- if [[ "$BUILD_MODULE" == "examples/csharp" ]]; then
+    sudo apt-get update > /dev/null;
+    sudo apt-get install -y mono-devel ca-certificates-mono > /dev/null;
+  fi
 - pip install nodepy-runtime
 - nodepy https://nodepy.org/install-pm.py develop
 - nodepy-pm install
 - export PATH="$PATH:$(nodepy-pm bin)"
 script:
-- nodepy-nosetests tests/*
 - craftr --version
+- if [[ "$BUILD_MODULE" == "" ]]; then
+    nodepy-nosetests tests/*;
+  else
+    craftr -cf "$BUILD_MODULE" $BUILD_OPTIONS;
+  fi
