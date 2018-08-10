@@ -74,8 +74,7 @@ class Session(_build.Master):
     super().__init__()
     self._build_directory = nr.fs.canonical(build_directory)
     self._current_scopes = []
-    self._build_sets = []  # Registers all build sets
-    self._file_sets = []  # Registers all file sets
+    self.options = {}
     self.loader = CraftrModuleLoader(self)
     self.nodepy_context = nodepy.context.Context()
     self.nodepy_context.resolver.loaders.append(self.loader)
@@ -102,7 +101,7 @@ class Session(_build.Master):
   def enter_scope(self, name, version, directory):
     scope = Scope(self, name, version, directory)
     self._current_scopes.append(scope)
-    try: yield
+    try: yield scope
     finally:
       assert self._current_scopes.pop() is scope
 
@@ -476,8 +475,11 @@ def chfdir(filename):
 # =========
 
 __all__ += [
+  'path',
   'complete_list_with'
 ]
+
+path = nr.fs
 
 def complete_list_with(dest, source, update):
   """
