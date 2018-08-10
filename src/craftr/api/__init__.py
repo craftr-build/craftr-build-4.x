@@ -53,7 +53,8 @@ import nr.fs
 from craftr.core import build as _build
 from nodepy.utils import pathlib
 from nr.stream import stream
-from nr.types import OrderedSet
+from nr.types.map import MapAsObject
+from nr.types.set import OrderedSet
 from .modules import CraftrModuleLoader
 from .proplib import PropertySet, Properties, NoSuchProperty
 
@@ -156,9 +157,11 @@ class Target(_build.Target):
       self.public = public
       self.properties = Properties(session.dependency_props, owner=current_scope())
 
-  def __init__(self, name: str):
-    super().__init__(session, name)
-    self.current_build_set = None
+  def __init__(self, name: str, scope:Scope):
+    super().__init__(session, '{}@{}'.format(scope.name, name))
+    self.name = name
+    self.scope = scope
+    self.current_operator = None
     self.properties = Properties(session.target_props, owner=current_scope())
     self.public_properties = Properties(session.target_props, owner=current_scope())
     self._dependencies = []
@@ -172,6 +175,10 @@ class Target(_build.Target):
     prop = self.properties.propset[prop_name]
     inherit = prop.options.get('inherit', False)
     return self.get_prop(prop_name, inherit=inherit)
+
+  @property
+  def build_directory(self):
+    return nr.fs.join(self.scope.build_directory, self.name)
 
   @property
   def dependencies(self):
@@ -189,7 +196,7 @@ class Target(_build.Target):
 
     for x in self._dependencies:
       if x.target is target:
-        raise RuntimeError('dependency to "{}" already exists'.format(target.name))
+        raise RuntimeError('dependency to "{}" already exists'.format(target.id))
     dep = Target.Dependency(target, public)
     self._dependencies.append(dep)
     return dep
@@ -226,6 +233,30 @@ class Target(_build.Target):
         return self.properties.propset[prop_name].get_default()
       else:
         return default
+
+  def get_props(self, prefix='', as_object=False):
+    """
+    Creates a dictionary from all property values in the Target that start
+    with the specified *prefix*. If *as_object* is #True, an object that wraps
+    the dictionary will be returned instead. Modifying the returned dictionary
+    does not have an effect on the actualy property values of the Target.
+
+    The prefix will be stripped from the keys (or attributes) of the returned
+    dictionary (or object).
+
+    # Parameters
+    prefix (str): The prefix to filter properties.
+    as_object (bool): Return an object instead of a dictionary.
+    return (dict, MapAsObject)
+    """
+
+    result = {}
+    propset = self.properties.propset
+    for prop in filter(lambda x: x.name.startswith(prefix), propset.values()):
+      result[prop.name[len(prefix):]] = self[prop.name]
+    if as_object:
+      result = MapAsObject(result)
+    return result
 
   def transitive_dependencies(self):
     """
@@ -335,7 +366,7 @@ def target(name, bind=True):
   """
 
   scope = current_scope()
-  target = session.add_target(Target(scope.name + '@' + name))
+  target = session.add_target(Target(name, scope))
   if bind:
     bind_target(target)
   return target
@@ -396,7 +427,7 @@ def properties(_scope=None, _props=None, _target=None, **kwarg_props):
         print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
 
 
-def operator(name, commands, variables=None):
+def operator(name, commands, variables=None, target=None, bind=None):
   """
   Creates a new #Operator in the current target and returns it. This is not
   usually called from a project build script but modules that implement new
@@ -404,9 +435,17 @@ def operator(name, commands, variables=None):
 
   The *name* of the operator will be adjusted to contain a counting index
   to prevent operator name clashes.
+
+  If *target* is specified, the function is assumed to be used independently
+  from the current target's context and is therefore not bound to the current
+  target or the specified one.
   """
 
-  target = current_target()
+  if target is None:
+    target = current_target()
+    if bind is None: bind = True
+  else:
+    if bind is None: bind = False
 
   if not isinstance(commands, _build.Commands):
     commands = _build.Commands(commands)
@@ -422,11 +461,15 @@ def operator(name, commands, variables=None):
   return op
 
 
-def build_set(inputs, outputs, variables=None, description=None):
+def build_set(inputs, outputs, variables=None, description=None,
+              operator=None):
   """
   Creates a new build set in the current operator adding the files specified
   in the *inputs* and *outputs* dictionaries.
   """
+
+  if operator is None:
+    operator = current_operator()
 
   bset = BuildSet(description=description)
   bset.variables.update(variables or {})
@@ -439,7 +482,7 @@ def build_set(inputs, outputs, variables=None, description=None):
       files = [files]
     bset.add_output_files(set_name, files)
 
-  current_operator().add_build_set(bset)
+  operator.add_build_set(bset)
   return bset
 
 

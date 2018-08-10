@@ -189,17 +189,17 @@ class Operator:
   must be attached to the operator.
   """
 
-  def __init__(self, master:'Master', name:str, commands:Commands):
+  def __init__(self, master:'Master', id:str, commands:Commands):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
-    if not isinstance(name, str):
-      raise TypeError('expected str, got {}'.format(type(name).__name__))
-    if not name:
-      raise ValueError('name must not be empty')
+    if not isinstance(id, str):
+      raise TypeError('expected str, got {}'.format(type(id).__name__))
+    if not id:
+      raise ValueError('id must not be empty')
     if not isinstance(commands, Commands):
       raise TypeError('expected Commands, got {}'.format(type(commands).__name__))
 
-    self._name = name
+    self._id = id
     self._master = master
     self._commands = commands
     self._target = None
@@ -207,15 +207,15 @@ class Operator:
     self._variables = {}
 
   def __repr__(self):
-    return 'Operator(target={!r}, name={!r}))'.format(self._target, self._name)
+    return 'Operator(target={!r}, id={!r}))'.format(self._target, self._id)
 
   @property
   def master(self):
     return self._master
 
   @property
-  def name(self):
-    return self._name
+  def id(self):
+    return self._id
 
   @property
   def commands(self):
@@ -249,7 +249,7 @@ class Operator:
         raise RuntimeError('operator requires ${{@{}}} which is not '
                            'provided by this build set'.format(set_name))
     for var_name in self._commands.variables:
-      if var_name not in self._variables and var_name not in build_set._vars:
+      if var_name not in self._variables and var_name not in build_set._variables:
         raise RuntimeError('operator requires ${{{}}} which is not provided '
                            'by this build set'.format(var_name))
     self._build_sets.append(build_set)
@@ -261,24 +261,24 @@ class Target:
   A target is a collection of operators.
   """
 
-  def __init__(self, master:'Master', name:str):
+  def __init__(self, master:'Master', id:str):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
-    if not isinstance(name, str):
-      raise TypeError('expected str, got {}'.format(type(name).__name__))
-    if not name:
-      raise ValueError('name must not be empty')
+    if not isinstance(id, str):
+      raise TypeError('expected str, got {}'.format(type(id).__name__))
+    if not id:
+      raise ValueError('id must not be empty')
 
-    self._name = name
+    self._id = id
     self._master = master
     self._operators = {}
 
   def __repr__(self):
-    return '<Target name={!r}>'.format(self._name)
+    return '<Target id={!r}>'.format(self._id)
 
   @property
-  def name(self):
-    return self._name
+  def id(self):
+    return self._id
 
   @property
   def master(self):
@@ -296,10 +296,10 @@ class Target:
       operator._target = self
     if operator._target is not self:
       raise RuntimeError('add_operator(): Operator belongs to another target')
-    if operator._name in self._operators:
-      raise TypeError('Operator name {!r} already occupied in Target {!r}'
-        .format(operator._name, self._name))
-    self._operators[operator._name] = operator
+    if operator._id in self._operators:
+      raise TypeError('Operator id {!r} already occupied in Target {!r}'
+        .format(operator._id, self._id))
+    self._operators[operator._id] = operator
     return operator
 
 
@@ -335,9 +335,9 @@ class Master:
   def add_target(self, target):
     if not isinstance(target, Target):
       raise TypeError('expected Target, got {}'.format(type(target).__name__))
-    if target._name in self._targets:
-      raise ValueError('Target name {!r} already occupied'.format(target._name))
-    self._targets[target._name] = target
+    if target._id in self._targets:
+      raise ValueError('Target id {!r} already occupied'.format(target._id))
+    self._targets[target._id] = target
     return target
 
   def _declare_output(self, build_set:BuildSet, filename:str):
@@ -362,11 +362,11 @@ def to_graph(master):
     return g.node(ident, cluster, label=nr.fs.base(filename))
 
   for target in master.targets:
-    target_cluster = g.cluster(target.name,
-      label='Target: {}'.format(target.name), labeljust='l')
+    target_cluster = g.cluster(target.id,
+      label='Target: {}'.format(target.id), labeljust='l')
     for operator in target.operators:
-      op_cluster = target_cluster.subcluster('{}@{}'.format(target.name, operator.name),
-        label='Operator: {}@{}'.format(target.name, operator.name))
+      op_cluster = target_cluster.subcluster('{}@{}'.format(target.id, operator.id),
+        label='Operator: {}@{}'.format(target.id, operator.id))
       for build_set in operator.build_sets:
         build_cluster = op_cluster.subcluster(
           id='BuildSet:{}'.format(id(build_set)), label='',
