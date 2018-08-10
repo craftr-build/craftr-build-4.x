@@ -1,0 +1,8 @@
+project('examples.c', '1.0-0')
+cxx = require('craftr/stdlib/lang/cxx')
+target('main')
+properties({
+  'cxx.type': 'executable',
+  'cxx.srcs': ['main.c']
+})
+cxx.build()
