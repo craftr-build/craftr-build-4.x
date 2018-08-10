@@ -2,4 +2,5 @@
 /.venv*
 /test.*
 *.egg-info
-build
+build/
+dist/

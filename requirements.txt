@@ -4,3 +4,4 @@ nr.fs>=1.0.4
 nr.interface>=1.0.3
 nr.stream>=1.0.1
 nr.types>=1.0.6
+requests>=2.19.1
