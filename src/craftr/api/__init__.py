@@ -105,10 +105,11 @@ class Session(_build.Master):
   scopes current directory and every scope gets its own build output directory.
   """
 
-  def __init__(self, build_directory: str, build_variant: str):
+  def __init__(self, build_root: str, build_directory: str, build_variant: str):
     super().__init__()
-    self._build_variant = build_variant
+    self._build_root = nr.fs.canonical(build_root)
     self._build_directory = nr.fs.canonical(build_directory)
+    self._build_variant = build_variant
     self._current_scopes = []
     self.options = {}
     self.loader = CraftrModuleLoader(self)
@@ -132,12 +133,16 @@ class Session(_build.Master):
     return module
 
   @property
-  def build_variant(self):
-    return self._build_variant
+  def build_root(self):
+    return self._build_root
 
   @property
   def build_directory(self):
     return self._build_directory
+
+  @property
+  def build_variant(self):
+    return self._build_variant
 
   @contextlib.contextmanager
   def enter_scope(self, name, version, directory):

@@ -30,8 +30,10 @@ def get_argument_parser(prog=None):
   parser.add_argument('--variant',
     choices=('debug', 'release'), default='debug',
     help='The build variant. Defaults to debug.')
+  parser.add_argument('--build-root', default='build',
+    help='The build root directory. Defaults to build.')
   parser.add_argument('--build-directory',
-    help='The build output directory. Defaults to build/{variant}.')
+    help='The build output directory. Defaults to {build_root}/{variant}.')
   parser.add_argument('--backend', default='craftr/backends/python',
     help='The build backend to use.')
   parser.add_argument('--verbose', action='store_true')
@@ -50,6 +52,7 @@ def get_argument_parser(prog=None):
 
   # Meta options
 
+  parser.add_argument('--tool', nargs='...', help='Invoke a tool')
   parser.add_argument('--dump-graphviz', nargs='?', default=NotImplemented,
     help='Dump a GraphViz representation of the build graph to stdout.')
   parser.add_argument('--dump-svg', nargs='?', default=NotImplemented,
@@ -64,13 +67,20 @@ def main(argv=None, prog=None):
   args, selection = parser.parse_known_args(argv)
 
   if not args.build_directory:
-    args.build_directory = nr.fs.join('build', args.variant)
+    args.build_directory = nr.fs.join(args.build_root, args.variant)
 
   if nr.fs.isdir(args.project):
     args.project = nr.fs.join(args.project, 'build.craftr')
 
   # Create a new session.
-  session = api.session = api.Session(args.build_directory, args.variant)
+  session = api.session = api.Session(args.build_root, args.build_directory, args.variant)
+
+  if args.tool is not None:
+    if not args.tool:
+      parser.error('missing arguments for --tool')
+    tool_name, argv = args.tool[0], args.tool[1:]
+    module = session.load_module('craftr/tools/' + tool_name).namespace
+    return module.main(argv, 'craftr --tool {}'.format(tool_name))
 
   backend = session.load_module(args.backend).namespace
 
