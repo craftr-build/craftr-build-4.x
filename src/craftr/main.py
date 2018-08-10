@@ -25,6 +25,8 @@ def get_argument_parser(prog=None):
 
   # Build options
 
+  parser.add_argument('--project', default='build.craftr',
+    help='The Craftr project file or directory to load.')
   parser.add_argument('--variant',
     choices=('debug', 'release'), default='debug',
     help='The build variant. Defaults to debug.')
@@ -49,13 +51,17 @@ def main(argv=None, prog=None):
   if not args.build_directory:
     args.build_directory = nr.fs.join('build', args.variant)
 
+  if nr.fs.isdir(args.project):
+    args.project = nr.fs.join(args.project, 'build.craftr')
+
   # Create a new session.
   session = api.session = api.Session(args.build_directory)
 
   print()
   print('===== LOADING BUILD MODULE')
   print()
-  module = session.load_module_from_file('build.craftr', is_main=True)
+
+  module = session.load_module_from_file(args.project, is_main=True)
 
   if args.dump_graphviz is not NotImplemented:
     with open_cli_file(args.dump_graphviz, 'w') as fp:
