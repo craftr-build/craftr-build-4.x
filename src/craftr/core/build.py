@@ -365,35 +365,40 @@ def to_graph(master):
   g = G.Graph(bidirectional=False)
   g.setting('graph', fontsize=10, fontname='monospace')
   g.setting('node', shape='record', style='filled', fontsize=10, fontname='monospace')
+  g.setting('edge', spline='line')
 
-  def file_node(filename, cluster):
+  def file_node(filename, cluster=None):
     ident = 'File:{}'.format(filename)
     if ident in g.nodes:
       return g.nodes[ident]
     return g.node(ident, cluster, label=nr.fs.base(filename))
 
-  for target in master.targets:
-    target_cluster = g.cluster(target.id,
-      label='Target: {}'.format(target.id), labeljust='l')
-    for operator in target.operators:
-      op_cluster = target_cluster.subcluster('{}@{}'.format(target.id, operator.id),
-        label='Operator: {}@{}'.format(target.id, operator.id))
-      for build_set in operator.build_sets:
-        build_cluster = op_cluster.subcluster(
-          id='BuildSet:{}'.format(id(build_set)), label='',
-          style='filled', fillcolor='grey')
-        for set_name, files in build_set.outputs.items():
-          set_cluster = build_cluster.subcluster(
-            id='{}/@{}'.format(build_cluster.id, set_name),
-            label='@{}'.format(set_name))
-          [file_node(x, set_cluster) for x in files]
-        for set_name, files in build_set.inputs.items():
-          set_cluster = build_cluster.subcluster(
-            id='{}/<{}'.format(build_cluster.id, set_name),
-            label='<{}'.format(set_name))
-          [file_node(x, set_cluster) for x in files]
+  def bset_node(bset, cluster=None):
+    ident = 'BuildSet:{}'.format(id(bset))
+    if ident in g.nodes:
+      return g.nodes[ident]
+    return g.node(ident, cluster, shape='point')
 
-  # TODO: (How to do) edges like input_file->BuildSetCluster->output_file ??
+  bsets = []
+  for target in master.targets:
+    for op in target.operators:
+      for bset in op.build_sets:
+        if not bset.outputs: continue
+        bsets.append(bset)
+
+  #for target in master.targets:
+  #  for op in target.operators:
+  #    cluster = g.cluster('Operator:{}/{}'.format(target.id, op.id))
+  #    for bset in op.build_sets:
+  #      bset_node(bset, cluster)
+
+  for bset in bsets:
+    if not bset.outputs: continue
+    node = bset_node(bset)
+    for f in stream.concat(bset.inputs.values()):
+      g.edge(file_node(f).id, node.id)
+    for f in stream.concat(bset.outputs.values()):
+      g.edge(node.id, file_node(f).id)
 
   return g
 
