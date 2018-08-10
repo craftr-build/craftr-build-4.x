@@ -192,6 +192,9 @@ class ClInfo(nr.types.Named):
       try:
         with sh.override_environ(env or {}):
           output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
+      except subprocess.CalledProcessError as e:
+        print(e.output.decode(), file=sys.stderr)
+        raise
       finally:
         os.remove(fp.name)
 
