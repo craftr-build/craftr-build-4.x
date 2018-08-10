@@ -31,11 +31,6 @@ etc. so they do not have to be explicitly declared and passed around.
 """
 
 __all__ = [
-  'Session',
-  'Scope',
-  'Target',
-  'Operator',
-  'BuildSet',
   'session',
   'current_session',
   'current_scope',
