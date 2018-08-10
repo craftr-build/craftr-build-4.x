@@ -52,6 +52,9 @@ def main(argv=None, prog=None):
   # Create a new session.
   session = api.session = api.Session(args.build_directory)
 
+  print()
+  print('===== LOADING BUILD MODULE')
+  print()
   module = session.load_module_from_file('build.craftr', is_main=True)
 
   if args.dump_graphviz is not NotImplemented:
@@ -67,7 +70,15 @@ def main(argv=None, prog=None):
       p.communicate(dotstr)
     return 0
 
+  print()
+  print('===== STARTING BUILD')
+  print()
+
   execute(session)
+
+  print()
+  print('===== END')
+  print()
 
 
 if __name__ == '__main__':

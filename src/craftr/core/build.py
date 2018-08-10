@@ -438,7 +438,16 @@ def execute(master):
   for build_set in topo_sort(master):
     if not build_set.operator:
       continue
-    prefix = '[{}/{}]'.format(build_set.operator.target.name, build_set.operator.name)
+
+    prefix = '[{}/{}]'.format(build_set.operator.target.id, build_set.operator.id)
+
+    # Skip the build set if all output files are newer than the input files.
+    infiles = list(stream.concat(build_set.inputs.values()))
+    outfiles = list(stream.concat(build_set.outputs.values()))
+    if not nr.fs.compare_all_timestamps(infiles, outfiles):
+      print(prefix, 'SKIP')
+      continue
+
     if build_set.description:
       print(prefix, build_set.get_description())
     else:
