@@ -1,5 +1,6 @@
 glob2>=0.6
 nodepy-runtime>=2.1.2
 nr.fs>=1.0.3
+nr.interface>=1.0.3
 nr.stream>=1.0.1
 nr.types>=1.0.6

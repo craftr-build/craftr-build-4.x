@@ -35,10 +35,14 @@ not allowed. The same is true (in combination) for variables that contain a
 list of values, however that can only be determined at render time.
 """
 
+__all__ = ['TemplateCompiler']
+
 import collections
 import re
 
+from nr.stream import stream
 from nr.types.sumtype import Sumtype
+from typing import List
 
 
 class _Part(Sumtype):
@@ -144,11 +148,32 @@ class _Template:
     return inputs, outputs, variables
 
 
+class _TemplateList:
+  """
+  Represents a list of templates or template lists (nested).
+  """
+
+  def __init__(self, templates, concat=True):
+    self._templates = templates
+    self._concat = concat
+
+  def render(self, inputs, outputs, variables, safe=False):
+    items = (x.render(inputs, outputs, variables, safe) for x in self._templates)
+    if self._concat:
+      items = stream.concat(items)
+    return list(items)
+
+  def occurences(self, inputs, outputs, variables):
+    for x in self._templates:
+      x.occurences(inputs, outputs, variables)
+    return inputs, outputs, variables
+
+
 class TemplateCompiler:
 
   _regex = re.compile(r'\$([@<]?\w+)|\$\{([@<]?.*?)\}')
 
-  def compile(self, arg: str):
+  def compile(self, arg:str):
     offset = 0
     parts = []
     while True:
@@ -165,3 +190,19 @@ class TemplateCompiler:
     if offset < len(arg):
       parts.append(_Part.Str(arg[offset:]))
     return _Template(parts)
+
+  def compile_list(self, arg:List[str]):
+    """
+    Compiles a list of arguments and returns a #_TemplateList that
+    concatenates its results.
+    """
+
+    return _TemplateList([self.compile(x) for x in arg], concat=True)
+
+  def compile_commands(self, arg:List[List[str]]):
+    """
+    Compiles a list of list of arguments and returns a nested #_TemplateList
+    where the inner lists concatenated their results.
+    """
+
+    return _TemplateList([self.compile_list(x) for x in arg], concat=False)

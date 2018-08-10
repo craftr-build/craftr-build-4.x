@@ -1,34 +1,34 @@
 
+import nr.fs
+
 from craftr.api import *
 from craftr.api import proplib
 from nr.stream import stream
 
+
 session.target_props.add('cxx.type', proplib.String)
-session.target_props.add('cxx.srcs', proplib.FileSetList)
-session.target_props.add('cxx.objs', proplib.FileSetList)
+session.target_props.add('cxx.srcs', proplib.PathList)
+session.target_props.add('cxx.objs', proplib.PathList)
 session.target_props.add('cxx.includes', proplib.PathList, options={'inherit': True})
-session.target_props.add('cxx.outStaticLibs', proplib.FileSetList, options={'inherit': True})
-session.target_props.add('cxx.outSharedLibs', proplib.FileSetList, options={'inherit': True})
-session.target_props.add('cxx.outExecutables', proplib.FileSetList, options={'inherit': True})
+session.target_props.add('cxx.outStaticLibs', proplib.PathList, options={'inherit': True})
+session.target_props.add('cxx.outSharedLibs', proplib.PathList, options={'inherit': True})
+session.target_props.add('cxx.outExecutables', proplib.PathList, options={'inherit': True})
 
 
 def build():
   target = current_target()
+  srcs = target['cxx.srcs']
+  objs = target['cxx.objs']
+  complete_list_with(objs, srcs, lambda x: chfdir(nr.fs.setsuffix(x, '.o')))
 
-  srcs = join_file_sets(target['cxx.srcs'])
-  objs = join_file_sets(target['cxx.objs'])
-  objs.fill_for(srcs, lambda x: chfdir(x + '.o'))
-  bset = build_set({'srcs': srcs}, {'objs': objs})
-
-  op = create_operator(
-    name='cxx.compile',
-    commands=[['gcc', '-I$includes', '-c', '$<srcs', '-o', '$@objs']],
-    for_each=True,
-    variables={'includes': target['cxx.includes']}
+  operator(
+    name = 'cxx.compile',
+    commands = [['gcc', '-I$includes', '-c', '$<srcs', '-o', '$@objs']],
+    variables = {'includes': target['cxx.includes']}
   )
 
-  objs = extract_file_set('objs', op.build_sets)
-  input_libs = join_file_sets(target['cxx.outStaticLibs'])
+  for src, obj in zip(srcs, objs):
+    build_set({'srcs': [src]}, {'objs': [obj]}, description='Compile $@objs')
 
   type = target.properties['cxx.type']
   if type in ('executable', 'sharedLibrary'):
@@ -44,12 +44,11 @@ def build():
   else:
     raise ValueError('type: {!r}'.format(type))
 
+  input_libs = target['cxx.outStaticLibs']
   binary = chfdir('main' + binaryExt)
-  bset = build_set({'objs': objs, 'inputLibs': input_libs}, {'binary': file_set([binary])})
-  op = create_operator(
-    name='cxx.link',
-    commands=[cmd]
-  )
+  operator('cxx.link', [cmd])
+  build_set({'objs': objs, 'inputLibs': input_libs}, {'binary': binary})
+
 
   if type == 'staticLibrary':
     target = '@cxx.outStaticLibs+'
@@ -57,4 +56,4 @@ def build():
     target = '@cxx.outSharedLibs+'
   elif type == 'executable':
     target = '@cxx.outExecutables+'
-  properties({target: [extract_file_set('binary', op.build_sets)]})
+  properties({target: [binary]})

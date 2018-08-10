@@ -27,6 +27,7 @@ from nr.types.generic import GenericMeta
 
 import builtins
 import collections
+import nr.interface
 
 
 class Prop:
@@ -144,6 +145,10 @@ class String(PropType):
 
 class Path(String):
 
+  class OwnerInterface(nr.interface.Interface):
+    def path_get_parent_dir(self):
+      raise NotImplementedError
+
   def __init__(self, parent_dir_getter=None):
     self.parent_dir_getter = parent_dir_getter
 
@@ -152,10 +157,12 @@ class Path(String):
       parent_dir = self.parent_dir_getter(owner)
     else:
       if owner is None:
-        raise RuntimeError('no owner object received')
-      if not hasattr(owner, 'directory'):
-        raise RuntimeError('owner {!r} has no member "directory"'.format(owner))
-      parent_dir = owner.directory
+        raise RuntimeError('Path.coerce(): no owner object received')
+      if not Path.OwnerInterface.implemented_by(owner):
+        raise RuntimeError('Path.coerce(): owner (type "{}") does not '
+                           'implement Path.OwnerInterface'.format(
+                             type(owner).__name__))
+      parent_dir = owner.path_get_parent_dir()
     value = super().coerce(name, value, owner)
     return path.canonical(value, path.abs(parent_dir))
 
@@ -259,10 +266,6 @@ class InstanceOf(PropType, metaclass=GenericMeta):
 
   def default(self):
     raise NotImplementedError
-
-
-from craftr.core.build import FileSet
-FileSetList = List[InstanceOf[FileSet]]
 
 
 class PropertySet:

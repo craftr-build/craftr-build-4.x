@@ -31,164 +31,53 @@ The files in a BuildSet are tracked globally in the build Master. A file may
 only be listed once in the outputs of a BuildSet.
 """
 
-__all__ = ['BuildSet', 'Operator', 'Target', 'Master']
+__all__ = ['BuildSet', 'Commands', 'Operator', 'Target', 'Master']
 
 import io
 import nr.fs
 import re
 import shlex
+import subprocess
 
-from nr.types.map import ValueIterableMap
-from nr.types.set import OrderedSet
-from typing import Dict, List, Optional, Union
-from .templates import TemplateCompiler
-
-
-class FileSet:
-  """
-  Represents an ordered set of files. File sets are combined to create a
-  #BuildSet that, together with an #Operator, form a single build action.
-  Files in the set are stored only in canonical form using
-  #Behaviour.canonicalize_path().
-
-  Linking file sets is not mandatory but highly recommended for debugging
-  purposes.
-
-  Adding a #FileSet to a #BuildSet will establish links in the #build_sets_in
-  and #build_sets_out.
-  """
-
-  def __init__(self, master: 'Master',
-               files: List[str] = None,
-               inputs: List['FileSet'] = None):
-
-    if not isinstance(master, Master):
-      raise TypeError('expected Master, got {}'.format(type(master).__name__))
-    self._master = master
-
-    if inputs is None:
-      inputs = []
-    self._inputs = OrderedSet()
-    if not isinstance(inputs, list):
-      raise TypeError('expected list, got {}'.format(type(inputs).__name__))
-    for x in inputs:
-      if not isinstance(x, FileSet):
-        raise TypeError('expected FileSet, got {}'.format(type(x).__name__))
-      self._inputs.add(x)
-
-    self._files = OrderedSet()
-    self.add_files(files or [])
-
-    self._build_sets_in = {}
-    self._build_sets_out = {}
-
-  def __repr__(self):
-    return '{}({{{}}})'.format(
-      type(self).__name__, ', '.join(repr(x) for x in self._files))
-
-  def __len__(self):
-    return len(self._files)
-
-  def __getitem__(self, index):
-    return self._files[index]
-
-  def __iter__(self):
-    return iter(self._files)
-
-  @property
-  def inputs(self):
-    return self._inputs
-
-  @property
-  def aliases(self):
-    return set(self._build_sets_in.values()) | set(self._build_sets_out.values())
-
-  def add_file(self, filename: str):
-    self._files.add(self._master.canonicalize_path(filename))
-
-  def add_files(self, files: List[str]):
-    canonical = self._master.canonicalize_path
-    self._files.update(canonical(x) for x in files)
-
-  def add_from(self, file_set: 'FileSet'):
-    self._inputs.add(file_set)
-    self._files.update(file_set._files)
-
-  def clear(self):
-    self._files.clear()
-
-  def fill_for(self, ref_set: 'FileSet', update: callable, add_as_input: bool = True):
-    if len(self) < len(ref_set) and add_as_input:
-      self._inputs.add(ref_set)
-    while len(self) < len(ref_set):
-      self.add_file(update(ref_set[len(self)]))
+from nr.types.map import ChainMap, ValueIterableMap
+from nr.stream import stream
+from typing import List
+from .template import TemplateCompiler
 
 
 class BuildSet:
   """
-  A build set is a collection of named #FileSet objects in either an input
-  or output slot.
+  A build set is a collection of named sets of files and variables that
+  represent an instantiation of the build action templated by an #Operator.
 
-  Build sets may be attached to an #Operator in which case they represent the
-  files produced by the commands specified in the operator. In any other case,
-  the build set represents a list of either already existing files (pure
-  inputs) or a subset of the files of its inputs.
+  The output files in a build set must be registered to the build #Master.
+  This is done automatically when adding files to the set.
   """
 
-  def __init__(self, master: 'Master',
-               alias: str = None,
-               description: Optional[str] = None,
-               inputs: Dict[str, FileSet] = None,
-               outputs: Dict[str, FileSet] = None,
-               variables: Dict[str, object] = None):
-
+  def __init__(self, master:'Master', description:str=None):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
-    self._master = master
-
-    self._inputs = {}
-    for key, value in (inputs or {}).items():
-      if not isinstance(value, FileSet):
-        raise TypeError('expected FileSet, got {}'.format(type(value).__name__))
-      self._inputs[key] = value
-      value._build_sets_in[self] = key
-
-    self._outputs = {}
-    for key, value in (outputs or {}).items():
-      if not isinstance(value, FileSet):
-        raise TypeError('expected FileSet, got {}'.format(type(value).__name__))
-      self._outputs[key] = value
-      value._build_sets_out[self] = key
-
-    if variables is not None and not isinstance(variables, dict):
-      raise TypeError('expected dict, got {}'.format(type(variables).__name__))
-    self._variables = dict(variables or {})
-
-    if alias is not None and not isinstance(alias, str):
-      raise TypeError('expected str, got {}'.format(type(alias).__name__))
-    self._alias = alias
-
     if description is not None and not isinstance(description, str):
-      raise TypeError('expected str, got {}'.format(
-        type(description).__name__))
+      raise TypeError('expected str, got {}'.format(type(description).__name__))
+    self._master = master
     self._description = description
-
+    self._inputs = {}
+    self._outputs = {}
+    self._variables = {}
     self._operator = None
 
   def __repr__(self):
-    return '<{} operator={} inputs={} outputs={} variables={}>'.format(
-      type(self).__name__, self.operator, set(self._inputs.keys()),
-      set(self._outputs.keys()), set(self._variables.keys()))
-
-  def __contains__(self, set_name):
-    return set_name in self._files
-
-  def __getitem__(self, set_name):
-    return list(self._files[set_name])
+    return 'BuildSet(operator={}, inputs={}, outputs={}, variables={})'\
+      .format(type(self).__name__, self.operator, set(self._inputs.keys()),
+              set(self._outputs.keys()), set(self._variables.keys()))
 
   @property
   def master(self):
     return self._master
+
+  @property
+  def description(self):
+    return self._description
 
   @property
   def inputs(self):
@@ -203,16 +92,35 @@ class BuildSet:
     return self._variables
 
   @property
-  def alias(self):
-    return self._alias
-
-  @property
-  def description(self):
-    return self._description
-
-  @property
   def operator(self):
     return self._operator
+
+  def add_input_files(self, set_name:str, files:List[str]):
+    result = []
+    dest = self._inputs.setdefault(set_name, [])
+    for x in files:
+      x = self._master.canonicalize_path(x)
+      result.append(x)
+      dest.append(x)
+    return result
+
+  def add_output_files(self, set_name:str, files:List[str]):
+    result = []
+    dest = self._outputs.setdefault(set_name, [])
+    for x in files:
+      x = self._master.canonicalize_path(x)
+      self._master._declare_output(self, x)
+      result.append(x)
+      dest.append(x)
+    return result
+
+  def get_input_build_sets(self) -> set:
+    inputs = set()
+    for fname in stream.concat(self.inputs.values()):
+      bset = self._master._output_files.get(fname, None)
+      if bset is not None:
+        inputs.add(bset)
+    return inputs
 
   def get_commands(self):
     """
@@ -223,7 +131,9 @@ class BuildSet:
 
     if not self._operator:
       raise TypeError('build set is not attached to an operator')
-    return self._master.substitutor.multi_subst(self._operator._commands, self)
+    variables = ChainMap(self._variables, self._operator._variables)
+    return self._operator._commands.compiled.render(
+      self._inputs, self._outputs, variables)
 
   def get_description(self):
     """
@@ -232,22 +142,44 @@ class BuildSet:
 
     if not self._operator:
       return self._description
-    return self._master.substitutor.subst(self._description, self)
+    template = TemplateCompiler().compile_list(shlex.split(self._description))
+    variables = ChainMap(self._variables, self._operator._variables)
+    return ' '.join(template.render(self._inputs, self._outputs, variables))
 
-  def fizzle(self):
-    """
-    Fizzle any connection, removing the build set from any operator that
-    it is attached to as well as removing the links between itself and its
-    file sets.
-    """
 
-    if self._operator:
-      self._operator._build_sets.remove(self)
-      self._operator = None
-    for fset in self._inputs.values():
-      fset._build_sets_in.pop(self)
-    for fset in self._outputs.values():
-      fset._build_sets_out.pop(self)
+class Commands:
+  """
+  This class represents a list of system commands, where every system command
+  is a list of strings. The strings in the commands are compiled using a
+  #TemplateCompiler and stored only in the compiled form.
+
+  A commands object is immutable after construction.
+  """
+
+  def __init__(self, commands:List[List[str]]):
+    self._commands = commands
+    self._compiled = TemplateCompiler().compile_commands(commands)
+    self._inputs, self._outputs, self._variables = \
+        self._compiled.occurences(set(), set(), set())
+
+  def __repr__(self):
+    return 'Commands({})'.format(self._commands)
+
+  @property
+  def inputs(self):
+    return self._inputs
+
+  @property
+  def outputs(self):
+    return self._outputs
+
+  @property
+  def variables(self):
+    return self._variables
+
+  @property
+  def compiled(self):
+    return self._compiled
 
 
 class Operator:
@@ -255,55 +187,35 @@ class Operator:
   An operator defines one or more system commands that is executed to produce
   output files from input files. These files are declared in a #BuildSet that
   must be attached to the operator.
-
-  Every operator must be attached to a #Target.
   """
 
-  def __init__(self, name: str,
-               master: 'Master',
-               commands: List[List[str]]):
-
+  def __init__(self, master:'Master', name:str, commands:Commands):
+    if not isinstance(master, Master):
+      raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if not isinstance(name, str):
       raise TypeError('expected str, got {}'.format(type(name).__name__))
     if not name:
       raise ValueError('name must not be empty')
+    if not isinstance(commands, Commands):
+      raise TypeError('expected Commands, got {}'.format(type(commands).__name__))
+
     self._name = name
-
-    if not isinstance(master, Master):
-      raise TypeError('expected Master, got {}'.format(type(master).__name__))
     self._master = master
-
-    if not isinstance(commands, list):
-      raise TypeError('expected list, got {}'.format(type(commands).__name__))
-    for x in commands:
-      if not isinstance(x, list):
-        raise TypeError('expected list, got {}'.format(type(x).__name__))
-      for y in x:
-        if not isinstance(y, str):
-          raise TypeError('expected str, got {}'.format(type(y).__name__))
     self._commands = commands
-    self._input_filesets, self._output_filesets, self._varnames = \
-        master.substitutor.multi_occurences(commands)
-
     self._target = None
     self._build_sets = []
-    self._vars = {}
+    self._variables = {}
 
   def __repr__(self):
-    return '<Operator name={!r} target={!r}>'.format(
-      self._name, self._target._name)
-
-  @property
-  def name(self):
-    return self._name
+    return 'Operator(target={!r}, name={!r}))'.format(self._target, self._name)
 
   @property
   def master(self):
     return self._master
 
   @property
-  def target(self):
-    return self._target
+  def name(self):
+    return self._name
 
   @property
   def commands(self):
@@ -311,7 +223,11 @@ class Operator:
 
   @property
   def variables(self):
-    return self._vars
+    return self._variables
+
+  @property
+  def target(self):
+    return self._target
 
   @property
   def build_sets(self):
@@ -324,16 +240,16 @@ class Operator:
       raise ValueError('add_build_set(): BuildSet belongs to another Operator')
     if build_set in self._build_sets:
       raise RuntimeError('add_build_set(): BuildSet is already added')
-    for set_name in self._input_filesets:
+    for set_name in self._commands.inputs:
       if set_name not in build_set.inputs:
         raise RuntimeError('operator requires ${{<{}}} which is not '
                            'provided by this build set'.format(set_name))
-    for set_name in self._output_filesets:
+    for set_name in self._commands.outputs:
       if set_name not in build_set.outputs:
         raise RuntimeError('operator requires ${{@{}}} which is not '
                            'provided by this build set'.format(set_name))
-    for var_name in self._varnames:
-      if var_name not in self._vars and var_name not in build_set._vars:
+    for var_name in self._commands.variables:
+      if var_name not in self._variables and var_name not in build_set._vars:
         raise RuntimeError('operator requires ${{{}}} which is not provided '
                            'by this build set'.format(var_name))
     self._build_sets.append(build_set)
@@ -342,21 +258,19 @@ class Operator:
 
 class Target:
   """
-  A target contains private and public properties that will then be turned
-  into operators which are also stored inside the target.
+  A target is a collection of operators.
   """
 
-  def __init__(self, name: str, master: 'Master'):
+  def __init__(self, master:'Master', name:str):
+    if not isinstance(master, Master):
+      raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if not isinstance(name, str):
       raise TypeError('expected str, got {}'.format(type(name).__name__))
     if not name:
       raise ValueError('name must not be empty')
+
     self._name = name
-
-    if not isinstance(master, Master):
-      raise TypeError('expected Master, got {}'.format(type(master).__name__))
     self._master = master
-
     self._operators = {}
 
   def __repr__(self):
@@ -372,7 +286,7 @@ class Target:
 
   @property
   def operators(self):
-    return self._operators.values()
+    return ValueIterableMap(internal=self._operators)
 
   def add_operator(self, operator):
     if not isinstance(operator, Operator):
@@ -388,9 +302,6 @@ class Target:
     self._operators[operator._name] = operator
     return operator
 
-  def get_operator(self, name):
-    return self._operators[name]
-
 
 class Master:
   """
@@ -399,17 +310,14 @@ class Master:
   member and the #canonicalize_path() method.
   """
 
-  def __init__(self, substitutor: Substitutor = Subsitutor()):
-    if not isinstance(substitutor, Substitutor):
-      raise TypeError('expected Substitutor, got {}'.format(
-        type(substitutor).__name__))
-    self._substitutor = substitutor
+  def __init__(self, template_compiler:TemplateCompiler=None):
+    self._template_compiler = template_compiler or TemplateCompiler()
     self._targets = {}
     self._output_files = {}  # Maps from the canonical filename to a BuildSet
 
   @property
-  def substitutor(self):
-    return self._substitutor
+  def template_compiler(self):
+    return self._template_compiler
 
   def canonicalize_path(self, path):
     """
@@ -422,7 +330,7 @@ class Master:
 
   @property
   def targets(self):
-    return ValueIterableMap(map=self._targets)
+    return ValueIterableMap(internal=self._targets)
 
   def add_target(self, target):
     if not isinstance(target, Target):
@@ -432,6 +340,14 @@ class Master:
     self._targets[target._name] = target
     return target
 
+  def _declare_output(self, build_set:BuildSet, filename:str):
+    # Note: filename must be canonicalized
+    assert self.canonicalize_path(filename) == filename
+    if filename in self._output_files:
+      raise ValueError('Two build sets with the same output file can not '
+                       'co-exist ({}, filename={!r})'.format(build_set, filename))
+    self._output_files[filename] = build_set
+
 
 def to_graph(master):
   from craftr.utils import graphviz as G
@@ -439,13 +355,11 @@ def to_graph(master):
   g.setting('graph', fontsize=10, fontname='monospace')
   g.setting('node', shape='record', style='filled', fontsize=10, fontname='monospace')
 
-  def create_file_set(file_set, cluster=None):
-    ident = 'FileSet:{}'.format(id(file_set))
+  def file_node(filename, cluster):
+    ident = 'File:{}'.format(filename)
     if ident in g.nodes:
       return g.nodes[ident]
-    alias = ', '.join(file_set.aliases)
-    lines = ([alias] if alias else []) + [repr([nr.fs.base(x) for x in file_set])]
-    return g.node(ident, cluster, label='\n'.join(lines))
+    return g.node(ident, cluster, label=nr.fs.base(filename))
 
   for target in master.targets:
     target_cluster = g.cluster(target.name,
@@ -454,24 +368,21 @@ def to_graph(master):
       op_cluster = target_cluster.subcluster('{}@{}'.format(target.name, operator.name),
         label='Operator: {}@{}'.format(target.name, operator.name))
       for build_set in operator.build_sets:
-        build_node = op_cluster.node('BuildSet:{}'.format(id(build_set)),
-          label='BuildSet', style='filled', fillcolor='grey')
+        build_cluster = op_cluster.subcluster(
+          id='BuildSet:{}'.format(id(build_set)), label='',
+          style='filled', fillcolor='grey')
+        for set_name, files in build_set.outputs.items():
+          set_cluster = build_cluster.subcluster(
+            id='{}/@{}'.format(build_cluster.id, set_name),
+            label='@{}'.format(set_name))
+          [file_node(x, set_cluster) for x in files]
+        for set_name, files in build_set.inputs.items():
+          set_cluster = build_cluster.subcluster(
+            id='{}/<{}'.format(build_cluster.id, set_name),
+            label='<{}'.format(set_name))
+          [file_node(x, set_cluster) for x in files]
 
-
-        print(build_set)
-        for file_set in build_set.outputs.values():
-          print('  ', file_set)
-          i =create_file_set(file_set).id
-          g.edge(build_node.id, i)
-        for file_set in build_set.inputs.values():
-          i = create_file_set(file_set).id
-          g.edge(i, build_node.id)
-
-  # TODO: Only for the craftr.api.Session subclass ..
-  for fset in master._file_sets:
-    node = create_file_set(fset)
-    for other in fset.inputs:
-      g.edge(create_file_set(other).id, node.id)
+  # TODO: (How to do) edges like input_file->BuildSetCluster->output_file ??
 
   return g
 
@@ -482,7 +393,6 @@ def topo_sort(master):
   between file sets.
   """
 
-  from nr.stream import stream
 
   # A mirror of the inputs for every build set, allowing us to remove
   # edge for this algorithm without actually modifying the graph.
@@ -501,13 +411,14 @@ def topo_sort(master):
         bset = queue.pop()
         if bset in bset_inputs:
           continue
-        bset_inputs[bset] = set(stream.concat(x._build_sets_out.keys() for x in bset.inputs.values()))
+        bset_inputs[bset] = set(stream.concat(bset.inputs.values()))
         bset_reverse.setdefault(bset, set())
         for x in bset_inputs[bset]:
           bset_reverse.setdefault(x, set()).add(bset)
-        if not bset_inputs[bset]:
+        input_build_sets = bset.get_input_build_sets()
+        queue += input_build_sets
+        if not input_build_sets:
           bset_start.add(bset)
-        queue += bset_inputs[bset]
 
   while bset_start:
     bset = bset_start.pop()
@@ -523,9 +434,6 @@ def execute(master):
   """
   Executes the full build graph -- useful for development tests.
   """
-
-  import shlex
-  import subprocess
 
   for build_set in topo_sort(master):
     if not build_set.operator:
