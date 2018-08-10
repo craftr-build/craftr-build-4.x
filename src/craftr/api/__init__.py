@@ -290,6 +290,16 @@ class BuildSet(_build.BuildSet):
     super().__init__(session, *args, **kwargs)
 
 
+class ModuleError(RuntimeError):
+
+  def __init__(self, scope_name, message):
+    self.scope_name = scope_name
+    self.message = message
+
+  def __str__(self):
+    return '{}: {}'.format(self.scope_name, self.message)
+
+
 def current_session(do_raise=True):
   if do_raise and session is None:
     raise RuntimeError('no current session')
@@ -505,7 +515,8 @@ __all__ += [
   'complete_list_with',
   'glob',
   'chfdir',
-  'fmt'
+  'fmt',
+  'error'
 ]
 
 path = nr.fs
@@ -582,3 +593,11 @@ def fmt(s, frame=None):
   frame = frame or inspect.currentframe().f_back
   vars = Resolver(frame)
   return s.format_map(vars)
+
+
+def error(*message):
+  """
+  Raises a #ModuleError.
+  """
+
+  raise ModuleError(current_scope().name, ' '.join(map(str, message)))
