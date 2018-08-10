@@ -21,7 +21,7 @@ def open_cli_file(filename, mode):
 
 
 def get_argument_parser(prog=None):
-  parser = argparse.ArgumentParser(prog=prog)
+  parser = argparse.ArgumentParser(prog=prog, allow_abbrev=False)
 
   # Build options
 
