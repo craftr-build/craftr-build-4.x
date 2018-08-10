@@ -349,12 +349,13 @@ def bind_operator(operator):
 __all__ += [
   'project',
   'target',
-  'operator',
-  'properties',
   'depends',
+  'properties',
+  'operator',
   'build_set',
   'glob',
-  'chfdir'
+  'chfdir',
+  'fmt'
 ]
 
 
@@ -375,6 +376,20 @@ def target(name, bind=True):
   if bind:
     bind_target(target)
   return target
+
+
+def depends(target, public=False):
+  """
+  Add *target* as a dependency to the current target.
+  """
+
+  if isinstance(target, str):
+    scope, name = target.partition(':')[::2]
+    if not scope:
+      scope = current_scope().name
+    target = session.targets[scope + '@' + name]
+
+  return current_target().add_dependency(target, public)
 
 
 def properties(_scope=None, _props=None, _target=None, **kwarg_props):
@@ -490,20 +505,6 @@ def build_set(inputs, outputs, variables=None, operator=None, **kwargs):
   return bset
 
 
-def depends(target, public=False):
-  """
-  Add *target* as a dependency to the current target.
-  """
-
-  if isinstance(target, str):
-    scope, name = target.partition(':')[::2]
-    if not scope:
-      scope = current_scope().name
-    target = session.targets[scope + '@' + name]
-
-  return current_target().add_dependency(target, public)
-
-
 def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
          ignore_false_excludes=False):
   if not parent:
@@ -516,6 +517,51 @@ def chfdir(filename):
   if nr.fs.isabs(filename):
     filename = nr.fs.rel(filename, current_scope().directory)
   return nr.fs.join(current_scope().build_directory, filename)
+
+
+def fmt(s, frame=None):
+  """
+  Formats the string *s* with the variables from the parent frame or the
+  specified frame-object *frame*.
+  """
+
+  import inspect
+  import gc
+  import types
+
+  class Resolver:
+    def __init__(self, frame):
+      self.frame = frame
+      self._func = NotImplemented
+    @property
+    def func(self):
+      if self._func is NotImplemented:
+        self._func = next(filter(lambda x: isinstance(x, types.FunctionType),
+            gc.get_referrers(self.frame.f_code)), None)
+      return self._func
+    def __getitem__(self, key):
+      # Try locals
+      try: return self.frame.f_locals[key]
+      except KeyError: pass
+      # Try non-locals
+      try:
+        index = self.frame.f_code.co_freevars.index(key)
+      except ValueError:
+        pass
+      else:
+        if self.func:
+          x = self.func.__closure__[index]
+          return x
+      # Try globals
+      g = self.frame.f_globals
+      g = g.get('__dict__', g)
+      try: return g[key]
+      except KeyError: pass
+      raise KeyError(key)
+
+  frame = frame or inspect.currentframe().f_back
+  vars = Resolver(frame)
+  return s.format_map(vars)
 
 
 # Utilities
