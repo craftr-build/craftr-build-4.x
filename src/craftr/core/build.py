@@ -411,14 +411,14 @@ def topo_sort(master):
         bset = queue.pop()
         if bset in bset_inputs:
           continue
-        bset_inputs[bset] = set(stream.concat(bset.inputs.values()))
+        bset_inputs[bset] = bset.get_input_build_sets()
         bset_reverse.setdefault(bset, set())
         for x in bset_inputs[bset]:
           bset_reverse.setdefault(x, set()).add(bset)
-        input_build_sets = bset.get_input_build_sets()
-        queue += input_build_sets
-        if not input_build_sets:
+        if not bset_inputs[bset]:
           bset_start.add(bset)
+        else:
+          queue += bset_inputs[bset]
 
   while bset_start:
     bset = bset_start.pop()
