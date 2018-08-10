@@ -1,0 +1,7 @@
+project('examples.haskell', '1.0-0')
+hs = require('craftr/lang/haskell')
+target('main')
+properties({
+  'haskell.srcs': ['src/Main.hs']
+})
+hs.build()

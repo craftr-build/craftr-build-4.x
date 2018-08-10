@@ -1,0 +1,34 @@
+project('craftr/lang/haskell', '1.0-0')
+
+if OS.type == 'nt':
+  exe_suffix = '.exe'
+else:
+  exe_suffix = ''
+
+session.target_props.add('haskell.srcs', 'PathList')
+session.target_props.add('haskell.productName', 'String')
+session.target_props.add('haskell.compilerFlags', 'StringList', options={'inherit': True})
+
+
+def build():
+  target = current_target()
+  src_dir = target.scope.directory
+  build_dir = target.build_directory
+  data = target.get_props('haskell.', as_object=True)
+
+  if not data.productName:
+    data.productName = target.name + '-' + target.scope.version
+  if data.srcs:
+    data.productFilename = path.join(build_dir, data.productName + exe_suffix)
+
+  if data.srcs:
+    # Action to compile the sources to an executable.
+    command = ['ghc', '-o', '$@out', '$<in']
+    command += data.compilerFlags
+    operator('haskell.compile', commands=[command])
+    build_set({'in': data.srcs}, {'out': data.productFilename})
+
+    # Action to run the executable.
+    command = [data.productFilename]
+    operator('haskell.run', commands=[command], explicit=True, syncio=True)
+    build_set({'in': data.productFilename}, {}, description='$<in')
