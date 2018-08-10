@@ -32,6 +32,8 @@ etc. so they do not have to be explicitly declared and passed around.
 
 __all__ = [
   'session',
+  'OS',
+  'BUILD',
   'current_session',
   'current_scope',
   'current_target',
@@ -44,18 +46,54 @@ import collections
 import contextlib
 import nodepy
 import nr.fs
+import os
+import sys
 
 from craftr.core import build as _build
 from nodepy.utils import pathlib
 from nr.stream import stream
+from nr.types.named import Named
 from nr.types.map import MapAsObject
 from nr.types.set import OrderedSet
+from werkzeug.local import LocalProxy
 from .modules import CraftrModuleLoader
 from .proplib import PropertySet, Properties, NoSuchProperty
 
 STDLIB_DIR = nr.fs.join(nr.fs.dir(nr.fs.dir(nr.fs.dir(__file__))))
 
 session = None  # The current #Session
+OS = LocalProxy(lambda: session.os_info)
+BUILD = LocalProxy(lambda: session.build_info)
+
+
+class OsInfo(Named):
+  name: str
+  id: str
+  type: str
+  arch: str
+
+  @classmethod
+  def new(cls):
+    if sys.platform.startswith('win32'):
+      return cls('windows', 'win32', os.name, 'x86_64' if os.environ.get('ProgramFiles(x86)') else 'x86')
+    elif sys.platform.startswith('darwin'):
+      return cls('macos', 'darwin', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
+    elif sys.platform.startswith('linux'):
+      return cls('linux', 'linux', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
+    else:
+      raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
+
+
+class BuildInfo(Named):
+  variant: str
+
+  @property
+  def debug(self):
+    return self.variant == 'debug'
+
+  @property
+  def release(self):
+    return self.variant == 'release'
 
 
 class Session(_build.Master):
@@ -78,6 +116,8 @@ class Session(_build.Master):
     self.nodepy_context.resolver.paths.append(pathlib.Path(STDLIB_DIR))
     self.target_props = PropertySet()
     self.dependency_props = PropertySet()
+    self.os_info = OsInfo.new()
+    self.build_info = BuildInfo(self._build_variant)
 
   def load_module(self, name):
     return self.nodepy_context.require(name + '.craftr', exports=False)
