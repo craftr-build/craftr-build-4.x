@@ -1,0 +1,8 @@
+project('examples.ocaml', '1.0-0')
+oc = require('craftr/lang/ocaml')
+target('main')
+properties({
+  'ocaml.srcs': glob('src/*.ml'),
+  'ocaml.standalone': True
+})
+oc.build()

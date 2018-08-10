@@ -1,0 +1,40 @@
+project('craftr/lang/ocaml', '1.0-0')
+
+if OS.type == 'nt':
+  exe_suffix = '.exe'
+else:
+  exe_suffix = ''
+
+
+session.target_props.add('ocaml.srcs', 'PathList')
+session.target_props.add('ocaml.standalone', 'Bool')
+session.target_props.add('ocaml.productName', 'String')
+session.target_props.add('ocaml.compilerFlags','StringList', options={'inherit': True})
+
+
+def build():
+  target = current_target()
+  src_dir = target.scope.directory
+  build_dir = target.build_directory
+  data = target.get_props('ocaml.', as_object=True)
+
+  if not data.productName:
+    data.productName = target.name + '-' + target.scope.version
+  if data.srcs:
+    data.productFilename = path.join(build_dir, data.productName)
+    if data.standalone:
+      data.productFilename += exe_suffix
+    else:
+      data.productFilename += '.cma'
+
+  if data.srcs:
+    # Action to compile an executable.
+    command = ['ocamlopt' if data.standalone else 'ocamlc']
+    command += ['-o', '$@out', '$<in']
+    operator(name='ocaml.compile', commands=[command])
+    build_set({'in': data.srcs}, {'out': data.productFilename})
+
+    # Action to run the executable.
+    command = [data.productFilename]
+    operator('ocaml.run', commands=[command], explicit=True, syncio=True)
+    build_set({'in': data.productFilename}, {}, description='$@in')
