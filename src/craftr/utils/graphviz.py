@@ -50,6 +50,8 @@ class Graph:
     self.settings = {}
     self.nodes = {}
     self.clusters = {}
+    self.edges = {}
+    self.reverse_edges = {}
 
   def setting(self, name, **attrs):
     self.settings[name] = attrs
@@ -68,11 +70,36 @@ class Graph:
     node.graph = self
     return node
 
-  def edge(self, aid, bid):
-    self.nodes[bid]
-    self.nodes[aid].connections.add(bid)
+  def edge(self, aid, bid, **attrs):
+    if self.bidirectional and aid > bid:
+      aid, bid = bid, aid
+
+    conns = self.edges.setdefault(aid, {})
+    conns.setdefault(bid, {}).update(attrs)
+    self.reverse_edges.setdefault(bid, set()).add(aid)
+
+  def edge_attrs(self, aid, bid):
+    if self.bidirectional and aid > bid:
+      aid, bid = bid, aid
+
+    try:
+      return self.edges[aid][bid]
+    except KeyError:
+      return {}
+
+  def inputs(self, node_id, bidirectional=None):
+    conns = set(self.reverse_edges.get(node_id, ()))
+    if bidirectional is None:
+      bidirectional = self.bidirectional
+    if bidirectional:
+      conns.update(self.edges.get(node_id, {}).keys())
+    return conns
+
+  def outputs(self, node_id):
+    conns = set(self.edges.get(node_id, {}).keys())
     if self.bidirectional:
-      self.nodes[bid].connections.add(bid)
+      conns.update(self.reverse_edges.get(node_id, ()))
+    return conns
 
   def render(self, writer=None):
     to_str = (writer is None)
@@ -104,7 +131,6 @@ class Node:
     self._cluster = None
     self.cluster = cluster
     self.graph = None
-    self.connections = set()
 
   @property
   def cluster(self):
@@ -123,8 +149,9 @@ class Node:
   def render(self, writer):
     attrs = ' '.join(attr(k, v, False) for k, v in self.attrs.items())
     writer.line('"{}" [{}];'.format(self.id, attrs))
-    for other_id in self.connections:
-      writer.line('"{}" {} "{}"'.format(self.id, '-' if self.graph.bidirectional else '->', other_id))
+    for other_id in self.graph.inputs(self.id, bidirectional=False):
+      attrs = ' '.join(attr(k, v, False) for k, v in self.graph.edge_attrs(other_id, self.id).items())
+      writer.line('"{}" {} "{}" [{}]'.format(other_id, '--' if self.graph.bidirectional else '->', self.id, attrs))
 
 
 class Cluster(Node):
