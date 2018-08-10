@@ -48,6 +48,7 @@ import nodepy
 import nr.fs
 import os
 import sys
+import toml
 
 from craftr.core import build as _build
 from nodepy.utils import pathlib
@@ -393,6 +394,7 @@ def bind_operator(operator):
 
 __all__ += [
   'project',
+  'config',
   'target',
   'depends',
   'properties',
@@ -405,6 +407,14 @@ def project(name, version):
   scope = session.current_scope
   scope.name = name
   scope.version = version
+
+
+def config(toml_str):
+  """
+  Pass a TOML formatted string that will update the session's configuration.
+  """
+
+  session.options.update(toml.loads(toml_str))
 
 
 def target(name, bind=True):
