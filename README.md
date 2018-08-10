@@ -45,7 +45,7 @@ properties({
 cxx.build()
 ```
 
-## How to install
+## How to install?
 
 Craftr requires Python 3.6 or newer (preferrably CPython) and can be installed
 like any other Python modules.

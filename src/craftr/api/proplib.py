@@ -107,12 +107,21 @@ class Any(PropType):
 
 class Bool(PropType):
 
-  def __init__(self, strict=True):
+  def __init__(self, strict=False):
     self.strict = strict
 
   def coerce(self, name, value, owner=None):
     if self.strict and type(value) != bool:
       raise self.typeerror(name, 'bool', value)
+    if isinstance(value, str):
+      value = value.lower().strip()
+      if value in ('1', 'true', 'on', 'yes'):
+        return True
+      elif value in ('', '0', 'false', 'off', 'no'):
+        return False
+      else:
+        msg = '{}: unable to coerce string {!r} to bool'
+        raise ValueError(msg.format(name, value))
     return bool(value)
 
   def default(self):
@@ -422,3 +431,29 @@ class NoSuchProperty(KeyError):
 
 class ReadOnlyProperty(ValueError):
   pass
+
+
+def prop_type(prop_type):
+  """
+  Returns a #PropType instance from the specified string or #PropType
+  subclass or subclass.
+  """
+
+  if isinstance(prop_type, str):
+    try:
+      name = prop_type
+      prop_type = globals()[name]
+      if not isinstance(prop_type, type) or \
+          not issubclass(prop_type, PropType):
+        raise KeyError
+    except KeyError:
+      raise ValueError('invalid property type name: {!r}'.format(name))
+    return prop_type()
+  elif isinstance(prop_type, type):
+    if not issubclass(prop_type, PropType):
+      raise ValueError('not a PropType subclass: {}'.format(prop_type.__name__))
+    return prop_type()
+  elif isinstance(prop_type, PropType):
+    return prop_type
+  else:
+    raise TypeError('unexpected argument: {!r}'.format(prop_type))

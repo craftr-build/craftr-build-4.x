@@ -27,6 +27,9 @@ This module implements the glue for Node.py and Craftr modules.
 
 import nodepy
 
+from typing import Union
+from . import proplib
+
 
 class MissingRequiredOptionError(RuntimeError):
   pass
@@ -37,12 +40,29 @@ class InvalidOptionError(RuntimeError):
 
 
 class ModuleOptions:
+  """
+  The #ModuleOptions object is created in the namespace of every Craftr
+  module and can be used to easily declare and retrieved typed options.
+
+  Calling the object expects a name, a type name and a default value.
+  The type name must be the name of a property type from the
+  #craftr.api.proplib module.
+  """
+
+  __PROPTYPE_MAP = {
+    str: 'String',
+    int: 'Integer',
+    bool: 'Bool'
+  }
 
   def __init__(self, session, scope):
     self._session = session
     self._scope = scope
 
-  def declare(self, name:str, type, default=NotImplemented):
+  def __call__(self, name: str, prop_type: Union[str, proplib.PropType],
+               default = NotImplemented):
+    prop_type = self.__PROPTYPE_MAP.get(prop_type, prop_type)
+    prop_type = proplib.prop_type(prop_type)
     option_name = self._scope.name + ':' + name
     try:
       value = self._session.options[option_name]
@@ -51,30 +71,10 @@ class ModuleOptions:
         raise MissingRequiredOptionError(self._scope.name, name)
       value = default
     try:
-      value = self.adapt(type, value)
+      value = prop_type.coerce(name, value, None)
     except ValueError as exc:
       raise InvalidOptionError(self._scope.name, name, str(exc))
     setattr(self, name, value)
-
-  def adapt(self, type_cls, value):
-    if type_cls == int:
-      if isinstance(value, str):
-        return int(value)
-      elif isinstance(value, int):
-        return value
-    elif type_cls == bool:
-      if isinstance(value, str):
-        value = value.lower().strip()
-        if value in ('1', 'true', 'on', 'yes'):
-          return True
-        elif value in ('0', 'false', 'off', 'no'):
-          return False
-      elif isinstance(value, bool):
-        return value
-    elif type_cls == str:
-      if isinstance(value, str):
-        return value
-    raise TypeError('expected {}, got {}'.format(type_cls.__name__, type(value).__name__))
 
 
 class CraftrModule(nodepy.loader.PythonModule):
