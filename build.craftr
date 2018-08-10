@@ -8,7 +8,7 @@ target('lib')
 properties('cxx',
   type = 'staticLibrary',
   srcs = glob('build/src/lib/*.c'),
-  public__includes = ['test/lib']
+  public__includes = ['build/src//lib']
 )
 cxx.build()
 
