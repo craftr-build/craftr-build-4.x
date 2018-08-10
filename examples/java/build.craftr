@@ -1,0 +1,18 @@
+project('examples.java', '1.0-0')
+java = require('craftr/lang/java')
+
+target('lib')
+properties({
+  'java.srcs': glob('src/lib/*.java'),
+  '@java.artifacts': ['org.tensorflow:tensorflow:1.4.0']
+})
+java.build()
+
+target('main')
+depends(':lib')
+properties({
+  'java.srcs': ['src/Main.java'],
+  'java.mainClass': 'Main',
+  'java.bundleType': 'merge'  # We use merge because it plays better with tensorflow
+})
+java.build()

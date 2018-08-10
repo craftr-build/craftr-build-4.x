@@ -1,0 +1,12 @@
+project('examples.java-mod', '1.0-0')
+java = require('craftr/lang/java')
+target('main')
+properties('java',
+  mainClass = 'com.greetings.Main',
+  jmod = {'com.greetings': 'src/'},
+  jlinkModules = ['com.greetings'],
+  jlinkLaunchers = {'greetings': 'com.greetings/com.greetings.Main'},
+  jlinkFlags = ['--compress=2', '--strip-debug', '--no-header-files', '--no-man-pages'],
+  jlinkOutputDirectory = 'dist'
+)
+java.build()
