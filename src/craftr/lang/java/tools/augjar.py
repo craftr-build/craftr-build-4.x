@@ -1,3 +1,6 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
 # Copyright (c) 2018  Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -17,6 +20,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 """
 A small tool to augment the MANIFEST.MF in a JAR file and add files to it or
 remove files from it.
