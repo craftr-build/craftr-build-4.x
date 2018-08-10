@@ -189,7 +189,8 @@ class Operator:
   must be attached to the operator.
   """
 
-  def __init__(self, master:'Master', id:str, commands:Commands):
+  def __init__(self, master:'Master', id:str, commands:Commands,
+               explicit:bool=False, syncio:bool=False):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if not isinstance(id, str):
@@ -205,6 +206,8 @@ class Operator:
     self._target = None
     self._build_sets = []
     self._variables = {}
+    self._explicit = explicit
+    self._syncio = syncio
 
   def __repr__(self):
     return 'Operator(target={!r}, id={!r}))'.format(self._target, self._id)
@@ -228,6 +231,14 @@ class Operator:
   @property
   def target(self):
     return self._target
+
+  @property
+  def explicit(self):
+    return self._explicit
+
+  @property
+  def syncio(self):
+    return self._syncio
 
   @property
   def build_sets(self):

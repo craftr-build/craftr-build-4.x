@@ -280,8 +280,8 @@ class Operator(_build.Operator):
   to be passed explicitly.
   """
 
-  def __init__(self, name, commands):
-    super().__init__(session, name, commands)
+  def __init__(self, *args, **kwargs):
+    super().__init__(session, *args, **kwargs)
 
 
 class BuildSet(_build.BuildSet):
@@ -427,7 +427,7 @@ def properties(_scope=None, _props=None, _target=None, **kwarg_props):
         print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
 
 
-def operator(name, commands, variables=None, target=None, bind=None):
+def operator(name, commands, variables=None, target=None, bind=None, **kwargs):
   """
   Creates a new #Operator in the current target and returns it. This is not
   usually called from a project build script but modules that implement new
@@ -455,14 +455,13 @@ def operator(name, commands, variables=None, target=None, bind=None):
     target._operator_name_counter[name] = count + 1
     name += '#' + str(count)
 
-  op = target.add_operator(Operator(name, commands))
+  op = target.add_operator(Operator(name, commands, **kwargs))
   op.variables.update(variables or {})
   bind_operator(op)
   return op
 
 
-def build_set(inputs, outputs, variables=None, description=None,
-              operator=None):
+def build_set(inputs, outputs, variables=None, operator=None, **kwargs):
   """
   Creates a new build set in the current operator adding the files specified
   in the *inputs* and *outputs* dictionaries.
@@ -471,7 +470,7 @@ def build_set(inputs, outputs, variables=None, description=None,
   if operator is None:
     operator = current_operator()
 
-  bset = BuildSet(description=description)
+  bset = BuildSet(**kwargs)
   bset.variables.update(variables or {})
   for set_name, files in inputs.items():
     if isinstance(files, str):
