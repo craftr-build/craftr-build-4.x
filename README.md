@@ -17,6 +17,15 @@ modern build requirements.
 <sup>1) Build scripts are loaded through [Node.py] and and have access to an
   extended set of global variables provided by the `craftr.api` module.</sup>
 
+## What's next?
+
+[Ninja]: https://ninja-build.org/
+[Craftr 3]: https://github.com/craftr-build/craftr/tree/3.0
+
+* Build graph serialization (`--configure` and `--build` steps)
+* [Ninja] build backend
+* Port (and enhance) standard library from [Craftr 3]
+
 ## How does it work?
 
 Build scripts in Craftr always have access to the members exported by the
