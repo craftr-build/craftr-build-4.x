@@ -1,20 +1,46 @@
-project('craftr/lang/java', '1.0-0')
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+This module implements functions to build Java applications, libraries and
+modules. It also supports referencing artifacts from Maven repositories.
+"""
+
 
 import copy
 import shlex
 import sys
-
 import maven from './tools/maven'
 import platform_commands from './tools/platform-commands'
 
 from nr.stream import stream
 
-options.declare('onejar', str, path.join(module.directory, "tools", "one-jar-boot-0.97.jar"))
-options.declare('javac', str, 'javac')
-options.declare('javacJar', str, 'jar')
-options.declare('compilerFlags', str, '')
+project('craftr/lang/java', '1.0-0')
+options('onejar', str, path.join(module.directory, "tools", "one-jar-boot-0.97.jar"))
+options('javac', str, 'javac')
+options('javacJar', str, 'jar')
+options('compilerFlags', str, '')
 
-ONEJAR_FILENAME = options.onejar
 AUGJAR_TOOL = path.join(path.dir(__file__), 'tools', 'augjar.py')
 DOWNLOAD_TOOL = path.join(path.dir(__file__), 'tools', 'download.py')
 
@@ -179,6 +205,11 @@ _artifacts_target = target('artifacts')
 
 
 def build():
+  """
+  This is function should be called after a target's `java.` properties have
+  been set up.
+  """
+
   scope = current_scope()
   target = current_target()
   depends(_artifacts_target)
@@ -344,10 +375,10 @@ def build():
       for infile in inputs[1:]:
         command += ['-m', infile]
     elif data.bundleType == 'onejar':
-      command += [ONEJAR_FILENAME, '-s', 'One-Jar-Main-Class=' + data.mainClass]
+      command += [options.onejar, '-s', 'One-Jar-Main-Class=' + data.mainClass]
       for infile in inputs:
         command += ['-f', 'lib/' + path.base(infile) + '=' + infile]
-      inputs += [ONEJAR_FILENAME]
+      inputs += [options.onejar]
     else:
       raise ValueError('invalid bundleType: {!r}'.format(data.bundleType))
     operator('java.bundle', commands=[command])
