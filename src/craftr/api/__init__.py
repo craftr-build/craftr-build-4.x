@@ -347,10 +347,7 @@ __all__ += [
   'depends',
   'properties',
   'operator',
-  'build_set',
-  'glob',
-  'chfdir',
-  'fmt'
+  'build_set'
 ]
 
 
@@ -500,6 +497,34 @@ def build_set(inputs, outputs, variables=None, operator=None, **kwargs):
   return bset
 
 
+# Utilities
+# =========
+
+__all__ += [
+  'path',
+  'complete_list_with',
+  'glob',
+  'chfdir',
+  'fmt'
+]
+
+path = nr.fs
+
+def complete_list_with(dest, source, update):
+  """
+  Calls *update()* for every missing element in *dest* compared to *source*.
+  The update function will receive the respective element from *source* as
+  an argument.
+
+  Modifies and returns *dest*.
+  """
+
+  if len(dest) >= len(source): return dest
+  while len(dest) < len(source):
+    dest.append(update(source[len(dest)]))
+  return dest
+
+
 def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
          ignore_false_excludes=False):
   if not parent:
@@ -557,28 +582,3 @@ def fmt(s, frame=None):
   frame = frame or inspect.currentframe().f_back
   vars = Resolver(frame)
   return s.format_map(vars)
-
-
-# Utilities
-# =========
-
-__all__ += [
-  'path',
-  'complete_list_with'
-]
-
-path = nr.fs
-
-def complete_list_with(dest, source, update):
-  """
-  Calls *update()* for every missing element in *dest* compared to *source*.
-  The update function will receive the respective element from *source* as
-  an argument.
-
-  Modifies and returns *dest*.
-  """
-
-  if len(dest) >= len(source): return dest
-  while len(dest) < len(source):
-    dest.append(update(source[len(dest)]))
-  return dest
