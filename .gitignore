@@ -1,5 +1,5 @@
+/.pytest_cache
 /.venv*
 /build
 /test.*
-/test
 *.egg-info
