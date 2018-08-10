@@ -23,7 +23,7 @@ def open_cli_file(filename, mode):
 def get_argument_parser(prog=None):
   parser = argparse.ArgumentParser(prog=prog, allow_abbrev=False)
 
-  # Build options
+  # Configuration options
 
   parser.add_argument('--project', default='build.craftr',
     help='The Craftr project file or directory to load.')
@@ -32,6 +32,21 @@ def get_argument_parser(prog=None):
     help='The build variant. Defaults to debug.')
   parser.add_argument('--build-directory',
     help='The build output directory. Defaults to build/{variant}.')
+  parser.add_argument('--backend', default='craftr/backends/python',
+    help='The build backend to use.')
+  parser.add_argument('--verbose', action='store_true')
+  parser.add_argument('--recursive', action='store_true')
+
+  # Invokation options
+
+  parser.add_argument('--export', action='store_true',
+    help='Execute the build module and serialize the build graph.')
+  parser.add_argument('--build', action='store_true',
+    help='Execute the build. Additional arguments are treated as '
+         'the targets that are to be built.')
+  parser.add_argument('--clean', action='store_true',
+    help='Clean the build output files. Additional arguments are '
+         'treated as the targets that are to be cleaned.')
 
   # Meta options
 
@@ -57,11 +72,12 @@ def main(argv=None, prog=None):
   # Create a new session.
   session = api.session = api.Session(args.build_directory, args.variant)
 
-  print()
-  print('===== LOADING BUILD MODULE')
-  print()
+  backend = session.load_module(args.backend).namespace
 
-  module = session.load_module_from_file(args.project, is_main=True)
+  if args.export:
+    module = session.load_module_from_file(args.project, is_main=True)
+  else:
+    raise NotImplementedError('build graph deserialization not implemented')
 
   # Determine the build sets that are supposed to be built.
   if selection:
@@ -95,15 +111,12 @@ def main(argv=None, prog=None):
       p.communicate(dotstr)
     return 0
 
-  print()
-  print('===== STARTING BUILD')
-  print()
-
-  execute(session, build_sets)
-
-  print()
-  print('===== END')
-  print()
+  if args.export:
+    backend.export()
+  if args.clean:
+    backend.clean(build_sets, args.recursive, args.verbose)
+  if args.build:
+    backend.build(build_sets, args.verbose)
 
 
 if __name__ == '__main__':

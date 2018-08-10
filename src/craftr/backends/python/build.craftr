@@ -1,0 +1,48 @@
+project('craftr/backends/python', '1.0-0')
+
+import errno
+import os
+import shutil
+
+from craftr.core.build import execute
+from nr.stream import stream
+
+def _remove(p):
+  if path.isdir(p):
+    shutil.rmtree(p)
+  else:
+    os.remove(p)
+
+
+def export():
+  pass
+
+
+def clean(build_sets, recursive, verbose):
+  seen = set()
+  queue = list(build_sets)
+  files_to_remove = []
+  while queue:
+    bset = queue.pop()
+    if bset in seen: continue
+    files_to_remove += stream.concat(bset.outputs.values())
+    if recursive:
+      queue += bset.get_input_build_sets()
+  print('Cleaning {} file(s) ...'.format(len(files_to_remove)))
+  for x in files_to_remove:
+    if verbose:
+      print('  {}'.format(x), end='')
+    try:
+      _remove(x)
+      if verbose:
+        print(' [OK]')
+    except OSError as exc:
+      if verbose:
+        print(' [{}]'.format(errno.errorcode.get(exc.errno, '???')))
+
+
+def build(build_sets, verbose):
+  print()
+  print('======= BUILD')
+  print()
+  execute(session, build_sets)
