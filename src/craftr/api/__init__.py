@@ -71,8 +71,9 @@ class Session(_build.Master):
   scopes current directory and every scope gets its own build output directory.
   """
 
-  def __init__(self, build_directory: str):
+  def __init__(self, build_directory: str, build_variant: str):
     super().__init__()
+    self._build_variant = build_variant
     self._build_directory = nr.fs.canonical(build_directory)
     self._current_scopes = []
     self.options = {}
@@ -93,6 +94,10 @@ class Session(_build.Master):
     self.nodepy_context.register_module(module)
     self.nodepy_context.load_module(module)
     return module
+
+  @property
+  def build_variant(self):
+    return self._build_variant
 
   @property
   def build_directory(self):

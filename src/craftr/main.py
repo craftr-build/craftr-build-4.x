@@ -55,7 +55,7 @@ def main(argv=None, prog=None):
     args.project = nr.fs.join(args.project, 'build.craftr')
 
   # Create a new session.
-  session = api.session = api.Session(args.build_directory)
+  session = api.session = api.Session(args.build_directory, args.variant)
 
   print()
   print('===== LOADING BUILD MODULE')
