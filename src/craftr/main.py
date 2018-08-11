@@ -132,14 +132,21 @@ def main(argv=None, prog=None):
           targets.append(target)
 
       if not targets:
-        print('error: no targets matched:', full_name)
+        print('error: no targets matched {!r}'.format(full_name))
         return 1
 
       # Find all matching operators and add their build sets.
+      found_sets = False
       for target in targets:
         for op in target.operators:
           if (not op_name and not op.explicit) or op.id.partition('#')[0] == op_name:
+            found_sets = True
             build_sets += op.build_sets
+
+      if not found_sets:
+        print('error: no operators matched {!r}'.format(op_name))
+        return 1
+
   else:
     build_sets = [x for x in session.all_build_sets() if not x.operator.explicit]
 
