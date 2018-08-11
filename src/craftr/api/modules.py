@@ -121,3 +121,18 @@ class CraftrModuleLoader(nodepy.resolver.StdResolver.Loader):
 
   def load_module(self, context, package, filename):
     return CraftrModule(self.session, context, None, filename)
+
+
+class CraftrLinkResolver(nodepy.base.Resolver):
+
+  def __init__(self):
+    self._aliases = {}
+
+  def add_alias(self, alias, module):
+    self._aliases[alias] = module
+
+  def resolve_module(self, request):
+    module = self._aliases.get(str(request.string))
+    if module is None:
+      raise nodepy.base.ResolveError(requests, [], [])
+    return module

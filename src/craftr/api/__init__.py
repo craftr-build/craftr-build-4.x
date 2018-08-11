@@ -49,6 +49,7 @@ import json
 import nodepy
 import nr.fs
 import os
+import re
 import sys
 import toml
 
@@ -59,7 +60,7 @@ from nr.types.named import Named
 from nr.types.map import MapAsObject
 from nr.types.set import OrderedSet
 from werkzeug.local import LocalProxy
-from .modules import CraftrModuleLoader
+from .modules import CraftrModuleLoader, CraftrLinkResolver
 from .proplib import PropertySet, Properties, NoSuchProperty
 
 STDLIB_DIR = nr.fs.join(nr.fs.dir(nr.fs.dir(nr.fs.dir(__file__))))
@@ -117,14 +118,21 @@ class Session(_build.Master):
     self._current_scopes = []
     self.options = {}
     self.loader = CraftrModuleLoader(self)
+    self.link_resolver = CraftrLinkResolver()
     self.nodepy_context = nodepy.context.Context()
     self.nodepy_context.resolver.loaders.append(self.loader)
     self.nodepy_context.resolver.paths.append(pathlib.Path(STDLIB_DIR))
+    self.nodepy_context.resolvers.insert(0, self.link_resolver)
     self.target_props = PropertySet()
     self.dependency_props = PropertySet()
     self.os_info = OsInfo.new()
     self.build_info = BuildInfo(self._build_variant)
     Target.init_properties(self.target_props)
+
+  def add_module_search_path(self, path):
+    if isinstance(path, str):
+      path = [path]
+    self.nodepy_context.resolver.paths += [pathlib.Path(x) for x in path]
 
   def load_config(self, config):
     """
@@ -474,6 +482,7 @@ def bind_operator(operator):
 __all__ += [
   'project',
   'config',
+  'link_module',
   'target',
   'depends',
   'properties',
@@ -494,6 +503,29 @@ def config(toml_str):
   """
 
   session.options.update(toml.loads(toml_str))
+
+
+def link_module(path, alias=None):
+  """
+  This function can be used in a build script that uses a Craftr module from
+  its subdirectories to make it available publicly.
+  """
+
+  path = nr.fs.canonical(path, current_scope().directory)
+  module = session.nodepy_context.require.resolve(path)
+  if alias is None:
+    with module.filename.open() as fp:
+      match = re.match('^project\((.*?)\)', fp.read(), re.M | re.X)
+      if not match:
+        raise ValueError('could not find project name in "{}"'.format(path))
+      expr = 'project = lambda name, version: (name, version)\nname, version = project({})'
+      expr = expr.format(match.group(1))
+      scope = {}
+      exec(expr, scope)
+      alias = scope['name']
+
+  print('linked module "{}" from "{}"'.format(alias, path))
+  session.link_resolver.add_alias(alias, module)
 
 
 def target(name, bind=True):

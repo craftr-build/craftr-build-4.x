@@ -48,6 +48,8 @@ def get_argument_parser(prog=None):
     help='Specify one or more options.')
   parser.add_argument('--verbose', action='store_true')
   parser.add_argument('--recursive', action='store_true')
+  parser.add_argument('--module-path', action='append', default=[],
+    help='Additional module search paths.')
 
   # Invokation options
 
@@ -91,6 +93,7 @@ def main(argv=None, prog=None):
 
   # Create a new session.
   session = api.session = api.Session(args.build_root, args.build_directory, args.variant)
+  session.add_module_search_path(args.module_path)
   if args.config_file:
     session.load_config(args.config_file)
   for opt in args.options or ():
