@@ -93,22 +93,19 @@ class MsvcCompiler(base.Compiler):
     props.add('cxx.msvcNoDefaultLib', 'StringList')
     props.add('cxx.msvcResourceFiles', 'PathList')
     props.add('cxx.msvcConformance', 'StringList', options={'inherit': True})
+    props.add('cxx.outMsvcResourceFiles', 'PathList')
 
   # @override
   def translate_target(self, target, data):
     src_dir = target.scope.directory
     obj_dir = path.join(target.build_directory, 'obj')
     if data.msvcResourceFiles:
-      outfiles = craftr.relocate_files(src_dir, data.msvcResourceFiles, obj_dir, '.res')
-      command = ['rc', '/r', '/nologo', '/fo', '$out', '$in']
-      action = target.add_action(
-        'cxx.msvcRc',
-        commands = [command],
-        environ = self.compiler_env
-      )
-      buildset = action.add_buildset()
-      buildset.files.add(data.msvcResourceFiles, ['in'])
-      buildset.files.add(outfiles, ['out', 'obj'])   # Include in the link step
+      outfiles = [chfdir(nr.fs.setsuffix(x, '.res'), obj_dir, src_dir)
+                  for x in data.msvcResourceFiles]
+      command = ['rc', '/r', '/nologo', '/fo', '$@out', '$<in']
+      operator('cxx.msvcRc', commands=[command], environ=self.compiler_env)
+      build_set({'in': data.msvcResourceFiles}, {'out': outfiles})
+      properties(target, {'@cxx.outMsvcResourceFiles+': outfiles})
 
   # @override
   def get_compile_command(self, target, data, lang):
@@ -173,6 +170,7 @@ class MsvcCompiler(base.Compiler):
 
   # @override
   def add_link_outputs(self, target, data, lang, buildset):
+    buildset.add_input_files('in', target['cxx.outMsvcResourceFiles'])
     if base.is_sharedlib(data):
       implib = path.setsuffix(data.productFilename, '.lib')
       buildset.add_output_files('outImplib', [implib])
