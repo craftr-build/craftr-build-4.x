@@ -39,5 +39,5 @@ def main(argv=None):
       dst.write('\n};\n')
 
 
-if require.main == module:
+if __name__ == '__main__':
   sys.exit(main())

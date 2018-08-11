@@ -14,7 +14,7 @@ options('architecture', str, OS.arch)
 options('toolchain', str, _toolchainDefault)
 options('staticRuntime', bool, OS.id == 'win32')
 
-import nodepy
+import sys
 import base from './impl/base'
 
 # TODO: Handle staticRuntime option.
@@ -296,7 +296,7 @@ def build():
     c_srcs.append(outfile)
 
     bin2c = str(require.resolve('./tools/bin2c').filename)
-    command = nodepy.runtime.exec_args + [bin2c, '-o', outfile]
+    command = [sys.executable, bin2c, '-o', outfile]
     command += ['{}:{}'.format(f, sym) for sym, f in data.embedFiles.items()]
 
     operator('cxx.bin2c', commands=[command])
