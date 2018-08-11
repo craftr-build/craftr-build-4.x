@@ -234,6 +234,11 @@ def _init_properties():
   # can not compile AND actually build at the same time.
   props.add('cxx.saveTemps', 'Bool', False)
 
+  # Outputs
+  # =======================
+
+  props.add('cxx.outLinkLibraries', 'PathList', options={'inherit': True})
+
   # Dependency Properties
   # =======================
 

@@ -6,6 +6,7 @@ import nr.fs as path
 import nr.stream
 import base from './base'
 import msvc from 'craftr/tools/msvc'
+import {options} from '../build.craftr'
 
 unique = nr.stream.stream.unique
 
@@ -128,7 +129,7 @@ class MsvcCompiler(base.Compiler):
     command += ['/wd' + str(x) for x in unique(data.msvcDisableWarnings)]
 
     if not data.runtimeLibrary:
-      data.runtimeLibrary = 'dynamic'
+      data.runtimeLibrary = 'static' if options.staticRuntime else 'dynamic'
     if data.runtimeLibrary == 'static':
       command += ['/MTd' if BUILD.debug else '/MT']
     elif data.runtimeLibrary == 'dynamic' or data.runtimeLibrary is None:
@@ -175,6 +176,8 @@ class MsvcCompiler(base.Compiler):
     if base.is_sharedlib(data):
       implib = path.setsuffix(data.productFilename, '.lib')
       buildset.files.add(implib, ['out', 'implib'])
+      properties({'@+cxx.outLinkLibraries': [implib]}, target=target)
+    super().add_link_outputs(target, data, lang, buildset)
 
 
 def get_compiler(fragment):

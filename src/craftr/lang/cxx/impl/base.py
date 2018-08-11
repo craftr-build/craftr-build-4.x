@@ -294,15 +294,15 @@ class Compiler(nr.types.Named):
   def create_link_action(self, target, data, action_name, lang, object_files):
     command = self.get_link_command(target, data, lang)
 
-    # TODO: Find input libraries to link with and that we add as input files
-    #       eg. from cxx.outStaticLibs.
+    input_files = list(object_files) + data.outLinkLibraries
 
     op = operator(action_name, commands=[command], environ=self.linker_env)
-    bset = BuildSet({'in': object_files}, {'product': data.productFilename})
+    bset = BuildSet({'in': input_files}, {'product': data.productFilename})
     self.add_link_outputs(target, data, lang, bset)
     op.add_build_set(bset)
 
     return op
 
   def add_link_outputs(self, target, data, lang, buildset):
-    pass
+    if is_staticlib(data):
+      properties({'@+cxx.outLinkLibraries': [data.productFilename]}, target=target)

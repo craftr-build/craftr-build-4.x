@@ -52,8 +52,6 @@ elif OS.id == 'win32' and cxx.compiler.id in ('msvc', 'mingw'):
 else:
   mode = 'pkg-config'
 
-windows_syslibs = ['gdi32', 'shell32']
-
 target('glfw')
 
 if mode == 'pkg-config':
@@ -81,8 +79,14 @@ if mode == 'win32-prebuilt':
 
   properties({
     '@cxx.includes+': [path.join(options.binaryDir, 'include')],
+    '@cxx.defines+': [] if options.static else ['GLFW_DLL'],
     '@cxx.libraryPaths+': [path.join(options.binaryDir, libdir)],
-    '@cxx.systemLibraries+': ['glfw3' if options.static else 'glfw3dll'] + windows_syslibs
+    '@cxx.systemLibraries+': ['glfw3' if options.static else 'glfw3dll']
+  })
+
+if OS.id == 'win32':
+  properties({
+    '@cxx.systemLibraries+': ['gdi32', 'shell32']
   })
 
 if mode == 'source':
@@ -100,7 +104,6 @@ if mode == 'source':
   if OS.id == 'win32':
     environ['_GLFW_WIN32'] = True
     sources += ['win32_*.c', 'wgl_context.c']
-    syslibs += windows_syslibs
   elif OS.id == 'darwin':
     environ['_GLFW_COCOA'] = True
   elif OS.id == 'linux':
@@ -136,7 +139,4 @@ if mode == 'source':
     '@cxx.systemLibraries+': syslibs
   })
 
-if OS.id == 'win32':
-  properties({
-    '@cxx.systemLibraries+': ['gdi32', 'shell32']
-  })
+  cxx.build()
