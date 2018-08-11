@@ -2,6 +2,7 @@
 import argparse
 import contextlib
 import io
+import os
 import nr.fs
 import subprocess
 import sys
@@ -158,7 +159,7 @@ def main(argv=None, prog=None):
   if args.dump_svg is not NotImplemented:
     dotstr = to_graph(session).render().encode('utf8')
     with open_cli_file(args.dump_svg, 'w') as fp:
-      command = ['dot', '-T', 'svg']
+      command = [os.environ.get('DOTENGINE', 'dot'), '-T', 'svg']
       p = subprocess.Popen(command, stdout=fp, stdin=subprocess.PIPE)
       p.communicate(dotstr)
     return 0

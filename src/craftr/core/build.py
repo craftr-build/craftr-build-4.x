@@ -179,6 +179,9 @@ class Commands:
   def __repr__(self):
     return 'Commands({})'.format(self._commands)
 
+  def __iter__(self):
+    return (x[:] for x in self._commands)
+
   @property
   def inputs(self):
     return self._inputs
@@ -240,7 +243,7 @@ class Operator:
 
   @property
   def commands(self):
-    return [x[:] for x in self._commands]
+    return list(self._commands)
 
   @property
   def variables(self):
@@ -396,7 +399,6 @@ def to_graph(master):
   g = G.Graph(bidirectional=False)
   g.setting('graph', fontsize=10, fontname='monospace')
   g.setting('node', shape='record', style='filled', fontsize=10, fontname='monospace')
-  g.setting('edge', spline='line')
 
   def file_node(filename, cluster=None):
     ident = 'File:{}'.format(filename)
@@ -405,10 +407,35 @@ def to_graph(master):
     return g.node(ident, cluster, label=nr.fs.base(filename))
 
   def bset_node(bset, cluster=None):
-    ident = 'BuildSet:{}'.format(id(bset))
+    # Add all this information in the identifier as it is displayed in the
+    # browser when hovering over the SVG element.
+    label = '\n'.join(' '.join(map(shlex.quote, x)) for x in bset.operator.commands)
+    ident = 'BuildSet:{}\nOperator: {}/{}\n'.format(id(bset), bset.operator.target.id, bset.operator.id) + '\n' + label
     if ident in g.nodes:
       return g.nodes[ident]
-    return g.node(ident, cluster, shape='point')
+    return g.node(ident, cluster, label='', shape='circle', fixedsize='true',
+      width='0.2', color='brown4', fillcolor='brown3')
+
+  def target_cluster(target):
+    return None
+    ident = 'Target:{}'.format(target.id)
+    if ident in g.clusters:
+      return g.clusters[ident]
+    return g.cluster(ident)
+
+  def op_cluster(op, cluster=None):
+    return None
+    ident = 'Operator:{}:{}'.format(op.target.id, op.id)
+    if ident in g.clusters:
+      return g.clusters[ident]
+
+    if cluster is None:
+      cluster = target_cluster(op.target)
+
+    cluster = g.cluster(ident, cluster, label='', xlabel='foo',
+      fillcolor='azure2', color='azure3', style='filled')
+
+    return cluster
 
   bsets = []
   for target in master.targets:
@@ -429,7 +456,7 @@ def to_graph(master):
     for f in stream.concat(bset.inputs.values()):
       g.edge(file_node(f).id, node.id)
     for f in stream.concat(bset.outputs.values()):
-      g.edge(node.id, file_node(f).id)
+      g.edge(node.id, file_node(f, op_cluster(bset.operator)).id)
 
   return g
 

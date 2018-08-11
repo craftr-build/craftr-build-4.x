@@ -31,8 +31,13 @@ import io
 
 def escape(value):
   value = str(value)
-  value = value.replace('"', '\\"').replace('{', '\\{').replace('}', '\\}')
+  value = value.replace('\\', '\\\\')
+  value = value.replace('"', '\\"')
+  value = value.replace('{', '\\{')
+  value = value.replace('}', '\\}')
   value = value.replace('\n', '\\n')
+  value = value.replace('<', '\\<')
+  value = value.replace('>', '\\>')
   return value
 
 
