@@ -32,6 +32,7 @@ project('craftr/tools/cache', '1.0-0')
 
 import atexit
 import contextlib
+import hashlib
 import json
 
 
@@ -40,8 +41,8 @@ class CacheManager:
   def __init__(self, filename):
     self.data = {}
     self.filename = filename
-    self.changed = False
     self.load()
+    self.hash = self.calculate_hash()
 
   def __repr__(self):
     return 'CacheManager(filename={!r}, data=...)'.format(self.filename)
@@ -54,25 +55,19 @@ class CacheManager:
 
   def __setitem__(self, key, value):
     self.data[key] = value
-    self.changed = True
 
   def __delitem__(self, key):
     del self.data[key]
-    self.changed = True
 
   def pop(self, key, *a):
     v = self.data.pop(key, *a)
-    self.changed = True
     return v
 
   def get(self, key, *a):
     return self.data.get(key, *a)
 
   def setdefault(self, key, value):
-    new_value = self.data.setdefault(key, value)
-    if new_value is not value:
-      self.changed = True
-    return new_value
+    return self.data.setdefault(key, value)
 
   def load(self):
     try:
@@ -84,10 +79,16 @@ class CacheManager:
       print('warning: error loading cache "{!r}": {}'.format(filename, exc))
 
   def save(self):
-    if self.changed:
+    # We only want to save the cache if something actually changed.
+    new_hash = self.calculate_hash()
+    if new_hash != self.hash:
       path.makedirs(path.dir(self.filename))
       with open(self.filename, 'w') as fp:
         json.dump(self.data, fp)
+      self.hash = new_hash
+
+  def calculate_hash(self):
+    return hashlib.sha1(json.dumps(self.data, sort_keys=True).encode()).hexdigest()
 
 
 g = CacheManager(path.join(session.build_root, 'craftr_cache.json'))
