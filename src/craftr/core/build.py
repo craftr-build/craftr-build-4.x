@@ -42,7 +42,7 @@ import subprocess
 
 from nr.types.map import ChainMap, ValueIterableMap
 from nr.stream import stream
-from typing import Iterable, List, Union
+from typing import Dict, Iterable, List, Union
 from .template import TemplateCompiler
 
 
@@ -55,13 +55,15 @@ class BuildSet:
   This is done automatically when adding files to the set.
   """
 
-  def __init__(self, master:'Master', description:str=None):
+  def __init__(self, master: 'Master', description: str = None,
+               environ: Dict[str, str] = None):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if description is not None and not isinstance(description, str):
       raise TypeError('expected str, got {}'.format(type(description).__name__))
     self._master = master
     self._description = description
+    self._environ = environ
     self._inputs = {}
     self._outputs = {}
     self._variables = {}
@@ -79,6 +81,10 @@ class BuildSet:
   @property
   def description(self):
     return self._description
+
+  @property
+  def environ(self):
+    return self._environ
 
   @property
   def inputs(self):
@@ -147,6 +153,9 @@ class BuildSet:
     variables = ChainMap(self._variables, self._operator._variables)
     return ' '.join(template.render(self._inputs, self._outputs, variables))
 
+  def get_environ(self):
+    return ChainMap(self._environ or {}, self._operator.environ or {})
+
 
 class Commands:
   """
@@ -190,8 +199,10 @@ class Operator:
   must be attached to the operator.
   """
 
-  def __init__(self, master:'Master', id:str, commands:Commands,
-               explicit:bool=False, syncio:bool=False):
+  def __init__(self, master: 'Master', id: str, commands: Commands,
+               environ: Dict[str, str] = None, explicit: bool = False,
+               syncio: bool = False):
+
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if not isinstance(id, str):
@@ -207,6 +218,7 @@ class Operator:
     self._target = None
     self._build_sets = []
     self._variables = {}
+    self._environ = environ
     self._explicit = explicit
     self._syncio = syncio
 
@@ -232,6 +244,10 @@ class Operator:
   @property
   def target(self):
     return self._target
+
+  @property
+  def environ(self):
+    return self._environ
 
   @property
   def explicit(self):

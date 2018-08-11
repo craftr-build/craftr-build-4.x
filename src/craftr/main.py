@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 from craftr import api
-from craftr.core.build import to_graph, execute
+from craftr.core.build import to_graph
 
 
 @contextlib.contextmanager
