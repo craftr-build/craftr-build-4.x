@@ -122,10 +122,24 @@ def main(argv=None, prog=None):
         target_name, op_name = name.partition(':')[::2]
       else:
         target_name, op_name = name, None
-      target = session.targets[scope + '@' + target_name]
-      for op in target.operators:
-        if (not op_name and not op.explicit) or op.id.partition('#')[0] == op_name:
-          build_sets += op.build_sets
+
+      # Find the target with the exact name and subtargets.
+      full_name = scope + '@' + target_name
+      prefix = full_name + '/'
+      targets = []
+      for target in session.targets:
+        if target.id == full_name or target.id.startswith(prefix):
+          targets.append(target)
+
+      if not targets:
+        print('error: no targets matched:', full_name)
+        return 1
+
+      # Find all matching operators and add their build sets.
+      for target in targets:
+        for op in target.operators:
+          if (not op_name and not op.explicit) or op.id.partition('#')[0] == op_name:
+            build_sets += op.build_sets
   else:
     build_sets = [x for x in session.all_build_sets() if not x.operator.explicit]
 
