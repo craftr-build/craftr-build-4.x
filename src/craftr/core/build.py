@@ -62,9 +62,9 @@ class BuildSet:
     if description is not None and not isinstance(description, str):
       raise TypeError('expected str, got {}'.format(type(description).__name__))
     self._master = master
-    self._description = description
+    self.description = description
     self._environ = environ
-    self._cwd = cwd
+    self._cwd = cwd or None  # empty string is invalid, fallback to None
     self._inputs = {}
     self._outputs = {}
     self._variables = {}
@@ -78,10 +78,6 @@ class BuildSet:
   @property
   def master(self):
     return self._master
-
-  @property
-  def description(self):
-    return self._description
 
   @property
   def environ(self):
@@ -153,8 +149,8 @@ class BuildSet:
     """
 
     if not self._operator:
-      return self._description
-    template = TemplateCompiler().compile_list(shlex.split(self._description))
+      return self.description
+    template = TemplateCompiler().compile_list(shlex.split(self.description))
     variables = ChainMap(self._variables, self._operator._variables)
     return ' '.join(template.render(self._inputs, self._outputs, variables))
 
@@ -227,7 +223,7 @@ class Operator:
     self._build_sets = []
     self._variables = {}
     self._environ = environ
-    self._cwd = cwd
+    self._cwd = cwd or None  # empty string is invalid, fallback to None
     self._explicit = explicit
     self._syncio = syncio
 

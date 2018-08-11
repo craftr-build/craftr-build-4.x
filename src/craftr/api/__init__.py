@@ -34,6 +34,7 @@ __all__ = [
   'session',
   'OS',
   'BUILD',
+  'BuildSet',
   'current_session',
   'current_scope',
   'current_target',
@@ -334,8 +335,17 @@ class Operator(_build.Operator):
 
 class BuildSet(_build.BuildSet):
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, inputs, outputs, variables=None, *args, **kwargs):
     super().__init__(session, *args, **kwargs)
+    self.variables.update(variables or {})
+    for set_name, files in inputs.items():
+      if isinstance(files, str):
+        files = [files]
+      self.add_input_files(set_name, files)
+    for set_name, files in outputs.items():
+      if isinstance(files, str):
+        files = [files]
+      self.add_output_files(set_name, files)
 
 
 class ModuleError(RuntimeError):
@@ -540,7 +550,7 @@ def operator(name, commands, variables=None, target=None, bind=None, **kwargs):
   return op
 
 
-def build_set(inputs, outputs, variables=None, operator=None, **kwargs):
+def build_set(*args, operator=None, **kwargs):
   """
   Creates a new build set in the current operator adding the files specified
   in the *inputs* and *outputs* dictionaries.
@@ -549,17 +559,7 @@ def build_set(inputs, outputs, variables=None, operator=None, **kwargs):
   if operator is None:
     operator = current_operator()
 
-  bset = BuildSet(**kwargs)
-  bset.variables.update(variables or {})
-  for set_name, files in inputs.items():
-    if isinstance(files, str):
-      files = [files]
-    bset.add_input_files(set_name, files)
-  for set_name, files in outputs.items():
-    if isinstance(files, str):
-      files = [files]
-    bset.add_output_files(set_name, files)
-
+  bset = BuildSet(*args, **kwargs)
   operator.add_build_set(bset)
   return bset
 
