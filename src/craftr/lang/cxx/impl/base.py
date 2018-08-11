@@ -190,6 +190,8 @@ class Compiler(nr.types.Named):
     command.extend(self.expand(self.enable_rtti if data.enableRtti else self.disable_rtti))
     if not BUILD.debug and data.optimization:
       command += self.expand(getattr(self, 'optimize_' + data.optimization + '_flag'))
+    if BUILD.debug:
+      command += self.expand(self.debug_flag)
     if forced_includes:
       command += stream.concat(self.expand(self.force_include, x) for x in forced_includes)
 

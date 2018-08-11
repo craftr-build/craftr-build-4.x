@@ -76,7 +76,7 @@ class GccCompiler(base.Compiler):
     buildset.add_output_files('obj', [obj])
 
 
-def get_compiler(fragment):
+def get_compiler(fragment, compiler_class=GccCompiler):
   # TODO: Parse fragment to allow different compiler version
   #       or cross-compiler
-  return GccCompiler()
+  return compiler_class()
