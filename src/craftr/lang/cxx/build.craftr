@@ -1,0 +1,338 @@
+project('craftr/lang/cxx', '1.0-0')
+
+if OS.id == 'win32':
+  if OS.type == 'nt':
+    _toolchainDefault = 'msvc'
+  else:
+    _toolchainDefault = 'mingw'
+elif OS.id == 'darwin':
+  _toolchainDefault = 'clang'
+else:
+  _toolchainDefault = 'gcc'
+
+options('architecture', str, OS.arch)
+options('toolchain', str, _toolchainDefault)
+options('staticRuntime', bool, OS.id == 'win32')
+
+import nodepy
+import base from './impl/base'
+
+# TODO: Handle staticRuntime option.
+# TODO: Support precompiled headers.
+# TODO: Support compiler-wrappers like ccache.
+# TODO: Support linker-wrappers (eg. for coverage).
+
+def _load_compiler():
+  toolchain, fragment = (options.toolchain).partition('#')[::2]
+  return require('./impl/' + options.toolchain).get_compiler(fragment)
+
+
+def _init_properties():
+  props = session.target_props
+  # Largely inspired by the Qbs cpp module.
+  # https://doc.qt.io/qbs/cpp-module.html
+
+  # General
+  # =======================
+
+  # Specifies the target type. Either `executable` or `library`.
+  props.add('cxx.type', 'String', 'executable')
+
+  # Link object files to an executable/library.
+  props.add('cxx.link', 'Bool', default=True)
+
+  # The name of the output file. This string may contain the string
+  # `$(ext)` which will be replaced with the platform's proper extension.
+  # It may also contain the string `$(lib)` which will be replaced by
+  # `lib` on OSX and macOS but with an empty string on Windows.
+  props.add('cxx.productName', 'String')
+
+  # The output directory for the product. If not specified, defaults
+  # to the targets build output directory. Note that this is a path
+  # property that will automatically convert relative to absolute paths
+  # from the target's or module's directory.
+  props.add('cxx.productDirectory', 'Path', optional=True)
+
+  # The C and/or C++ input files for the target. If this property is not
+  # set, the target will not be considered a C/C++ build target.
+  props.add('cxx.srcs', 'PathList', options={'inherit': True})
+
+  # Allow the link-step to succeed even if symbols are unresolved.
+  props.add('cxx.allowUnresolvedSymbols', 'Bool', False)
+
+  # Combine C/C++ sources into a single translation unit. Note that
+  # many projects can not be compiled in this fashion.
+  props.add('cxx.combineCSources', 'Bool', False)
+  props.add('cxx.combineCppSources', 'Bool', False)
+
+  # Allow the linker to discard data that appears to be unused.
+  # This value being undefined uses the linker's default.
+  props.add('cxx.discardUnusedData', 'Bool')
+
+  # Whether to store debug information in an external file or bundle
+  # instead of within the binary. Defaults to True for MSVC, False
+  # otherwise.
+  props.add('cxx.separateDebugInformation', 'Bool')
+
+  # Preprocessor definitions to set when compiling.
+  props.add('cxx.defines', 'StringList', options={'inherit': True})
+  props.add('cxx.definesForStaticBuild', 'StringList', options={'inherit': True})
+  props.add('cxx.definesForSharedBuild', 'StringList', options={'inherit': True})
+
+  # Include search paths.
+  props.add('cxx.includes', 'PathList', options={'inherit': True})
+
+  # Library search paths.
+  props.add('cxx.libraryPaths', 'PathList', options={'inherit': True})
+
+  # Paths for the dynamic linker. This is only used when running
+  # the product of a build target via Craftr.
+  props.add('cxx.runPaths', 'PathList', options={'inherit': True})
+
+  # Working directory for the cxx.run target.
+  props.add('cxx.runCwd', 'Path', optional=True)
+
+  # Dynamic libraries to link. You should use target dependencies
+  # wherever possible rather than using this property.
+  props.add('cxx.dynamicLibraries', 'PathList', options={'inherit': True})
+
+  # Static libraries to link. You should use target dependencies
+  # wherever possible rather than using this property.
+  props.add('cxx.staticLibraries', 'PathList', options={'inherit': True})
+
+  # Link with system libraries, where unspecified linkage.
+  props.add('cxx.systemLibraries', 'StringList', options={'inherit': True})
+
+  # List of files to automatically include at the beginning of
+  # each translation unit.
+  props.add('cxx.prefixHeaders', 'PathList', options={'inherit': True})
+
+  # Optimization level. Valid values are `none`, `size` and `speed`.
+  props.add('cxx.optimization', 'String')
+
+  # Whether to treat warnings as errors.
+  props.add('cxx.treatWarningsAsErrors', 'Bool')
+
+  # Specifies the warning level. Valid values are `none` or `all`.
+  props.add('cxx.warningLevel', 'String')
+
+  # Flags that are added to all compilation steps, independent of
+  # the language.
+  props.add('cxx.compilerFlags', 'StringList', options={'inherit': True})
+
+  # Specifies the way the library prefers to be linked. Either 'static' or 'dynamic'.
+  props.add('cxx.preferredLinkage', 'String')
+
+  # Flags that are added to C compilation.
+  props.add('cxx.cFlags', 'StringList', options={'inherit': True})
+
+  # Flags that are added to C++ compilation.
+  props.add('cxx.cppFlags', 'StringList', options={'inherit': True})
+
+  # The version of the C standard. If left undefined, the compiler's
+  # default value is used. Valid values include `c89`, `c99` and `c11`.
+  props.add('cxx.cStd', 'String')
+
+  # The C standard library to link to.
+  props.add('cxx.cStdlib', 'String')
+
+  # The version of the C++ standard. If left undefined, the compiler's
+  # default value is used. Valid values include `c++98`, `c++11`
+  # and `c++14`.
+  props.add('cxx.cppStd', 'String')
+
+  # The C++ standard library to link to. Possible values are `libc++`
+  # and `libstdc++`.
+  props.add('cxx.cppStdlib', 'String')
+
+  # Additional flags for the linker.
+  props.add('cxx.linkerFlags', 'StringList', options={'inherit': True})
+
+  # Name of the entry point of an executable or dynamic library.
+  props.add('cxx.entryPoint', 'String')
+
+  # Type of the runtime library. Accepted values are `dynamic` and
+  # `static`. Defaults to `dynamic` for MSVC, otherwise undefined.
+  # For GCC/Clang, `static` will imply `-static-libc` or flags alike.
+  props.add('cxx.runtimeLibrary', 'String')
+
+  # Whether to enable exception handling.
+  props.add('cxx.enableExceptions', 'Bool', True)
+
+  # Whether to enable runtime type information
+  props.add('cxx.enableRtti', 'Bool', True)
+
+  # A dictionary that maps symbol names to filenames. The files listed in
+  # the dictionary will be packged into object files and then be available
+  # for use in the C application by externing them.
+  from craftr.api.proplib import Dict, String, Path
+  props.add('cxx.embedFiles', Dict[String, Path])
+
+  # Apple Settings
+  # =======================
+
+  # Additional search paths for OSX frameworks.
+  props.add('cxx.frameworkPaths', 'PathList', options={'inherit': True})
+
+  # OSX framework to link. If the framework is part of your project,
+  # consider using a dependency instead.
+  props.add('cxx.frameworks', 'StringList', options={'inherit': True})
+
+  # OSX framework to link weakly. If the framework is part of your project,
+  # consider using a dependency instead.
+  props.add('cxx.weakFrameworks', 'StringList', options={'inherit': True})
+
+  # A version number in the format [major] [minor] indicating the earliest
+  # version that the product should run on.
+  props.add('cxx.minimumMacosVersion', 'String')
+
+  # Unix Settings
+  # =======================
+
+  # Generate position independent code. If this is undefined, PIC is
+  # generated for libraries, but not applications.
+  props.add('cxx.positionIndependentCode', 'Bool')
+
+  # rpaths that are passed to the linker. Paths that also appear
+  # in runPaths are ignored.
+  props.add('cxx.rpaths', 'PathList', options={'inherit': True})
+
+  # The version to be appended to the soname in ELF shared libraries.
+  props.add('cxx.soVersion', 'String')
+
+  # Visibility level for exported symbols. Possible values include
+  # `default`, `hidden`, `hiddenInlines` and `minimal (which combines
+  # `hidden` and `hiddenInlines`).
+  props.add('cxx.visibility', 'String')
+
+  # Windows Settings
+  # =======================
+
+  # Whether to automatically generate a manifest file and include it in
+  # the binary. Disable this property if you define your own .rc file.
+  props.add('cxx.generateManifestFile', 'Bool', True)
+
+  # Specifies the character set used in the Win32 API. Defaults to
+  # "unicode".
+  props.add('cxx.windowsApiCharacterSet', 'String')
+
+  # Advanced Settings
+  # =======================
+
+  # TODO
+
+  # Map of defines by language name.
+  #props.add('cxx.definesByLanguage', 'Map[String, Map[String]]')
+
+  # Map of defines by compiler ID.
+  #props.add('cxx.definesByCompiler', 'Map[String, Map[String]]')
+
+  # Map of defines by platform ID.
+  #props.add('cxx.definesByPlatform', 'Map[String, Map[String]]')
+
+  # Save temporary build prodcuts. Note that some toolchains (such as MSVC)
+  # can not compile AND actually build at the same time.
+  props.add('cxx.saveTemps', 'Bool', False)
+
+  # Dependency Properties
+  # =======================
+
+  props = session.dependency_props
+
+  # If False, the dependency will not be linked, even if it is a valid
+  # input for a linker rule. This property affects library dependencies only.
+  props.add('cxx.link', 'Bool', True)
+
+
+_init_properties()
+compiler = _load_compiler()
+compiler.init()
+
+print('Selected compiler: {} ({}) {} for {}'.format(
+  compiler.name, compiler.id, compiler.version, compiler.arch))
+
+
+def build():
+  target = current_target()
+  build_dir = target.build_directory
+  data = target.get_props('cxx.', as_object=True)
+
+  if not data.preferredLinkage:
+    data.preferredLinkage = 'static'
+  if data.preferredLinkage not in ('static', 'shared'):
+    error('invalid cxx.preferredLinkage: {!r}'.format(data.preferredLinkage))
+
+  if not data.productName:
+    data.productName = '$(lib)' + target.name + '-' + target.scope.version + '$(ext)'
+  if data.type == 'executable':
+    repl = {'$(lib)': '', '$(ext)': compiler.executable_suffix}
+    tags = ['exe']
+    suggestedName = '{}$(ext)'
+  elif base.is_sharedlib(data):
+    repl = {'$(lib)': compiler.library_prefix, '$(ext)': compiler.library_shared_suffix}
+    tags = ['lib', 'sharedlib']
+  elif base.is_staticlib(data):
+    repl = {'$(lib)': compiler.library_prefix, '$(ext)': compiler.library_static_suffix}
+    tags = ['lib', 'staticlib']
+  else:
+    raise RuntimeError('what is this?', data)
+  for a, b in repl.items():
+    data.productName = data.productName.replace(a, b)
+
+  if not data.productDirectory:
+    data.productDirectory = build_dir
+  data.productTags = tags
+  data.productFilename = path.join(data.productDirectory, data.productName)
+
+  compiler.translate_target(target, data)
+
+  c_srcs = []
+  cpp_srcs = []
+
+  # Handle cxx.embedFiles -- turning data files into C files and add
+  # them to the sources list.
+  if data.embedFiles:
+    outfile = path.join(build_dir, 'embed.c')
+    c_srcs.append(outfile)
+
+    bin2c = str(require.resolve('./tools/bin2c').filename)
+    command = nodepy.runtime.exec_args + [bin2c, '-o', outfile]
+    command += ['{}:{}'.format(f, sym) for sym, f in data.embedFiles.items()]
+
+    operator('cxx.bin2c', commands=[command])
+    build_set({'in': data.embedFiles.values()}, {'out': outfile})
+
+  for filename in data.srcs:
+    if filename.endswith('.c'):
+      c_srcs.append(filename)
+    elif filename.endswith('.cpp') or filename.endswith('.cc'):
+      cpp_srcs.append(filename)
+    # TODO: Issue a warning?
+
+  if data.combineCSources:
+    unity_c_file = path.join(build_dir, 'unity.c')
+    with craftr.AutoRestoreMtimeFile(unity_c_file, 'w') as fp:
+      [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
+    c_srcs = [unity_c_file]
+
+  if data.combineCppSources:
+    unity_cpp_file = path.join(build_dir, 'unity.cpp')
+    with craftr.AutoRestoreMtimeFile(unity_cpp_file, 'w') as fp:
+      [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
+    cpp_srcs = [unity_cpp_file]
+
+  obj_files = []
+  for srcs, lang in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
+    if not srcs: continue
+    name = 'cxx.compile' + lang.capitalize()
+    op = compiler.create_compile_action(target, data, name, lang, srcs)
+    obj_files += [x.outputs['obj'][0] for x in op.build_sets]
+
+  if obj_files and data.link:
+    lang = 'cpp' if cpp_srcs else 'c'
+    compiler.create_link_action(target, data, 'cxx.link', lang, obj_files)
+
+  if obj_files and data.type == 'executable':
+    command = [path.abs(data.productFilename)]
+    operator('cxx.run', commands=[command], explicit=True, syncio=True, cwd=data.runCwd)
+    build_set({'in': data.productFilename}, {}, description='$<in')
