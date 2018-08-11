@@ -124,6 +124,7 @@ class Session(_build.Master):
     self.dependency_props = PropertySet()
     self.os_info = OsInfo.new()
     self.build_info = BuildInfo(self._build_variant)
+    Target.init_properties(self.target_props)
 
   def load_config(self, config):
     """
@@ -252,6 +253,10 @@ class Target(_build.Target):
   operator.
   """
 
+  @staticmethod
+  def init_properties(props):
+    props.add('this.buildDirectory', 'String', None)
+
   class Dependency:
     def __init__(self, target, public):
       self.target = target
@@ -281,7 +286,10 @@ class Target(_build.Target):
 
   @property
   def build_directory(self):
-    return nr.fs.join(self.scope.build_directory, self.name)
+    directory = self['this.buildDirectory']
+    if not directory:
+      directory = nr.fs.join(self.scope.build_directory, self.name)
+    return directory
 
   @property
   def dependencies(self):
