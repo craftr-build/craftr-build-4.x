@@ -1,51 +1,20 @@
-## examples/csharp
+### Example: `csharp`
 
 This example demonstrates how to compile a C# application with dependencies
 and bundling them into a single executable.
 
-### Build & Run
-
 ```
-$ craftr -cf examples/csharp/ -b main:csharp.runBundle
-CSC v2.6.0.62329 (5429b35d)
-Feeds used:
-  C:\Users\niklas\.nuget\packages\
-  https://api.nuget.org/v3/index.json
+$ craftr -cb --project examples/csharp main:csharp.runBundle
+CSC v2.8.3.63029 (e9a3a6c0)
 
+======= BUILD
 
-
-Attempting to gather dependency information for package 'Newtonsoft.Json.10.0.3' with respect to project 'C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget', targeting 'Any,Version=v0.0'
-Gathering dependency information took 487,71 ms
-Attempting to resolve dependencies for package 'Newtonsoft.Json.10.0.3' with DependencyBehavior 'Lowest'
-Resolving dependency information took 0 ms
-Resolving actions to install package 'Newtonsoft.Json.10.0.3'
-Resolved actions to install package 'Newtonsoft.Json.10.0.3'
-Retrieving package 'Newtonsoft.Json 10.0.3' from 'C:\Users\niklas\.nuget\packages\'.
-Adding package 'Newtonsoft.Json.10.0.3' to folder 'C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget'
-Added package 'Newtonsoft.Json.10.0.3' to folder 'C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget'
-Successfully installed 'Newtonsoft.Json 10.0.3' to C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget
-Executing nuget actions took 205,12 ms
-[Installing] ILMerge.2.14.1208
-Feeds used:
-  C:\Users\niklas\.nuget\packages\
-  https://api.nuget.org/v3/index.json
-
-
-
-Attempting to gather dependency information for package 'ILMerge.2.14.1208' with respect to project 'C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget', targeting 'Any,Version=v0.0'
-Gathering dependency information took 875,42 ms
-Attempting to resolve dependencies for package 'ILMerge.2.14.1208' with DependencyBehavior 'Lowest'
-Resolving dependency information took 0 ms
-Resolving actions to install package 'ILMerge.2.14.1208'
-Resolved actions to install package 'ILMerge.2.14.1208'
-Retrieving package 'ILMerge 2.14.1208' from 'C:\Users\niklas\.nuget\packages\'.
-Adding package 'ILMerge.2.14.1208' to folder 'C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget'
-Added package 'ILMerge.2.14.1208' to folder 'C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget'
-Successfully installed 'ILMerge 2.14.1208' to C:\Users\niklas\Repositories\craftr-build\craftr\build\debug\csharp\nuget
-Executing nuget actions took 81,58 ms
-note: writing "build\debug\build.ninja"
-note: Ninja v1.7.2 (C:\Users\niklas\Nextcloud\share\prefs\bin\ninja.EXE)
-[2/3] "C:\program files\python36\python.exe" c:\users\niklas\repo...uildslave.py examples.csharp@main:csharp.runBundle^3fe7961f5a2f 0 Hello, world!
+[examples.csharp@main/csharp.compile#1] SKIP
+[examples.csharp@main/csharp.bundle#1]
+  $ 'C:\Users\niklas\Desktop\craftr4\build\debug\craftr/lang/csharp\csharp\nuget\ILMerge.2.14.1208\tools\ILMerge.exe' '/out:C:\Users\niklas\Desktop\craftr4\build\debug\examples.csharp\main\main-1.0-0-bundle.exe' 'C:\Users\niklas\Desktop\craftr4\build\debug\examples.csharp\main\main-1.0-0.exe' 'C:\Users\niklas\Desktop\craftr4\build\debug\craftr/lang/csharp\csharp\nuget\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll'
+[examples.csharp@main/csharp.runBundle#1] C:\Users\niklas\Desktop\craftr4\build\debug\examples.csharp\main\main-1.0-0-bundle.exe
+  $ 'C:\Users\niklas\Desktop\craftr4\build\debug\examples.csharp\main\main-1.0-0-bundle.exe'
+Hello, world!
 {
   "MyArray": [
     "Manual text",
