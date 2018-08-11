@@ -107,12 +107,12 @@ def main(argv=None, prog=None):
     module = session.load_module('craftr/tools/' + tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
 
-  backend = session.load_module(args.backend).namespace
-
-  if args.config:  # TODO: or no serialized version of the build graph available
-    module = session.load_module_from_file(args.project, is_main=True)
+  graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
+  if args.config:
+    session.load_module_from_file(args.project, is_main=True)
+    session.save(graph_file)
   else:
-    raise NotImplementedError('build graph deserialization not implemented')
+    session.load(graph_file)
 
   # Determine the build sets that are supposed to be built.
   if args.targets:
@@ -121,7 +121,7 @@ def main(argv=None, prog=None):
       if '@' in name:
         scope, name = name.partition('@')[::2]
       else:
-        scope = module.scope.name
+        scope = session.main_module
       if ':' in name:
         target_name, op_name = name.partition(':')[::2]
       else:
@@ -167,6 +167,7 @@ def main(argv=None, prog=None):
       p.communicate(dotstr)
     return 0
 
+  backend = session.load_module(args.backend).namespace
   if args.config:
     backend.export()
   if args.clean:

@@ -127,6 +127,7 @@ class Session(_build.Master):
     self.dependency_props = PropertySet()
     self.os_info = OsInfo.new()
     self.build_info = BuildInfo(self._build_variant)
+    self.main_module = None
     Target.init_properties(self.target_props)
 
   def add_module_search_path(self, path):
@@ -194,6 +195,8 @@ class Session(_build.Master):
     module.is_main = is_main
     self.nodepy_context.register_module(module)
     self.nodepy_context.load_module(module)
+    if is_main:
+      self.main_module = module.scope.name
     return module
 
   @property
@@ -225,6 +228,17 @@ class Session(_build.Master):
     if self._current_scopes:
       return self._current_scopes[-1].current_target
     return None
+
+  # Master overrides
+
+  def to_json(self):
+    return {'variant': self._build_directory, 'main_module': self.main_module,
+            'data': super().to_json()}
+
+  def load_json(self, data):
+    self._build_variant = data['variant']
+    self.main_module = data['main_module']
+    super().load_json(data['data'])
 
 
 class Scope(nr.interface.Implementation):

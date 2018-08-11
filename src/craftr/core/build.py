@@ -35,6 +35,7 @@ __all__ = ['BuildSet', 'Commands', 'Operator', 'Target', 'Master']
 
 import collections
 import io
+import json
 import nr.fs
 import re
 import shlex
@@ -103,7 +104,7 @@ class BuildSet:
   def operator(self):
     return self._operator
 
-  def add_input_files(self, set_name:str, files:List[str]):
+  def add_input_files(self, set_name: str, files: List[str]):
     result = []
     dest = self._inputs.setdefault(set_name, [])
     for x in files:
@@ -112,7 +113,7 @@ class BuildSet:
       dest.append(x)
     return result
 
-  def add_output_files(self, set_name:str, files:List[str]):
+  def add_output_files(self, set_name: str, files: List[str]):
     result = []
     dest = self._outputs.setdefault(set_name, [])
     for x in files:
@@ -160,6 +161,24 @@ class BuildSet:
   def get_cwd(self):
     return self._cwd or self._operator.cwd
 
+  def to_json(self):
+    return {'description': self.description, 'environ': self._environ,
+            'cwd': self._cwd, 'inputs': self._inputs, 'outputs': self._outputs,
+            'variables': self._variables}
+
+  @classmethod
+  def from_json(cls, master: 'Master', operator: 'Operator', data: Dict):
+    self = object.__new__(cls)
+    self._master = master
+    self.description = data['description']
+    self._environ = data['environ']
+    self._cwd = data['cwd']
+    self._inputs = data['inputs']
+    self._outputs = data['outputs']
+    self._variables = data['variables']
+    self._operator = operator
+    return self
+
 
 class Commands:
   """
@@ -170,7 +189,7 @@ class Commands:
   A commands object is immutable after construction.
   """
 
-  def __init__(self, commands:List[List[str]]):
+  def __init__(self, commands: List[List[str]]):
     self._commands = commands
     self._compiled = TemplateCompiler().compile_commands(commands)
     self._inputs, self._outputs, self._variables = \
@@ -197,6 +216,13 @@ class Commands:
   @property
   def compiled(self):
     return self._compiled
+
+  def to_json(self) -> List:
+    return self._commands
+
+  @classmethod
+  def from_json(cls, data: List):
+    return cls(data)
 
 
 class Operator:
@@ -295,13 +321,35 @@ class Operator:
     self._build_sets.append(build_set)
     return build_set
 
+  def to_json(self) -> Dict:
+    return {'id': self._id, 'commands': self._commands.to_json(),
+            'build_sets': [x.to_json() for x in self._build_sets],
+            'variables': self._variables, 'environ': self._environ,
+            'cwd': self._cwd, 'explicit': self._explicit,
+            'syncio': self._syncio}
+
+  @classmethod
+  def from_json(cls, master: 'Master', target: 'Target', data: Dict):
+    self = object.__new__(cls)
+    self._master = master
+    self._target = target
+    self._id = data['id']
+    self._commands = Commands.from_json(data['commands'])
+    self._build_sets = [BuildSet.from_json(master, self, x) for x in data['build_sets']]
+    self._variables = data['variables']
+    self._environ = data['environ']
+    self._cwd = data['cwd']
+    self._explicit = data['explicit']
+    self._syncio = data['syncio']
+    return self
+
 
 class Target:
   """
   A target is a collection of operators.
   """
 
-  def __init__(self, master:'Master', id:str):
+  def __init__(self, master: 'Master', id: str):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if not isinstance(id, str):
@@ -342,6 +390,18 @@ class Target:
     self._operators[operator._id] = operator
     return operator
 
+  def to_json(self) -> Dict:
+    return {'id': self._id, 'operators': [x.to_json() for x in self._operators.values()]}
+
+  @classmethod
+  def from_json(cls, master: 'Master', data: Dict) -> 'Target':
+    self = object.__new__(cls)
+    self._master = master
+    self._id = data['id']
+    self._operators = {x['id']: Operator.from_json(master, self, x)
+                       for x in data['operators']}
+    return self
+
 
 class Master:
   """
@@ -350,7 +410,7 @@ class Master:
   member and the #canonicalize_path() method.
   """
 
-  def __init__(self, template_compiler:TemplateCompiler=None):
+  def __init__(self, template_compiler: TemplateCompiler = None):
     self._template_compiler = template_compiler or TemplateCompiler()
     self._targets = {}
     self._output_files = {}  # Maps from the canonical filename to a BuildSet
@@ -392,6 +452,21 @@ class Master:
     for target in self.targets:
       for op in target.operators:
         yield from op.build_sets
+
+  def to_json(self):
+    return [x.to_json() for x in self._targets.values()]
+
+  def load_json(self, data: Dict):
+    self._targets = {x['id']: Target.from_json(self, x) for x in data}
+
+  def save(self, filename: str):
+    with open(filename, 'w') as fp:
+      json.dump(self.to_json(), fp, sort_keys=True)
+
+  def load(self, filename: str):
+    with open(filename) as fp:
+      data = json.load(fp)
+    self.load_json(data)
 
 
 def to_graph(master):
