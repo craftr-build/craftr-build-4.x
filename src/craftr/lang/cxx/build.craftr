@@ -154,7 +154,7 @@ def _init_properties():
   # Type of the runtime library. Accepted values are `dynamic` and
   # `static`. Defaults to `dynamic` for MSVC, otherwise undefined.
   # For GCC/Clang, `static` will imply `-static-libc` or flags alike.
-  props.add('cxx.runtimeLibrary', 'String')
+  props.add('cxx.runtimeLibrary', 'String', 'static' if options.staticRuntime else '')
 
   # Whether to enable exception handling.
   props.add('cxx.enableExceptions', 'Bool', True)

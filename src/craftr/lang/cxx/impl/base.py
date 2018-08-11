@@ -249,6 +249,9 @@ class Compiler(nr.types.Named):
     else:
       assert False, data.type
 
+    if not data.runtimeLibrary:
+      data.runtimeLibrary = 'static' if options.staticRuntime else 'dynamic'
+
     if is_archive:
       command = self.expand(self.archiver)
       command.extend(self.expand(self.archiver_out, '${@product}'))
