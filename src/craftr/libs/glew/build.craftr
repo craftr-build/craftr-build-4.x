@@ -58,4 +58,4 @@ if OS.id == 'win32':
 
 else:
   import {pkg_config} from 'craftr/tools/pkg-config'
-  pkg_config(target, 'glew', static=options.static)
+  pkg_config('glew', static=options.static)

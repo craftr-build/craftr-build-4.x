@@ -56,7 +56,7 @@ target('glfw')
 
 if mode == 'pkg-config':
   import {pkg_config} from 'craftr/tools/pkg-config'
-  pkg_config(target, 'glfw3', static=options.static)
+  pkg_config('glfw3', static=options.static)
 
 if mode == 'win32-prebuilt':
   if cxx.compiler.id == 'msvc':
@@ -113,7 +113,7 @@ if mode == 'source':
       import {pkg_config} from 'craftr/tools/pkg-config'
       sources += ['x11_*.c', 'xkb_unicode.c']
       environ['_GLFW_X11'] = True
-      pkg_config(target, ['x11', 'xcursor', 'xrandr', 'xinerama'])
+      pkg_config(['x11', 'xcursor', 'xrandr', 'xinerama'])
     elif wayland:
       environ['_GLFW_WAYLAND'] = True
       sources += ['wl_*.c']

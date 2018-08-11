@@ -44,7 +44,7 @@ cxx = require('craftr/lang/cxx')
 target('opencl')
 if options.vendor == 'pkg-config':
   import {pkg_config} from 'craftr/tools/pkg-config'
-  pkg_config(target, 'OpenCL')
+  pkg_config('OpenCL')
 if options.vendor == 'amd':
   error('OpenCL vendor "amd" not implemented.')
 if options.vendor == 'intel':
