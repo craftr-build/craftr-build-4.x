@@ -24,7 +24,7 @@ modern build requirements.
 
 * Build graph serialization (`--configure` and `--build` steps)
 * [Ninja] build backend
-* Port (and enhance) standard library from [Craftr 3]
+* Enhancements to the standard library (especiall C/C++)
 * Make modules in a sub directory visible to every other module with
   a `link_module()` function (creating a physical Node.py link or a virtual
   one...?)
