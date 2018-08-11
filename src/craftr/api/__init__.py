@@ -494,10 +494,12 @@ def properties(_scope=None, _props=None, _target=None, **kwarg_props):
 
   # Prepare the parameters from both sources.
   for key, value in (_props or {}).items():
-    public = key[0] == '@'
-    if public: key = key[1:]
-    append = key[-1] == '+'
-    if append: key = key[:-1]
+    public = append = False
+    while True:
+      if not public and key[0] == '@': public, key = True, key[1:]
+      elif not append and key[0] == '+': append, key = True, key[1:]
+      elif not append and key[-1] == '+': append, key = True, key[:-1]
+      else: break
     props.setdefault(key, []).append((value, public, append))
   for key, value in kwarg_props.items():
     public = key.startswith('public__')
