@@ -58,6 +58,10 @@ class ModuleOptions:
   def __init__(self, session, scope):
     self._session = session
     self._scope = scope
+    self._aliases = []
+
+  def add_scope_alias(self, alias):
+    self._aliases.append(alias)
 
   def __repr__(self):
     attrs = ', '.join('{}={!r}'.format(k, v) for k, v in vars(self).items() if not k.startswith('_'))
@@ -67,10 +71,13 @@ class ModuleOptions:
                default = NotImplemented):
     prop_type = self.__PROPTYPE_MAP.get(prop_type, prop_type)
     prop_type = proplib.prop_type(prop_type)
-    option_name = self._scope.name + ':' + name
-    try:
-      value = self._session.options[option_name]
-    except KeyError:
+    for alias in [self._scope.name] + self._aliases:
+      if alias is None: continue
+      option_name = alias + ':' + name
+      if option_name in self._session.options:
+        value = self._session.options[option_name]
+        break
+    else:
       if default is NotImplemented:
         raise MissingRequiredOptionError(self._scope.name, name)
       value = default
