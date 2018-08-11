@@ -21,7 +21,7 @@ def open_cli_file(filename, mode):
 
 
 def get_argument_parser(prog=None):
-  parser = argparse.ArgumentParser(prog=prog, allow_abbrev=False)
+  parser = argparse.ArgumentParser(prog=prog)
 
   # Configuration options
 
@@ -41,9 +41,11 @@ def get_argument_parser(prog=None):
 
   # Invokation options
 
-  parser.add_argument('--export', action='store_true',
-    help='Execute the build module and serialize the build graph.')
-  parser.add_argument('--build', action='store_true',
+  parser.add_argument('-c', '--config', action='store_true',
+    help='Configure the build. This will execute the build script and '
+         'export the build graph to the build directory (depending on '
+         'the backend).')
+  parser.add_argument('-b', '--build', action='store_true',
     help='Execute the build. Additional arguments are treated as '
          'the targets that are to be built.')
   parser.add_argument('--clean', action='store_true',
@@ -66,6 +68,10 @@ def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
   args, selection = parser.parse_known_args(argv)
 
+  for x in selection:
+    if x.startswith('-'):
+      parser.error('unknown option: {}'.format(x))
+
   if not args.build_directory:
     args.build_directory = nr.fs.join(args.build_root, args.variant)
 
@@ -84,7 +90,7 @@ def main(argv=None, prog=None):
 
   backend = session.load_module(args.backend).namespace
 
-  if args.export:
+  if args.config:  # TODO: or no serialized version of the build graph available
     module = session.load_module_from_file(args.project, is_main=True)
   else:
     raise NotImplementedError('build graph deserialization not implemented')
@@ -121,7 +127,7 @@ def main(argv=None, prog=None):
       p.communicate(dotstr)
     return 0
 
-  if args.export:
+  if args.config:
     backend.export()
   if args.clean:
     backend.clean(build_sets, args.recursive, args.verbose)
