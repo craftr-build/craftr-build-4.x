@@ -40,6 +40,10 @@ class GccCompiler(base.Compiler):
   depfile_args = ['-MD', '-MP', '-MF', '${@obj}.d']
   depfile_name = '$out.d'  # TODO: This is Ninja syntax, find a way to combine this with the BuildSet variable syntax.
 
+  compiler_supports_openmp = True
+  compiler_enable_openmp = ['-fopenmp']
+  linker_enable_openmp = ['-lgomp']
+
   linker_c = compiler_c
   linker_cpp = compiler_cpp
   linker_env = None

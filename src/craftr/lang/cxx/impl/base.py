@@ -67,6 +67,11 @@ class Compiler(nr.types.Named):
     ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $out.
     ('deps_prefix', str, None),              # The deps prefix (don't mix with depfile_name).
 
+    # OpenMP settings.
+    ('compiler_supports_openmp', bool, False),
+    ('compiler_enable_openmp', List[str], None),
+    ('linker_enable_openmp', List[str], None),
+
     ('linker_c', List[str]),                 # Arguments to invoke the linker for C programs.
     ('linker_cpp', List[str]),               # Arguments to invoke the linker for C++/C programs.
     ('linker_env', Dict[str, str]),          # Environment variables for the binary linker.
@@ -139,6 +144,12 @@ class Compiler(nr.types.Named):
     includes = [short_path(x) for x in data.includes]
     flags = list(data.compilerFlags)
     forced_includes = list(data.prefixHeaders)
+
+    if data.enableOpenmp:
+      if not self.compiler_supports_openmp:
+        print('[WARNING]: Compiler does not support OpenMP')
+      else:
+        flags += self.compiler_enable_openmp
 
     # TODO: Find exported information from dependencies.
     """
@@ -260,7 +271,9 @@ class Compiler(nr.types.Named):
       command.extend(self.expand(self.linker_out, '${@product}'))
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
-    flags = []
+    flags = list(data.linkerFlags)
+    if data.enableOpenmp and self.compiler_supports_openmp:
+      flags += self.linker_enable_openmp
 
     # TODO: Tell the compiler to link staticLibraries and dynamicLibraries
     #       statically/dynamically respectively?

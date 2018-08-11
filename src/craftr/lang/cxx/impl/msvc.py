@@ -56,6 +56,10 @@ class MsvcCompiler(base.Compiler):
   force_include = ['/FI', '%ARG%']
   save_temps = ['/P', '/Fi$out.i']  # TODO: Prevents the compilation step. :(
 
+  compiler_supports_openmp = True
+  compiler_enable_openmp = ['/openmp']
+  linker_enable_openmp = []
+
   linker_c = ['link', '/nologo']
   linker_cpp = linker_c
   linker_out = '/OUT:${@product}'

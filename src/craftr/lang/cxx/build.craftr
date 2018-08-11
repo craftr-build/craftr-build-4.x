@@ -234,6 +234,9 @@ def _init_properties():
   # can not compile AND actually build at the same time.
   props.add('cxx.saveTemps', 'Bool', False)
 
+  # Enable OpenMP support.
+  props.add('cxx.enableOpenmp', 'Bool', False)
+
   # Outputs
   # =======================
 
