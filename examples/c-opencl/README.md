@@ -19,6 +19,10 @@ and specify your OpenCL vendor, eg. `craftr/libs/opencl:vendor=intel`.
 
 ####  To do
 
+* Getting a `CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR` error on Windows 10 with
+  the NVIDIA CUDA OpenCL driver (GTX 780) and Intel Drivers (i7-4770K) but
+  it works on Windows with an Intel i7-7500U.
+
 * Ubuntu with Intel HD drivers: Getting `error: OpenGL=>OpenCL image could not be created: CL_MEM_OBJECT_ALLOCATION_FAILURE`.
   The `clCreateFromGLTexture2D()` function is not supposed to return this error per the specification.
   Already checked questions for solutions:
