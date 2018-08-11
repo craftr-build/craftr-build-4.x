@@ -26,9 +26,10 @@ This module allows you to compile and bundle C# applications.
 """
 
 project('craftr/lang/csharp', '1.0-0')
+options.add_scope_alias('csharp')
 options('impl', str, 'net' if OS.type == 'nt' else 'mono')
-options('csc', str, 'csc' if OS.type == 'nt' else 'mcs')
-options('monoArch', str, OS.arch)  # Used to determine the Mono installation path. Must be either x64 or x86
+options('csc', str, '')
+options('monoArch', str, '')  # Used to determine the Mono installation path. Must be either x64 or x86
 options('mergeTool', str, '')  # The name of the tool to merge assemblies, either ILRepack or ILMerge
 
 import functools
@@ -128,7 +129,7 @@ class CscInfo(nr.types.Named):
     if options.impl not in ('net', 'mono'):
       raise ValueError('unsupported csharp.impl={!r}'.format(impl))
 
-    program = options.csc
+    program = options.csc or ('csc' if options.impl == 'net' else 'mcs')
     is_mcs = path.rmvsuffix(program).lower().endswith('mcs')
 
     if options.impl == 'net':
@@ -142,7 +143,7 @@ class CscInfo(nr.types.Named):
         arch = options.monoArch
         monobin_x64 = path.join(os.getenv('ProgramFiles'), 'Mono', 'bin')
         monobin_x86 = path.join(os.getenv('ProgramFiles(x86)'), 'Mono', 'bin')
-        if arch is None:
+        if not arch:
           if path.isdir(monobin_x64):
             monobin = monobin_x64
           else:
@@ -152,7 +153,9 @@ class CscInfo(nr.types.Named):
         elif arch == 'x86':
           monobin = monobin_x86
         else:
-          raise ValueError('invalid value csharp.mono_arch={!r}'.format(arch))
+          raise ValueError('invalid value for csharp.monoArch: {!r}'.format(arch))
+        if not path.isdir(monobin):
+          error('Mono installation directory does not exist: "{}"'.format(monobin))
         environ['PATH'] = monobin + path.pathsep + os.getenv('PATH')
 
         # On windows, the mono compiler is available as .bat file, thus we
@@ -301,19 +304,21 @@ def build():
     command += data.runArgs
     # TODO: Seems like there is no option or environment variable to
     #       allow the .NET runtime to find the assemblies in other directories?
-    operator('csharp.run', commands=[command], explicit=True, syncio=True)
+    operator('csharp.run', commands=[command], explicit=True, syncio=True,
+      environ=csc.environ)
     build_set({'in': data.productFilename}, {}, description='$<in')
 
   # Action to merge the generated references into one file.
   if data.bundleFilename and data.bundle:
     command = csc.get_merge_tool(out='$@out', primary='$<in',
       assemblies=references + bundleReferences)
-    operator('csharp.bundle', commands=[command])
+    operator('csharp.bundle', commands=[command], environ=csc.environ)
     build_set({'in': data.productFilename}, {'out': data.bundleFilename})
 
     # Action to run the product.
     command = list(data.runArgsPrefix or csc.exec_args([]))
     command += [data.bundleFilename]
     command += data.runArgs
-    operator('csharp.runBundle', commands=[command], explicit=True, syncio=True)
+    operator('csharp.runBundle', commands=[command], explicit=True,
+      syncio=True, environ=csc.environ)
     build_set({'in': data.bundleFilename}, {}, description='$<in')
