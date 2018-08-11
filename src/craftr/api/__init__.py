@@ -84,7 +84,7 @@ class OsInfo(Named):
     elif sys.platform.startswith('linux'):
       return cls('linux', 'linux', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
     elif sys.platform.startswith('msys'):
-      return cls('msys', 'msys', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
+      return cls('msys', 'win32', 'posix', 'x86_64' if sys.maxsize > 2**32 else 'x86')
     else:
       raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 
