@@ -1,0 +1,16 @@
+project('examples.c-opencl', '1.0-0')
+cxx = require('craftr/lang/cxx')
+
+target('main')
+depends('craftr/libs/opencl:opencl')
+depends('craftr/libs/glew:glew')
+depends('craftr/libs/glfw:glfw')
+properties({
+  'cxx.embedFiles': {
+    'ClKernel': 'src/kernel.cl',
+    'ScreenVert': 'src/screen.vert',
+    'ScreenFrag': 'src/screen.frag'},
+  'cxx.srcs': ['src/main.c'],
+  'cxx.includes': ['src/common']
+})
+cxx.build()
