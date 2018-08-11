@@ -1,0 +1,8 @@
+project('examples.c-win32', '1.0-0')
+cxx = require('craftr/lang/cxx')
+target('main')
+properties({
+  'cxx.srcs': ['src/main.c'],
+  'cxx.msvcResourceFiles': ['src/test.rc']
+})
+cxx.build()
