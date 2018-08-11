@@ -175,7 +175,7 @@ class MsvcCompiler(base.Compiler):
   def add_link_outputs(self, target, data, lang, buildset):
     if base.is_sharedlib(data):
       implib = path.setsuffix(data.productFilename, '.lib')
-      buildset.files.add(implib, ['out', 'implib'])
+      buildset.add_output_files('outImplib', [implib])
       properties({'@+cxx.outLinkLibraries': [implib]}, target=target)
     super().add_link_outputs(target, data, lang, buildset)
 
