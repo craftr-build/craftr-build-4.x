@@ -62,9 +62,18 @@ if mode == 'pkg-config':
 
 if mode == 'win32-prebuilt':
   if cxx.compiler.id == 'msvc':
-    if options.msvcVersion is None:
-      options.msvcVersion = cxx.compiler.toolkit.vs_year
-    libdir = 'lib-vc{}'.format(options.msvcVersion or cxx.compiler.toolkit.vs_year)
+    if options.msvcVersion:
+      libdir = 'lib-vc{}'.format(options.msvcVersion)
+    else:
+      vs_year = cxx.compiler.toolkit.vs_year
+      for y in range(vs_year, 2012, -1):
+        libdir = 'lib-vc{}'.format(y)
+        if path.exists(path.join(options.binaryDir, libdir)):
+          if y != cxx.compiler.toolkit.vs_year:
+            print('GLFW: warning: falling back to lib-vc{} (expected lib-vc{})'.format(y, vs_year))
+            break
+      else:
+        error('unable to determine VC library directory')
   elif cxx.compiler.id == 'mingw':
     libdir = 'lib-mingw' if cxx.compiler.is32bit else 'lib-mingw-w64'
   else:
