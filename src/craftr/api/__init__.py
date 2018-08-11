@@ -162,7 +162,6 @@ class Session(_build.Master):
       if key.startswith('if(') and key.endswith(')'):
         left, right = key[3:-1].partition('=')[::2]
         expr = 'str({}) == {!r}'.format(left, right.strip())
-        print(expr)
         # TODO: Catch exception?
         result = eval(expr, {'OS': self.os_info, 'BUILD': self.build_info})
         if not result: return
