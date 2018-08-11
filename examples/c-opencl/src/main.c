@@ -224,11 +224,24 @@ GLuint createProgram(char const* vert, char const* frag) {
   return program;
 }
 
+void printExtensionsList(char const* c) {
+  while (*c) {
+    char* n = c;
+    while (*n && *n != ' ') n++;
+    if (*n) {
+      *n = 0;
+      n++;
+    }
+    printf("  - %s\n", c);
+    c = n;
+  }
+}
+
 int main(int argc, char** argv) {
   if (initWindow() != 0) return 1;
+  char buffer[2048];
 
   /* Select the first OpenCL platform. */
-  printf("Looking for OpenCL platform ...\n");
   cl_platform_id platform;
   cl_uint num_platforms;
   clGetPlatformIDs(1, &platform, &num_platforms);
@@ -237,8 +250,14 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(buffer), buffer, NULL);
+  printf("Selected OpenCL Platform: %s\n", buffer);
+  clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, sizeof(buffer), buffer, NULL);
+  printf("The following extensions are supported:\n");
+  printExtensionsList(buffer);
+  printf("\n");
+
   /* Get the first OpenCL device. */
-  printf("Looking for OpenCL device ...\n");
   cl_device_id device;
   cl_uint num_devices;
   clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, &num_devices);
@@ -247,8 +266,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, sizeof(buffer), buffer, NULL);
+  printf("The following extensions are supported by the selected OpenCL Device:\n");
+  printExtensionsList(buffer);
+  printf("\n");
+
   /* Create an OpenCL context that has access to the OpenGL context. */
-  printf("Looking for OpenCL context ...\n");
   cl_context_properties props[] = {
     CL_CONTEXT_PLATFORM, (cl_context_properties) platform,
     CURRENT_DISPLAY_PROP, (cl_context_properties) getCurrentDC(),
@@ -263,7 +286,6 @@ int main(int argc, char** argv) {
   }
 
   /* Compile the OpenCL kernel. */
-  printf("Compiling OpenCL kernel ...\n");
   char const* kernelSource = (char*)ClKernel;
   cl_program program = clCreateProgramWithSource(
     g_clContext, 1, &kernelSource, &ClKernel_size, &error);
@@ -286,7 +308,6 @@ int main(int argc, char** argv) {
   }
 
   /* Load the OpenGL shader which just plainly renders a texture. */
-  printf("Compiling OpenGL shader program ...\n");
   GLuint shaderProgram = createProgram((char*)ScreenVert, (char*)ScreenFrag);
   if (shaderProgram == 0) {
     fprintf(stderr, "error: OpenGL shader program could not be created.\n");
