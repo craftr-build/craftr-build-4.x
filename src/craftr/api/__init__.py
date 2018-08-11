@@ -522,7 +522,7 @@ def depends(target, public=False):
   return current_target().add_dependency(target, public)
 
 
-def properties(_scope=None, _props=None, _target=None, **kwarg_props):
+def properties(_scope=None, _props=None, _target=None, target=None, **kwarg_props):
   """
   Sets properties in the current target.
 
@@ -540,7 +540,7 @@ def properties(_scope=None, _props=None, _target=None, **kwarg_props):
       `public__` and/or suffixed with `__append`.
   """
 
-  target = _target or current_target()
+  target = _target or target or current_target()
   props = {}
 
   if isinstance(_scope, dict):
