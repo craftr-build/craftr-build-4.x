@@ -59,6 +59,10 @@ class ModuleOptions:
     self._session = session
     self._scope = scope
 
+  def __repr__(self):
+    attrs = ', '.join('{}={!r}'.format(k, v) for k, v in vars(self).items() if not k.startswith('_'))
+    return 'ModuleOptions({})'.format(attrs)
+
   def __call__(self, name: str, prop_type: Union[str, proplib.PropType],
                default = NotImplemented):
     prop_type = self.__PROPTYPE_MAP.get(prop_type, prop_type)
