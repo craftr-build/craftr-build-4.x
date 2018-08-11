@@ -1,0 +1,7 @@
+{
+  "if(OS.id=win32)": {
+    "craftr/libs/opencl": {
+      "vendor": "nvidia"
+    }
+  }
+}
