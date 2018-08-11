@@ -1,0 +1,9 @@
+project('examples.c-sfml', '1.0-0')
+cxx = require('craftr/lang/cxx')
+target('main')
+depends('craftr/libs/sfml:sfml')
+properties({
+  'cxx.srcs': ['main.cpp'],
+  'cxx.runCwd': '.'
+})
+cxx.build()
