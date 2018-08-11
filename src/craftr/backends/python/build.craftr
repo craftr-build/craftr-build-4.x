@@ -111,8 +111,6 @@ def build(build_sets, verbose):
           stdin, stdout, stderr = subprocess.PIPE, subprocess.PIPE, subprocess.STDOUT
         p = subprocess.Popen(cmd, cwd=build_set.get_cwd(),
           stdin=stdin, stdout=stdout, stderr=stderr)
-        if p.stdin:
-          p.stdin.close()
         out = p.communicate()
         if (verbose or p.returncode != 0) and p.stdout:
           print()

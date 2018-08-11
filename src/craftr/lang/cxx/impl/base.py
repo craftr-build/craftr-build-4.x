@@ -106,7 +106,7 @@ class Compiler(nr.types.Named):
     return list(args)
 
   # @override
-  def init(self, context):
+  def init(self):
     """
     Called from CxxTargetHandler.init().
     """
@@ -249,10 +249,10 @@ class Compiler(nr.types.Named):
 
     if is_archive:
       command = self.expand(self.archiver)
-      command.extend(self.expand(self.archiver_out, '${@outProduct}'))
+      command.extend(self.expand(self.archiver_out, '${@product}'))
     else:
       command = self.expand(self.linker_cpp if lang == 'cpp' else self.linker_c)
-      command.extend(self.expand(self.linker_out, '${@outProduct}'))
+      command.extend(self.expand(self.linker_out, '${@product}'))
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = []

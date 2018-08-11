@@ -1,7 +1,9 @@
 
-import {path} from 'craftr'
 import sys
 import base from './base'
+
+from craftr.api import *
+
 
 class GccCompiler(base.Compiler):
 
@@ -13,7 +15,7 @@ class GccCompiler(base.Compiler):
   compiler_env = None
   compiler_c = 'gcc'
   compiler_cpp = 'g++'
-  compiler_out = ['-c', '-o', '${out}']
+  compiler_out = ['-c', '-o', '${@obj}']
 
   c_std = '-std=%ARG%'
   c_stdlib = '-stdlib=%ARG%'
@@ -35,7 +37,7 @@ class GccCompiler(base.Compiler):
   disable_rtti = '-fno-rtti'
   force_include = ['-include', '%ARG%']
   save_temps = '-save-temps'
-  depfile_args = ['-MD', '-MP', '-MF', '${out}.d']
+  depfile_args = ['-MD', '-MP', '-MF', '${@obj}.d']
   depfile_name = '$out.d'  # TODO: This is Ninja syntax, find a way to combine this with the BuildSet variable syntax.
 
   linker_c = compiler_c
@@ -53,7 +55,7 @@ class GccCompiler(base.Compiler):
 
   archiver = ['ar', 'rcs']
   archiver_env = None
-  archiver_out = '${out}'
+  archiver_out = '%ARG%'
 
   executable_suffix = ''
   library_prefix = 'lib'
@@ -69,9 +71,9 @@ class GccCompiler(base.Compiler):
   """
 
   def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
-    rel = path.rel(src, target.directory)
+    rel = path.rel(src, target.scope.directory)
     obj = path.setsuffix(path.join(objdir, rel), '.o')
-    buildset.files.add(obj, ['out', 'obj'])
+    buildset.add_output_files('obj', [obj])
 
 
 def get_compiler(fragment):

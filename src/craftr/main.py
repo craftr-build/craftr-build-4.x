@@ -92,7 +92,7 @@ def main(argv=None, prog=None):
   session = api.session = api.Session(args.build_root, args.build_directory, args.variant)
   if args.config_file:
     session.load_config(args.config_file)
-  for opt in args.options:
+  for opt in args.options or ():
     key, value = opt.partition('=')[::2]
     session.options[key] = value
 
