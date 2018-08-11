@@ -25,6 +25,7 @@ project('craftr/lang/python', '1.0-0')
 
 import sys
 
+options.add_scope_alias('python')
 options('bin', str, sys.executable)
 options('binArgs', str, '')
 
