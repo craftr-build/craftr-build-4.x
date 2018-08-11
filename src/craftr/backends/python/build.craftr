@@ -114,7 +114,7 @@ def build(build_sets, verbose):
         if p.stdin:
           p.stdin.close()
         out = p.communicate()
-        if verbose and not build_set.operator.syncio:
+        if (verbose or p.returncode != 0) and p.stdout:
           print()
           print(out[0].decode())
         if p.returncode != 0:
