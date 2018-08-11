@@ -482,37 +482,3 @@ def topo_sort(build_sets: Union[Master, List[BuildSet]]):
       if not bset_inputs[x]:
         bset_start.add(x)
     bset_reverse[bset] = set()
-
-
-def execute(master, build_sets=None):
-  """
-  Executes the full build graph -- useful for development tests.
-  """
-
-  if build_sets is None:
-    build_sets = master
-
-  for build_set in topo_sort(build_sets):
-    if not build_set.operator:
-      continue
-
-    prefix = '[{}/{}]'.format(build_set.operator.target.id, build_set.operator.id)
-
-    # Skip the build set if all output files are newer than the input files.
-    infiles = list(stream.concat(build_set.inputs.values()))
-    outfiles = list(stream.concat(build_set.outputs.values()))
-    if not nr.fs.compare_all_timestamps(infiles, outfiles):
-      print(prefix, 'SKIP')
-      continue
-
-    if build_set.description:
-      print(prefix, build_set.get_description())
-    else:
-      print(prefix)
-    for files in build_set.outputs.values():
-      for filename in files:
-        nr.fs.makedirs(nr.fs.dir(filename))
-    commands = build_set.get_commands()
-    for cmd in commands:
-      print('  $', ' '.join(shlex.quote(x) for x in cmd))
-      subprocess.check_call(cmd)

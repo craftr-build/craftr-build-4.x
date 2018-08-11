@@ -28,11 +28,16 @@ A simplistic, non-parallel backend implemented in Python.
 project('craftr/backends/python', '1.0-0')
 
 import errno
+import nr.fs
 import os
+import shlex
 import shutil
+import subprocess
 
-from craftr.core.build import execute
+from craftr.core.build import topo_sort
+from craftr.utils import sh
 from nr.stream import stream
+
 
 def _remove(p):
   if path.isdir(p):
@@ -72,4 +77,32 @@ def build(build_sets, verbose):
   print()
   print('======= BUILD')
   print()
-  execute(session, build_sets)
+
+  if build_sets is None:
+    build_sets = session
+
+  for build_set in topo_sort(build_sets):
+    if not build_set.operator:
+      continue
+
+    prefix = '[{}/{}]'.format(build_set.operator.target.id, build_set.operator.id)
+
+    # Skip the build set if all output files are newer than the input files.
+    infiles = list(stream.concat(build_set.inputs.values()))
+    outfiles = list(stream.concat(build_set.outputs.values()))
+    if not nr.fs.compare_all_timestamps(infiles, outfiles):
+      print(prefix, 'SKIP')
+      continue
+
+    if build_set.description:
+      print(prefix, build_set.get_description())
+    else:
+      print(prefix)
+    for files in build_set.outputs.values():
+      for filename in files:
+        nr.fs.makedirs(nr.fs.dir(filename))
+    commands = build_set.get_commands()
+    with sh.override_environ(build_set.get_environ()):
+      for cmd in commands:
+        print('  $', ' '.join(shlex.quote(x) for x in cmd))
+        subprocess.check_call(cmd, cwd=build_set.get_cwd())
