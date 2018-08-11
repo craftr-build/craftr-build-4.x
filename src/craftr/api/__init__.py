@@ -710,10 +710,10 @@ def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
                     ignore_false_excludes)
 
 
-def chfdir(filename):
+def chfdir(filename, new_parent=None, old_parent=None):
   if nr.fs.isabs(filename):
-    filename = nr.fs.rel(filename, current_scope().directory)
-  return nr.fs.join(current_scope().build_directory, filename)
+    filename = nr.fs.rel(filename, old_parent or current_scope().directory)
+  return nr.fs.join(new_parent or current_target().build_directory, filename)
 
 
 def fmt(s, frame=None):
