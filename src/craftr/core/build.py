@@ -71,7 +71,7 @@ class BuildSet:
     self._operator = None
 
   def __repr__(self):
-    return 'BuildSet(operator={}, inputs={}, outputs={}, variables={})'\
+    return '{}(operator={}, inputs={}, outputs={}, variables={})'\
       .format(type(self).__name__, self.operator, set(self._inputs.keys()),
               set(self._outputs.keys()), set(self._variables.keys()))
 
