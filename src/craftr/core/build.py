@@ -56,7 +56,7 @@ class BuildSet:
   """
 
   def __init__(self, master: 'Master', description: str = None,
-               environ: Dict[str, str] = None):
+               environ: Dict[str, str] = None, cwd: str = None):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if description is not None and not isinstance(description, str):
@@ -64,6 +64,7 @@ class BuildSet:
     self._master = master
     self._description = description
     self._environ = environ
+    self._cwd = cwd
     self._inputs = {}
     self._outputs = {}
     self._variables = {}
@@ -85,6 +86,10 @@ class BuildSet:
   @property
   def environ(self):
     return self._environ
+
+  @property
+  def cwd(self):
+    return self._cwd
 
   @property
   def inputs(self):
@@ -156,6 +161,9 @@ class BuildSet:
   def get_environ(self):
     return ChainMap(self._environ or {}, self._operator.environ or {})
 
+  def get_cwd(self):
+    return self._cwd or self._operator.cwd
+
 
 class Commands:
   """
@@ -200,8 +208,8 @@ class Operator:
   """
 
   def __init__(self, master: 'Master', id: str, commands: Commands,
-               environ: Dict[str, str] = None, explicit: bool = False,
-               syncio: bool = False):
+               environ: Dict[str, str] = None, cwd: str = None,
+               explicit: bool = False, syncio: bool = False):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
@@ -219,6 +227,7 @@ class Operator:
     self._build_sets = []
     self._variables = {}
     self._environ = environ
+    self._cwd = cwd
     self._explicit = explicit
     self._syncio = syncio
 
@@ -248,6 +257,10 @@ class Operator:
   @property
   def environ(self):
     return self._environ
+
+  @property
+  def cwd(self):
+    return self._cwd
 
   @property
   def explicit(self):
