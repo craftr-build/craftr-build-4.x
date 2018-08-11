@@ -450,6 +450,8 @@ def target(name, bind=True):
 def depends(target, public=False):
   """
   Add *target* as a dependency to the current target.
+
+  target (str, Target, List[Union[Target, str]])
   """
 
   if isinstance(target, str):
@@ -461,8 +463,10 @@ def depends(target, public=False):
     except KeyError as exc:
       session.load_module(scope)
       target = session.targets[scope + '@' + name]
-
-  return current_target().add_dependency(target, public)
+  elif isinstance(target, (list, tuple)):
+    [depends(x) for x in target]
+  else:
+    return current_target().add_dependency(target, public)
 
 
 def properties(_scope=None, _props=None, _target=None, **kwarg_props):
