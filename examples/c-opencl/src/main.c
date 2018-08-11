@@ -224,38 +224,51 @@ GLuint createProgram(char const* vert, char const* frag) {
   return program;
 }
 
-void printExtensionsList(char const* c) {
-  while (*c) {
+int hasExtension(char const* extensionList, char const* extension) {
+  for (char* c = extensionList; *c; ) {
     char* n = c;
     while (*n && *n != ' ') n++;
     if (*n) {
       *n = 0;
       n++;
     }
-    printf("  - %s\n", c);
+    if (strcmp(c, extension) == 0) return 1;
     c = n;
   }
+  return 0;
 }
 
 int main(int argc, char** argv) {
-  if (initWindow() != 0) return 1;
   char buffer[2048];
 
   /* Select the first OpenCL platform. */
-  cl_platform_id platform;
+  cl_platform_id platforms[10];
   cl_uint num_platforms;
-  clGetPlatformIDs(1, &platform, &num_platforms);
+  clGetPlatformIDs(10, platforms, &num_platforms);
   if (num_platforms == 0) {
     fprintf(stderr, "error: no OpenCL platforms available.\n");
     return 1;
   }
 
+  printf("\bFound %u OpenCL platforms:\n", num_platforms);
+  for (cl_uint i = 0; i < num_platforms; ++i) {
+    clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, sizeof(buffer), buffer, NULL);
+    printf("  - [%u] %s\n", i, buffer);
+  }
+  printf("\n");
+
+  cl_uint index = 0;
+  printf("Please select the OpenCL Platform to use: ");
+  scanf("%u", &index);
+  if (index < 0 || index >= num_platforms) {
+    fprintf(stderr, "error: index out of range: %u\n", index);
+    return 1;
+  }
+
+  cl_platform_id platform = platforms[index];
+
   clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(buffer), buffer, NULL);
   printf("Selected OpenCL Platform: %s\n", buffer);
-  clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, sizeof(buffer), buffer, NULL);
-  printf("The following extensions are supported:\n");
-  printExtensionsList(buffer);
-  printf("\n");
 
   /* Get the first OpenCL device. */
   cl_device_id device;
@@ -267,9 +280,13 @@ int main(int argc, char** argv) {
   }
 
   clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, sizeof(buffer), buffer, NULL);
-  printf("The following extensions are supported by the selected OpenCL Device:\n");
-  printExtensionsList(buffer);
-  printf("\n");
+  if (!hasExtension(buffer, "cl_khr_gl_sharing")) {
+    fprintf(stderr, "error: the OpenCL device does not support the cl_khr_gl_sharing extension.\n");
+    return 1;
+  }
+
+  /* Initialize the window. */
+  if (initWindow() != 0) return 1;
 
   /* Create an OpenCL context that has access to the OpenGL context. */
   cl_context_properties props[] = {
