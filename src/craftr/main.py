@@ -27,6 +27,10 @@ def get_argument_parser(prog=None):
 
   parser.add_argument('--project', default='build.craftr',
     help='The Craftr project file or directory to load.')
+  parser.add_argument('--config-file', default=None,
+    help='Load the specified configuration file. Defaults to '
+         '"build.craftr.toml" or "build.craftr.json" in the project '
+         'directory if the file exists.')
   parser.add_argument('--variant',
     choices=('debug', 'release'), default='debug',
     help='The build variant. Defaults to debug.')
@@ -74,12 +78,19 @@ def main(argv=None, prog=None):
 
   if not args.build_directory:
     args.build_directory = nr.fs.join(args.build_root, args.variant)
-
   if nr.fs.isdir(args.project):
     args.project = nr.fs.join(args.project, 'build.craftr')
+  if not args.config_file:
+    args.config_file = nr.fs.join(nr.fs.dir(args.project), 'build.craftr.toml')
+    if not nr.fs.isfile(args.config_file):
+      args.config_file = nr.fs.join(nr.fs.dir(args.project), 'build.craftr.json')
+      if not nr.fs.isfile(args.config_file):
+        args.config_file = None
 
   # Create a new session.
   session = api.session = api.Session(args.build_root, args.build_directory, args.variant)
+  if args.config_file:
+    session.load_config(args.config_file)
 
   if args.tool is not None:
     if not args.tool:

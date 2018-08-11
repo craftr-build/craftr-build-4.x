@@ -45,6 +45,7 @@ __all__ = [
 
 import collections
 import contextlib
+import json
 import nodepy
 import nr.fs
 import os
@@ -121,6 +122,58 @@ class Session(_build.Master):
     self.dependency_props = PropertySet()
     self.os_info = OsInfo.new()
     self.build_info = BuildInfo(self._build_variant)
+
+  def load_config(self, config):
+    """
+    Loads a TOML configuration. Evaluates `if(...)` expressions in the keys
+    of the configuration. Such conditional expressions must be of the form
+    `DATA=VALUE` where `DATA` can be a Python expressions that usually reads
+    a member of the #OS or #BUILD objects and `VALUE` is treated as a string
+    without the need to add quotes.
+
+    Example:
+
+    ```toml
+    ['if(OS.id==win32)'.'craftr/lang/cxx']
+    staticRuntime = true
+    ```
+
+    The configuration can also be represented as JSON:
+
+    ```json
+    {
+      "if(OS.id=win32)": {
+        "craftr/libs/opencl": {
+          "vendor": "nvidia"
+        }
+      }
+    }
+    ```
+    """
+
+    if isinstance(config, str):
+      with open(config) as fp:
+        if path.getsuffix(config) == 'json':
+          config = json.load(fp)
+        else:
+          config = toml.load(fp)
+
+    def handle_key(key, data):
+      if key.startswith('if(') and key.endswith(')'):
+        left, right = key[3:-1].partition('=')[::2]
+        expr = 'str({}) == {!r}'.format(left, right.strip())
+        print(expr)
+        # TODO: Catch exception?
+        result = eval(expr, {'OS': self.os_info, 'BUILD': self.build_info})
+        if not result: return
+        for key, value in data.items():
+          handle_key(key, value)
+      else:
+        for sub_key, value in data.items():
+          self.options[key + ':' + sub_key] = value
+
+    for key, value in config.items():
+      handle_key(key, value)
 
   def load_module(self, name):
     return self.nodepy_context.require(name + '.craftr', exports=False)
