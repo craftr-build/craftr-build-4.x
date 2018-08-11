@@ -456,7 +456,11 @@ def depends(target, public=False):
     scope, name = target.partition(':')[::2]
     if not scope:
       scope = current_scope().name
-    target = session.targets[scope + '@' + name]
+    try:
+      target = session.targets[scope + '@' + name]
+    except KeyError as exc:
+      session.load_module(scope)
+      target = session.targets[scope + '@' + name]
 
   return current_target().add_dependency(target, public)
 
