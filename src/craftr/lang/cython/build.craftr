@@ -1,0 +1,127 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+project('craftr/lang/cython', '1.0-0')
+options('bin', str, 'cython')
+options('binArgs', str, '')
+
+import sys
+import python from "craftr/lang/python"
+
+from craftr import api
+from craftr.utils import sh
+
+cxx = require('craftr/lang/cxx')
+target('foo')
+
+
+if options.binArgs:
+  cython = sh.split(options.binArgs)
+else:
+  cython = [options.bin]
+
+props = session.target_props
+props.add('cython.srcs', 'PathList')
+props.add('cython.main', 'PathList')
+props.add('cython.includes', 'PathList')
+props.add('cython.additionalFlags', 'Bool')
+props.add('cython.fastFail', 'Bool')
+props.add('cython.pythonVersion', 'String')
+props.add('cython.cpp', 'Bool')
+props.add('cython.inWorkingTree', 'Bool')
+
+
+
+def relocate_files(parent, files, outdir, suffix, replace_suffix=True):
+  """
+  Converts the list of filenames *files* so that they are placed under
+  *outdir* instead of *parent* and have the specified *suffix*. If
+  *replace_suffix* is #True (default), then the file's suffix will be
+  replaced, otherwise appended.
+  """
+
+  outdir = path.canonical(outdir)
+  parent = path.canonical(parent)
+
+  result = []
+  for filename in files:
+    filename = path.join(outdir, path.rel(path.canonical(filename), parent))
+    filename = path.addsuffix(filename, suffix, replace=replace_suffix)
+    result.append(filename)
+
+  return result
+
+
+def build():
+  target = current_target()
+  build_dir = target.build_directory
+  data = target.get_props('cython.', as_object=True)
+
+  if not data.pythonVersion:
+    data.pythonVersion = sys.version[0]
+  if data.pythonVersion not in ('2', '3'):
+    error('invalid cython.pythonVersion: {!r}'.format(data.pythonVersion))
+
+  srcs_dir = path.join(build_dir, "cython-srcs")
+  c_srcs = relocate_files(target.scope.directory, data.srcs,
+    srcs_dir, '.cpp' if data.cpp else '.c')
+  c_main = relocate_files(target.scope.directory, data.main,
+    srcs_dir, '.cpp' if data.cpp else '.c')
+
+  data.includes += target['cxx.includes']
+
+  command = cython + ['$<in', '-o', '$@out', '-{}'.format(data.pythonVersion)]
+  command += ['-I' + x for x in data.includes]
+  command += ['--fast-fail'] if data.fastFail else []
+  command += ['--cplus'] if data.cpp else []
+  command += ['$embedflag']
+
+  op = operator('cython.compile', commands=[command])
+  modules = []
+
+  for pyx_files, c_files, is_lib in ((data.srcs, c_srcs, True), (data.main, c_main, False)):
+    for pyx, c in zip(pyx_files, c_files):
+      bset = build_set({'in': pyx}, {'out': c}, {'embedflag': []}, description='$<in', operator=op)
+      if not is_lib:
+        bset.variables['embedflag'] = '--embed'
+
+      base = path.rmvsuffix(path.base(pyx))
+      if is_lib:
+        product = base + python.cfg['SO']
+        modules.append(product)
+      else:
+        product = base + '$(ext)'
+
+      api.target('{}/{}'.format(target.name, base))
+      depends('craftr/lang/python:python')
+      properties({
+        'this.buildDirectory': build_dir,
+        'cxx.srcs': [c],
+        'cxx.type': 'library' if is_lib else 'executable',
+        'cxx.preferredLinkage': 'shared',
+        'cxx.productName': product,
+        'cxx.runtimeLibrary': 'dynamic'
+      })
+      cxx.build()
+
+  bind_target(target)

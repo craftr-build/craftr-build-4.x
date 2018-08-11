@@ -1,0 +1,8 @@
+project('examples.cython', '1.0-0')
+cython = require('craftr/lang/cython')
+target('main')
+properties({
+  'cython.srcs': ['Primes.pyx'],
+  'cython.main': ['Main.pyx']
+})
+cython.build()
