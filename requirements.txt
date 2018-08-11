@@ -6,3 +6,4 @@ nr.stream>=1.0.1
 nr.types>=1.0.6
 requests>=2.19.1
 toml>=0.9.4
+werkzeug>=0.14.1
