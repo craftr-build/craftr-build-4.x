@@ -105,4 +105,20 @@ def build(build_sets, verbose):
     with sh.override_environ(build_set.get_environ()):
       for cmd in commands:
         print('  $', ' '.join(shlex.quote(x) for x in cmd))
-        subprocess.check_call(cmd, cwd=build_set.get_cwd())
+        if build_set.operator.syncio:
+          stdin, stdout, stderr = None, None, None
+        else:
+          stdin, stdout, stderr = subprocess.PIPE, subprocess.PIPE, subprocess.STDOUT
+        p = subprocess.Popen(cmd, cwd=build_set.get_cwd(),
+          stdin=stdin, stdout=stdout, stderr=stderr)
+        if p.stdin:
+          p.stdin.close()
+        out = p.communicate()
+        if verbose and not build_set.operator.syncio:
+          print()
+          print(out[0].decode())
+        if p.returncode != 0:
+          print('\ncraftr: error: exited with return code {}'.format(p.returncode))
+          return p.returncode
+
+  return 0
