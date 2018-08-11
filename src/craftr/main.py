@@ -22,56 +22,126 @@ def open_cli_file(filename, mode):
 
 
 def get_argument_parser(prog=None):
-  parser = argparse.ArgumentParser(prog=prog)
+  parser = argparse.ArgumentParser(
+    prog=prog,
+    formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=70, width=100))
 
-  parser.add_argument('targets', nargs='*',
-    help='The targets to build or clean.')
+  group = parser.add_argument_group('Configuration')
 
-  # Configuration options
+  group.add_argument(
+    '--variant',
+    metavar='[=debug]',
+    choices=('debug', 'release'),
+    default='debug',
+    help='Choose the build variant (debug|release).')
 
-  parser.add_argument('--project', default='build.craftr',
+  group.add_argument(
+    '--project',
+    default='build.craftr',
+    metavar='PATH',
     help='The Craftr project file or directory to load.')
-  parser.add_argument('--config-file', default=None,
+
+  group.add_argument(
+    '--module-path',
+    action='append',
+    default=[],
+    metavar='PATH',
+    help='Additional module search paths.')
+
+  group.add_argument(
+    '--config-file',
+    default=None,
+    metavar='PATH',
     help='Load the specified configuration file. Defaults to '
          '"build.craftr.toml" or "build.craftr.json" in the project '
          'directory if the file exists.')
-  parser.add_argument('--variant',
-    choices=('debug', 'release'), default='debug',
-    help='The build variant. Defaults to debug.')
-  parser.add_argument('--build-root', default='build',
-    help='The build root directory. Defaults to build.')
-  parser.add_argument('--build-directory',
-    help='The build output directory. Defaults to {build_root}/{variant}.')
-  parser.add_argument('--backend', default='craftr/backends/python',
-    help='The build backend to use.')
-  parser.add_argument('--options', nargs='+',
-    help='Specify one or more options.')
-  parser.add_argument('--verbose', action='store_true')
-  parser.add_argument('--recursive', action='store_true')
-  parser.add_argument('--module-path', action='append', default=[],
-    help='Additional module search paths.')
 
-  # Invokation options
+  group.add_argument(
+    '-O', '--option',
+    action='append',
+    default=[],
+    metavar='K=V',
+    help='Override an option value.')
 
-  parser.add_argument('-c', '--config', action='store_true',
-    help='Configure the build. This will execute the build script and '
-         'export the build graph to the build directory (depending on '
-         'the backend).')
-  parser.add_argument('-b', '--build', action='store_true',
-    help='Execute the build. Additional arguments are treated as '
-         'the targets that are to be built.')
-  parser.add_argument('--clean', action='store_true',
-    help='Clean the build output files. Additional arguments are '
-         'treated as the targets that are to be cleaned.')
+  group.add_argument(
+    '--build-root',
+    default='build',
+    metavar='PATH=[build]',
+    help='The build root directory. When used, this option must be specified '
+         'with every invokation of Craftr, even after the config step.')
 
-  # Meta options
+  group.add_argument(
+    '--backend',
+    default=None,
+    metavar='MODULE',
+    help='Override the build backend. Can also be specified with the '
+         'build:backend option. Defaults to "craftr/backends/python".')
 
-  parser.add_argument('--tool', nargs='...', help='Invoke a tool')
-  parser.add_argument('--dump-graphviz', nargs='?', default=NotImplemented,
-    help='Dump a GraphViz representation of the build graph to stdout.')
-  parser.add_argument('--dump-svg', nargs='?', default=NotImplemented,
-    help='Render an SVG file of the build graph\'s GraphViz representation. '
-         'Requires the `dot` command to be available.')
+  group = parser.add_argument_group('Configure, build and clean')
+
+  group.add_argument(
+    'targets',
+    nargs='*',
+    metavar='[TARGET [...]]',
+    help='Allows you to explicitly specify the targets that should be built '
+         'and/or cleaned with the --build and --clean steps. A target '
+         'specifier is of the form "[scope@]target[:operator]. If the scope '
+         'is omitted, it falls back to the project\'s scope. If the operator '
+         'is not specified, all non-explicit operators of the target are used. '
+         'Logical children of one target are automatically included when their '
+         'parent target is matched.')
+
+  group.add_argument(
+    '-c', '--config',
+    action='store_true',
+    help='Configure step. Run the project build script and serialize the '
+         'build information. This needs to be re-run when the build backend '
+         'is changed.')
+
+  group.add_argument(
+    '-b', '--build',
+    action='store_true',
+    help='Build step. This must be used after or together with --config.')
+
+  group.add_argument(
+    '--clean',
+    action='store_true',
+    help='Clean step.')
+
+  group.add_argument(
+    '-v', '--verbose',
+    action='store_true',
+    help='Enable verbose output in the --build and/or --clean steps.')
+
+  group.add_argument(
+    '-r', '--recursive',
+    action='store_true',
+    help='Clean build sets recursively.')
+
+  group = parser.add_argument_group('Tools and debugging')
+
+  group.add_argument(
+    '--tool',
+    nargs='...',
+    metavar='TOOLNAME [ARG [...]]',
+    help='Invoke a Craftr tool.')
+
+  group.add_argument(
+    '--dump-graphviz',
+    nargs='?',
+    default=NotImplemented,
+    metavar='FILE',
+    help='Dump a GraphViz representation of the build graph to stdout or '
+         'the specified FILE.')
+
+  group.add_argument(
+    '--dump-svg',
+    nargs='?',
+    default=NotImplemented,
+    metavar='FILE',
+    help='Render an SVG file of the build graph\'s GraphViz representation '
+         'to stdout or the specified FILE. Override the layout engine with '
+         'the DOTENGINE environment variable (defaults to "dot").')
 
   return parser
 
@@ -80,8 +150,6 @@ def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
   args = parser.parse_args(argv)
 
-  if not args.build_directory:
-    args.build_directory = nr.fs.join(args.build_root, args.variant)
   if nr.fs.isdir(args.project):
     args.project = nr.fs.join(args.project, 'build.craftr')
   if not args.config_file:
@@ -92,11 +160,12 @@ def main(argv=None, prog=None):
         args.config_file = None
 
   # Create a new session.
-  session = api.session = api.Session(args.build_root, args.build_directory, args.variant)
+  build_directory = nr.fs.join(args.build_root, args.variant)
+  session = api.session = api.Session(args.build_root, build_directory, args.variant)
   session.add_module_search_path(args.module_path)
   if args.config_file:
     session.load_config(args.config_file)
-  for opt in args.options or ():
+  for opt in args.option or ():
     key, value = opt.partition('=')[::2]
     session.options[key] = value
 
@@ -167,6 +236,8 @@ def main(argv=None, prog=None):
       p.communicate(dotstr)
     return 0
 
+  if not args.backend:
+    args.backend = session.options.get('build:backend', 'craftr/backends/python')
   backend = session.load_module(args.backend).namespace
   if args.config:
     backend.export()
