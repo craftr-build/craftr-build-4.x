@@ -506,19 +506,20 @@ def depends(target, public=False):
   target (str, Target, List[Union[Target, str]])
   """
 
+  if isinstance(target, (list, tuple)):
+    [depends(x) for x in target]
+    return
+
   if isinstance(target, str):
     scope, name = target.partition(':')[::2]
     if not scope:
       scope = current_scope().name
-    try:
-      target = session.targets[scope + '@' + name]
-    except KeyError as exc:
+    target_name = scope + '@' + name
+    if target_name not in session.targets:
       session.load_module(scope)
-      target = session.targets[scope + '@' + name]
-  elif isinstance(target, (list, tuple)):
-    [depends(x) for x in target]
-  else:
-    return current_target().add_dependency(target, public)
+    target = session.targets[scope + '@' + name]
+
+  return current_target().add_dependency(target, public)
 
 
 def properties(_scope=None, _props=None, _target=None, **kwarg_props):
