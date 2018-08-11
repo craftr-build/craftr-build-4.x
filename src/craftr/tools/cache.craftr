@@ -68,6 +68,12 @@ class CacheManager:
   def get(self, key, *a):
     return self.data.get(key, *a)
 
+  def setdefault(self, key, value):
+    new_value = self.data.setdefault(key, value)
+    if new_value is not value:
+      self.changed = True
+    return new_value
+
   def load(self):
     try:
       with open(self.filename) as fp:
