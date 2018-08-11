@@ -532,51 +532,87 @@ def depends(target, public=False):
   return current_target().add_dependency(target, public)
 
 
-def properties(_scope=None, _props=None, _target=None, target=None, **kwarg_props):
+def properties(*args, target=None, **kwarg_props):
   """
   Sets properties in the current target.
 
-  _scope (str): A scope prefix. If specified, it will be prefixed to
-      both *_props* and *kwarg_props*. If it is a dictionary instead
-      of a string, it will behave as the *_props* argument.
-  _props (dict): A dictionary of properties to set. The keys in the
+  The following signatures are accepted:
+
+  - `(...)`
+  - `(props: str, ...)`
+  - `(target: Target, ...)`
+  - `(scope: str, props: str = None, ...)`
+  - `(target: Target, scope: str, props: str = None, ...)`
+  - `(target: Target, props: str = None, ...)`
+
+  scope (str): A scope prefix. If specified, it will be prefixed to
+      both *props* and *kwarg_props*. If it is a dictionary instead
+      of a string, it will behave as the *props* argument.
+  props (dict): A dictionary of properties to set. The keys in the
       dictionary can have special syntax to mark a property as publicly
       visible (prefix with `@`) and/or to append to existing values in
-      the same target (suffix with `+`).
-  _target (Target): The target to set the properties in. Defaults to
+      the same target (suffix with `+`).6
+  target (Target): The target to set the properties in. Defaults to
       the currently active target.
   kwarg_props: Keyword-argument style property values. Similar to the
-      *_props* dictionary, keys in this dictionary may be prefixed with
+      *props* dictionary, keys in this dictionary may be prefixed with
       `public__` and/or suffixed with `__append`.
   """
 
-  target = _target or target or current_target()
-  props = {}
+  assert '_target' not in kwarg_props  # find old code
 
-  if isinstance(_scope, dict):
-    _props = _scope
-    _scope = ''
+  if not args:
+    scope = None
+    props = None
+    target = current_target()
+  elif len(args) == 1:
+    scope = None
+    if isinstance(args[0], Target):
+      props = None
+      target = args[0]
+    else:
+      props = args[0]
+      target = current_target()
+  elif len(args) == 2:
+    if isinstance(args[0], Target):
+      target, props = args
+      scope = None
+    else:
+      scope, props = args
+      target = current_target()
+  elif len(args) == 3:
+    target, scope, props = args
   else:
-    _scope += '.'
+    raise TypeError('too many positional arguments, expected 0-3, got {}'
+      .format(len(args)))
+
+  if props is None:
+    props = {}
+  if not scope:
+    scope = ''
+  else:
+    scope += '.'
+
+  compiled_props = {}
 
   # Prepare the parameters from both sources.
-  for key, value in (_props or {}).items():
+  for key, value in (props or {}).items():
     public = append = False
     while True:
       if not public and key[0] == '@': public, key = True, key[1:]
       elif not append and key[0] == '+': append, key = True, key[1:]
       elif not append and key[-1] == '+': append, key = True, key[:-1]
       else: break
-    props.setdefault(key, []).append((value, public, append))
+    compiled_props.setdefault(key, []).append((value, public, append))
   for key, value in kwarg_props.items():
     public = key.startswith('public__')
     if public: key = key[8:]
     append = key.endswith('__append')
     if append: key = key[:-8]
-    props.setdefault(key, []).append((value, public, append))
+    compiled_props.setdefault(key, []).append((value, public, append))
 
-  for key, operations in props.items():
-    key = _scope + key
+  for key, operations in compiled_props.items():
+    key = scope + key
     for value, public, append in operations:
       dest = target.public_properties if public else target.properties
       if append and dest.is_set(key):
