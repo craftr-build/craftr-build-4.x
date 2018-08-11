@@ -23,6 +23,9 @@ def open_cli_file(filename, mode):
 def get_argument_parser(prog=None):
   parser = argparse.ArgumentParser(prog=prog)
 
+  parser.add_argument('targets', nargs='*',
+    help='The targets to build or clean.')
+
   # Configuration options
 
   parser.add_argument('--project', default='build.craftr',
@@ -40,6 +43,8 @@ def get_argument_parser(prog=None):
     help='The build output directory. Defaults to {build_root}/{variant}.')
   parser.add_argument('--backend', default='craftr/backends/python',
     help='The build backend to use.')
+  parser.add_argument('--options', nargs='+',
+    help='Specify one or more options.')
   parser.add_argument('--verbose', action='store_true')
   parser.add_argument('--recursive', action='store_true')
 
@@ -70,11 +75,7 @@ def get_argument_parser(prog=None):
 
 def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
-  args, selection = parser.parse_known_args(argv)
-
-  for x in selection:
-    if x.startswith('-'):
-      parser.error('unknown option: {}'.format(x))
+  args = parser.parse_args(argv)
 
   if not args.build_directory:
     args.build_directory = nr.fs.join(args.build_root, args.variant)
@@ -91,6 +92,9 @@ def main(argv=None, prog=None):
   session = api.session = api.Session(args.build_root, args.build_directory, args.variant)
   if args.config_file:
     session.load_config(args.config_file)
+  for opt in args.options:
+    key, value = opt.partition('=')[::2]
+    session.options[key] = value
 
   if args.tool is not None:
     if not args.tool:
@@ -107,9 +111,9 @@ def main(argv=None, prog=None):
     raise NotImplementedError('build graph deserialization not implemented')
 
   # Determine the build sets that are supposed to be built.
-  if selection:
+  if args.targets:
     build_sets = []
-    for name in selection:
+    for name in args.targets:
       if '@' in name:
         scope, name = name.partition('@')[::2]
       else:
