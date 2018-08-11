@@ -202,6 +202,8 @@ class Target(_build.Target):
       self.target = target
       self.public = public
       self.properties = Properties(session.dependency_props, owner=current_scope())
+    def __getitem__(self, key):
+      return self.properties[key]
 
   def __init__(self, name: str, scope:Scope):
     super().__init__(session, '{}@{}'.format(scope.name, name))

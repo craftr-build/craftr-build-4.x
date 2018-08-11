@@ -93,6 +93,7 @@ class CraftrModule(nodepy.loader.PythonModule):
       setattr(self.namespace, name, getattr(api, name))
     with self.session.enter_scope(None, None, str(self.directory)) as scope:
       self.scope = scope
+      self.namespace.scope = scope
       self.namespace.options = ModuleOptions(self.session, self.scope)
       super()._exec_code(code)
 
