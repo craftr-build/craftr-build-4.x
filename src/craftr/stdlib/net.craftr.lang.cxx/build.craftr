@@ -36,7 +36,7 @@ else:
 options.add_scope_alias('cxx')
 options('architecture', str, OS.arch)
 options('toolchain', str, _toolchainDefault)
-options('staticRuntime', bool, OS.id == 'win32')
+options('staticRuntime', bool, False)
 
 import sys
 import base from './impl/base'
