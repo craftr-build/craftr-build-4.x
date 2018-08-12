@@ -1,0 +1,98 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+This Craftr module provides two objects that represent a JSON object that
+is persistent between multiple Craftr configure steps. While the #v object
+is locally unique for the current build variant, the #g object is globally
+available for all build variants.
+"""
+
+project(module.name, '1.0-0')
+
+import atexit
+import contextlib
+import hashlib
+import json
+
+
+class CacheManager:
+
+  def __init__(self, filename):
+    self.data = {}
+    self.filename = filename
+    self.load()
+    self.hash = self.calculate_hash()
+
+  def __repr__(self):
+    return 'CacheManager(filename={!r}, data=...)'.format(self.filename)
+
+  def __contains__(self, key):
+    return key in self.data
+
+  def __getitem__(self, key):
+    return self.data[key]
+
+  def __setitem__(self, key, value):
+    self.data[key] = value
+
+  def __delitem__(self, key):
+    del self.data[key]
+
+  def pop(self, key, *a):
+    v = self.data.pop(key, *a)
+    return v
+
+  def get(self, key, *a):
+    return self.data.get(key, *a)
+
+  def setdefault(self, key, value):
+    return self.data.setdefault(key, value)
+
+  def load(self):
+    try:
+      with open(self.filename) as fp:
+        self.data.update(json.load(fp))
+    except FileNotFoundError:
+      pass
+    except json.JSONDecodeError as exc:
+      print('warning: error loading cache "{!r}": {}'.format(filename, exc))
+
+  def save(self):
+    # We only want to save the cache if something actually changed.
+    new_hash = self.calculate_hash()
+    if new_hash != self.hash:
+      path.makedirs(path.dir(self.filename))
+      with open(self.filename, 'w') as fp:
+        json.dump(self.data, fp)
+      self.hash = new_hash
+
+  def calculate_hash(self):
+    return hashlib.sha1(json.dumps(self.data, sort_keys=True).encode()).hexdigest()
+
+
+g = CacheManager(path.join(session.build_root, 'craftr_cache.json'))
+v = CacheManager(path.join(session.build_root, 'craftr_cache.{}.json'.format(session.build_variant)))
+
+atexit.register(g.save)
+atexit.register(v.save)

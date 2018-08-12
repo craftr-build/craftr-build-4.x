@@ -1,6 +1,6 @@
 project('examples.c-opencl', '1.0-0')
 
-import cxx from 'craftr/lang/cxx'
+import cxx from 'cxx'
 
 target('main')
 depends([

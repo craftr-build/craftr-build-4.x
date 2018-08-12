@@ -1,0 +1,141 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+project(module.name, '1.0-0')
+options('sourceDir', str, '')
+options('binaryDir', str, '')
+options('version', str, '3.2.1')
+options('msvcVersion', str, '')
+options('fromSource', bool, False)
+options('static', bool, True)
+options('x11', bool, True)
+options('wayland', bool, True)
+
+import cxx from 'net.craftr.lang.cxx'
+import {get_source_archive} from 'net.craftr.tool.download'
+import {pkg_config} from 'net.craftr.tool.pkg-config'
+import {configure_file} from 'net.craftr.tool.cmake'
+
+if options.fromSource:
+  mode = 'source'
+  if not options.sourceDir:
+    url = fmt('https://github.com/glfw/glfw/releases/download/{options.version}/glfw-{options.version}.zip')
+    options.sourceDir = get_source_archive(url)
+    options.sourceDir = path.join(path.abs(options.sourceDir), fmt('glfw-{options.version}'))
+
+elif OS.id == 'win32' and cxx.compiler.id in ('msvc', 'mingw'):
+  mode = 'win32-prebuilt'
+  if not options.binaryDir:
+    winver = 'WIN64' if cxx.compiler.is64bit else 'WIN32'
+    url = fmt('https://github.com/glfw/glfw/releases/download/{options.version}/glfw-{options.version}.bin.{winver}.zip')
+    options.binaryDir = get_source_archive(url.format(**locals()))
+    options.binaryDir = path.join(path.abs(options.binaryDir), fmt('glfw-{options.version}.bin.{winver}'))
+
+else:
+  mode = 'pkg-config'
+
+target('glfw')
+
+if mode == 'pkg-config':
+  pkg_config('glfw3', static=options.static)
+
+if mode == 'win32-prebuilt':
+  if cxx.compiler.id == 'msvc':
+    if options.msvcVersion:
+      libdir = 'lib-vc{}'.format(options.msvcVersion)
+    else:
+      vs_year = cxx.compiler.toolkit.vs_year
+      for y in range(vs_year, 2012, -1):
+        libdir = 'lib-vc{}'.format(y)
+        if path.exists(path.join(options.binaryDir, libdir)):
+          if y != cxx.compiler.toolkit.vs_year:
+            print('GLFW: warning: falling back to lib-vc{} (expected lib-vc{})'.format(y, vs_year))
+            break
+      else:
+        error('unable to determine VC library directory')
+  elif cxx.compiler.id == 'mingw':
+    libdir = 'lib-mingw' if cxx.compiler.is32bit else 'lib-mingw-w64'
+  else:
+    error('unsupported compiler for Windows prebuilt GLFW: {!r}'.format(cxx.compiler.id))
+
+  properties({
+    '@cxx.includes+': [path.join(options.binaryDir, 'include')],
+    '@cxx.defines+': [] if options.static else ['GLFW_DLL'],
+    '@cxx.libraryPaths+': [path.join(options.binaryDir, libdir)],
+    '@cxx.systemLibraries+': ['glfw3' if options.static else 'glfw3dll']
+  })
+
+if OS.id == 'win32':
+  properties({
+    '@cxx.systemLibraries+': ['gdi32', 'shell32']
+  })
+
+if mode == 'source':
+  sources = ['context.c', 'egl_context.c', 'init.c', 'input.c', 'monitor.c',
+              'vulkan.c', 'window.c']
+  syslibs = []
+
+  # CMake header configuration variables.
+  environ = {}
+  environ['_GLFW_VULKAN_STATIC'] = False
+  environ['_GLFW_USE_HYBRID_HPG'] = True
+  environ['_GLFW_USE_RETINA'] = True
+  if not options.static:
+    environ['_GLFW_BUILD_DLL'] = True
+  if OS.id == 'win32':
+    environ['_GLFW_WIN32'] = True
+    sources += ['win32_*.c', 'wgl_context.c']
+  elif OS.id == 'darwin':
+    environ['_GLFW_COCOA'] = True
+  elif OS.id == 'linux':
+    syslibs += ['dl', 'm']
+    sources += ['glx_context.c', 'posix_*.c', 'linux_joystick.c']
+    if options.x11 or not options.wayland:
+      sources += ['x11_*.c', 'xkb_unicode.c']
+      environ['_GLFW_X11'] = True
+      pkg_config(['x11', 'xcursor', 'xrandr', 'xinerama'])
+    elif wayland:
+      environ['_GLFW_WAYLAND'] = True
+      sources += ['wl_*.c']
+      # TODO: Wayland pkg-config name?
+  else:
+    error('unsupported os: {!r}'.format(OS.id))
+  # TODO: _GLFW_MIR ?
+  # TODO: _GLFW_HAS_XF86VM ?
+
+  sources = glob(sources, parent=path.join(options.sourceDir, 'src'))
+
+  filename = path.join(options.sourceDir, 'src/glfw_config.h.in')
+  config_dir = path.abs(configure_file(filename, environ=environ).directory)
+
+  properties({
+    'cxx.type': 'library',
+    'cxx.srcs+': sources,
+    'cxx.includes+': [config_dir],
+    'cxx.defines+': ['_GLFW_USE_CONFIG_H'],
+    'cxx.preferredLinkage+': 'static' if options.static else 'shared',
+    '@cxx.includes+': [path.join(options.sourceDir, 'include', 'GLFW')],
+    '@cxx.systemLibraries+': syslibs
+  })
+
+  cxx.build()

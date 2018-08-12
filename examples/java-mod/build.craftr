@@ -1,5 +1,5 @@
 project('examples.java-mod', '1.0-0')
-java = require('craftr/lang/java')
+java = require('java')
 target('main')
 properties('java',
   mainClass = 'com.greetings.Main',

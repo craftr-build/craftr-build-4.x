@@ -1,0 +1,324 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+This module allows you to compile and bundle C# applications.
+"""
+
+project(module.name, '1.0-0')
+options.add_scope_alias('csharp')
+options('impl', str, 'net' if OS.type == 'nt' else 'mono')
+options('csc', str, '')
+options('monoArch', str, '')  # Used to determine the Mono installation path. Must be either x64 or x86
+options('mergeTool', str, '')  # The name of the tool to merge assemblies, either ILRepack or ILMerge
+
+import functools
+import nr.types
+import os
+import re
+import requests
+import subprocess
+import nupkg from './nupkg'
+
+from craftr.utils import sh
+
+if OS.type == 'nt':
+  import msvc from 'net.craftr.tool.msvc'
+else:
+  msvc = None
+
+artifacts_dir = path.join(scope.build_directory, 'csharp', 'nuget')
+
+
+class CscInfo(nr.types.Named):
+
+  __annotations__ = [
+    ('impl', str),
+    ('program', list),
+    ('environ', dict),
+    ('version', str),
+    ('netversion', str, 'net45')  # TODO: determine default netversion here
+  ]
+
+  def __repr__(self):
+    return '<CscInfo impl={!r} program={!r} environ=... version={!r}>'\
+      .format(self.impl, self.program, self.version)
+
+  def is_mono(self):
+    assert self.impl in ('net', 'mono'), self.impl
+    return self.impl == 'mono'
+
+  def exec_args(self, argv):
+    if self.is_mono():
+      return ['mono'] + argv
+    return argv
+
+  def get_nuget(self):
+    """
+    Checks if the `nuget` command-line program is available, and otherwise
+    downloads it into the artifact directory.
+    """
+
+    local_nuget = path.join(artifacts_dir, 'nuget.exe')
+    if not path.isfile(local_nuget):
+      if sh.which('nuget') is not None:
+        return ['nuget']
+      print('[Downloading] NuGet ({})'.format(local_nuget))
+      response = requests.get('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe')
+      response.raise_for_status()
+      path.makedirs(artifacts_dir, exist_ok=True)
+      with open(local_nuget, 'wb') as fp:
+        for chunk in response.iter_content():
+          fp.write(chunk)
+      path.chmod(local_nuget, '+x')
+    return self.exec_args([path.abs(local_nuget)])
+
+  def get_merge_tool(self, out, primary, assemblies=()):
+    """
+    Checks if the `ILMerge` or `ILRepack` command-line program is available, and
+    otherwise installs it using NuGet into the artifact directory.
+    """
+
+    tool = options.mergeTool
+    if not tool:
+      if self.is_mono():
+        tool = 'ILRepack:2.0.13'
+      else:
+        tool = 'ILMerge:2.14.1208'
+
+    tool_name, version = tool.partition(':')[::2]
+    local_tool = path.join(artifacts_dir, tool_name + '.' + version, 'tools', tool_name + '.exe')
+    command = None
+    if not path.isfile(local_tool):
+      if sh.which(tool_name) is not None:
+        command = [tool_name]
+      else:
+        install_cmd = self.get_nuget() + ['install', tool_name, '-Version', version]
+        print('[Installing] {}.{}'.format(tool_name, version))
+        path.makedirs(artifacts_dir, exist_ok=True)
+        subprocess.check_call(install_cmd, cwd=artifacts_dir)
+
+    if not command:
+      command = self.exec_args([path.abs(local_tool)])
+
+    return command + ['/out:' + out] + [primary] + list(assemblies)
+
+  @staticmethod
+  @functools.lru_cache()
+  def get():
+    if options.impl not in ('net', 'mono'):
+      raise ValueError('unsupported csharp:impl={!r}'.format(options.impl))
+
+    program = options.csc or ('csc' if options.impl == 'net' else 'mcs')
+    is_mcs = path.rmvsuffix(program).lower().endswith('mcs')
+
+    if options.impl == 'net':
+      toolkit = msvc.MsvcToolkit.get()
+      csc = CscInfo(options.impl, [program], toolkit.environ, toolkit.csc_version)
+    else:
+      environ = {}
+      if OS.type == 'nt':
+        # Also, just make sure that we can find some standard installation
+        # of Mono.
+        arch = options.monoArch
+        monobin_x64 = path.join(os.getenv('ProgramFiles'), 'Mono', 'bin')
+        monobin_x86 = path.join(os.getenv('ProgramFiles(x86)'), 'Mono', 'bin')
+        if not arch:
+          if path.isdir(monobin_x64):
+            monobin = monobin_x64
+          else:
+            monobin = monobin_x86
+        elif arch == 'x64':
+          monobin = monobin_x64
+        elif arch == 'x86':
+          monobin = monobin_x86
+        else:
+          raise ValueError('invalid value for csharp:monoArch: {!r}'.format(arch))
+        if not path.isdir(monobin):
+          error('Mono installation directory does not exist: "{}"'.format(monobin))
+        environ['PATH'] = monobin + path.pathsep + os.getenv('PATH')
+
+        # On windows, the mono compiler is available as .bat file, thus we
+        # need to run it through the shell.
+        program = sh.shellify([program])
+      else:
+        program = [program]
+
+      if is_mcs:
+        with sh.override_environ(environ):
+          version = subprocess.check_output(program + ['--version']).decode().strip()
+        m = re.search('compiler\s+version\s+([\d\.]+)', version)
+        if not m:
+          raise ValueError('Mono compiler version could not be detected from:\n\n  ' + version)
+        version = m.group(1)
+      else:
+        with sh.override_environ(environ):
+          version = subprocess.check_output(program + ['/version']).decode().strip()
+
+      csc = CscInfo(options.impl, program, environ, version)
+
+    return csc
+
+
+def _init_properties():
+  props = session.target_props
+  props.add('csharp.srcs', 'PathList', options={'inherit': True})
+  props.add('csharp.type', 'String', 'exe')  # appcontainer, exe, library, module, winexe, winmdobj
+  props.add('csharp.main', 'String')
+  props.add('csharp.productName', 'String')
+  props.add('csharp.compilerFlags', 'StringList', options={'inherit': True})
+  props.add('csharp.dynamicLibraries', 'PathList', options={'inherit': True})
+  props.add('csharp.packages', 'StringList')
+  props.add('csharp.bundle', 'Bool', False)  # Allows you to enable bundling of assemblies.
+  props.add('csharp.runArgsPrefix', 'StringList')
+  props.add('csharp.runArgs', 'StringList')
+
+  props = session.dependency_props
+  props.add('csharp.bundle', 'Bool', True)
+
+
+_init_properties()
+csc = CscInfo.get()
+print('{} v{}'.format('CSC' if csc.impl == 'net' else csc.impl, csc.version))
+
+
+def __install(packages):
+  packages = [nupkg.Dependency.from_str(x) for x in packages]
+  deps = set()
+  result = []
+  path.makedirs(artifacts_dir, exist_ok=True)
+  for dep in packages:
+    deps.add(dep)
+
+    # Only install if the .nupkg file does not already exists.
+    nupkg_file = dep.nupkg(artifacts_dir)
+    if not path.isfile(nupkg_file):
+      command = csc.get_nuget() + ['install', dep.id, '-Version', dep.version]
+      subprocess.check_call(command, cwd=artifacts_dir)
+
+    # Parse the .nuspec for this package's dependencies.
+    specdom = nupkg.get_nuspec(nupkg_file)
+    if not specdom:
+      log.warn('Could not read .nuspec from "{}"'.format(nupkg_file))
+      continue
+
+    # XXX determine target_framework, None includes ALL dependencies (which is bad)
+    target_framework = None
+    for dep in nupkg.nuspec_eval_deps(specdom, target_framework):
+      deps.add(dep)
+
+  for dep in deps:
+    filename = dep.resolve(artifacts_dir, framework=csc.netversion)
+    if filename is not None:
+      result.append(filename)
+  return result
+
+
+def build():
+  target = current_target()
+  build_dir = target.build_directory
+  data = target.get_props('csharp.', as_object=True)
+
+  # Install artifacts.
+  data.dynamicLibraries += __install(data.packages)
+
+  # Prepare information for compiling a product.
+  if data.srcs:
+    if data.type in ('appcontainerexe', 'exe', 'winexe'):
+      suffix = '.exe'
+    elif data.type == 'winmdobj':
+      suffix = '.winmdobj'
+    elif data.type == 'module':
+      suffix = '.netmodule'
+    elif data.type == 'library':
+      suffix = '.dll'
+    else:
+      raise ValueError('invalid csharp.type: {!r}'.format(data.type))
+
+    if not data.productName:
+      data.productName = target.name + '-' + target.scope.version
+    data.productFilename = path.join(build_dir, data.productName + suffix)
+    data.bundleFilename = None
+    if data.bundle:
+      data.bundleFilename = path.addtobase(data.productFilename, '-bundle')
+
+  if data.srcs:
+    bundleModules = []
+    modules = []
+    bundleReferences = list(data.dynamicLibraries)
+    references = []
+
+    for dep in target.transitive_dependencies():
+      do_bundle = dep['csharp.bundle']
+
+      modules = dep.target['csharp.outModules']
+      if do_bundle: bundleModules += modules
+      else: modules += modules
+
+      references = dep.target['csharp.outReferences']
+      if do_bundle: bundleReferences += modules
+      else: references += modules
+
+    # Action to compile the C# sources into the target product type.
+    command = csc.program + ['-nologo', '-target:' + data.type]
+    command += ['-out:$@out']
+    if data.main:
+      command += ['-main:' + data.main]
+    if modules or bundleModules:
+      command.append('-addmodule:' + ';'.join(modules + bundleModules))
+    if references or bundleReferences:
+      command += ['-reference:' + x for x in (references + bundleReferences)]
+    if data.compilerFlags:
+      command += data.compilerFlags
+    command += ['$<in']
+    operator('csharp.compile', commands=[command], environ=csc.environ)
+    build_set({'in': data.srcs}, {'out': data.productFilename})
+
+    # TODO:
+    # TODO: Add to csharp.outModules or csharp.outReferences respectively
+    # TODO:
+
+    # Action to run the product.
+    command = list(data.runArgsPrefix or csc.exec_args([]))
+    command += [data.productFilename]
+    command += data.runArgs
+    # TODO: Seems like there is no option or environment variable to
+    #       allow the .NET runtime to find the assemblies in other directories?
+    operator('csharp.run', commands=[command], explicit=True, syncio=True,
+      environ=csc.environ)
+    build_set({'in': data.productFilename}, {}, description='$<in')
+
+  # Action to merge the generated references into one file.
+  if data.bundleFilename and data.bundle:
+    command = csc.get_merge_tool(out='$@out', primary='$<in',
+      assemblies=references + bundleReferences)
+    operator('csharp.bundle', commands=[command], environ=csc.environ)
+    build_set({'in': data.productFilename}, {'out': data.bundleFilename})
+
+    # Action to run the product.
+    command = list(data.runArgsPrefix or csc.exec_args([]))
+    command += [data.bundleFilename]
+    command += data.runArgs
+    operator('csharp.runBundle', commands=[command], explicit=True,
+      syncio=True, environ=csc.environ)
+    build_set({'in': data.bundleFilename}, {}, description='$<in')

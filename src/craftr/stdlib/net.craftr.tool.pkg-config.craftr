@@ -1,0 +1,89 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+project(module.name, '1.0-0')
+
+import cxx from 'net.craftr.lang.cxx'
+from craftr.utils import sh
+
+
+class PkgConfigError(Exception):
+  pass
+
+
+def pkg_config(pkg_name, static=True, target=None):
+  """
+  This function runs the `pkg-config` command with the specified *pkg_name*
+  and appends values to the targets exported properties.
+  """
+
+  target = target or current_target()
+
+  if isinstance(pkg_name, str):
+    pkg_name = [pkg_name]
+
+  command = ['pkg-config'] + pkg_name + ['--cflags', '--libs']
+  if static:
+    command.append('--static')
+
+  try:
+    flags = sh.check_output(command).decode()
+  except FileNotFoundError as exc:
+    raise PkgConfigError('pkg-config is not available ({})'.format(exc))
+  except sh.CalledProcessError as exc:
+    raise PkgConfigError('{} not installed on this system\n\n{}'.format(
+        pkg_name, exc.stderr or exc.stdout))
+
+  # Parse the flags.
+  includes = []
+  defines = []
+  syslibs = []
+  libpath = []
+  compile_flags = []
+  link_flags = []
+
+  for flag in sh.split(flags):
+    if flag.startswith('-I'):
+      includes.append(flag[2:])
+    elif flag.startswith('-D'):
+      defines.append(flag[2:])
+    elif flag.startswith('-l'):
+      syslibs.append(flag[2:])
+    elif flag.startswith('-L'):
+      libpath.append(flag[2:])
+    elif flag.startswith('-Wl,'):
+      link_flags.append(flag[4:])
+    else:
+      compile_flags.append(flag)
+
+  properties({
+    '@+cxx.includes': includes,
+    '@+cxx.defines': defines,
+    '@+cxx.systemLibraries': syslibs,
+    '@+cxx.libraryPaths': libpath,
+    '@+cxx.compilerFlags': compile_flags,
+    '@+cxx.linkerFlags': link_flags
+  }, target=target)
+
+
+pkg_config.Error = PkgConfigError

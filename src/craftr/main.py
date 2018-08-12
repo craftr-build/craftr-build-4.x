@@ -75,7 +75,7 @@ def get_argument_parser(prog=None):
     default=None,
     metavar='MODULE',
     help='Override the build backend. Can also be specified with the '
-         'build:backend option. Defaults to "craftr/backends/python".')
+         'build:backend option. Defaults to "net.craftr.backends.python".')
 
   group = parser.add_argument_group('Configure, build and clean')
 
@@ -173,7 +173,7 @@ def main(argv=None, prog=None):
     if not args.tool:
       parser.error('missing arguments for --tool')
     tool_name, argv = args.tool[0], args.tool[1:]
-    module = session.load_module('craftr/tools/' + tool_name).namespace
+    module = session.load_module('net.craftr.tool.' + tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
 
   graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
@@ -237,7 +237,7 @@ def main(argv=None, prog=None):
     return 0
 
   if not args.backend:
-    args.backend = session.options.get('build:backend', 'craftr/backends/python')
+    args.backend = session.options.get('build:backend', 'net.craftr.backends.python')
   backend = session.load_module(args.backend).namespace
   if args.config:
     backend.export()

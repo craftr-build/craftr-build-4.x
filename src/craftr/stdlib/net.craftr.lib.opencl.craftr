@@ -1,0 +1,63 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+project('1.0-0')
+options('vendor', str, '' if OS.id == 'win32' else 'pkg-config')
+options('intelSdk', str, 'C:\\Intel\\OpenCL\\sdk' if OS.id == 'win32' else '')
+options('cudaSdk', str, '')
+
+import os
+import {pkg_config} from 'net.craftr.tool.pkg-config'
+
+VALID_VENDORS = ('pkg-config', 'amd', 'intel', 'nvidia')
+if options.vendor not in VALID_VENDORS:
+  error('invalid vendor: {!r}'.format(options.vendor))
+if options.vendor == 'intel' and not path.isdir(options.intelSdk):
+  error('intelSdk: directory "{}" does not exist'.format(options.intelSdk))
+if options.vendor == 'nvidia':
+  if not options.cudaSdk:
+    options.cudaSdk = os.environ.get('CUDA_PATH') or error('CUDA_PATH not set')
+  if not os.path.isdir(options.cudaSdk):
+    error('cudaSdk: directory "{}" does not exist'.format(options.cudaSdk))
+
+cxx = require('net.craftr.lang.cxx')
+
+target('opencl')
+if options.vendor == 'pkg-config':
+  pkg_config('OpenCL')
+if options.vendor == 'amd':
+  error('OpenCL vendor "amd" not implemented.')
+if options.vendor == 'intel':
+  if OS.id != 'win32':
+    error('OpenCL vendor "intel" on "{}" not implemented.'.format(OS.id))
+  properties({
+    '@cxx.includes+': [path.join(options.intelSdk, 'include')],
+    '@cxx.libraryPaths+': [path.join(options.intelSdk, 'lib', cxx.compiler.arch)],
+    '@cxx.systemLibraries+': ['OpenCL']
+  })
+if options.vendor == 'nvidia':
+  properties({
+    '@cxx.includes+': [path.join(options.cudaSdk, 'include')],
+    '@cxx.libraryPaths+': [path.join(options.cudaSdk, 'lib', 'Win32' if cxx.compiler.is32bit else 'x64')],
+    '@cxx.systemLibraries+': ['OpenCL']
+  })

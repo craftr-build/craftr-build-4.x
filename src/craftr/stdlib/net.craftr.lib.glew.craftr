@@ -1,0 +1,61 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+project(module.name, '1.0-0')
+options('version', str, '2.1.0')
+options('binaryDir', str, '')
+options('static', bool, OS.id == 'win32')
+
+target('glew')
+if OS.id == 'win32':
+  import cxx from 'net.craftr.lang.cxx'
+  import {get_source_archive} from 'net.craftr.tool.download'
+
+  if cxx.compiler.id in ('msvc', 'mingw', 'gcc'):
+    if not options.binaryDir:
+      url = fmt('https://github.com/nigels-com/glew/releases/download/glew-{options.version}/glew-{options.version}-win32.zip')
+      options.binaryDir = get_source_archive(url)
+      options.binaryDir = path.join(path.abs(options.binaryDir), 'glew-{}'.format(options.version))
+  else:
+    error('unsupported compiler on Windows: {!r}'.format(cxx.compiler.id))
+
+  properties({
+    '@cxx.includes': [path.join(options.binaryDir, 'include')],
+    '@cxx.libraryPaths': [path.join(options.binaryDir, 'lib', 'Release', 'Win32' if cxx.compiler.is32bit else 'x64')],
+    '@cxx.defines': ['GLEW_STATIC'] if options.static else [],
+    '@cxx.systemLibraries': [
+      'glew32s' if options.static else 'glew32',
+      'user32',
+      'opengl32',
+      'Ws2_32',
+      'ole32',
+      'comctl32',
+      'gdi32',
+      'comdlg32',
+      'uuid'
+    ]
+  })
+
+else:
+  import {pkg_config} from 'net.craftr.tool.pkg-config'
+  pkg_config('glew', static=options.static)

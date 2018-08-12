@@ -1,5 +1,5 @@
 project('examples.cython', '1.0-0')
-cython = require('craftr/lang/cython')
+cython = require('cython')
 target('main')
 properties({
   'cython.srcs': ['Primes.pyx'],

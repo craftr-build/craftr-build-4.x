@@ -102,11 +102,21 @@ class CraftrModule(nodepy.loader.PythonModule):
     from craftr import api
     for name in api.__all__:
       setattr(self.namespace, name, getattr(api, name))
-    with self.session.enter_scope(None, None, str(self.directory)) as scope:
+    with self.session.enter_scope(self.name, None, str(self.directory)) as scope:
       self.scope = scope
       self.namespace.scope = scope
       self.namespace.options = ModuleOptions(self.session, self.scope)
       super()._exec_code(code)
+
+  @property
+  def name(self):
+    if self.scope and self.scope.name:
+      return self.scope.name
+    if self.filename.name.endswith('.craftr'):
+      if self.filename.name == 'build.craftr':
+        return self.filename.parent.name
+      return self.filename.name[:-7]
+    return super().name.fget(self)
 
 
 class CraftrModuleLoader(nodepy.resolver.StdResolver.Loader):
@@ -119,7 +129,7 @@ class CraftrModuleLoader(nodepy.resolver.StdResolver.Loader):
       yield path
       path = path.with_suffix('')
     else:
-      yield path.with_suffix('.craftr')
+      yield path.with_name(path.name + '.craftr')
     path = nodepy.resolver.resolve_link(context, path)
     yield path.joinpath('build.craftr')
 
@@ -141,5 +151,5 @@ class CraftrLinkResolver(nodepy.base.Resolver):
   def resolve_module(self, request):
     module = self._aliases.get(str(request.string))
     if module is None:
-      raise nodepy.base.ResolveError(requests, [], [])
+      raise nodepy.base.ResolveError(request, [], [])
     return module

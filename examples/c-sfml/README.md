@@ -7,7 +7,7 @@ the minor adjustment of replacing `sf::Keyboard::Enter` with
   [0]: https://github.com/SFML/SFML/tree/master/examples/opengl
 
 ```
-$ craftr -cf examples/c-sfml/ -b main:cxx.run
+$ craftr -cb --project examples/c-sfml main:cxx.run
 Selected compiler: Microsoft Visual C++ (msvc) 19.12.25835 for x64
 Downloading https://www.sfml-dev.org/files/SFML-2.4.2-windows-vc14-64-bit.zip ...
 Extracting to build\debug\.source-downloads\SFML-2.4.2-windows-vc14-64-bit ...

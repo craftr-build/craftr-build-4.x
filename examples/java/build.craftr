@@ -1,5 +1,5 @@
 project('examples.java', '1.0-0')
-java = require('craftr/lang/java')
+java = require('java')
 
 target('lib')
 properties({

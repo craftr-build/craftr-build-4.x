@@ -1,0 +1,95 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import cxx from 'net.craftr.lang.cxx'
+import {get_source_archive} from 'net.craftr.tool.download'
+import {pkg_config} from 'net.craftr.tool.pkg-config'
+
+project(module.name, '1.0-0')
+options('version', str, '2.4.2')
+options('binaryDir', str, '')
+options('static', bool, True)
+options('debug', bool, BUILD.debug)
+
+
+target('sfml')
+
+if OS.id == 'win32':
+  if cxx.compiler.id in ('msvc', 'mingw'):
+    if not options.binaryDir:
+      # Find the appropriate download URL.
+      bit = 32 if cxx.compiler.is32bit else 64
+      if cxx.compiler.id == 'msvc':
+        if cxx.compiler.toolkit.version <= 110:
+          vcv = 'vc11'
+        elif cxx.compiler.toolkit.version <= 120:
+          vcv = 'vc12'
+        else:
+          vcv = 'vc14'
+        url = fmt('https://www.sfml-dev.org/files/SFML-{options.version}-windows-{vcv}-{bit}-bit.zip')
+      else:
+        url = fmt('https://www.sfml-dev.org/files/SFML-{options.version}-windows-gcc-6.1.0-mingw-{bit}-bit.zip')
+
+      # Download and unpack the archive.
+      options.binaryDir = path.abs(path.join(
+        get_source_archive(url), 'SFML-' + options.version))
+
+    ssfx = '-s' if options.static else ''
+    dsfx = '-d' if options.debug else ''
+  else:
+    error('unsupported compiler on Windows: {!r}'.format(cxx.compiler.id))
+
+  properties('cxx', {
+    '@includes': [path.join(options.binaryDir, 'include')],
+    '@defines': ['SFML_STATIC'] if options.static else [],
+    '@libraryPaths': [path.join(options.binaryDir, 'lib')],
+    '@systemLibraries': [fmt(x) for x in [
+      'sfml-main{dsfx}',
+      'sfml-audio{ssfx}{dsfx}',
+      'sfml-graphics{ssfx}{dsfx}',
+      'sfml-network{ssfx}{dsfx}',
+      'sfml-window{ssfx}{dsfx}',
+      'sfml-system{ssfx}{dsfx}',
+      'opengl32',
+      'openal32',
+      'freetype',
+      'jpeg',
+      'flac',
+      'vorbisenc',
+      'vorbisfile',
+      'vorbis',
+      'ogg',
+      # Windows specific
+      'ws2_32',
+      'winmm',
+      'gdi32',
+      'user32',
+      'advapi32'
+    ]]
+  })
+
+else:
+  pkg_config('sfml-all', static=options.static)
+
+  if OS.id == 'linux':
+    properties({'@cxx.systemLibraries+': ['GL']})

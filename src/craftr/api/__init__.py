@@ -63,7 +63,7 @@ from werkzeug.local import LocalProxy
 from .modules import CraftrModuleLoader, CraftrLinkResolver
 from .proplib import PropertySet, Properties, NoSuchProperty
 
-STDLIB_DIR = nr.fs.join(nr.fs.dir(nr.fs.dir(nr.fs.dir(__file__))))
+STDLIB_DIR = pathlib.Path(__file__).parent.parent.joinpath('stdlib')
 
 session = None  # The current #Session
 OS = LocalProxy(lambda: session.os_info)
@@ -121,7 +121,8 @@ class Session(_build.Master):
     self.link_resolver = CraftrLinkResolver()
     self.nodepy_context = nodepy.context.Context()
     self.nodepy_context.resolver.loaders.append(self.loader)
-    self.nodepy_context.resolver.paths.append(pathlib.Path(STDLIB_DIR))
+    self.nodepy_context.resolver.paths.append(STDLIB_DIR)
+    self.nodepy_context.resolver.paths.append(STDLIB_DIR.joinpath('aliases'))
     self.nodepy_context.resolvers.insert(0, self.link_resolver)
     self.target_props = PropertySet()
     self.dependency_props = PropertySet()

@@ -46,7 +46,7 @@ build graph.
 ```python
 # build.craftr
 project('myproject', '1.0-0')
-cxx = require('craftr/lang/cxx')
+cxx = require('cxx')
 target('main')
 properties({
   'cxx.srcs': glob('src/*.c'),
