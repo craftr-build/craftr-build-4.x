@@ -246,7 +246,7 @@ def build():
         build_set({}, {'out': binary_jar}, description='Downloading {} ...'.format(artifact.to_local_path('jar')))
         _artifact_operators[binary_jar] = op
         artifactActions.append(op)
-        properties({'@java.outLibraries+': [binary_jar]}, _target=_artifacts_target)
+        properties(_artifacts_target, {'@java.outLibraries+': [binary_jar]})
       data.binaryJars.append(binary_jar)
       bundleBinaryJars.append(binary_jar)
 

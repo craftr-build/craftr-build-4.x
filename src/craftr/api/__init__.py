@@ -611,27 +611,29 @@ def properties(*args, target=None, **kwarg_props):
   if not args:
     scope = None
     props = None
-    target = current_target()
   elif len(args) == 1:
     scope = None
     if isinstance(args[0], Target):
+      assert target is None
       props = None
       target = args[0]
     else:
       props = args[0]
-      target = current_target()
   elif len(args) == 2:
     if isinstance(args[0], Target):
+      assert target is None
       target, props = args
       scope = None
     else:
       scope, props = args
-      target = current_target()
   elif len(args) == 3:
+    assert target is None
     target, scope, props = args
   else:
     raise TypeError('too many positional arguments, expected 0-3, got {}'
       .format(len(args)))
+
+  target = target or current_target()
 
   if props is None:
     props = {}
