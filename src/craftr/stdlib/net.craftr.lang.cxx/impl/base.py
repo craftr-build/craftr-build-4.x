@@ -1,5 +1,6 @@
 
 import nr.types
+import {options} from '../build.craftr'
 
 from craftr.api import *
 from typing import List, Dict, Union, Callable
