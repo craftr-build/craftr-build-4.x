@@ -586,11 +586,12 @@ def properties(*args, target=None, **kwarg_props):
   The following signatures are accepted:
 
   - `(...)`
-  - `(props: str, ...)`
+  - `(scope: str, ...)`
+  - `(props: Dict, ...)`
   - `(target: Target, ...)`
-  - `(scope: str, props: str = None, ...)`
-  - `(target: Target, scope: str, props: str = None, ...)`
-  - `(target: Target, props: str = None, ...)`
+  - `(scope: str, props: Dict = None, ...)`
+  - `(target: Target, scope: str, props: Dict = None, ...)`
+  - `(target: Target, props: Dict = None, ...)`
 
   scope (str): A scope prefix. If specified, it will be prefixed to
       both *props* and *kwarg_props*. If it is a dictionary instead
@@ -613,10 +614,12 @@ def properties(*args, target=None, **kwarg_props):
     props = None
   elif len(args) == 1:
     scope = None
+    props = None
     if isinstance(args[0], Target):
       assert target is None
-      props = None
       target = args[0]
+    elif isinstance(args[0], str):
+      scope = args[0]
     else:
       props = args[0]
   elif len(args) == 2:
