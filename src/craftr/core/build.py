@@ -187,6 +187,7 @@ class BuildSet:
     """
 
     data = self.to_json()
+    data['commands'] = self.operator.commands.to_json()
     data['environ'] = dict(self.get_environ())
     data['cwd'] = self.get_cwd()
     return hashlib.sha1(json.dumps(data, sort_keys=True).encode('utf8')).hexdigest()
@@ -281,7 +282,7 @@ class Operator:
 
   @property
   def commands(self):
-    return list(self._commands)
+    return self._commands
 
   @property
   def variables(self):
