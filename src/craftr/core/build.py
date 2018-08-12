@@ -34,6 +34,7 @@ only be listed once in the outputs of a BuildSet.
 __all__ = ['BuildSet', 'Commands', 'Operator', 'Target', 'Master']
 
 import collections
+import hashlib
 import io
 import json
 import nr.fs
@@ -179,6 +180,16 @@ class BuildSet:
     self._operator = operator
     [master._declare_output(self, x) for x in stream.concat(self.outputs.values())]
     return self
+
+  def compute_hash(self):
+    """
+    Computes a hash for the build set.
+    """
+
+    data = self.to_json()
+    data['environ'] = dict(self.get_environ())
+    data['cwd'] = self.get_cwd()
+    return hashlib.sha1(json.dumps(data, sort_keys=True).encode('utf8')).hexdigest()
 
 
 class Commands:
