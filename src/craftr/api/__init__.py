@@ -535,7 +535,7 @@ def link_module(path, alias=None):
         raise ValueError('could not find project name in "{}"'.format(path))
       expr = 'project = lambda name, version: (name, version)\nname, version = project({})'
       expr = expr.format(match.group(1))
-      scope = {}
+      scope = {'module': module}
       exec(expr, scope)
       alias = scope['name']
 
