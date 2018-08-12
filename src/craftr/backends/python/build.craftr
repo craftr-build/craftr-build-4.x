@@ -33,10 +33,38 @@ import os
 import shlex
 import shutil
 import subprocess
+import {CacheManager} from 'craftr/tools/cache'
 
 from craftr.core.build import topo_sort
 from craftr.utils import sh
 from nr.stream import stream
+
+# This cache maps the output filenames to the hash of the last build set.
+build_log = CacheManager(path.join(session.build_root, 'craftr_build_log.{}.json'.format(session.build_variant)))
+
+
+def _check_build_set(build_set):
+  """
+  Checks if the specified *build_set* actually has to be built.
+  """
+
+  outfiles = list(stream.concat(build_set.outputs.values()))
+
+  h = build_set.compute_hash()
+  for x in outfiles:
+    if build_log.get(x) != h:
+      return True
+
+  # TODO: Depfile support
+
+  infiles = list(stream.concat(build_set.inputs.values()))
+  return nr.fs.compare_all_timestamps(infiles, outfiles)
+
+
+def _build_set_done(build_set):
+  h = build_set.compute_hash()
+  for x in stream.concat(build_set.outputs.values()):
+    build_log[x] = h
 
 
 def _remove(p):
@@ -74,10 +102,6 @@ def clean(build_sets, recursive, verbose):
 
 
 def build(build_sets, verbose):
-  print()
-  print('======= BUILD')
-  print()
-
   if build_sets is None:
     build_sets = session
 
@@ -87,10 +111,7 @@ def build(build_sets, verbose):
 
     prefix = '[{}/{}]'.format(build_set.operator.target.id, build_set.operator.id)
 
-    # Skip the build set if all output files are newer than the input files.
-    infiles = list(stream.concat(build_set.inputs.values()))
-    outfiles = list(stream.concat(build_set.outputs.values()))
-    if not nr.fs.compare_all_timestamps(infiles, outfiles):
+    if not _check_build_set(build_set):
       print(prefix, 'SKIP')
       continue
 
@@ -101,6 +122,7 @@ def build(build_sets, verbose):
     for files in build_set.outputs.values():
       for filename in files:
         nr.fs.makedirs(nr.fs.dir(filename))
+
     commands = build_set.get_commands()
     with sh.override_environ(build_set.get_environ()):
       for cmd in commands:
@@ -109,14 +131,24 @@ def build(build_sets, verbose):
           stdin, stdout, stderr = None, None, None
         else:
           stdin, stdout, stderr = subprocess.PIPE, subprocess.PIPE, subprocess.STDOUT
-        p = subprocess.Popen(cmd, cwd=build_set.get_cwd(),
-          stdin=stdin, stdout=stdout, stderr=stderr)
-        out = p.communicate()
-        if (verbose or p.returncode != 0) and p.stdout:
+        try:
+          p = subprocess.Popen(cmd, cwd=build_set.get_cwd(),
+            stdin=stdin, stdout=stdout, stderr=stderr)
+        except OSError as exc:
           print()
-          print(out[0].decode())
-        if p.returncode != 0:
-          print('\ncraftr: error: exited with return code {}'.format(p.returncode))
-          return p.returncode
+          print(exc)
+          returncode = 127
+        else:
+          out = p.communicate()
+          returncode = p.returncode
+          if (verbose or returncode != 0) and p.stdout:
+            print()
+            print(out[0].decode())
+        if returncode != 0:
+          print('\ncraftr: error: exited with return code {}'.format(returncode))
+          return returncode
 
+    _build_set_done(build_set)
+
+  build_log.save()
   return 0
