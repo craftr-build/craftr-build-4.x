@@ -108,13 +108,14 @@ def build():
 
       base = path.rmvsuffix(path.base(pyx))
       if is_lib:
-        product = base + python.cfg['SO']
+        product = path.join(build_dir, base + python.cfg['SO'])
         modules.append(product)
       else:
         product = base + '$(ext)'
+        bset.add_input_files('_modules', modules)
 
       api.target('{}/{}'.format(target.name, base))
-      depends('craftr/lang/python:python')
+      depends('net.craftr.lang.python:python')
       properties({
         'this.buildDirectory': build_dir,
         'cxx.srcs': [c],
