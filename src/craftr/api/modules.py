@@ -27,6 +27,7 @@ This module implements the glue for Node.py and Craftr modules.
 
 import nodepy
 
+from nr.stream import stream
 from typing import Union
 from . import proplib
 
@@ -71,7 +72,8 @@ class ModuleOptions:
                default = NotImplemented):
     prop_type = self.__PROPTYPE_MAP.get(prop_type, prop_type)
     prop_type = proplib.prop_type(prop_type)
-    for alias in [self._scope.name] + self._aliases:
+    aliases = [self._scope.name, self._scope.name.rpartition('.')[2]]
+    for alias in stream.chain(aliases, self._aliases):
       if alias is None: continue
       option_name = alias + ':' + name
       if option_name in self._session.options:
