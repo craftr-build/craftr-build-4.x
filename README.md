@@ -20,7 +20,6 @@ modern build requirements.
 ## What's next?
 
 [Ninja]: https://ninja-build.org/
-[Craftr 3]: https://github.com/craftr-build/craftr/tree/3.0
 
 * [Ninja] build backend
 * Enhancements to the standard library (especiall C/C++)
