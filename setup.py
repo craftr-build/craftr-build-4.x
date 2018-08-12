@@ -14,8 +14,9 @@ setuptools.setup(
   url = 'https://github.com/craftr-build/craftr',
   packages = setuptools.find_packages('src'),
   package_dir = {'': 'src'},
+  include_package_data = True,
+  install_requires = requirements,
   entry_points = {
     'console_scripts': ['craftr=craftr.main:main']
-  },
-  install_requires = requirements
+  }
 )
