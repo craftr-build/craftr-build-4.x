@@ -1,4 +1,4 @@
-<p align="right">Current Version: v4.0.0.dev0</p>
+<p align="right">Current Version: v4.0.0.dev1</p>
 
 # The Craftr build system
 
