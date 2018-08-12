@@ -118,7 +118,7 @@ class CraftrModule(nodepy.loader.PythonModule):
       if self.filename.name == 'build.craftr':
         return self.filename.parent.name
       return self.filename.name[:-7]
-    return super().name.fget(self)
+    return super().name
 
 
 class CraftrModuleLoader(nodepy.resolver.StdResolver.Loader):
