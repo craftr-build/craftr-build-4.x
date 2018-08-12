@@ -21,20 +21,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project(module.name, '1.0-0')
-
 import sys
-
-options.add_scope_alias('python')
-options('bin', str, sys.executable)
-options('binArgs', str, '')
-
 import json
 import re
 import shlex
 import subprocess
 
 from craftr.utils import sh
+
+project(module.name, '1.0-0')
+
+options('bin', str, sys.executable)
+options('binArgs', str, '')
 
 
 def get_python_config(python_bin):

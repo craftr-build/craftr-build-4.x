@@ -26,7 +26,7 @@ This module allows you to compile and bundle C# applications.
 """
 
 project(module.name, '1.0-0')
-options.add_scope_alias('csharp')
+
 options('impl', str, 'net' if OS.type == 'nt' else 'mono')
 options('csc', str, '')
 options('monoArch', str, '')  # Used to determine the Mono installation path. Must be either x64 or x86

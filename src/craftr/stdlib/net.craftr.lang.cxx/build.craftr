@@ -33,7 +33,6 @@ elif OS.id == 'darwin':
 else:
   _toolchainDefault = 'gcc'
 
-options.add_scope_alias('cxx')
 options('architecture', str, OS.arch)
 options('toolchain', str, _toolchainDefault)
 options('staticRuntime', bool, False)

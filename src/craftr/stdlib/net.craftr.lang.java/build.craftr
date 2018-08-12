@@ -36,7 +36,7 @@ import platform_commands from './tools/platform-commands'
 from nr.stream import stream
 
 project(module.name, '1.0-0')
-options.add_scope_alias('java')
+
 options('onejar', str, path.join(module.directory, "tools", "one-jar-boot-0.97.jar"))
 options('javac', str, 'javac')
 options('javacJar', str, 'jar')

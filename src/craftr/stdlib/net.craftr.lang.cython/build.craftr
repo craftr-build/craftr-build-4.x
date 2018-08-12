@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 project(module.name, '1.0-0')
-options.add_scope_alias('cython')
+
 options('bin', str, 'cython')
 options('binArgs', str, '')
 
