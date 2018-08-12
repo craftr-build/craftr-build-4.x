@@ -4,9 +4,9 @@ import cxx from 'cxx'
 
 target('main')
 depends([
-  'craftr/libs/opencl:opencl',
-  'craftr/libs/glew:glew',
-  'craftr/libs/glfw:glfw'
+  'net.craftr.lib.opencl:opencl',
+  'net.craftr.lib.glew:glew',
+  'net.craftr.lib.glfw:glfw'
 ])
 properties({
   'cxx.srcs': ['src/main.c'],
