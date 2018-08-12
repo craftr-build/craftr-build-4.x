@@ -232,7 +232,7 @@ class Session(_build.Master):
   # Master overrides
 
   def to_json(self):
-    return {'variant': self._build_directory, 'main_module': self.main_module,
+    return {'variant': self._build_variant, 'main_module': self.main_module,
             'data': super().to_json()}
 
   def load_json(self, data):
