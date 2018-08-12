@@ -127,7 +127,7 @@ class CscInfo(nr.types.Named):
   @functools.lru_cache()
   def get():
     if options.impl not in ('net', 'mono'):
-      raise ValueError('unsupported csharp.impl={!r}'.format(impl))
+      raise ValueError('unsupported csharp:impl={!r}'.format(options.impl))
 
     program = options.csc or ('csc' if options.impl == 'net' else 'mcs')
     is_mcs = path.rmvsuffix(program).lower().endswith('mcs')
@@ -153,7 +153,7 @@ class CscInfo(nr.types.Named):
         elif arch == 'x86':
           monobin = monobin_x86
         else:
-          raise ValueError('invalid value for csharp.monoArch: {!r}'.format(arch))
+          raise ValueError('invalid value for csharp:monoArch: {!r}'.format(arch))
         if not path.isdir(monobin):
           error('Mono installation directory does not exist: "{}"'.format(monobin))
         environ['PATH'] = monobin + path.pathsep + os.getenv('PATH')
