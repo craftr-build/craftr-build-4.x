@@ -155,6 +155,19 @@ def get_argument_parser(prog=None):
 
 
 def main(argv=None, prog=None):
+  if argv is None:
+    argv = sys.argv[1:]
+
+  # Workaround for the argparse.REMAINDER mode to ensure that ALL arguments
+  # after this flag are consumed and not just some that look like they could
+  # not belong to other arguments...
+  try:
+    tool_index = argv.index('--tool')
+  except ValueError:
+    tool_argv = None
+  else:
+    argv, tool_argv = argv[:tool_index+1], argv[tool_index+1:]
+
   parser = get_argument_parser(prog)
   args = parser.parse_args(argv)
 
@@ -190,9 +203,7 @@ def main(argv=None, prog=None):
     session.options[key] = value
 
   if args.tool is not None:
-    if not args.tool:
-      parser.error('missing arguments for --tool')
-    tool_name, argv = args.tool[0], args.tool[1:]
+    tool_name, argv = tool_argv[0], tool_argv[1:]
     module = session.load_module('net.craftr.tool.' + tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
 
