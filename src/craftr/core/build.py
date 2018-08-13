@@ -155,7 +155,7 @@ class BuildSet:
     """
 
     if not self.description:
-      return '\n'.join(' '.join(map(shlex.quote, x)) for x in self.get_commands())
+      return ' && '.join(' '.join(map(shlex.quote, x)) for x in self.get_commands())
     if not self._operator:
       return self.description
     template = TemplateCompiler().compile_list(shlex.split(self.description))
