@@ -16,6 +16,8 @@
   #include <CL/cl_gl.h>
 #endif
 
+#include "embed.h"
+
 
 /* Returns a handle to the platform dependent current OpenGL context. */
 void* getCurrentGLC();
@@ -54,14 +56,6 @@ extern cl_context_properties CURRENT_DISPLAY_PROP;
 #else
   #error "Unsupported Platform"
 #endif
-
-
-extern unsigned char ClKernel[];
-extern size_t ClKernel_size;
-extern unsigned char ScreenVert[];
-extern size_t ScreenVert_size;
-extern unsigned char ScreenFrag[];
-extern size_t ScreenFrag_size;
 
 GLFWwindow* g_window;
 cl_context g_clContext;
@@ -303,7 +297,7 @@ int main(int argc, char** argv) {
   }
 
   /* Compile the OpenCL kernel. */
-  char const* kernelSource = (char*)ClKernel;
+  char const* kernelSource = (char*)ClKernel_start;
   cl_program program = clCreateProgramWithSource(
     g_clContext, 1, &kernelSource, &ClKernel_size, &error);
   if (error != CL_SUCCESS) {
@@ -325,7 +319,7 @@ int main(int argc, char** argv) {
   }
 
   /* Load the OpenGL shader which just plainly renders a texture. */
-  GLuint shaderProgram = createProgram((char*)ScreenVert, (char*)ScreenFrag);
+  GLuint shaderProgram = createProgram((char*)ScreenVert_start, (char*)ScreenFrag_start);
   if (shaderProgram == 0) {
     fprintf(stderr, "error: OpenGL shader program could not be created.\n");
     return 1;

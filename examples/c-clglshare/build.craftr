@@ -15,6 +15,7 @@ properties({
     'ClKernel': 'src/kernel.cl',
     'ScreenVert': 'src/screen.vert',
     'ScreenFrag': 'src/screen.frag'
-  }
+  },
+  'cxx.embedHeader': 'embed.h',
 })
 cxx.build()
