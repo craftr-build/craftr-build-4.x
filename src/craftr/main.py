@@ -274,9 +274,9 @@ def main(argv=None, prog=None):
   if args.config:
     backend.export()
   if args.clean:
-    backend.clean(build_sets, args.recursive, args.verbose)
+    backend.clean(build_sets, recursive=args.recursive, verbose=args.verbose)
   if args.build:
-    res = backend.build(build_sets, args.verbose)
+    res = backend.build(build_sets, verbose=args.verbose)
     if args.notify and ntfy:
       ntfy.notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
 

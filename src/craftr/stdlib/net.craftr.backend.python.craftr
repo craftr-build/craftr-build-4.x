@@ -74,11 +74,11 @@ def _remove(p):
     os.remove(p)
 
 
-def export():
+def export(**options):
   pass
 
 
-def clean(build_sets, recursive, verbose):
+def clean(build_sets, recursive=False, verbose=False, **options):
   seen = set()
   queue = list(build_sets)
   files_to_remove = []
@@ -101,7 +101,7 @@ def clean(build_sets, recursive, verbose):
         print(' [{}]'.format(errno.errorcode.get(exc.errno, '???')))
 
 
-def build(build_sets, verbose):
+def build(build_sets, verbose=False, **options):
   if build_sets is None:
     build_sets = session
 
