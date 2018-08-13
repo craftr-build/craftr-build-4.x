@@ -61,6 +61,7 @@ class MsvcInstallation(nr.types.Named):
   _list = None
   __annotations__ = [
     ('version', int),
+    ('is_build_tools', bool),
     ('directory', str),
     ('_environ', dict, None),
   ]
@@ -71,10 +72,12 @@ class MsvcInstallation(nr.types.Named):
     Generates the path to the `vcvarsall.bat`.
     """
 
-    if self.version >= 141:
-      return os.path.join(self.directory, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
+    if self.is_build_tools:
+      return path.join(self.directory, 'vcbuildtools.bat')
+    elif self.version >= 141:
+      return path.join(self.directory, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
     else:
-      return os.path.join(self.directory, 'VC', 'vcvarsall.bat')
+      return path.join(self.directory, 'VC', 'vcvarsall.bat')
 
   def environ(self, arch=None, platform_type=None, sdk_version=None):
     """
@@ -126,14 +129,21 @@ class MsvcInstallation(nr.types.Named):
 
       # Clean up the directory name.
       value = value.rstrip('\\')
-      if not value or not os.path.isdir(value):
+      if not value or not path.isdir(value):
         continue
-      if os.path.basename(value).lower() == 'tools':
+      if path.base(value).lower() == 'tools':
         # The VS_COMNTOOLS variable points to the Common7\Tools
         # subdirectory, usually.
-        value = os.path.dirname(os.path.dirname(value))
+        value = path.dir(path.dir(value))
 
-      results.append(cls(version=ver, directory=value))
+      results.append(cls(ver, False, value))
+
+    build_tools_dir = r'C:\Program Files (x86)\Microsoft Visual C++ Build Tools'
+    if path.isdir(build_tools_dir):
+      # TODO: Is there a (good) way to determine the versio of the Build Tools?
+      #       It seems there is no version information besides the year in the
+      #       filenames of the links that open respective consoles.
+      results.append(cls(140, True, build_tools_dir))
 
     have_versions = set(x.version for x in results)
 
@@ -142,13 +152,13 @@ class MsvcInstallation(nr.types.Named):
     if 141 not in have_versions:
       programfiles = os.getenv('ProgramFiles(x86)', '') or os.getenv('ProgramFiles', '')
       if programfiles:
-        vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Community')
-        if not os.path.isdir(vspath):
-          vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Professional')
-        if not os.path.isdir(vspath):
-          vspath = os.path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
-        if os.path.isdir(vspath):
-          results.append(cls(141, vspath))
+        vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Community')
+        if not path.isdir(vspath):
+          vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Professional')
+        if not path.isdir(vspath):
+          vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
+        if path.isdir(vspath):
+          results.append(cls(141, False, vspath))
 
     # TODO: Special handling for newer MSVC versions?
 
@@ -156,7 +166,7 @@ class MsvcInstallation(nr.types.Named):
 
     # Special handling for explicitly defined MSVC install directory.
     if options.installDir:
-      if not os.path.exists(options.installDir):
+      if not path.exists(options.installDir):
         log.warn('msvc.install_dir={!r} does not exist'.format(options.installDir))
       else:
         result.insert(0, cls(-1, options.installDir))
