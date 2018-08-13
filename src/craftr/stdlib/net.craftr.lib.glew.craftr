@@ -45,8 +45,8 @@ if OS.id == 'win32':
     '@cxx.defines': ['GLEW_STATIC'] if options.static else [],
     '@cxx.systemLibraries': [
       'glew32s' if options.static else 'glew32',
+      'OpenGL32',
       'user32',
-      'opengl32',
       'Ws2_32',
       'ole32',
       'comctl32',
