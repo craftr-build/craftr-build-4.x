@@ -150,6 +150,8 @@ class BuildSet:
     Return the description of the build set with variables expanded.
     """
 
+    if not self.description:
+      return '\n'.join(' '.join(map(shlex.quote, x)) for x in self.get_commands())
     if not self._operator:
       return self.description
     template = TemplateCompiler().compile_list(shlex.split(self.description))
@@ -278,7 +280,7 @@ class Operator:
 
   @property
   def id(self):
-    return self._target.id + '/' + self._name
+    return self._target.id + '@' + self._name
 
   @property
   def name(self):
