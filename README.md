@@ -13,6 +13,21 @@ modern build requirements.
 * Python-based build scripts <sup>1</sup>
 * Modular, reusable build definitions
 * Native support for a bunch of common languages
+  * C, C++
+    * Compilers: MSVC, GCC, Clang
+    * Windows: Automatic detection of an installed MSVC or MinGW/MSYS2 toolchain
+  * Java
+    * Support for Maven Repository dependencies
+    * JAR bundling
+    * Java Modules
+    * jlink standalone runtimes
+  * C#
+    * Compilers: MSVC, Mono
+    * NuGet Dependencies
+    * ILMerge/ILRepack
+  * Cython
+  * Haskell
+  * OCaml
 
 <sup>1) Build scripts are loaded through [Node.py] and and have access to an
   extended set of global variables provided by the `craftr.api` module.</sup>
