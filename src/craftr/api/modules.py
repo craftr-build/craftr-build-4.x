@@ -26,6 +26,7 @@ This module implements the glue for Node.py and Craftr modules.
 """
 
 import nodepy
+import warnings
 
 from nr.stream import stream
 from typing import Union
@@ -68,8 +69,13 @@ class ModuleOptions:
     attrs = ', '.join('{}={!r}'.format(k, v) for k, v in vars(self).items() if not k.startswith('_'))
     return 'ModuleOptions({})'.format(attrs)
 
-  def __call__(self, name: str, prop_type: Union[str, proplib.PropType],
-               default = NotImplemented):
+  def __call__(self, *args, **kwargs):
+    warnings.warn('ModuleOptions.__call__() is deprecated, use .add() instead',
+                  DeprecationWarning, stacklevel=2)
+    self.add(*args, **kwargs)
+
+  def add(self, name: str, prop_type: Union[str, proplib.PropType],
+          default = NotImplemented):
     prop_type = self.__PROPTYPE_MAP.get(prop_type, prop_type)
     prop_type = proplib.prop_type(prop_type)
     aliases = [self._scope.name, self._scope.name.rpartition('.')[2]]
