@@ -340,9 +340,11 @@ class Operator:
     self._build_sets.append(build_set)
     return build_set
 
-  def to_json(self) -> Dict:
+  def to_json(self, *, build_sets: List[BuildSet] = None) -> Dict:
+    if build_sets is None:
+      build_sets = self._build_sets
     return {'name': self._name, 'commands': self._commands.to_json(),
-            'build_sets': [x.to_json() for x in self._build_sets],
+            'build_sets': [x.to_json() for x in build_sets],
             'variables': self._variables, 'environ': self._environ,
             'cwd': self._cwd, 'explicit': self._explicit,
             'syncio': self._syncio}
@@ -409,15 +411,17 @@ class Target:
     self._operators[operator._name] = operator
     return operator
 
-  def to_json(self) -> Dict:
-    return {'id': self._id, 'operators': [x.to_json() for x in self._operators.values()]}
+  def to_json(self, *, operators: List[Operator] = None) -> Dict:
+    if operators is None:
+      operators = self._operators.values()
+    return {'id': self._id, 'operators': [x.to_json() for x in operators]}
 
   @classmethod
   def from_json(cls, master: 'Master', data: Dict) -> 'Target':
     self = object.__new__(cls)
     self._master = master
     self._id = data['id']
-    self._operators = {x['id']: Operator.from_json(master, self, x)
+    self._operators = {x['name']: Operator.from_json(master, self, x)
                        for x in data['operators']}
     return self
 
