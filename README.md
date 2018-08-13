@@ -3,15 +3,17 @@
 # The Craftr build system
 
 Craftr is a Python based meta build system with native support for C, C++,
-C#, Java and Cython projects. It can be tailored to satisfy all needs of
-modern build requirements.
+C#, Java and Cython projects. It can be tailored to satisfy all build
+requirements for modern applications.
 
 ## Features
 
 [Node.py]: https://github.com/nodepy/nodepy
+[Ninja]: https://ninja-build.org/
 
 * Python-based build scripts <sup>1</sup>
 * Modular, reusable build definitions
+* Uses [Ninja] as lightning-fast build backend
 * Native support for a bunch of common languages
   * C, C++
     * Compilers: MSVC, GCC, Clang
@@ -33,8 +35,6 @@ modern build requirements.
   extended set of global variables provided by the `craftr.api` module.</sup>
 
 ## What's next?
-
-[Ninja]: https://ninja-build.org/
 
 * Support passing additional arguments to a build operator (useful for
   operators that run a build product, eg `cxx.run`)
