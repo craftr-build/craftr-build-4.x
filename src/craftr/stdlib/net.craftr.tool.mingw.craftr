@@ -37,11 +37,25 @@ import sys
 
 from nr.types import named
 from nr.stream import stream
-from craftr.utils import sh, winreg
+from craftr.utils import sh
+
+try:
+  from craftr.utils import winreg
+except ImportError:
+  winreg = None
 
 
 class InvalidMingwInstallation(Exception):
   pass
+
+
+class MultipleMingwInstallations(Exception):
+
+  def __init__(self, choices):
+    self.choices = choices
+
+  def __str__(self):
+    return str(self.choices)
 
 
 class MingwInstallation(named.Named):
@@ -51,20 +65,25 @@ class MingwInstallation(named.Named):
   _environ: dict = None
   _mingw_dir: str = None
 
-  def __init__(self, install_dir):
+  def __init__(self, install_dir, mingw_dir=None):
     if not install_dir or not path.isdir(install_dir):
       raise InvalidMingwInstallation('Directory does not exist: "{}"'.format(install_dir))
 
-    choices = []
-    for name in path.listdir(install_dir):
-      if 'mingw' in name: choices.append(name)
-    if not choices:
-      raise InvalidMingwInstallation('Could not find a *mingw* subdirectory: "{}"'.format(install_dir))
+    if not mingw_dir:
+      choices = []
+      for name in path.listdir(install_dir):
+        if not path.isdir(path.join(install_dir, name)): continue
+        if 'mingw' in name or 'msys' in name: choices.append(name)
+      if not choices:
+        raise InvalidMingwInstallation('Could not find a *mingw* subdirectory: "{}"'.format(install_dir))
+      if len(choices) > 1 and 'mingw' in choices:
+        choices.remove('mingw')
+      if len(choices) > 1:
+        raise MultipleMingwInstallations(choices)
+      mingw_dir = choices[0]
 
-    # Heuristic: Prefer 64 bit over 32 -- on 32 bit the 64 one will not be installed?
-    name = next((x for x in choices if '64' in x), choices[0])
-    is_64 = '64' in name
-    super().__init__(install_dir, is_64, _mingw_dir=name)
+    is_64 = '64' in mingw_dir
+    super().__init__(install_dir, is_64, _mingw_dir=mingw_dir)
 
   @property
   def is_64(self):
@@ -106,18 +125,22 @@ class MingwInstallation(named.Named):
 
     test_directories = options.installDirectory.split(path.pathsep)
 
-    keys = []
-    keys.append(winreg.HKEY_LOCAL_MACHINE.key('SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'))
-    keys.append(winreg.HKEY_LOCAL_MACHINE.key('SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall'))
-    for key in stream.concat(x.keys() for x in keys):
-      if 'posix' in key.name or 'win32' in key.name:
-        publisher = key.value('Publisher').data
-        if 'mingw' in publisher.lower():
-          try:
-            location = key.value('InstallLocation').data
-          except FileNotFoundError:
-            location = os.path.dirname(key.value('UninstallString').data)
-          test_directories.append(location)
+    if winreg is not None:
+      keys = []
+      keys.append(winreg.HKEY_LOCAL_MACHINE.key('SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'))
+      keys.append(winreg.HKEY_LOCAL_MACHINE.key('SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall'))
+      for key in stream.concat(x.keys() for x in keys):
+        if 'posix' in key.name or 'win32' in key.name:
+          publisher = key.value('Publisher').data
+          if 'mingw' in publisher.lower():
+            try:
+              location = key.value('InstallLocation').data
+            except FileNotFoundError:
+              location = os.path.dirname(key.value('UninstallString').data)
+            test_directories.append(location)
+    else:
+      # MSYS2 support
+      test_directories = ['/mingw32', '/usr', '/mingw64']
 
     results = []
     for base in test_directories:
@@ -125,6 +148,8 @@ class MingwInstallation(named.Named):
         results.append(cls(base))
       except InvalidMingwInstallation:
         continue
+      except MultipleMingwInstallations as e:
+        results += [cls(base, x) for x in e.choices]
 
     return results
 
