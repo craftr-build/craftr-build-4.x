@@ -163,8 +163,7 @@ def main(argv=None, prog=None):
       import ntfy
     except ImportError:
       print('warning: ntfy module is not available, --notify is ignored.')
-  else:
-    ntfy = None
+      ntfy = None
 
   if nr.fs.isdir(args.project):
     args.project = nr.fs.join(args.project, 'build.craftr')
