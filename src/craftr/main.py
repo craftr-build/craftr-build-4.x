@@ -244,7 +244,7 @@ def main(argv=None, prog=None):
       found_sets = False
       for target in targets:
         for op in target.operators:
-          if (not op_name and not op.explicit) or op.id.partition('#')[0] == op_name:
+          if (not op_name and not op.explicit) or op.name.partition('#')[0] == op_name:
             found_sets = True
             build_sets += op.build_sets
 

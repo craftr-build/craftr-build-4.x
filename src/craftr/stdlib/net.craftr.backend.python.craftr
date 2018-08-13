@@ -110,7 +110,7 @@ def build(build_sets, verbose):
       if not build_set.operator:
         continue
 
-      prefix = '[{}/{}]'.format(build_set.operator.target.id, build_set.operator.id)
+      prefix = '[{}]'.format(build_set.operator.id)
 
       if not _check_build_set(build_set):
         print(prefix, 'SKIP')

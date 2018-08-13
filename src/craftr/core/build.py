@@ -245,20 +245,20 @@ class Operator:
   must be attached to the operator.
   """
 
-  def __init__(self, master: 'Master', id: str, commands: Commands,
+  def __init__(self, master: 'Master', name: str, commands: Commands,
                environ: Dict[str, str] = None, cwd: str = None,
                explicit: bool = False, syncio: bool = False):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
-    if not isinstance(id, str):
-      raise TypeError('expected str, got {}'.format(type(id).__name__))
-    if not id:
-      raise ValueError('id must not be empty')
+    if not isinstance(name, str):
+      raise TypeError('expected str, got {}'.format(type(name).__name__))
+    if not name:
+      raise ValueError('name must not be empty')
     if not isinstance(commands, Commands):
       raise TypeError('expected Commands, got {}'.format(type(commands).__name__))
 
-    self._id = id
+    self._name = name
     self._master = master
     self._commands = commands
     self._target = None
@@ -270,7 +270,7 @@ class Operator:
     self._syncio = syncio
 
   def __repr__(self):
-    return 'Operator(target={!r}, id={!r}))'.format(self._target, self._id)
+    return 'Operator(target={!r}, name={!r}))'.format(self._target, self._name)
 
   @property
   def master(self):
@@ -278,7 +278,11 @@ class Operator:
 
   @property
   def id(self):
-    return self._id
+    return self._target.id + '/' + self._name
+
+  @property
+  def name(self):
+    return self._name
 
   @property
   def commands(self):
@@ -335,7 +339,7 @@ class Operator:
     return build_set
 
   def to_json(self) -> Dict:
-    return {'id': self._id, 'commands': self._commands.to_json(),
+    return {'name': self._name, 'commands': self._commands.to_json(),
             'build_sets': [x.to_json() for x in self._build_sets],
             'variables': self._variables, 'environ': self._environ,
             'cwd': self._cwd, 'explicit': self._explicit,
@@ -346,7 +350,7 @@ class Operator:
     self = object.__new__(cls)
     self._master = master
     self._target = target
-    self._id = data['id']
+    self._name = data['name']
     self._commands = Commands.from_json(data['commands'])
     self._build_sets = [BuildSet.from_json(master, self, x) for x in data['build_sets']]
     self._variables = data['variables']
@@ -397,10 +401,10 @@ class Target:
       operator._target = self
     if operator._target is not self:
       raise RuntimeError('add_operator(): Operator belongs to another target')
-    if operator._id in self._operators:
+    if operator._name in self._operators:
       raise TypeError('Operator id {!r} already occupied in Target {!r}'
-        .format(operator._id, self._id))
-    self._operators[operator._id] = operator
+        .format(operator._name, self._id))
+    self._operators[operator._name] = operator
     return operator
 
   def to_json(self) -> Dict:
@@ -461,10 +465,13 @@ class Master:
                        'co-exist ({}, filename={!r})'.format(build_set, filename))
     self._output_files[filename] = build_set
 
-  def all_build_sets(self) -> Iterable[BuildSet]:
+  def all_operators(self) -> Iterable[Operator]:
     for target in self.targets:
-      for op in target.operators:
-        yield from op.build_sets
+      yield from target.operators
+
+  def all_build_sets(self) -> Iterable[BuildSet]:
+    for op in self.all_operators():
+      yield from op.build_sets
 
   def to_json(self):
     return [x.to_json() for x in self._targets.values()]
@@ -498,7 +505,7 @@ def to_graph(master):
     # Add all this information in the identifier as it is displayed in the
     # browser when hovering over the SVG element.
     label = '\n'.join(' '.join(map(shlex.quote, x)) for x in bset.operator.commands)
-    ident = 'BuildSet:{}\nOperator: {}/{}\n'.format(id(bset), bset.operator.target.id, bset.operator.id) + '\n' + label
+    ident = 'BuildSet:{}\nOperator: {}\n'.format(id(bset), bset.operator.id) + '\n' + label
     if ident in g.nodes:
       return g.nodes[ident]
     return g.node(ident, cluster, label='', shape='circle', fixedsize='true',
@@ -513,7 +520,7 @@ def to_graph(master):
 
   def op_cluster(op, cluster=None):
     return None
-    ident = 'Operator:{}:{}'.format(op.target.id, op.id)
+    ident = 'Operator:{}'.format(op.id)
     if ident in g.clusters:
       return g.clusters[ident]
 
@@ -534,7 +541,7 @@ def to_graph(master):
 
   #for target in master.targets:
   #  for op in target.operators:
-  #    cluster = g.cluster('Operator:{}/{}'.format(target.id, op.id))
+  #    cluster = g.cluster('Operator:{}'.format(op.id))
   #    for bset in op.build_sets:
   #      bset_node(bset, cluster)
 
