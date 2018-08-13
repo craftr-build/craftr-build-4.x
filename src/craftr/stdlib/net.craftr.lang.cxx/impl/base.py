@@ -3,6 +3,7 @@ import nr.types
 import {options} from '../build.craftr'
 
 from craftr.api import *
+from craftr.core.template import TemplateCompiler
 from typing import List, Dict, Union, Callable
 from nr.stream import stream
 
@@ -239,13 +240,16 @@ class Compiler(nr.types.Named):
 
   def create_compile_action(self, target, data, action_name, lang, srcs):
     command = self.get_compile_command(target, data, lang)
-    op = operator(action_name, commands=[command], environ=self.compiler_env) # TODO: depfile=self.depfile_name
+    op = operator(action_name, commands=[command], environ=self.compiler_env,
+                  deps_prefix=self.deps_prefix)
 
     objdir = path.join(target.build_directory, 'obj')
     for src in srcs:
       bset = BuildSet({'src': src}, {})
       self.add_objects_for_source(target, data, lang, src, bset, objdir)
-      bset.description = 'Building ' + path.base(bset.outputs['obj'][0])
+      obj_file = bset.outputs['obj'][0]
+      if self.depfile_name:
+        bset.depfile = TemplateCompiler().compile(self.depfile_name).render({}, {'obj': [obj_file]}, {})[0]
       op.add_build_set(bset)
 
     return op

@@ -44,7 +44,7 @@ class GccCompiler(base.Compiler):
   force_include = ['-include', '%ARG%']
   save_temps = '-save-temps'
   depfile_args = ['-MD', '-MP', '-MF', '${@obj}.d']
-  depfile_name = '$out.d'  # TODO: This is Ninja syntax, find a way to combine this with the BuildSet variable syntax.
+  depfile_name = '${@obj}.d'
 
   compiler_supports_openmp = True
   compiler_enable_openmp = ['-fopenmp']
