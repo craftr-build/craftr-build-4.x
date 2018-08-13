@@ -278,10 +278,7 @@ def _init_properties():
 _init_properties()
 compiler = _load_compiler()
 compiler.init()
-
-print('Selected compiler: {} ({}) {} for {}'.format(
-  compiler.name, compiler.id, compiler.version, compiler.arch))
-
+print(compiler.info_string())
 
 def build():
   target = current_target()

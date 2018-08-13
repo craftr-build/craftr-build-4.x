@@ -104,6 +104,13 @@ class Compiler(nr.types.Named):
   def __repr__(self):
     return '<{} name={!r} version={!r}>'.format(type(self).__name__, self.name, self.version)
 
+  def info_string(self):
+    return '{} ({}) {} for {}'.format(
+      self.name,
+      self.id,
+      self.version,
+      self.arch)
+
   def expand(self, args, value=None):
     if isinstance(args, str):
       args = [args]
