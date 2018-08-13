@@ -1,4 +1,4 @@
-### Example: `c-sfml`
+### Example: `cpp-sfml`
 
 The code for this example is copied from the [SFML OpenGL example][0] with
 the minor adjustment of replacing `sf::Keyboard::Enter` with
