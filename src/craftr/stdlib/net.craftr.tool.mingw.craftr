@@ -35,6 +35,7 @@ Tested with
 * MingW-W64-builds
 * Win-Builds
 * Old MinGW (32-bit)
+* MSYS2 Mingw32 and Mingw64
 """
 
 project(module.name, '1.0-0')
