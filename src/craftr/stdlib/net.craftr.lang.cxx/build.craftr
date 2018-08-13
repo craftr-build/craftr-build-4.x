@@ -191,6 +191,18 @@ def _init_properties():
   from craftr.api.proplib import Dict, String, Path
   props.add('cxx.embedFiles', Dict[String, Path])
 
+  # The name of the embed header.
+  props.add('cxx.embedHeader', 'String', None)
+
+  # Embed the data statically in a header file.
+  props.add('cxx.embedStatic', 'Bool', False)
+
+  # Create a C++ source/header.
+  props.add('cxx.embedAsCpp', 'Bool', False)
+
+  # The namespace of the embedded data. Only if `cxx.embedAsCpp` is True.
+  props.add('cxx.embedNamespace', 'String', None)
+
   # Apple Settings
   # =======================
 
@@ -320,15 +332,35 @@ def build():
   # Handle cxx.embedFiles -- turning data files into C files and add
   # them to the sources list.
   if data.embedFiles:
-    outfile = path.join(build_dir, 'embed.c')
-    c_srcs.append(outfile)
+    bin2c = str(session.nodepy_context.require.resolve('net.craftr.tool.bin2c').filename)
+    command = [sys.executable, bin2c]
 
-    bin2c = str(require.resolve('./tools/bin2c').filename)
-    command = [sys.executable, bin2c, '-o', outfile]
-    command += ['{}:{}'.format(f, sym) for sym, f in data.embedFiles.items()]
+    outfiles = []
+    outdir = path.join(build_dir, 'cxx.embed')
+    if data.embedHeader:
+      basename = path.rmvsuffix(data.embedHeader)
+      embed_header = path.abs(data.embedHeader, outdir)
+      command += [('--hpp=' if data.embedAsCpp else '--h=') + embed_header]
+      outfiles.append(embed_header)
+      data.includes.append(path.dir(embed_header))
+    else:
+      basename = 'embed'
+
+    if data.embedStatic:
+      if data.embedHeader:
+        command += ['--static']
+      else:
+        print('Warning: cxx.embedStatic requires cxx.embedHeader to be set')
+    else:
+      source_file = path.join(outdir, basename + ('.cpp' if data.embedAsCpp else '.c'))
+      (cpp_srcs if data.embedAsCpp else c_srcs).append(source_file)
+      command += [('--cpp=' if data.embedAsCpp else '--c=') + source_file]
+      outfiles.append(source_file)
+
+    command += ['{}={}'.format(f, sym) for sym, f in data.embedFiles.items()]
 
     operator('cxx.bin2c', commands=[command])
-    build_set({'in': data.embedFiles.values()}, {'out': outfile})
+    build_set({'in': data.embedFiles.values()}, {'out': outfiles})
 
   for filename in data.srcs:
     if filename.endswith('.c'):
