@@ -11,8 +11,10 @@ and specify your OpenCL vendor, eg. `-Oopencl:vendor=intel`.
 
 On some Linux systems, you may find that `pkg-config` can not find information
 on the `OpenCL` package. In that case, you can override the information
-returned by pkg-config using `-Opkg-config:OpenCL=-lOpenCL`. Make sure you
-have an OpenCL driver installed as well as the opencl-headers, GLFW3 and GLEW.
+returned by pkg-config using for example `-Opkg-config:OpenCL=-lOpenCL` or
+even `-Opkg-config:OpenCL=-Wl,/usr/lib64/libOpenCL.so.1`.  
+Make sure you have an OpenCL driver installed as well as the opencl-headers,
+GLFW3 and GLEW.
 
 #### Screenshots
 
