@@ -82,6 +82,16 @@ To install the latest version from the Craftr GitHub repository use:
 
     $ pip install git+https://github.com/craftr-build/craftr.git -b develop
 
+## Tips & Tricks
+
+### How to show Python warnings?
+
+The Craftr API makes some usage of the Python `warnings` module. If you want
+warnings to be displayed, you can add `PYTHONWARNINGS=once` to the environment,
+or use the `--pywarn[=once]` command-line flag which is usually preferred
+because you won't see the warnings caused by your Python standard library.
+
+
 ## Synopsis
 
 ```

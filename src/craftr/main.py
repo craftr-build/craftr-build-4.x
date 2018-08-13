@@ -6,6 +6,7 @@ import os
 import nr.fs
 import subprocess
 import sys
+import warnings
 
 from craftr import api
 from craftr.core.build import to_graph
@@ -151,6 +152,14 @@ def get_argument_parser(prog=None):
          'module to be installed.'
   )
 
+  group.add_argument(
+    '--pywarn',
+    nargs='?',
+    default=NotImplemented,
+    metavar='--pywarn[=once]',
+    help='Set the filter for the Python warnings module.'
+  )
+
   return parser
 
 
@@ -170,6 +179,9 @@ def main(argv=None, prog=None):
 
   parser = get_argument_parser(prog)
   args = parser.parse_args(argv)
+
+  if args.pywarn is not NotImplemented:
+    warnings.simplefilter(args.pywarn or 'once')
 
   if args.notify:
     try:
