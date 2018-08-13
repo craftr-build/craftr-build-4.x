@@ -2,6 +2,7 @@
 import sys
 import base from './base'
 import {get_gcc_info} from 'net.craftr.tool.mingw'
+import {options} from '../build'
 
 from craftr.api import *
 
@@ -13,7 +14,7 @@ class GccCompiler(base.Compiler):
 
   def __init__(self, cross_prefix='', **kwargs):
     self.compiler_c = self.linker_c = cross_prefix + 'gcc'
-    self.compiler_cpp = self.linker_cpp = cross_prefix + 'gcc'
+    self.compiler_cpp = self.linker_cpp = cross_prefix + 'g++'
     if 'arch' not in kwargs or 'version' not in kwargs:
       info = get_gcc_info(self.compiler_c, self.compiler_env or kwargs.get('compiler_env'))
       kwargs.setdefault('arch', 'x64' if '64' in info['target'] else 'x86')
@@ -65,10 +66,35 @@ class GccCompiler(base.Compiler):
   archiver_env = None
   archiver_out = '%ARG%'
 
+  def init(self):
+    options.add('enableGcov', bool, False)
+
+  def get_compile_command(self, target, data, lang):
+    flags = super().get_compile_command(target, data, lang)
+    if options.enableGcov:
+      flags += ['-fprofile-arcs', '-ftest-coverage']
+    return flags
+
+  def get_link_command(self, target, data, lang):
+    flags = super().get_link_command(target, data, lang)
+    if options.enableGcov:
+      flags += ['-lgcov']
+    return flags
+
   def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
     rel = path.rel(src, target.scope.directory)
     obj = path.setsuffix(path.join(objdir, rel), '.o')
     buildset.add_output_files('obj', [obj])
+
+  def on_completion(self, target, data):
+    if options.enableGcov and data.type == 'executable':
+      commands = [
+        [data.productFilename],
+        ['gcov', '${<objs}', '-n']
+      ]
+      operator('cxx.gcov', commands=commands, syncio=True, explicit=True,
+        environ=self.compiler_env, cwd=data.runCwd)
+      build_set({'objs': data.outObjFiles, 'in': data.productFilename}, {})
 
 
 def get_compiler(fragment, compiler_class=GccCompiler):

@@ -381,18 +381,20 @@ def build():
       [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
     cpp_srcs = [unity_cpp_file]
 
-  obj_files = []
+  data.outObjFiles = []
   for srcs, lang in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
     if not srcs: continue
     name = 'cxx.compile' + lang.capitalize()
     op = compiler.create_compile_action(target, data, name, lang, srcs)
-    obj_files += [x.outputs['obj'][0] for x in op.build_sets]
+    data.outObjFiles += [x.outputs['obj'][0] for x in op.build_sets]
 
-  if obj_files and data.link:
+  if data.outObjFiles and data.link:
     lang = 'cpp' if cpp_srcs else 'c'
-    compiler.create_link_action(target, data, 'cxx.link', lang, obj_files)
+    compiler.create_link_action(target, data, 'cxx.link', lang, data.outObjFiles)
 
-  if obj_files and data.type == 'executable':
+  if data.outObjFiles and data.type == 'executable':
     command = [path.abs(data.productFilename)]
     operator('cxx.run', commands=[command], explicit=True, syncio=True, cwd=data.runCwd)
     build_set({'in': data.productFilename}, {}, description='$<in')
+
+  compiler.on_completion(target, data)

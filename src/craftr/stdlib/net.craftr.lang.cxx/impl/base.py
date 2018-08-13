@@ -254,7 +254,6 @@ class Compiler(nr.types.Named):
 
     return op
 
-  # @abstract
   def add_objects_for_source(sefl, target, data, lang, src, buildset, objdir):
     """
     This method is called from #create_compile_action() in order to construct
@@ -340,17 +339,17 @@ class Compiler(nr.types.Named):
     return command + ['$<in'] + flags
 
   def create_link_action(self, target, data, action_name, lang, object_files):
-    command = self.get_link_command(target, data, lang)
-
     input_files = list(object_files) + data.outLinkLibraries
-
+    command = self.get_link_command(target, data, lang)
     op = operator(action_name, commands=[command], environ=self.linker_env)
     bset = BuildSet({'in': input_files}, {'product': data.productFilename})
     self.add_link_outputs(target, data, lang, bset)
     op.add_build_set(bset)
-
     return op
 
   def add_link_outputs(self, target, data, lang, buildset):
     if is_staticlib(data):
       properties({'@+cxx.outLinkLibraries': [data.productFilename]}, target=target)
+
+  def on_completion(self, target, data):
+    pass
