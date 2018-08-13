@@ -22,9 +22,19 @@
 # SOFTWARE.
 
 """
-Detects MinGW installations via the Windows registry. Can be used as a Craftr
-tool (using the `craftr --tool` option) to list available installations or to
-run a command using the proper MinGW environment.
+Detects MinGW installations via the Windows registry and common installation
+paths. Can be used as a Craftr tool (using the `craftr --tool` option) to
+list available installations or to run a command using the proper MinGW
+environment.
+
+This module supports various types of MinGW installations (see a list of
+available builds here: http://mingw-w64.org/doku.php/download#mingw-builds)
+
+Tested with
+
+* MingW-W64-builds
+* Win-Builds
+* Old MinGW (32-bit)
 """
 
 project(module.name, '1.0-0')
