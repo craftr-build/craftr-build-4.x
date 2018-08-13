@@ -106,16 +106,18 @@ def export_operator(writer, operator, non_explicit):
   #  else:
   #    order_only.append(make_rule_name(graph, dep))
 
+  has_depfile = any(x.depfile for x in operator.build_sets)
+
   writer.rule(
     rule_name,
     command,
     description='$build_description',
     pool = 'console' if operator.syncio else None,
-    #depfile = action.depfile,
-    #deps = 'gcc' if action.depfile else ('msvc' if action.deps_prefix else None)
+    depfile = '$build_depfile' if has_depfile else None,
+    deps = 'gcc' if has_depfile else ('msvc' if operator.deps_prefix else None)
   )
-  #if action.deps_prefix:
-  #  writer.variable('msvc_deps_prefix', action.deps_prefix, indent=1)
+  if operator.deps_prefix:
+    writer.variable('msvc_deps_prefix', operator.deps_prefix, indent=1)
 
   all_output_files = []
   for index, bset in enumerate(operator.build_sets):
@@ -129,7 +131,8 @@ def export_operator(writer, operator, non_explicit):
       variables = {
         'index': str(index),
         'hash': bset.compute_hash(),
-        'build_description': bset.get_description() or ''
+        'build_description': bset.get_description() or '',
+        'build_depfile': bset.depfile
       }
     )
 
