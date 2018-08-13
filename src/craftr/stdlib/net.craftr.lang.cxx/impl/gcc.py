@@ -1,6 +1,7 @@
 
 import sys
 import base from './base'
+import {get_gcc_info} from 'net.craftr.tool.mingw'
 
 from craftr.api import *
 
@@ -8,13 +9,17 @@ from craftr.api import *
 class GccCompiler(base.Compiler):
 
   id = 'gcc'
-  arch = 'x64' if sys.maxsize > (2**32-1) else 'x86'  # TOOD: Determine using gcc -v
   name = 'gcc'
-  version = '??'  # TODO: Determine using gcc -v
+
+  def __init__(self, cross_prefix=''):
+    self.compiler_c = self.linker_c = cross_prefix + 'gcc'
+    self.compiler_cpp = self.linker_cpp = cross_prefix + 'gcc'
+    info = get_gcc_info(self.compiler_c, self.compiler_env)
+    self.arch = 'x64' if '64' in info['target'] else 'x86'
+    self.version = info['version']
+    super().__init__()
 
   compiler_env = None
-  compiler_c = 'gcc'
-  compiler_cpp = 'g++'
   compiler_out = ['-c', '-o', '${@obj}']
 
   c_std = '-std=%ARG%'
@@ -44,8 +49,6 @@ class GccCompiler(base.Compiler):
   compiler_enable_openmp = ['-fopenmp']
   linker_enable_openmp = ['-lgomp']
 
-  linker_c = compiler_c
-  linker_cpp = compiler_cpp
   linker_env = None
   linker_out = ['-o', '%ARG%']
   linker_shared = [pic_flag, '-shared']
