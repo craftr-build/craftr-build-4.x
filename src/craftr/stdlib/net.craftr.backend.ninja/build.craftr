@@ -1,0 +1,239 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+This module implements the Ninja build backend for Craftr.
+"""
+
+project(module.name, '1.0-0')
+
+options('local', bool, False)  # Use a local build of the Ninja tool
+
+import io
+import nodepy
+import os
+import re
+import requests
+import shlex
+import shutil
+import subprocess
+import sys
+import zipfile
+
+from nr.stream import stream
+concat = stream.concat
+
+import {Writer as NinjaWriter} from './ninja_syntax'
+import {BuildServer} from './build_server'
+
+NINJA_FILENAME = 'ninja' + ('.exe' if os.name == 'nt' else '')
+NINJA_MIN_VERSION = '1.7.1'
+if sys.platform.startswith('win32'):
+  NINJA_PLATFORM = 'win'
+elif sys.platform.startswith('darwin'):
+  NINJA_PLATFORM = 'mac'
+else:
+  NINJA_PLATFORM = 'linux'
+NINJA_URL = 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-{}.zip'.format(NINJA_PLATFORM)
+
+
+def quote(s, for_ninja=False):
+  """
+  Enhanced implementation of :func:`shlex.quote` as it generates single-quotes
+  on Windows which can lead to problems.
+  """
+
+  if os.name == 'nt' and os.sep == '\\':
+    s = s.replace('"', '\\"')
+    if re.search('\s', s) or any(c in s for c in '<>'):
+      s = '"' + s + '"'
+  else:
+    s = shlex.quote(s)
+  if for_ninja:
+    # Fix escaped $ variables on Unix, see issue craftr-build/craftr#30
+    s = re.sub(r"'(\$\w+)'", r'\1', s)
+  return s
+
+
+def make_rule_description(action):
+  commands = (' '.join(map(quote, x)) for x in action.commands)
+  return ' && '.join(commands)
+
+
+def make_rule_name(operator):
+  return re.sub('[^\d\w_\.]+', '_', operator.id)
+
+
+def export_operator(writer, operator, non_explicit):
+  phony_name = make_rule_name(operator)
+  rule_name = 'rule_' + phony_name
+  if not operator.explicit:
+    non_explicit.append(phony_name)
+
+  # Note: We add the hash into the command so that Ninja knows when an
+  # operator has been changed since the last time it was executed.
+  command = [
+    '$python', str(require.resolve('./build_slave').filename),
+    operator.target.id, operator.name, '$index', '$hash'
+  ]
+  command = ' '.join(quote(x, for_ninja=True) for x in command)
+
+  #order_only = []
+  #for dep in action.deps:
+  #  output_files = dep.get_output_files()
+  #  if output_files:
+  #    order_only.extend(output_files)
+  #  else:
+  #    order_only.append(make_rule_name(graph, dep))
+
+  writer.rule(
+    rule_name,
+    command,
+    description='$build_description',
+    pool = 'console' if operator.syncio else None,
+    #depfile = action.depfile,
+    #deps = 'gcc' if action.depfile else ('msvc' if action.deps_prefix else None)
+  )
+  #if action.deps_prefix:
+  #  writer.variable('msvc_deps_prefix', action.deps_prefix, indent=1)
+
+  all_output_files = []
+  for index, bset in enumerate(operator.build_sets):
+    output_files = list(stream.concat(bset.outputs.values()))
+    all_output_files += output_files
+    writer.build(
+      inputs = list(stream.concat(bset.inputs.values())),
+      outputs = output_files or [phony_name],
+      rule = rule_name,
+      order_only = [],
+      variables = {
+        'index': str(index),
+        'hash': bset.compute_hash(),
+        'build_description': bset.get_description() or ''
+      }
+    )
+
+  if all_output_files:
+    writer.build([phony_name], 'phony', all_output_files)
+
+
+def check_ninja_version(build_directory, download=False):
+  # If there's a local ninja version, use it.
+  local_ninja = os.path.join(build_directory, NINJA_FILENAME)
+  if os.path.isfile(local_ninja):
+    ninja = local_ninja
+  elif not options.local:
+    # Otherwise, check if there's a ninja version installed.
+    ninja = shutil.which('ninja')
+  else:
+    ninja = None
+
+  # Check the minimum Ninja version.
+  if ninja:
+    ninja_version = subprocess.check_output([ninja, '--version']).decode().strip()
+    if not ninja_version or ninja_version < NINJA_MIN_VERSION:
+      print('note: need at least ninja {} (have {} at "{}")'.format(NINJA_MIN_VERSION, ninja_version, ninja))
+      ninja = None
+      ninja_version = None
+
+  if not ninja and download:
+    # Download a new Ninja version into the build directory.
+    ninja = local_ninja
+    print('note: downloading Ninja ({})'.format(NINJA_URL))
+    with zipfile.ZipFile(io.BytesIO(requests.get(NINJA_URL).content)) as zfile:
+      with zfile.open(NINJA_FILENAME) as src:
+        with open(ninja, 'wb') as dst:
+          shutil.copyfileobj(src, dst)
+      os.chmod(ninja, int('766', 8))
+    ninja_version = subprocess.check_output([ninja, '--version']).decode().strip()
+
+  if not download and ninja_version:
+    print('note: Ninja v{} ({})'.format(ninja_version, ninja))
+  return ninja
+
+
+def export(**options):
+  check_ninja_version(session.build_directory, download=True)
+  build_file = path.join(session.build_directory, 'build.ninja')
+  path.makedirs(path.dir(build_file))
+
+  #if path.exists(build_file) and path.getmtime(build_file) >= graph.mtime():
+  #  return  # Does not need to be re-exported, as the build graph hasn't changed.
+
+  print('note: writing "{}"'.format(build_file))
+  with open(build_file, 'w') as fp:
+    writer = NinjaWriter(fp, width=9000)
+    writer.comment('This file was automatically generated by Craftr')
+    writer.comment('It is not recommended to edit this file manually.')
+    writer.newline()
+
+    # writer.variable('msvc_deps_prefix')  # TODO
+    writer.variable('builddir', session.build_directory)
+    writer.variable('python', ' '.join(map(quote, [sys.executable])))
+    writer.variable('nodepy_exec_args', ' '.join(map(quote, nodepy.runtime.exec_args)))
+    writer.newline()
+
+    non_explicit = []
+    for op in sorted(session.all_operators(), key=lambda x: x.id):
+      try:
+        export_operator(writer, op, non_explicit)
+        writer.newline()
+      except Exception as e:
+        raise RuntimeError('error while exporting {!r}'.format(op.id)) from e
+
+    if non_explicit:
+      writer.default(non_explicit)
+
+
+def build(build_sets, verbose=False, **options):
+  build_directory = session.build_directory
+  with BuildServer(session) as server:
+    os.environ['CRAFTR_BUILD_SERVER'] = '{}:{}'.format(*server.address())
+    if verbose:
+      os.environ['CRAFTR_VERBOSE'] = 'true'
+    ninja = check_ninja_version(build_directory)
+    if not ninja:
+      return 1
+    command = [ninja, '-f', os.path.join(session.build_directory, 'build.ninja')]
+    #command += self.args
+    command += [make_rule_name(x.operator) for x in build_sets]
+    return subprocess.call(command)
+
+
+def clean(build_sets, recursive=False, verbose=False, **options):
+  ninja = check_ninja_version(session.build_directory)
+  if not ninja:
+    return 1
+
+  if recursive:
+    targets = [make_rule_name(x.operator) for x in build_sets]
+  else:
+    # Use -r and passing rules only cleans files that have been created by that rule.
+    targets = ['rule_' + make_rule_name(x.operator) for x in build_sets]
+    if targets:
+      targets.insert(0, '-r')
+
+  command = [ninja, '-f', path.join(session.build_directory, 'build.ninja'), '-t', 'clean']
+  #command += args.clean_args
+  command += targets
+  return subprocess.call(command)

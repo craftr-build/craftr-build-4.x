@@ -36,7 +36,9 @@ modern build requirements.
 
 [Ninja]: https://ninja-build.org/
 
-* [Ninja] build backend
+* Support passing additional arguments to a build operator (useful for
+  operators that run a build product, eg `cxx.run`)
+* Support for Ninja depfiles/deps (also in the Python backend)
 * Enhancements to the standard library (especiall C/C++)
 * Reduce build graph JSON representation: Write the same `environ`
   dictionary only once and reference from `Operator` and `BuildSet`

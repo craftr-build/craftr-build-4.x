@@ -76,7 +76,7 @@ def get_argument_parser(prog=None):
     default=None,
     metavar='MODULE',
     help='Override the build backend. Can also be specified with the '
-         'build:backend option. Defaults to "net.craftr.backend.python".')
+         'build:backend option. Defaults to "net.craftr.backend.ninja".')
 
   group = parser.add_argument_group('Configure, build and clean')
 
@@ -269,7 +269,7 @@ def main(argv=None, prog=None):
     return 0
 
   if not args.backend:
-    args.backend = session.options.get('build:backend', 'net.craftr.backend.python')
+    args.backend = session.options.get('build:backend', 'net.craftr.backend.ninja')
   backend = session.load_module(args.backend).namespace
   if args.config:
     backend.export()
