@@ -530,7 +530,7 @@ def link_module(path, alias=None):
   module = session.nodepy_context.require.resolve(path)
   if alias is None:
     with module.filename.open() as fp:
-      match = re.match('^project\((.*?)\)', fp.read(), re.M | re.X)
+      match = re.match(r'^project\((.*?)\)', fp.read(), re.M | re.X)
       if not match:
         raise ValueError('could not find project name in "{}"'.format(path))
       expr = 'project = lambda name, version: (name, version)\nname, version = project({})'

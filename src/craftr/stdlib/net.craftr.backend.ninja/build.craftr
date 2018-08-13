@@ -65,7 +65,7 @@ def quote(s, for_ninja=False):
 
   if os.name == 'nt' and os.sep == '\\':
     s = s.replace('"', '\\"')
-    if re.search('\s', s) or any(c in s for c in '<>'):
+    if re.search(r'\s', s) or any(c in s for c in '<>'):
       s = '"' + s + '"'
   else:
     s = shlex.quote(s)
@@ -81,7 +81,7 @@ def make_rule_description(action):
 
 
 def make_rule_name(operator):
-  return re.sub('[^\d\w_\.]+', '_', operator.id)
+  return re.sub(r'[^\d\w_\.]+', '_', operator.id)
 
 
 def export_operator(writer, operator, non_explicit):

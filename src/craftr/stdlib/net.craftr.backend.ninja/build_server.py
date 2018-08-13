@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
+r"""
 Craftr uses a "Build Server" that serves the action information from the
 master process to the Craftr slave process (invoked via the build backend).
 This is to avoid that the slave process has to parse the build graph file

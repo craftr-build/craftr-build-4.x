@@ -63,7 +63,7 @@ def quote(s, for_ninja=False):
     return s
   if os.name == 'nt' and os.sep == '\\':
     s = s.replace('"', '\\"')
-    if re.search('\s', s) or any(c in s for c in '<>'):
+    if re.search(r'\s', s) or any(c in s for c in '<>'):
       s = '"' + s + '"'
   else:
     s = shlex.quote(s)
