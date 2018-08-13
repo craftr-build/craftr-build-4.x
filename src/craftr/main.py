@@ -144,12 +144,27 @@ def get_argument_parser(prog=None):
          'to stdout or the specified FILE. Override the layout engine with '
          'the DOTENGINE environment variable (defaults to "dot").')
 
+  group.add_argument(
+    '--notify',
+    action='store_true',
+    help='Send a notification when the build completed. Requires the ntfy '
+         'module to be installed.'
+  )
+
   return parser
 
 
 def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
   args = parser.parse_args(argv)
+
+  if args.notify:
+    try:
+      import ntfy
+    except ImportError:
+      print('warning: ntfy module is not available, --notify is ignored.')
+  else:
+    ntfy = None
 
   if nr.fs.isdir(args.project):
     args.project = nr.fs.join(args.project, 'build.craftr')
@@ -251,7 +266,9 @@ def main(argv=None, prog=None):
   if args.clean:
     backend.clean(build_sets, args.recursive, args.verbose)
   if args.build:
-    backend.build(build_sets, args.verbose)
+    res = backend.build(build_sets, args.verbose)
+    if args.notify and ntfy:
+      ntfy.notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
 
 
 if __name__ == '__main__':
