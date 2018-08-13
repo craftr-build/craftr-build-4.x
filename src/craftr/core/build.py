@@ -58,15 +58,19 @@ class BuildSet:
   """
 
   def __init__(self, master: 'Master', description: str = None,
-               environ: Dict[str, str] = None, cwd: str = None):
+               environ: Dict[str, str] = None, cwd: str = None,
+               depfile: str = None):
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
     if description is not None and not isinstance(description, str):
       raise TypeError('expected str, got {}'.format(type(description).__name__))
+    if depfile is not None and not isinstance(depfile, str):
+      raise TypeError('expected str, got {}'.format(type(depfile).__name__))
     self._master = master
     self.description = description
     self._environ = environ
     self._cwd = cwd or None  # empty string is invalid, fallback to None
+    self.depfile = depfile
     self._inputs = {}
     self._outputs = {}
     self._variables = {}
@@ -166,7 +170,8 @@ class BuildSet:
 
   def to_json(self):
     return {'description': self.description, 'environ': self._environ,
-            'cwd': self._cwd, 'inputs': self._inputs, 'outputs': self._outputs,
+            'cwd': self._cwd, 'depfile': self.depfile,
+            'inputs': self._inputs, 'outputs': self._outputs,
             'variables': self._variables}
 
   @classmethod
@@ -176,6 +181,7 @@ class BuildSet:
     self.description = data['description']
     self._environ = data['environ']
     self._cwd = data['cwd']
+    self.depfile = data['depfile']
     self._inputs = data['inputs']
     self._outputs = data['outputs']
     self._variables = data['variables']
@@ -249,7 +255,8 @@ class Operator:
 
   def __init__(self, master: 'Master', name: str, commands: Commands,
                environ: Dict[str, str] = None, cwd: str = None,
-               explicit: bool = False, syncio: bool = False):
+               explicit: bool = False, syncio: bool = False,
+               deps_prefix: str = None):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
@@ -259,7 +266,8 @@ class Operator:
       raise ValueError('name must not be empty')
     if not isinstance(commands, Commands):
       raise TypeError('expected Commands, got {}'.format(type(commands).__name__))
-
+    if deps_prefix is not None and not isinstance(deps_prefix, str):
+      raise TypeError('expected str, got {}'.format(type(deps_prefix).__name__))
     self._name = name
     self._master = master
     self._commands = commands
@@ -270,6 +278,7 @@ class Operator:
     self._cwd = cwd or None  # empty string is invalid, fallback to None
     self._explicit = explicit
     self._syncio = syncio
+    self._deps_prefix = deps_prefix
 
   def __repr__(self):
     return 'Operator(target={!r}, name={!r}))'.format(self._target, self._name)
@@ -315,6 +324,10 @@ class Operator:
     return self._syncio
 
   @property
+  def deps_prefix(self):
+    return self._deps_prefix
+
+  @property
   def build_sets(self):
     return self._build_sets[:]
 
@@ -347,7 +360,7 @@ class Operator:
             'build_sets': [x.to_json() for x in build_sets],
             'variables': self._variables, 'environ': self._environ,
             'cwd': self._cwd, 'explicit': self._explicit,
-            'syncio': self._syncio}
+            'syncio': self._syncio, 'deps_prefix': self._deps_prefix}
 
   @classmethod
   def from_json(cls, master: 'Master', target: 'Target', data: Dict):
@@ -362,6 +375,7 @@ class Operator:
     self._cwd = data['cwd']
     self._explicit = data['explicit']
     self._syncio = data['syncio']
+    self._deps_prefix = data['deps_prefix']
     return self
 
 
