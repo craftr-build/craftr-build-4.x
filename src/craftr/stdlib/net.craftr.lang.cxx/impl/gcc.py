@@ -61,19 +61,6 @@ class GccCompiler(base.Compiler):
   archiver_env = None
   archiver_out = '%ARG%'
 
-  executable_suffix = ''
-  library_prefix = 'lib'
-  library_shared_suffix = '.so'
-  library_static_suffix = '.a'
-
-  """
-  lib_macro = 'lib$(0)'
-  ext_lib_macro = extmacro('.a', '.a.$(0)')
-  ext_dll_macro = extmacro('.so', '.so.$(0)')
-  ext_exe_macro = extmacro('', '.$(0)')
-  obj_macro = '.o'
-  """
-
   def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
     rel = path.rel(src, target.scope.directory)
     obj = path.setsuffix(path.join(objdir, rel), '.o')

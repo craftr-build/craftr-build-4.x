@@ -6,6 +6,19 @@ from craftr.api import *
 from typing import List, Dict, Union, Callable
 from nr.stream import stream
 
+options('namingScheme', str, '')
+
+if not options.namingScheme:
+  if OS.id == 'win32':
+    options.namingScheme = 'e=.exe,lp=,ls=.lib,ld=.dll'
+  elif OS.id == 'darwin':
+    options.namingScheme = 'e=,lp=lib,ls=.a,ld=.dylib'
+  else:
+    options.namingScheme = 'e=,lp=lib,ls=.a,ld=.so'
+
+naming_scheme = {k.lower(): v for k, v in (
+  x.partition('=')[::2] for x in options.namingScheme.split(','))}
+
 
 def short_path(x):
   y = path.rel(x, par=True)
@@ -92,6 +105,11 @@ class Compiler(nr.types.Named):
     ('archiver_env', List[str]),             # Environment variables for the archiver.
     ('archiver_out', List[str]),             # Flag(s) to specify the output file.
   ]
+
+  executable_suffix = naming_scheme.get('e', '')
+  library_prefix = naming_scheme.get('lp', '')
+  library_shared_suffix = naming_scheme.get('ld', '')
+  library_static_suffix = naming_scheme.get('ls', '')
 
   @property
   def is32bit(self):

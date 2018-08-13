@@ -72,11 +72,6 @@ class MsvcCompiler(base.Compiler):
   archiver = ['lib', '/nologo']
   archiver_out = '/OUT:${@product}'
 
-  executable_suffix = '.exe'
-  library_prefix = ''
-  library_shared_suffix = '.dll'
-  library_static_suffix = '.lib'
-
   def __init__(self, toolkit):
     super().__init__(
       version = toolkit.cl_version,
