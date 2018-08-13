@@ -58,6 +58,7 @@ def get_argument_parser(prog=None):
 
   group.add_argument(
     '-O', '--option',
+    dest='options',
     action='append',
     default=[],
     metavar='K=V',
@@ -159,13 +160,18 @@ def main(argv=None, prog=None):
       if not nr.fs.isfile(args.config_file):
         args.config_file = None
 
+  for x in args.targets[:]:
+    if '=' in x:
+      args.options.append(x)
+      args.targets.remove(x)
+
   # Create a new session.
   build_directory = nr.fs.join(args.build_root, args.variant)
   session = api.session = api.Session(args.build_root, build_directory, args.variant)
   session.add_module_search_path(args.module_path)
   if args.config_file:
     session.load_config(args.config_file)
-  for opt in args.option or ():
+  for opt in args.options or ():
     key, value = opt.partition('=')[::2]
     session.options[key] = value
 
