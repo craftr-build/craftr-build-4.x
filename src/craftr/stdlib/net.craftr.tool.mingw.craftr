@@ -1,0 +1,153 @@
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+Detects MinGW installations via the Windows registry. Can be used as a Craftr
+tool (using the `craftr --tool` option) to list available installations or to
+run a command using the proper MinGW environment.
+"""
+
+project(module.name, '1.0-0')
+options('installDirectory', str, '')
+
+import os
+import re
+import subprocess
+import sys
+
+from nr.types import named
+from nr.stream import stream
+from craftr.utils import sh, winreg
+
+
+class InvalidMingwInstallation(Exception):
+  pass
+
+
+class MingwInstallation(named.Named):
+  install_dir: str
+  _is_64: bool = None
+  _gccinfo: dict = None
+  _environ: dict = None
+  _mingw_dir: str = None
+
+  def __init__(self, install_dir):
+    if not install_dir or not path.isdir(install_dir):
+      raise InvalidMingwInstallation('Directory does not exist: "{}"'.format(install_dir))
+
+    choices = []
+    for name in path.listdir(install_dir):
+      if 'mingw' in name: choices.append(name)
+    if not choices:
+      raise InvalidMingwInstallation('Could not find a *mingw* subdirectory: "{}"'.format(install_dir))
+
+    # Heuristic: Prefer 64 bit over 32 -- on 32 bit the 64 one will not be installed?
+    name = next((x for x in choices if '64' in x), choices[0])
+    is_64 = '64' in name
+    super().__init__(install_dir, is_64, _mingw_dir=name)
+
+  @property
+  def is_64(self):
+    if self._is_64 is not None:
+      return self._is_64
+    return '64' in self.gccinfo['target']
+
+  @property
+  def gccinfo(self):
+    if self._gccinfo is None:
+      with sh.override_environ(self.environ):
+        output = sh.check_output(['gcc', '-v'], stderr=sh.STDOUT).decode()
+        target = re.search('Target:\s+(.*)$', output, re.M | re.I).group(1).strip()
+        version = re.search('\w+\s+version\s+([\d\.]+)', output, re.M | re.I).group(1)
+      self._gccinfo = {'target': target, 'version': version}
+    return self._gccinfo
+
+  @property
+  def environ(self):
+    if self._environ is None:
+      self._environ = os.environ.copy()
+      self._environ['PATH'] = path.pathsep.join(self.binary_paths) + path.pathsep + self._environ['PATH']
+    return self._environ
+
+  @property
+  def binary_paths(self):
+    paths = []
+    paths.append(path.join(self.install_dir, self._mingw_dir, 'bin'))
+    paths.append(path.join(self.install_dir, 'bin'))
+    return paths
+
+  @classmethod
+  def list(cls):
+    """
+    Searches for MinGW installations on the system using the Windows Registry
+    and common install directories. You can suggest an additional install
+    directory with the `mingw:installDirectory` option.
+    """
+
+    test_directories = options.installDirectory.split(path.pathsep)
+
+    keys = []
+    keys.append(winreg.HKEY_LOCAL_MACHINE.key('SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'))
+    keys.append(winreg.HKEY_LOCAL_MACHINE.key('SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall'))
+    for key in stream.concat(x.keys() for x in keys):
+      if 'posix' in key.name or 'win32' in key.name:
+        publisher = key.value('Publisher').data
+        if 'mingw' in publisher.lower():
+          try:
+            location = key.value('InstallLocation').data
+          except FileNotFoundError:
+            location = os.path.dirname(key.value('UninstallString').data)
+          test_directories.append(location)
+
+    results = []
+    for base in test_directories:
+      try:
+        results.append(cls(base))
+      except InvalidMingwInstallation:
+        continue
+
+    return results
+
+
+def main(argv=None, prog=None):
+  import argparse
+  parser = argparse.ArgumentParser(prog=prog)
+  parser.add_argument('argv', nargs='...')
+  args = parser.parse_args(argv)
+
+  if not args.argv:
+    i = None
+    for i, inst in enumerate(MingwInstallation.list()):
+      print('- Location:'.format(i), inst.install_dir)
+      print('  Binary Paths:', path.pathsep.join(inst.binary_paths))
+      print('  Craftr Options:', 'cxx:toolchain=mingw mingw:installDirectory="{}"'.format(inst.install_dir))
+      print('  Architecture:', 'x64' if inst.is_64 else 'x86')
+      print('  Target:', inst.gccinfo['target'])
+      print('  Gcc Version:', inst.gccinfo['version'])
+      print()
+    if i is None:
+      print('No MinGW installations detected.')
+  else:
+    inst = MingwInstallation.list()[0]
+    with sh.override_environ(inst.environ):
+      return subprocess.call(args.argv)
