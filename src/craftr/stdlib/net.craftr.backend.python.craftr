@@ -128,7 +128,7 @@ def build(build_sets, verbose):
       with sh.override_environ(build_set.get_environ()):
         for cmd in commands:
           print('  $', ' '.join(shlex.quote(x) for x in cmd))
-          if build_set.operator.syncio:
+          if build_set.operator.syncio or verbose:
             stdin, stdout, stderr = None, None, None
           else:
             stdin, stdout, stderr = subprocess.PIPE, subprocess.PIPE, subprocess.STDOUT
