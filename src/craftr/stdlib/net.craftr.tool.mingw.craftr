@@ -138,9 +138,9 @@ class MingwInstallation(named.Named):
             except FileNotFoundError:
               location = os.path.dirname(key.value('UninstallString').data)
             test_directories.append(location)
-    else:
+    elif OS.name == 'msys':
       # MSYS2 support
-      test_directories = ['/mingw32', '/usr', '/mingw64']
+      test_directories += ['/mingw32', '/usr', '/mingw64']
 
     results = []
     for base in test_directories:
