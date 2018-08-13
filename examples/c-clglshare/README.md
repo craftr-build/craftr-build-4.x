@@ -1,4 +1,4 @@
-### Example: `c-opencl`
+### Example: `c-clglshare`
 
 This example uses OpenCL and OpenGL interop to render the Mandelbrot set.
 It shows usage of the following technologies and Craftr build features:
