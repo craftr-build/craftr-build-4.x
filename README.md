@@ -87,7 +87,7 @@ To install the latest version from the Craftr GitHub repository use:
 ```
 usage: craftr [-h] [--variant [=debug]] [--project PATH] [--module-path PATH] [--config-file PATH]
               [-O K=V] [--build-root PATH=[build]] [--backend MODULE] [-c] [-b] [--clean] [-v] [-r]
-              [--tool ...] [--dump-graphviz [FILE]] [--dump-svg [FILE]]
+              [--tool ...] [--dump-graphviz [FILE]] [--dump-svg [FILE]] [--notify]
               [[TARGET [...]] [[TARGET [...]] ...]]
 
 optional arguments:
@@ -103,7 +103,7 @@ Configuration:
   --build-root PATH=[build]  The build root directory. When used, this option must be specified with
                              every invokation of Craftr, even after the config step.
   --backend MODULE           Override the build backend. Can also be specified with the
-                             build:backend option. Defaults to "craftr/backends/python".
+                             build:backend option. Defaults to "net.craftr.backend.ninja".
 
 Configure, build and clean:
   [TARGET [...]]             Allows you to explicitly specify the targets that should be built
@@ -127,6 +127,8 @@ Tools and debugging:
   --dump-svg [FILE]          Render an SVG file of the build graph's GraphViz representation to
                              stdout or the specified FILE. Override the layout engine with the
                              DOTENGINE environment variable (defaults to "dot").
+  --notify                   Send a notification when the build completed. Requires the ntfy module
+                             to be installed.
 ```
 
 ---
