@@ -1,4 +1,4 @@
-project('examples.c-sfml', '1.0-0')
+project('examples.cpp-sfml', '1.0-0')
 cxx = require('cxx')
 target('main')
 depends('net.craftr.lib.sfml:sfml')

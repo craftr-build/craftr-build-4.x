@@ -1,4 +1,4 @@
-project('examples.c-opencl', '1.0-0')
+project('examples.c-clglshare', '1.0-0')
 
 import cxx from 'cxx'
 
