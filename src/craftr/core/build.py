@@ -34,9 +34,11 @@ only be listed once in the outputs of a BuildSet.
 __all__ = ['BuildSet', 'Commands', 'Operator', 'Target', 'Master']
 
 import collections
+import contextlib
 import hashlib
 import io
 import json
+import os
 import nr.fs
 import re
 import shlex
@@ -146,8 +148,7 @@ class BuildSet:
     if not self._operator:
       raise TypeError('build set is not attached to an operator')
     variables = ChainMap(self._variables, self._operator._variables)
-    return self._operator._commands.compiled.render(
-      self._inputs, self._outputs, variables)
+    return self._operator.commands.render(self._inputs, self._outputs, variables)
 
   def get_description(self):
     """
@@ -201,6 +202,94 @@ class BuildSet:
     return hashlib.sha1(json.dumps(data, sort_keys=True).encode('utf8')).hexdigest()
 
 
+class Command:
+  """
+  Represents a single command.
+  """
+
+  def __init__(self, command: Union[List[str], str],
+               supports_response_file: bool = False,
+               response_args_begin: int = 1):
+    if isinstance(command, str):
+      command = shlex.split(command)
+    self._command = command
+    self._compiled = TemplateCompiler().compile_list(command)
+    self._inputs, self._outputs, self._variables = \
+        self._compiled.occurences(set(), set(), set())
+    self._supports_response_file = supports_response_file
+    self._response_args_begin = response_args_begin
+
+  def __repr__(self):
+    return 'Command({!r})'.format(self._command)
+
+  def __iter__(self):
+    return iter(self._command)
+
+  @property
+  def command(self):
+    return self._command[:]
+
+  @property
+  def compiled(self):
+    return self._compiled
+
+  @property
+  def inputs(self):
+    return self._inputs
+
+  @property
+  def outputs(self):
+    return self._outputs
+
+  @property
+  def variables(self):
+    return self._variables
+
+  @property
+  def supports_response_file(self):
+    return self._supports_response_file
+
+  @property
+  def response_args_begin(self):
+    return self._response_args_begin
+
+  def render(self, inputs, outputs, variables):
+    return self._compiled.render(inputs, outputs, variables)
+
+  @contextlib.contextmanager
+  def with_response_file(self, commands):
+    """
+    Takes a rendered list of commands and produces a response file on Windows
+    if necessary and supported by the command. The *commands* should be the
+    result of the command's #render() method.
+    """
+
+    if not self.supports_response_file:
+      yield commands; return
+
+    # Create a response file on Windows if supported by the command.
+    if os.name == 'nt' and sum(len(x)+1 for x in commands) > 8192:
+      with nr.fs.tempfile(text=True, encoding='utf16') as fp:
+        fp.write('\n'.join(commands[self.response_args_begin:]))
+        fp.write('\n')
+        fp.close()
+        yield commands[:self.response_args_begin] + ['@' + fp.name]
+    else:
+      yield commands
+
+  def to_json(self):
+    return {
+      'command': self._command,
+      'supports_response_file': self._supports_response_file,
+      'response_args_begin': self._response_args_begin
+    }
+
+  @classmethod
+  def from_json(cls, data):
+    return cls(data['command'], data['supports_response_file'],
+      data['response_args_begin'])
+
+
 class Commands:
   """
   This class represents a list of system commands, where every system command
@@ -210,17 +299,21 @@ class Commands:
   A commands object is immutable after construction.
   """
 
-  def __init__(self, commands: List[List[str]]):
-    self._commands = commands
-    self._compiled = TemplateCompiler().compile_commands(commands)
-    self._inputs, self._outputs, self._variables = \
-        self._compiled.occurences(set(), set(), set())
+  def __init__(self, commands: List[Union[Command, List[str]]]):
+    self._commands = []
+    for x in commands:
+      if not isinstance(x, Command):
+        x = Command(x)
+      self._commands.append(x)
+    self._inputs, self._outputs, self._variables = set(), set(), set()
+    [x.compiled.occurences(self._inputs, self._outputs, self._variables)
+     for x in self._commands]
 
   def __repr__(self):
-    return 'Commands({})'.format(self._commands)
+    return 'Commands({!r})'.format(self._commands)
 
   def __iter__(self):
-    return (x[:] for x in self._commands)
+    return (x for x in self._commands)
 
   @property
   def inputs(self):
@@ -238,12 +331,15 @@ class Commands:
   def compiled(self):
     return self._compiled
 
+  def render(self, inputs, outputs, variables):
+    return [x.render(inputs, outputs, variables) for x in self._commands]
+
   def to_json(self) -> List:
-    return self._commands
+    return [x.to_json() for x in self._commands]
 
   @classmethod
   def from_json(cls, data: List):
-    return cls(data)
+    return cls([Command.from_json(x) for x in data])
 
 
 class Operator:

@@ -3,6 +3,7 @@ import nr.types
 import {options} from '../build.craftr'
 
 from craftr.api import *
+from craftr.core import build
 from craftr.core.template import TemplateCompiler
 from typing import List, Dict, Union, Callable
 from nr.stream import stream
@@ -339,8 +340,13 @@ class Compiler(nr.types.Named):
     return command + ['$<in'] + flags
 
   def create_link_action(self, target, data, action_name, lang, object_files):
-    input_files = list(object_files) + data.outLinkLibraries
     command = self.get_link_command(target, data, lang)
+
+    linker_cmd_len = len(self.linker_cpp if lang == 'cpp' else self.linker_c)
+    command = build.Command(command, supports_response_file=True,
+                            response_args_begin=linker_cmd_len)
+
+    input_files = list(object_files) + data.outLinkLibraries
     op = operator(action_name, commands=[command], environ=self.linker_env)
     bset = BuildSet({'in': input_files}, {'product': data.productFilename})
     self.add_link_outputs(target, data, lang, bset)

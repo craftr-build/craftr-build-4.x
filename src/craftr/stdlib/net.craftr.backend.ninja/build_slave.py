@@ -29,6 +29,7 @@ Ninja runs.
 """
 
 import argparse
+import contextlib
 import io
 import json
 import nr.fs as path
@@ -154,21 +155,24 @@ def main(argv=None, prog=None):
     print_command_list()
 
   # Execute the subcommands.
-  for i, cmd in enumerate(commands):
-    # Add the additional_args to the last command in the chain.
-    if i == len(commands) - 1:
-      cmd = cmd + additional_args
-    try:
-      code = subprocess.call(cmd)
-    except OSError as e:
-      error(e)
-      code = 127
-    if code != 0:
-      error('\n' + '-'*60)
-      error('fatal: "{}" exited with code {}.'.format(operator.id, code))
-      print_command_list(i)
-      error('-'*60 + '\n')
-      return code
+  with contextlib.ExitStack() as stack:
+    for i, (cmd, cmd_template) in enumerate(zip(commands, bset.operator.commands)):
+      cmd = stack.enter_context(cmd_template.with_response_file(cmd))
+
+      # Add the additional_args to the last command in the chain.
+      if i == len(commands) - 1:
+        cmd = cmd + additional_args
+      try:
+        code = subprocess.call(cmd)
+      except OSError as e:
+        error(e)
+        code = 127
+      if code != 0:
+        error('\n' + '-'*60)
+        error('fatal: "{}" exited with code {}.'.format(operator.id, code))
+        print_command_list(i)
+        error('-'*60 + '\n')
+        return code
 
   # Check if all output files have been produced by the commands.
   outputs = list(stream.concat(bset.outputs.values()))
