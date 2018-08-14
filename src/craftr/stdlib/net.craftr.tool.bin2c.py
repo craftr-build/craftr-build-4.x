@@ -105,32 +105,51 @@ def write_namespace(fp, namespace):
       fp.write('}} // namespace {}\n'.format(x))
 
 
-def write_header(fp, files, namespace, static, cpp):
+def write_header(fp, files, namespace, static, cpp, cstring=False, cppstring=False):
   fp.write(HEADER + '\n')
   fp.write('#pragma once\n')
-  fp.write('#include <{}>\n\n'.format('cstddef' if cpp else 'stddef.h'))
+  fp.write('#include <{}>\n'.format('cstddef' if cpp else 'stddef.h'))
+  if cppstring and cpp:
+    fp.write('#include <string>\n')
+  fp.write('\n')
   if not cpp:
     fp.write('#ifdef __cplusplus\nextern "C" {\n#endif\n\n')
   with write_namespace(fp, namespace if cpp else None):
     if static:
-      write_data(fp, files, namespace, static, cpp, False)
+      write_data(fp, files, namespace=None, static=static, cpp=cpp,
+        cstring=cstring, cppstring=cppstring)
     else:
       for s in files.values():
         fp.write('extern unsigned char const {}_start[];\n'.format(s))
-        fp.write('extern size_t const {}_size;\n\n'.format(s))
+        fp.write('extern size_t const {}_size;\n'.format(s))
+        if cstring and not cpp:
+          fp.write('extern char const* const {}_string;\n'.format(s))
+        if cppstring and cpp:
+          fp.write('extern std::string const {}_string;\n'.format(s))
+        fp.write('\n')
   if not cpp:
     fp.write('#ifdef __cplusplus\n} // extern "C"\n#endif\n\n')
 
 
-def write_impl(fp, files, namespace, cpp):
-  fp.write(HEADER + '\n')
-  fp.write('#include <{}>\n\n'.format('cstddef' if cpp else 'stddef.h'))
-  write_data(fp, files, namespace, False, cpp, True)
+def write_impl(fp, files, namespace, cpp, cstring=False, cppstring=False):
+  if cpp and namespace:
+    write_header(fp, files, namespace, False, cpp, cstring, cppstring)
+    fp.write('\n')
+  else:
+    # TODO: It's basically the same as in write_header() here.
+    fp.write(HEADER + '\n')
+    fp.write('#include <{}>\n'.format('cstddef' if cpp else 'stddef.h'))
+    if cppstring and cpp:
+      fp.write('#include <string>\n')
+    fp.write('\n')
+
+  write_data(fp, files, namespace=namespace, static=False,
+    cpp=cpp, impl=True, cstring=cstring, cppstring=cppstring)
 
 
-def write_data(fp, files, namespace, static, cpp, impl):
+def write_data(fp, files, namespace, static, cpp, impl, cstring, cppstring):
   static = 'static ' if static else ''
-  prefix = '{}::'.format(namespace) if (impl and cpp and namespace) else ''
+  prefix = '{}::'.format(namespace) if (namespace and cpp) else ''
   for f, s in files.items():
     s = prefix + s
     fp.write('{}unsigned char const {}_start[] = {{\n'.format(static, s))
@@ -145,7 +164,12 @@ def write_data(fp, files, namespace, static, cpp, impl):
             fp.write('0x{:02X},'.format(c))
           fp.write('\n')
     fp.write('};\n')
-    fp.write('{}size_t const {}_size = {};\n\n'.format(static, s, size - 1))
+    fp.write('{}size_t const {}_size = {};\n'.format(static, s, size - 1))
+    if cstring:
+      fp.write('{0}char const* const {1}_string = (char*) {1}_start;\n'.format(static, s))
+    if cppstring and cpp and not cstring:
+      fp.write('{0}std::string const {1}_string((char*){1}_start, {1}_size);\n'.format(static, s))
+    fp.write('\n')
 
 
 def get_argument_parser(prog=None):
@@ -167,6 +191,8 @@ def get_argument_parser(prog=None):
   group.add_argument('--hpp', metavar='FILE', help='The C++ header output file.')
   group.add_argument('-n', '--namespace', metavar='NAMESPACE', help='The C++ namespace.')
   group.add_argument('-s', '--static', action='store_true', help='Write to header as static data.')
+  group.add_argument('--cstring', action='store_true', help='Write a C-string representation (precedence over --cppstring).')
+  group.add_argument('--cppstring', action='store_true', help='Write a C++-string representation.')
 
   return parser
 
@@ -184,19 +210,19 @@ def main(argv=None, prog=None):
 
   if args.h:
     with open_cli_file(args.h, 'w') as fp:
-      write_header(fp, files, args.namespace, args.static, False)
+      write_header(fp, files, args.namespace, args.static, False, args.cstring, args.cppstring)
 
   if args.c:
     with open_cli_file(args.c, 'w') as fp:
-      write_impl(fp, files, args.namespace, False)
+      write_impl(fp, files, args.namespace, False, args.cstring, args.cppstring)
 
   if args.hpp:
     with open_cli_file(args.hpp, 'w') as fp:
-      write_header(fp, files, args.namespace, args.static, True)
+      write_header(fp, files, args.namespace, args.static, True, args.cstring, args.cppstring)
 
   if args.cpp:
     with open_cli_file(args.cpp, 'w') as fp:
-      write_impl(fp, files, args.namespace, True)
+      write_impl(fp, files, args.namespace, True, args.cstring, args.cppstring)
 
 
 if __name__ == '__main__':

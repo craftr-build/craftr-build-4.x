@@ -328,6 +328,7 @@ def build():
 
   c_srcs = []
   cpp_srcs = []
+  required_headers = []
 
   # Handle cxx.embedFiles -- turning data files into C files and add
   # them to the sources list.
@@ -343,6 +344,7 @@ def build():
       command += [('--hpp=' if data.embedAsCpp else '--h=') + embed_header]
       outfiles.append(embed_header)
       data.includes.append(path.dir(embed_header))
+      required_headers.append(embed_header)
     else:
       basename = 'embed'
 
@@ -357,8 +359,14 @@ def build():
       command += [('--cpp=' if data.embedAsCpp else '--c=') + source_file]
       outfiles.append(source_file)
 
-    command += ['{}={}'.format(f, sym) for sym, f in data.embedFiles.items()]
+    if data.embedNamespace:
+      command += ['--namespace=' + data.embedNamespace]
+    if data.embedAsCpp:
+      command += ['--cppstring']
+    else:
+      command += ['--cstring']
 
+    command += ['{}={}'.format(f, sym) for sym, f in data.embedFiles.items()]
     operator('cxx.bin2c', commands=[command])
     build_set({'in': data.embedFiles.values()}, {'out': outfiles})
 
@@ -387,6 +395,9 @@ def build():
     name = 'cxx.compile' + lang.capitalize()
     op = compiler.create_compile_action(target, data, name, lang, srcs)
     data.outObjFiles += [x.outputs['obj'][0] for x in op.build_sets]
+    if required_headers:
+      for x in op.build_sets:
+        x.add_input_files('?required-headers', required_headers)
 
   if data.outObjFiles and data.link:
     lang = 'cpp' if cpp_srcs else 'c'
