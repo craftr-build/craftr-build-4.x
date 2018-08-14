@@ -80,7 +80,7 @@ def export(**options):
 
 def clean(build_sets, recursive=False, verbose=False, **options):
   seen = set()
-  queue = list(build_sets)
+  queue = list(build_sets) if build_sets else list(session.all_build_sets())
   files_to_remove = []
   while queue:
     bset = queue.pop()

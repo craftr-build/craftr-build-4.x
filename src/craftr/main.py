@@ -37,6 +37,62 @@ def notify(message, title):
     ntfy.notify(message, title)
 
 
+def resolve_build_sets(session, target_specifiers):
+  """
+  Returns a list of the build sets that are selected in the list of
+  *target_specifiers*.
+  """
+
+  basename_map = {}
+  for k, v in session._output_files.items():
+    base = nr.fs.base(k)
+    basename_map.setdefault(base, set()).add(v)
+
+  build_sets = []
+  for spec in target_specifiers:
+    if spec in basename_map:
+      build_sets += basename_map[spec]
+      continue
+    abs_spec = nr.fs.canonical(spec)
+    if abs_spec in session._output_files:
+      build_sets.append(session._output_files[abs_spec])
+      continue
+
+    name = spec
+    if '@' in name:
+      scope, name = name.partition('@')[::2]
+    else:
+      scope = session.main_module
+    if ':' in name:
+      target_name, op_name = name.partition(':')[::2]
+    else:
+      target_name, op_name = name, None
+
+    # Find the target with the exact name and subtargets.
+    full_name = scope + '@' + target_name
+    prefix = full_name + '/'
+    targets = []
+    for target in session.targets:
+      if target.id == full_name or target.id.startswith(prefix):
+        targets.append(target)
+
+    if not targets:
+      raise ValueError('no targets matched {!r}'.format(spec))
+
+    # Find all matching operators and add their build sets.
+    found_sets = False
+    for target in targets:
+      for op in target.operators:
+        if (not op_name and not op.explicit) or op.name.partition('#')[0] == op_name:
+          found_sets = True
+          build_sets += op.build_sets
+
+    if not found_sets:
+      raise ValueError('no operators matched {!r}'.format(spec))
+
+  return build_sets
+
+
 def get_argument_parser(prog=None):
   parser = argparse.ArgumentParser(
     prog=prog,
@@ -251,43 +307,9 @@ def main(argv=None, prog=None):
 
   # Determine the build sets that are supposed to be built.
   if args.targets:
-    build_sets = []
-    for name in args.targets:
-      if '@' in name:
-        scope, name = name.partition('@')[::2]
-      else:
-        scope = session.main_module
-      if ':' in name:
-        target_name, op_name = name.partition(':')[::2]
-      else:
-        target_name, op_name = name, None
-
-      # Find the target with the exact name and subtargets.
-      full_name = scope + '@' + target_name
-      prefix = full_name + '/'
-      targets = []
-      for target in session.targets:
-        if target.id == full_name or target.id.startswith(prefix):
-          targets.append(target)
-
-      if not targets:
-        print('error: no targets matched {!r}'.format(full_name))
-        return 1
-
-      # Find all matching operators and add their build sets.
-      found_sets = False
-      for target in targets:
-        for op in target.operators:
-          if (not op_name and not op.explicit) or op.name.partition('#')[0] == op_name:
-            found_sets = True
-            build_sets += op.build_sets
-
-      if not found_sets:
-        print('error: no operators matched {!r}'.format(op_name))
-        return 1
-
+    build_sets = resolve_build_sets(session, args.targets)
   else:
-    build_sets = [x for x in session.all_build_sets() if not x.operator.explicit]
+    build_sets = None
 
   if args.dump_graphviz is not NotImplemented:
     with open_cli_file(args.dump_graphviz, 'w') as fp:
