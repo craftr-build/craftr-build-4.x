@@ -38,6 +38,7 @@ options('toolchain', str, _toolchainDefault)
 options('staticRuntime', bool, False)
 
 import sys
+import nr.fs
 import base from './impl/base'
 
 # TODO: Handle staticRuntime option.
@@ -378,15 +379,17 @@ def build():
     # TODO: Issue a warning?
 
   if data.combineCSources:
+    path.makedirs(build_dir)
     unity_c_file = path.join(build_dir, 'unity.c')
-    with craftr.AutoRestoreMtimeFile(unity_c_file, 'w') as fp:
+    with nr.fs.mtime_consistent_file(unity_c_file, 'w') as fp:
       [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
     c_srcs = [unity_c_file]
 
   if data.combineCppSources:
+    path.makedirs(build_dir)
     unity_cpp_file = path.join(build_dir, 'unity.cpp')
-    with craftr.AutoRestoreMtimeFile(unity_cpp_file, 'w') as fp:
-      [fp.write('#include "{}"\n'.format(path.abs(x))) for x in c_srcs]
+    with nr.fs.mtime_consistent_file(unity_cpp_file, 'w') as fp:
+      [fp.write('#include "{}"\n'.format(path.abs(x))) for x in cpp_srcs]
     cpp_srcs = [unity_cpp_file]
 
   data.outObjFiles = []
