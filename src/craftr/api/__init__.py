@@ -543,17 +543,36 @@ def link_module(path, alias=None):
   session.link_resolver.add_alias(alias, module)
 
 
-def target(name, bind=True):
+def target(name=None, bind=True, builders=None):
   """
   Create a new target with the specified *name* in the current scope and
   set it as the current target.
+
+  If *name* is omitted, a decorator is returned instead that will call the
+  decorated function and invoke the specified *builders* immediately after
+  the function suceeded.
+
+  The function may or may not accept one positional argument in which case
+  the target object is passed.
   """
 
-  scope = current_scope()
-  target = session.add_target(Target(name, scope))
-  if bind:
-    bind_target(target)
-  return target
+  if name is None:
+    def decorator(fun):
+      t = target(fun.__name__)
+      fun() if fun.__code__.co_argcount == 0 else fun(t)
+      [x() for x in builders or ()]
+      return t
+    return decorator
+  else:
+    if builders is not None:
+      # TODO: We could invoke the builders for this target when the next
+      # target is created or the current scope is exited.
+      raise ValueError('target(builders) only supported when used as a decorator')
+    scope = current_scope()
+    t = session.add_target(Target(name, scope))
+    if bind:
+      bind_target(t)
+    return t
 
 
 def depends(target, public=False):
@@ -734,6 +753,7 @@ __all__ += [
   'glob',
   'chfdir',
   'fmt',
+  'ModuleError',
   'error'
 ]
 
