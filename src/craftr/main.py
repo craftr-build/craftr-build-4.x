@@ -94,6 +94,15 @@ def get_argument_parser(prog=None):
     help='Override the build backend. Can also be specified with the '
          'build:backend option. Defaults to "net.craftr.backend.ninja".')
 
+  group.add_argument(
+    '--link',
+    metavar='PATH',
+    default=[],
+    action='append',
+    help='Link the specified module so it can be require()d using its module '
+         'name rather than using a relative path. This is the same as calling '
+         'link_module() from a build script.')
+
   group = parser.add_argument_group('Configure, build and clean')
 
   group.add_argument(
@@ -229,6 +238,8 @@ def main(argv=None, prog=None):
     tool_name, argv = tool_argv[0], tool_argv[1:]
     module = session.load_module('net.craftr.tool.' + tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
+
+  [api.link_module(nr.fs.abs(x)) for x in args.link]
 
   graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
   if args.config:
