@@ -157,7 +157,10 @@ class CraftrLinkResolver(nodepy.base.Resolver):
     self._aliases[alias] = module
 
   def resolve_module(self, request):
-    module = self._aliases.get(str(request.string))
+    s = str(request.string)
+    if s.endswith('.craftr'):
+      s = s[:-7]
+    module = self._aliases.get(s)
     if module is None:
       raise nodepy.base.ResolveError(request, [], [])
     return module
