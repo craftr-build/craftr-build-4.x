@@ -526,11 +526,14 @@ def link_module(path, alias=None):
   its subdirectories to make it available publicly.
   """
 
-  path = nr.fs.canonical(path, current_scope().directory)
+  if not nr.fs.isabs(path):
+    path = nr.fs.abs(path, current_scope().directory)
+  path = nr.fs.canonical(path)
   module = session.nodepy_context.require.resolve(path)
   if alias is None:
+    expr = re.compile(r'^project\((.*?)\)', re.M | re.X)
     with module.filename.open() as fp:
-      match = re.match(r'^project\((.*?)\)', fp.read(), re.M | re.X)
+      match = expr.search(fp.read())
       if not match:
         raise ValueError('could not find project name in "{}"'.format(path))
       expr = 'project = lambda name, version: (name, version)\nname, version = project({})'
