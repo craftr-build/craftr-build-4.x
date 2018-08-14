@@ -8,6 +8,9 @@ import subprocess
 import sys
 import warnings
 
+try: import ntfy
+except ImportError: ntfy = None
+
 from craftr import api
 from craftr.core.build import to_graph
 
@@ -20,6 +23,18 @@ def open_cli_file(filename, mode):
   else:
     with open(filename, mode) as fp:
       yield fp
+
+
+def notify(message, title):
+  if not ntfy:
+    return
+  # On OSX, even if a virtualenv is created with --system-site-packages
+  # and ntfy was installed into the system Python, it won't work. On
+  # Linux, it will work that way, btw (and it works any way on Windows).
+  if api.session.os_info.id == 'darwin' and hasattr(sys, 'real_prefix'):
+    subprocess.call(['ntfy', '-t', title, 'send', message])
+  else:
+    ntfy.notify(message, title)
 
 
 def get_argument_parser(prog=None):
@@ -183,12 +198,8 @@ def main(argv=None, prog=None):
   if args.pywarn is not NotImplemented:
     warnings.simplefilter(args.pywarn or 'once')
 
-  if args.notify:
-    try:
-      import ntfy
-    except ImportError:
-      print('warning: ntfy module is not available, --notify is ignored.')
-      ntfy = None
+  if args.notify and not ntfy:
+    print('warning: ntfy module is not available, --notify is ignored.')
 
   if nr.fs.isdir(args.project):
     args.project = nr.fs.join(args.project, 'build.craftr')
@@ -290,7 +301,7 @@ def main(argv=None, prog=None):
   if args.build:
     res = backend.build(build_sets, verbose=args.verbose)
     if args.notify and ntfy:
-      ntfy.notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
+      notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
 
 
 if __name__ == '__main__':
