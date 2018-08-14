@@ -86,7 +86,7 @@ class MsvcCompiler(base.Compiler):
   def init(self):
     props = session.target_props
     props.add('cxx.msvcDisableWarnings', 'StringList')
-    props.add('cxx.msvcWaringsAsErrors', 'StringList')
+    props.add('cxx.msvcWarningsAsErrors', 'StringList')
     props.add('cxx.msvcCompilerFlags', 'StringList')
     props.add('cxx.msvcLinkerFlags', 'StringList')
     props.add('cxx.msvcNoDefaultLib', 'StringList')
@@ -133,7 +133,7 @@ class MsvcCompiler(base.Compiler):
     else:
       error('invalid cxx.runtimeLibrary: {!r}'.format(data.runtimeLibrary))
 
-    command += ['/we' + str(x) for x in unique(data.msvcWaringsAsErrors)]
+    command += ['/we' + str(x) for x in unique(data.msvcWarningsAsErrors)]
     command += data.msvcCompilerFlags
 
     for conf in data.msvcConformance:
