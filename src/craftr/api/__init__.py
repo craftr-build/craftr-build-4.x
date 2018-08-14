@@ -352,10 +352,13 @@ class Target(_build.Target):
 
     if inherit:
       def iter_values():
-        yield self.public_properties[prop_name]
-        yield self.properties[prop_name]
+        if self.public_properties.is_set(prop_name):
+          yield self.public_properties[prop_name]
+        if self.properties.is_set(prop_name):
+          yield self.properties[prop_name]
         for target in self.transitive_dependencies().attr('target'):
-          yield target.public_properties[prop_name]
+          if target.public_properties.is_set(prop_name):
+            yield target.public_properties[prop_name]
       prop = self.properties.propset[prop_name]
       return prop.type.inherit(prop_name, iter_values())
     else:

@@ -86,7 +86,10 @@ class PropType:
     raise NotImplementedError
 
   def inherit(self, name, values):
-    return next(values)
+    try:
+      return next(values)
+    except StopIteration:
+      return self.default()
 
   @staticmethod
   def typeerror(name, expected, value):
