@@ -29,7 +29,7 @@ if OS.id == 'win32':
   else:
     _toolchainDefault = 'mingw'
 elif OS.id == 'darwin':
-  _toolchainDefault = 'clang'
+  _toolchainDefault = 'llvm'
 else:
   _toolchainDefault = 'gcc'
 
