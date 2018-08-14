@@ -13,14 +13,19 @@ class GccCompiler(base.Compiler):
   name = 'gcc'
 
   def __init__(self, cross_prefix='', **kwargs):
-    self.compiler_c = self.linker_c = cross_prefix + 'gcc'
-    self.compiler_cpp = self.linker_cpp = cross_prefix + 'g++'
+    if cross_prefix:
+      self.compiler_c = cross_prefix + self.compiler_c
+      self.linker_c = cross_prefix + self.linker_c
+      self.compiler_cpp = cross_prefix + self.compiler_cpp
+      self.linker_cpp = cross_prefix + self.linker_cpp
     if 'arch' not in kwargs or 'version' not in kwargs:
       info = get_gcc_info(self.compiler_c, self.compiler_env or kwargs.get('compiler_env'))
       kwargs.setdefault('arch', 'x64' if '64' in info['target'] else 'x86')
       kwargs.setdefault('version', info['version'])
     super().__init__(**kwargs)
 
+  compiler_c = 'gcc'
+  compiler_cpp = 'g++'
   compiler_env = None
   compiler_out = ['-c', '-o', '${@obj}']
 

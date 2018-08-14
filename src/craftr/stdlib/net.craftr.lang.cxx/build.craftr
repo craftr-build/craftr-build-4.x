@@ -163,11 +163,11 @@ def _init_properties():
   # The version of the C++ standard. If left undefined, the compiler's
   # default value is used. Valid values include `c++98`, `c++11`
   # and `c++14`.
-  props.add('cxx.cppStd', 'String')
+  props.add('cxx.cppStd', 'String', options={'inherit': True})
 
   # The C++ standard library to link to. Possible values are `libc++`
   # and `libstdc++`.
-  props.add('cxx.cppStdlib', 'String')
+  props.add('cxx.cppStdlib', 'String', options={'inherit': True})
 
   # Additional flags for the linker.
   props.add('cxx.linkerFlags', 'StringList', options={'inherit': True})
