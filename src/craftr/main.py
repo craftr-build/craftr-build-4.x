@@ -103,6 +103,21 @@ def get_argument_parser(prog=None):
          'name rather than using a relative path. This is the same as calling '
          'link_module() from a build script.')
 
+  group.add_argument(
+    '--notify',
+    action='store_true',
+    help='Send a notification when the build completed. Requires the ntfy '
+         'module to be installed.'
+  )
+
+  group.add_argument(
+    '--pywarn',
+    nargs='?',
+    default=NotImplemented,
+    metavar='=once',
+    help='Set the filter for the Python warnings module.'
+  )
+
   group = parser.add_argument_group('Configure, build and clean')
 
   group.add_argument(
@@ -168,21 +183,6 @@ def get_argument_parser(prog=None):
     help='Render an SVG file of the build graph\'s GraphViz representation '
          'to stdout or the specified FILE. Override the layout engine with '
          'the DOTENGINE environment variable (defaults to "dot").')
-
-  group.add_argument(
-    '--notify',
-    action='store_true',
-    help='Send a notification when the build completed. Requires the ntfy '
-         'module to be installed.'
-  )
-
-  group.add_argument(
-    '--pywarn',
-    nargs='?',
-    default=NotImplemented,
-    metavar='--pywarn[=once]',
-    help='Set the filter for the Python warnings module.'
-  )
 
   return parser
 
