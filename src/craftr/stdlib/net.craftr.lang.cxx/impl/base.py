@@ -338,16 +338,18 @@ class Compiler(nr.types.Named):
       flags += stream.concat([self.expand(self.linker_lib, x) for x in stream.unique(libs)])
 
     return command + ['$<in'] + flags
-
-  def create_link_action(self, target, data, action_name, lang, object_files):
+    
+  def get_link_commands(self, target, data, lang):
     command = self.get_link_command(target, data, lang)
-
     linker_cmd_len = len(self.linker_cpp if lang == 'cpp' else self.linker_c)
     command = build.Command(command, supports_response_file=True,
                             response_args_begin=linker_cmd_len)
+    return [command]
 
+  def create_link_action(self, target, data, action_name, lang, object_files):
+    commands = self.get_link_commands(target, data, lang)
     input_files = list(object_files) + data.outLinkLibraries
-    op = operator(action_name, commands=[command], environ=self.linker_env)
+    op = operator(action_name, commands=commands, environ=self.linker_env)
     bset = BuildSet({'in': input_files}, {'product': data.productFilename})
     self.add_link_outputs(target, data, lang, bset)
     op.add_build_set(bset)

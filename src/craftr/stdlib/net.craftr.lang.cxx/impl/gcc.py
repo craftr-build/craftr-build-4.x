@@ -73,6 +73,8 @@ class GccCompiler(base.Compiler):
 
   def init(self):
     options.add('enableGcov', bool, False)
+    if OS.id == 'darwin':
+      session.target_props.add('cxx.osxInstallNameTool', 'StringList')
 
   def get_compile_command(self, target, data, lang):
     flags = super().get_compile_command(target, data, lang)
@@ -85,6 +87,12 @@ class GccCompiler(base.Compiler):
     if options.enableGcov:
       flags += ['-lgcov']
     return flags
+
+  def get_link_commands(self, target, data, lang):
+    commands = super().get_link_commands(target, data, lang)
+    if OS.id == 'darwin' and data.osxInstallNameTool:
+      commands.append(['install_name_tool'] + data.osxInstallNameTool + ['${@product}'])
+    return commands
 
   def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
     rel = path.rel(src, target.scope.directory)
