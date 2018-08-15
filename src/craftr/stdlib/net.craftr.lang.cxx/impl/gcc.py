@@ -49,7 +49,7 @@ class GccCompiler(base.Compiler):
   disable_rtti = '-fno-rtti'
   force_include = ['-include', '%ARG%']
   save_temps = '-save-temps'
-  depfile_args = ['-MD', '-MP', '-MF', '${@obj}.d']
+  depfile_args = ['-MMD', '-MF', '${@obj}.d']
   depfile_name = '${@obj}.d'
 
   compiler_supports_openmp = True
