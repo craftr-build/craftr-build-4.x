@@ -312,6 +312,31 @@ class Target(_build.Target):
     inherit = prop.options.get('inherit', False)
     return self.get_prop(prop_name, inherit=inherit)
 
+  def __setitem__(self, prop_name, value):
+    """
+    Sets a property value. The *prop_name* can be prefixed with an `@`
+    character to set it as a public property. It may be prefixed or
+    suffixed with a `+` character to append to the existing value (only
+    for property types that support it, aka. list).
+    """
+
+    public = append = False
+    while True:
+      if not public and prop_name[0] == '@': public, prop_name = True, prop_name[1:]
+      elif not append and prop_name[0] == '+': append, prop_name = True, prop_name[1:]
+      elif not append and prop_name[-1] == '+': append, prop_name = True, prop_name[:-1]
+      else: break
+
+    dest = self.public_properties if public else self.properties
+    if append and dest.is_set(prop_name):
+      prop = dest.propset[prop_name]
+      value = prop.coerce(value, dest.owner)
+      value = dest.propset[prop_name].type.inherit(key, [dest[prop_name], value])
+    try:
+      dest[prop_name] = value
+    except NoSuchProperty as exc:
+      print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
+
   @property
   def build_directory(self):
     directory = self['this.buildDirectory']
@@ -696,15 +721,12 @@ def properties(*args, target=None, **kwarg_props):
   for key, operations in compiled_props.items():
     key = scope + key
     for value, public, append in operations:
-      dest = target.public_properties if public else target.properties
-      if append and dest.is_set(key):
-        prop = dest.propset[key]
-        value = prop.coerce(value, dest.owner)
-        value = dest.propset[key].type.inherit(key, [dest[key], value])
-      try:
-        dest[key] = value
-      except NoSuchProperty as exc:
-        print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
+      c_key = key
+      if public:
+        c_key = '@' + key
+      if append:
+        c_key += '+'
+      target[c_key] = value
 
 
 def operator(name, commands, variables=None, target=None, bind=None, **kwargs):
