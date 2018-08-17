@@ -87,7 +87,7 @@ class PropType:
 
   def inherit(self, name, values):
     try:
-      return next(values)
+      return next(iter(values))
     except StopIteration:
       return self.default()
 
@@ -245,6 +245,16 @@ class Dict(PropType, metaclass=GenericMeta):
 
   def default(self):
     return {}
+
+  def inherit(self, name, values):
+    merge = {}
+    has_none = False  # In case the property was optional
+    for x in values:
+      if x is None: has_none = True
+      else: merge.update(x)
+    if not merge and has_none:
+      return None
+    return merge
 
 
 StringList = List[String]
