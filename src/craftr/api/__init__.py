@@ -188,7 +188,7 @@ class Session(_build.Master):
       handle_key(key, value)
 
   def load_module(self, name):
-    return self.nodepy_context.require(name + '.craftr', exports=False)
+    return self.nodepy_context.require(name, exports=False)
 
   def load_module_from_file(self, filename, is_main=False):
     filename = pathlib.Path(nr.fs.canonical(filename))
