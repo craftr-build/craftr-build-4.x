@@ -352,7 +352,7 @@ class Operator:
   def __init__(self, master: 'Master', name: str, commands: Commands,
                environ: Dict[str, str] = None, cwd: str = None,
                explicit: bool = False, syncio: bool = False,
-               deps_prefix: str = None):
+               deps_prefix: str = None, restat: bool = False):
 
     if not isinstance(master, Master):
       raise TypeError('expected Master, got {}'.format(type(master).__name__))
@@ -375,6 +375,7 @@ class Operator:
     self._explicit = explicit
     self._syncio = syncio
     self._deps_prefix = deps_prefix
+    self._restat = restat
 
   def __repr__(self):
     return 'Operator(target={!r}, name={!r}))'.format(self._target, self._name)
@@ -422,6 +423,10 @@ class Operator:
   @property
   def deps_prefix(self):
     return self._deps_prefix
+
+  @property
+  def restat(self):
+    return self._restat
 
   @property
   def build_sets(self):

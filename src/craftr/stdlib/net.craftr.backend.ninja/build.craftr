@@ -118,6 +118,8 @@ def export_operator(writer, operator, non_explicit):
   )
   if operator.deps_prefix:
     writer.variable('msvc_deps_prefix', operator.deps_prefix, indent=1)
+  if operator.restat:
+    writer.variable('restat', '1', indent=1)
 
   all_output_files = []
   for index, bset in enumerate(operator.build_sets):
