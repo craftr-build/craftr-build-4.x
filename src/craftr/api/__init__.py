@@ -591,7 +591,7 @@ def link_module(path, alias=None):
   session.link_resolver.add_alias(alias, module)
 
 
-def target(name=None, bind=True, builders=None):
+def target(name=None, bind=True, ctx=False, scope=None, builders=None):
   """
   Create a new target with the specified *name* in the current scope and
   set it as the current target.
@@ -602,6 +602,9 @@ def target(name=None, bind=True, builders=None):
 
   The function may or may not accept one positional argument in which case
   the target object is passed.
+
+  If *ctx* is #True, a context manager will be returned instead that binds
+  the target for the duration of the context.
   """
 
   if name is None:
@@ -616,16 +619,24 @@ def target(name=None, bind=True, builders=None):
       # TODO: We could invoke the builders for this target when the next
       # target is created or the current scope is exited.
       raise ValueError('target(builders) only supported when used as a decorator')
-    scope = current_scope()
+    scope = scope or current_scope()
     t = session.add_target(Target(name, scope))
-    if bind:
+    if bind and not ctx:
       bind_target(t)
+    if bind and ctx:
+      @contextlib.contextmanager
+      def target_bind_context():
+        prev = current_target()
+        bind_target(t)
+        try: yield t
+        finally: bind_target(prev)
+      return target_bind_context()
     return t
 
 
-def depends(target, public=False):
+def depends(target, public=False, to=None):
   """
-  Add *target* as a dependency to the current target.
+  Add *target* as a dependency to the current target or *to*.
 
   target (str, Target, List[Union[Target, str]])
   """
@@ -643,7 +654,8 @@ def depends(target, public=False):
       session.load_module(scope)
     target = session.targets[scope + '@' + name]
 
-  return current_target().add_dependency(target, public)
+  to = to or current_target()
+  return to.add_dependency(target, public)
 
 
 def properties(*args, target=None, **kwarg_props):
