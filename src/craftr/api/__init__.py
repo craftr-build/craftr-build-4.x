@@ -241,6 +241,10 @@ class Session(_build.Master):
     self.main_module = data['main_module']
     super().load_json(data['data'])
 
+  def add_target(self, target):
+    target.scope.targets[target.name] = target
+    return super().add_target(target)
+
 
 class Scope(nr.interface.Implementation):
   """
@@ -259,6 +263,7 @@ class Scope(nr.interface.Implementation):
     self.version = version
     self.directory = directory
     self.current_target = None
+    self.targets = {}
 
   @property
   def build_directory(self):
