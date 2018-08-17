@@ -215,6 +215,11 @@ def get_argument_parser(prog=None):
     action='store_true',
     help='Clean build sets recursively.')
 
+  group.add_argument(
+    '-S', '--sequential',
+    action='store_true',
+    help='Disable parallel builds. Useful for debugging.')
+
   group = parser.add_argument_group('Tools and debugging')
 
   group.add_argument(
@@ -332,7 +337,7 @@ def main(argv=None, prog=None):
   if args.clean:
     backend.clean(build_sets, recursive=args.recursive, verbose=args.verbose)
   if args.build:
-    res = backend.build(build_sets, verbose=args.verbose)
+    res = backend.build(build_sets, verbose=args.verbose, sequential=args.sequential)
     if args.notify and ntfy:
       notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
 

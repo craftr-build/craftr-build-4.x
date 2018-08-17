@@ -211,7 +211,7 @@ def export(**options):
       writer.default(non_explicit)
 
 
-def build(build_sets, verbose=False, **options):
+def build(build_sets, verbose=False, sequential=False, **options):
   build_directory = session.build_directory
   with BuildServer(session) as server:
     os.environ['CRAFTR_BUILD_SERVER'] = '{}:{}'.format(*server.address())
@@ -221,6 +221,8 @@ def build(build_sets, verbose=False, **options):
     if not ninja:
       return 1
     command = [ninja, '-f', os.path.join(session.build_directory, 'build.ninja')]
+    if sequential:
+      command += ['-j', '1']
     #command += self.args
     if build_sets:
       command += [make_rule_name(x.operator) for x in build_sets]
