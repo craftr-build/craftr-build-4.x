@@ -55,13 +55,13 @@ class Prop:
     return 'Prop(name={!r}, type={!r}, default={!r}, optional={!r}, readonly={!r})'.format(
       self.name, self.type, self.default, self.optional, self.readonly)
 
-  def get_default(self):
+  def get_default(self, owner=None):
     if self.default is NotImplemented:
       return self.type.default()
     default = self.default
     if callable(default):
       default = default()
-    return self.coerce(default, None)
+    return self.coerce(default, owner)
 
   def coerce(self, value, owner=None):
     if not self.optional or value is not None:
@@ -376,7 +376,7 @@ class Properties:
     try:
       return self.values[key]
     except KeyError:
-      return prop.get_default()
+      return prop.get_default(self.owner)
 
   def __setitem__(self, key, value):
     prop = self.propset[key]
@@ -398,7 +398,7 @@ class Properties:
       try:
         yield (key, self.values[key])
       except KeyError:
-        yield (key, prop.get_default())
+        yield (key, prop.get_default(self.owner))
 
   def keys(self):
     return iter(self.propset)
@@ -408,7 +408,7 @@ class Properties:
       try:
         yield self.values[key]
       except KeyError:
-        yield prop.get_default()
+        yield prop.get_default(self.owner)
 
   def has_value(self, key):
     """
@@ -431,6 +431,9 @@ class Properties:
     """
 
     return key in self.values
+
+  def get_default(self, key):
+    return self.propset[key].get_default(self.owner)
 
 
 class NoSuchProperty(KeyError):

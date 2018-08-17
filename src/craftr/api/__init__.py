@@ -409,7 +409,7 @@ class Target(_build.Target):
       elif self.properties.is_set(prop_name):
         return self.properties[prop_name]
       elif default is NotImplemented:
-        return self.properties.propset[prop_name].get_default()
+        return self.properties.get_default(prop_name)
       else:
         return default
 
