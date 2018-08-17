@@ -269,9 +269,9 @@ class Command:
 
     # Create a response file on Windows if supported by the command.
     if os.name == 'nt' and sum(len(x)+1 for x in commands) > 8192:
-      with nr.fs.tempfile(text=True, encoding='utf16') as fp:
-        fp.write('\n'.join(commands[self.response_args_begin:]))
-        fp.write('\n')
+      with nr.fs.tempfile(text=True, encoding='utf8') as fp:
+        for x in commands[self.response_args_begin:]:
+          fp.write('"{}"\n'.format(x))
         fp.close()
         yield commands[:self.response_args_begin] + ['@' + fp.name]
     else:
