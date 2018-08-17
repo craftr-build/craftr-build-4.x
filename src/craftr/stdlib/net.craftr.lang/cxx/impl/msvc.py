@@ -68,7 +68,7 @@ class MsvcCompiler(base.Compiler):
   linker_libpath = '/LIBPATH:%ARG%'
   linker_runtime = {}  # Required flags will be added in build_compile_flags()
 
-  archiver = ['lib', '/nologo']
+  #archiver = ['lib', '/nologo']
   archiver_out = '/OUT:${@product}'
 
   def __init__(self, toolkit):
@@ -84,6 +84,7 @@ class MsvcCompiler(base.Compiler):
       compiler_cpp = [toolkit.cl_bin, '/nologo'],
       linker_c = [toolkit.cl_info.link_program, '/nologo'],
       linker_cpp = [toolkit.cl_info.link_program, '/nologo'],
+      archiver = [toolkit.cl_info.lib_program, '/nologo'],
       version = toolkit.cl_version,
       arch = toolkit.cl_info.target,
       compiler_env = toolkit.environ,
