@@ -157,10 +157,20 @@ class CraftrLinkResolver(nodepy.base.Resolver):
     self._aliases[alias] = module
 
   def resolve_module(self, request):
-    s = str(request.string)
-    if s.endswith('.craftr'):
-      s = s[:-7]
-    module = self._aliases.get(s)
-    if module is None:
-      raise nodepy.base.ResolveError(request, [], [])
-    return module
+    r = str(request.string)
+    module = self._aliases.get(r)
+    if module is not None:
+      return module
+    stem, base = r.rpartition('/')[::2]
+    i = 0
+    for i in range(base.count('.')):
+      new_string = '/'.join(base.rsplit('.', i+1))
+      if stem:
+        new_string = stem + '/' + new_string
+      new_request = request.copy(string=nodepy.base.RequestString(new_string))
+      try:
+        return request.context.resolve(new_request)
+      except nodepy.base.ResolveError as exc:
+        if exc.request != new_request:
+          raise
+    raise nodepy.base.ResolveError(request, [], [])
