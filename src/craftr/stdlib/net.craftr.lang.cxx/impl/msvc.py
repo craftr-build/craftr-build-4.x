@@ -83,6 +83,13 @@ class MsvcCompiler(base.Compiler):
     )
     self.toolkit = toolkit
 
+  def info_string(self):
+    return 'MSVC-{version} ({id}) {cl_version} for {arch}'.format(
+      version = self.toolkit.version,
+      id = self.id,
+      cl_version = self.toolkit.cl_version,
+      arch = self.arch)
+
   def init(self):
     props = session.target_props
     props.add('cxx.msvcDisableWarnings', 'StringList')
