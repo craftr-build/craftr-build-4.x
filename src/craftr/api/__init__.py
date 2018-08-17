@@ -39,6 +39,7 @@ __all__ = [
   'current_scope',
   'current_target',
   'current_operator',
+  'current_directory',
   'bind_target',
   'bind_operator'
 ]
@@ -520,6 +521,18 @@ def current_operator(do_raise=True):
   return operator
 
 
+def current_directory(do_raise=True):
+  target = current_target(False)
+  if target:
+    return target.directory
+  scope = current_scope(False)
+  if scope:
+    return scope.directory
+  if do_raise:
+    raise RuntimeError('no current target or scope')
+  return os.getcwd()
+
+
 def bind_target(target):
   """
   Binds the specified *target* as the current target in the current scope.
@@ -834,7 +847,7 @@ def complete_list_with(dest, source, update):
 def glob(patterns, parent=None, excludes=None, include_dotfiles=False,
          ignore_false_excludes=False):
   if not parent:
-    parent = session.current_scope.directory
+    parent = current_directory()
   return nr.fs.glob(patterns, parent, excludes, include_dotfiles,
                     ignore_false_excludes)
 
