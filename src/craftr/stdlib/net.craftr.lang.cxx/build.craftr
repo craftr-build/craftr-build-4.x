@@ -103,7 +103,7 @@ def _init_properties():
   props.add('cxx.definesForStaticBuild', 'StringList', options={'inherit': True})
   props.add('cxx.definesForSharedBuild', 'StringList', options={'inherit': True})
 
-  # Include search paths.
+  # Include search paths. Supports glob patterns!
   props.add('cxx.includes', 'PathList', options={'inherit': True})
 
   # Library search paths.

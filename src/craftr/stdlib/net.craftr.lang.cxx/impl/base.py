@@ -169,7 +169,12 @@ class Compiler(nr.types.Named):
     elif data.type == 'library' and data.preferredLinkage == 'static':
       defines += list(data.definesForStaticBuild)
 
-    includes = [short_path(x) for x in data.includes]
+    def expand_glob(x):
+      if nr.fs.isglob(x):
+        return [x for x in nr.fs.glob(x) if nr.fs.isdir(x)]
+      return [x]
+    includes = [short_path(x) for x in stream.concat(
+      expand_glob(y) for y in data.includes)]
     flags = list(data.compilerFlags)
     forced_includes = list(data.prefixHeaders)
 
@@ -338,7 +343,7 @@ class Compiler(nr.types.Named):
       flags += stream.concat([self.expand(self.linker_lib, x) for x in stream.unique(libs)])
 
     return command + ['$<in'] + flags
-    
+
   def get_link_commands(self, target, data, lang):
     command = self.get_link_command(target, data, lang)
     linker_cmd_len = len(self.linker_cpp if lang == 'cpp' else self.linker_c)
