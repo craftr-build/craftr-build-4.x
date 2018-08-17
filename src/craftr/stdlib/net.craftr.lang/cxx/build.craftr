@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project(module.name, '1.0-0')
+project('net.craftr.lang.cxx', '1.0-0')
 
 if OS.id == 'win32':
   if OS.type == 'nt':

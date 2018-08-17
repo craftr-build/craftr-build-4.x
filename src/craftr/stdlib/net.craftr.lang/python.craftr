@@ -29,7 +29,7 @@ import subprocess
 
 from craftr.utils import sh
 
-project(module.name, '1.0-0')
+project('net.craftr.lang.python', '1.0-0')
 
 options('bin', str, sys.executable)
 options('binArgs', str, '')

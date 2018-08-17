@@ -26,7 +26,7 @@ Runs a batch file and outputs the environment variables after that batch file
 has run as a JSON object.
 """
 
-project(module.name, '1.0-0')
+project('net.craftr.tool.batchvars', '1.0-0')
 
 import json
 import subprocess

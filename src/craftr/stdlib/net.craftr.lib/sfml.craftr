@@ -25,7 +25,7 @@ import cxx from 'net.craftr.lang.cxx'
 import {get_source_archive} from 'net.craftr.tool.download'
 import {pkg_config} from 'net.craftr.tool.pkg-config'
 
-project(module.name, '1.0-0')
+project('net.craftr.lib.sfml', '1.0-0')
 options('version', str, '2.4.2')
 options('binaryDir', str, '')
 options('static', bool, True)

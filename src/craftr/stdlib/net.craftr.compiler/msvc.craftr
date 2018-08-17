@@ -25,7 +25,7 @@
 Detect MSVC installations on the current system (Windows only).
 """
 
-project(module.name, '1.0-0')
+project('net.craftr.compiler.msvc', '1.0-0')
 options('installDir', str, '')
 options('version', str, '')
 options('arch', str, 'x86' if OS.arch == 'x86' else 'amd64')

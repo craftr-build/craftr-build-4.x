@@ -38,7 +38,7 @@ Tested with
 * MSYS2 Mingw32 and Mingw64
 """
 
-project(module.name, '1.0-0')
+project('net.craftr.compiler.mingw', '1.0-0')
 options('installDirectory', str, '')
 
 import os

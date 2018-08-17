@@ -25,7 +25,7 @@
 A simplistic, non-parallel backend implemented in Python.
 """
 
-project(module.name, '1.0-0')
+project('net.craftr.backend.python', '1.0-0')
 
 import errno
 import nr.fs

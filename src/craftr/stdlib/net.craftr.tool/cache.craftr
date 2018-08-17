@@ -28,7 +28,7 @@ is locally unique for the current build variant, the #g object is globally
 available for all build variants.
 """
 
-project(module.name, '1.0-0')
+project('net.craftr.tool.cache', '1.0-0')
 
 import atexit
 import contextlib

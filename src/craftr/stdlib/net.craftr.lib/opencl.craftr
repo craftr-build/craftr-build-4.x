@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project(module.name, '1.0-0')
+project('net.craftr.lib.opencl', '1.0-0')
 options('vendor', str, '' if OS.id == 'win32' else 'pkg-config')
 options('intelSdk', str, 'C:\\Intel\\OpenCL\\sdk' if OS.id == 'win32' else '')
 options('cudaSdk', str, '')

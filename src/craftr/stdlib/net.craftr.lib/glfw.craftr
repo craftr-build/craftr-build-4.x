@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project(module.name, '1.0-0')
+project('net.craftr.lib.glfw', '1.0-0')
 options('sourceDir', str, '')
 options('binaryDir', str, '')
 options('version', str, '3.2.1')
