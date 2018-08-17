@@ -127,6 +127,11 @@ def export_operator(writer, operator, non_explicit):
   all_output_files = []
   for index, bset in enumerate(operator.build_sets):
     output_files = list(concat(bset.outputs.values()))
+    if operator.run_always:
+      # Add a file that will never exist. Ninja will try to run the
+      # command every time because it tries to satisfy the output file.
+      output_files.append('{}_??'.format(operator.id))
+
     all_output_files += output_files
     writer.build(
       inputs = list(concat(bset.inputs.values())),
