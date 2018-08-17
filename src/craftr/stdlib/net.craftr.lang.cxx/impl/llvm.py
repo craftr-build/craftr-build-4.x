@@ -1,10 +1,14 @@
 
+import os
 import {GccCompiler} from './gcc'
+import {LlvmInstallation} from 'net.craftr.compiler.llvm'
+from craftr.api import OS, path
+
 
 class LlvmCompiler(GccCompiler):
 
   id = 'llvm'
-  name = 'llvm'
+  name = 'LLVM'
 
   compiler_c = 'clang'
   compiler_cpp = 'clang++'
@@ -13,4 +17,10 @@ class LlvmCompiler(GccCompiler):
 
 
 def get_compiler(fragment):
-  return LlvmCompiler()
+  if OS.id == 'win32':
+    inst = next((LlvmInstallation.iter_installations()), None)
+    if not inst:
+      error('No Windows LLVM installation found.')
+    return LlvmCompiler(compiler_env=inst.environ, linker_env=inst.environ)
+  else:
+    return LlvmCompiler()
