@@ -246,7 +246,7 @@ class Session(_build.Master):
     return super().add_target(target)
 
 
-class Scope(nr.interface.Implementation):
+class Scope:
   """
   A scope basically represents a Craftr build module. The name of a scope is
   usually determined by the Craftr module loader.
@@ -254,8 +254,6 @@ class Scope(nr.interface.Implementation):
   Note that a scope may be created with a name and version set to #None. The
   scope must be initialized with the #module_id() build script function.
   """
-
-  nr.interface.implements(proplib.Path.OwnerInterface)
 
   def __init__(self, session: Session, name: str, version: str, directory: str):
     self.session = session
@@ -269,10 +267,6 @@ class Scope(nr.interface.Implementation):
   def build_directory(self):
     return nr.fs.join(self.session.build_directory, self.name)
 
-  @nr.interface.override
-  def path_get_parent_dir(self):
-    return self.directory
-
 
 class Target(_build.Target):
   """
@@ -283,6 +277,7 @@ class Target(_build.Target):
 
   @staticmethod
   def init_properties(props):
+    props.add('this.directory', 'String', None)
     props.add('this.buildDirectory', 'String', None)
 
   class Dependency:
@@ -293,13 +288,23 @@ class Target(_build.Target):
     def __getitem__(self, key):
       return self.properties[key]
 
+  class PropertiesOwner(nr.interface.Implementation):
+    nr.interface.implements(proplib.Path.OwnerInterface)
+
+    def __init__(self, target):
+      self._target = target
+
+    @nr.interface.override
+    def path_get_parent_dir(self):
+      return self._target.directory
+
   def __init__(self, name: str, scope:Scope):
     super().__init__(session, '{}@{}'.format(scope.name, name))
     self.name = name
     self.scope = scope
     self.current_operator = None
-    self.properties = Properties(session.target_props, owner=current_scope())
-    self.public_properties = Properties(session.target_props, owner=current_scope())
+    self.properties = Properties(session.target_props, owner=Target.PropertiesOwner(self))
+    self.public_properties = Properties(session.target_props, owner=Target.PropertiesOwner(self))
     self._dependencies = []
     self._operator_name_counter = collections.defaultdict(lambda: 1)
 
@@ -331,11 +336,18 @@ class Target(_build.Target):
     if append and dest.is_set(prop_name):
       prop = dest.propset[prop_name]
       value = prop.coerce(value, dest.owner)
-      value = dest.propset[prop_name].type.inherit(key, [dest[prop_name], value])
+      value = dest.propset[prop_name].type.inherit(prop_name, [dest[prop_name], value])
     try:
       dest[prop_name] = value
     except NoSuchProperty as exc:
       print('[WARNING]: Property {} does not exist'.format(exc)) # TODO
+
+  @property
+  def directory(self):
+    directory = self['this.directory']
+    if not directory:
+      directory = self.scope.directory
+    return directory
 
   @property
   def build_directory(self):
