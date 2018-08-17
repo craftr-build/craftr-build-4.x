@@ -58,7 +58,7 @@ except ImportError:
 
 def get_gcc_info(program, environ=None):
   with sh.override_environ(environ or {}):
-    output = sh.check_output(['gcc', '-v'], stderr=sh.STDOUT).decode()
+    output = sh.check_output([program, '-v'], stderr=sh.STDOUT).decode()
     target = re.search(r'Target:\s+(.*)$', output, re.M | re.I).group(1).strip()
     version = re.search(r'\w+\s+version\s+([\d\.]+)', output, re.M | re.I).group(1)
   return {'target': target, 'version': version}

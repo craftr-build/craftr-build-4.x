@@ -1,7 +1,7 @@
 
 import sys
 import base from './base'
-import {get_gcc_info} from 'net.craftr.tool.mingw'
+import {get_gcc_info} from 'net.craftr.compiler.mingw'
 import {options} from '../build'
 
 from craftr.api import *

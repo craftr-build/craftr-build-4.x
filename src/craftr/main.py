@@ -297,7 +297,12 @@ def main(argv=None, prog=None):
 
   if args.tool is not None:
     tool_name, argv = tool_argv[0], tool_argv[1:]
-    module = session.load_module('net.craftr.tool.' + tool_name).namespace
+    try:
+      module = session.load_module('net.craftr.tool.' + tool_name).namespace
+    except session.ResolveError as exc:
+      if str(exc.request.string) != 'net.craftr.tool.' + tool_name:
+        raise
+      module = session.load_module(tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
 
   [api.link_module(nr.fs.abs(x)) for x in args.link]

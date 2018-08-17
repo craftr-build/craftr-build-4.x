@@ -111,6 +111,8 @@ class Session(_build.Master):
   scopes current directory and every scope gets its own build output directory.
   """
 
+  ResolveError = nodepy.base.ResolveError
+
   def __init__(self, build_root: str, build_directory: str, build_variant: str):
     super().__init__()
     self._build_root = nr.fs.canonical(build_root)

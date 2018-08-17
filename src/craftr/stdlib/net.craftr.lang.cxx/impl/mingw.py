@@ -1,5 +1,5 @@
 
-import {MingwInstallation} from 'net.craftr.tool.mingw'
+import {MingwInstallation} from 'net.craftr.compiler.mingw'
 import {GccCompiler} from './gcc'
 
 

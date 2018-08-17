@@ -5,7 +5,7 @@ import logging as log
 import nr.fs as path
 import nr.stream
 import base from './base'
-import msvc from 'net.craftr.tool.msvc'
+import msvc from 'net.craftr.compiler.msvc'
 import {options} from '../build.craftr'
 
 unique = nr.stream.stream.unique

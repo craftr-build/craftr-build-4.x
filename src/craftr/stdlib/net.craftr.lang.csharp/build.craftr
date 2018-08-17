@@ -43,7 +43,7 @@ import nupkg from './nupkg'
 from craftr.utils import sh
 
 if OS.type == 'nt':
-  import msvc from 'net.craftr.tool.msvc'
+  import msvc from 'net.craftr.compiler.msvc'
 else:
   msvc = None
 
