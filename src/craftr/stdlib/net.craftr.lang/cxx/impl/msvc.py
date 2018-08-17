@@ -31,10 +31,9 @@ class MsvcCompilerOptions(CompilerOptions):
 class MsvcCompiler(base.Compiler):
 
   id = 'msvc'
-  name = 'Microsoft Visual C++'
 
-  compiler_c = ['cl', '/nologo']
-  compiler_cpp = ['cl', '/nologo']
+  #compiler_c = ['cl', '/nologo']
+  #compiler_cpp = ['cl', '/nologo']
   compiler_out = ['/c', '/Fo%ARG%']
 
   c_std = ['/std:%ARG%']
@@ -60,8 +59,8 @@ class MsvcCompiler(base.Compiler):
   compiler_enable_openmp = ['/openmp']
   linker_enable_openmp = []
 
-  linker_c = ['link', '/nologo']
-  linker_cpp = linker_c
+  #linker_c = ['link', '/nologo']
+  #linker_cpp = linker_c
   linker_out = '/OUT:${@product}'
   linker_shared = '/DLL'
   linker_exe = []
@@ -73,7 +72,18 @@ class MsvcCompiler(base.Compiler):
   archiver_out = '/OUT:${@product}'
 
   def __init__(self, toolkit):
+    if toolkit.type == toolkit.TYPE_MSVC:
+      name = 'Microsoft Visual C++'
+    elif toolkit.type == toolkit.TYPE_LLVM:
+      name = 'LLVM Clang-CL'
+    else:
+      name = toolkit.type
     super().__init__(
+      name = name,
+      compiler_c = [toolkit.cl_bin, '/nologo'],
+      compiler_cpp = [toolkit.cl_bin, '/nologo'],
+      linker_c = [toolkit.cl_info.link_program, '/nologo'],
+      linker_cpp = [toolkit.cl_info.link_program, '/nologo'],
       version = toolkit.cl_version,
       arch = toolkit.cl_info.target,
       compiler_env = toolkit.environ,
@@ -84,7 +94,8 @@ class MsvcCompiler(base.Compiler):
     self.toolkit = toolkit
 
   def info_string(self):
-    return 'MSVC-{version} ({id}) {cl_version} for {arch}'.format(
+    return '{} v{version} ({id}) {cl_version} for {arch}'.format(
+      self.name,
       version = self.toolkit.version,
       id = self.id,
       cl_version = self.toolkit.cl_version,

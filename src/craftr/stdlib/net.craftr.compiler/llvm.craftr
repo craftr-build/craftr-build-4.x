@@ -68,6 +68,10 @@ class LlvmInstallation(named.Named):
   def has_clang_cl(self):
     return path.isfile(path.join(self.directory, 'bin', 'clang-cl.exe'))
 
+  @property
+  def bindir(self):
+    return path.join(self.directory, 'bin')
+
   @classmethod
   def iter_installations(cls):
     try_directories = []

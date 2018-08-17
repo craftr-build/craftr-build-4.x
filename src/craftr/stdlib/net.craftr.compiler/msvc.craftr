@@ -31,6 +31,7 @@ options('version', str, '')
 options('arch', str, 'x86' if OS.arch == 'x86' else 'amd64')
 options('platformType', str, '')
 options('sdkVersion', str, '')
+options('clangcl', bool, False)
 
 import contextlib
 import functools
@@ -50,6 +51,7 @@ import logging as log
 
 import {batchvars} from 'net.craftr.tool.batchvars'
 import {v as build_cache} from 'net.craftr.tool.cache'
+import {LlvmInstallation} from 'net.craftr.compiler.llvm'
 
 from craftr.utils import sh
 
@@ -61,10 +63,14 @@ class MsvcInstallation(nr.types.Named):
   _list = None
   __annotations__ = [
     ('version', int),
-    ('is_build_tools', bool),
+    ('type', str),
     ('directory', str),
     ('_environ', dict, None),
+    ('llvm', LlvmInstallation, None)
   ]
+
+  TYPE_VISUALSTUDIO ='VisualStudio'
+  TYPE_BUILDTOOLS = 'BuildTools'
 
   @property
   def vcvarsall(self):
@@ -72,7 +78,9 @@ class MsvcInstallation(nr.types.Named):
     Generates the path to the `vcvarsall.bat`.
     """
 
-    if self.is_build_tools:
+    if self._environ is not None:
+      return self._environ
+    if self.type == self.TYPE_BUILDTOOLS:
       return path.join(self.directory, 'vcbuildtools.bat')
     elif self.version >= 141:
       return path.join(self.directory, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
@@ -94,8 +102,8 @@ class MsvcInstallation(nr.types.Named):
     is raised.
     """
 
-    if self._environ is not None:
-      return self._environ
+    if self.llvm:
+      return self.llvm.environ
 
     arch = options.arch
     if arch == 'x86_64':
@@ -136,14 +144,14 @@ class MsvcInstallation(nr.types.Named):
         # subdirectory, usually.
         value = path.dir(path.dir(value))
 
-      results.append(cls(ver, False, value))
+      results.append(cls(ver, cls.TYPE_VISUALSTUDIO, value))
 
     build_tools_dir = r'C:\Program Files (x86)\Microsoft Visual C++ Build Tools'
     if path.isdir(build_tools_dir):
       # TODO: Is there a (good) way to determine the versio of the Build Tools?
       #       It seems there is no version information besides the year in the
       #       filenames of the links that open respective consoles.
-      results.append(cls(140, True, build_tools_dir))
+      results.append(cls(140, cls.TYPE_BUILDTOOLS, build_tools_dir))
 
     have_versions = set(x.version for x in results)
 
@@ -158,7 +166,7 @@ class MsvcInstallation(nr.types.Named):
         if not path.isdir(vspath):
           vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
         if path.isdir(vspath):
-          results.append(cls(141, False, vspath))
+          results.append(cls(141, cls.TYPE_VISUALSTUDIO, vspath))
 
     # TODO: Special handling for newer MSVC versions?
 
@@ -169,7 +177,7 @@ class MsvcInstallation(nr.types.Named):
       if not path.exists(options.installDir):
         log.warn('msvc.install_dir={!r} does not exist'.format(options.installDir))
       else:
-        result.insert(0, cls(-1, options.installDir))
+        result.insert(0, cls(-1, cls.TYPE_BUILDTOOLS, options.installDir))
 
     cls._list = result
     return cls._list
@@ -202,6 +210,7 @@ class ClInfo(nr.types.Named):
     ('version', str),
     ('version_str', str),
     ('target', str),  # Either x86 or x64
+    ('thread_model', str),
     ('msvc_deps_prefix', str, None),
     ('assembler_program', str),
     ('link_program', str),
@@ -210,18 +219,52 @@ class ClInfo(nr.types.Named):
   ]
 
   VERSION_REGEX = re.compile(r'compiler\s+version\s*([\d\.]+)\s*\w+\s*(x\w+)', re.I | re.M)
+  CLANGCL_VERSION_REGEX = re.compile(r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)', re.I)
 
   @classmethod
   def from_program(cls, program, env=None):
-    with sh.override_environ(env or {}):
-      version_output = subprocess.check_output([program], stderr=subprocess.STDOUT).decode()
-    match = cls.VERSION_REGEX.search(version_output)
-    if not match:
-      raise RuntimeError('ClInfo could not be detected from {!r}'
-        .format(program))
 
-    version = match.group(1)
-    arch = match.group(2)
+    # Determine kind and version. We need to do this separately from
+    # the /showIncludes detection as Clang CL does not display a logo
+    # when being invoked.
+    #
+    # We can't use the /? option if the actual "program" is a batch
+    # script as this will print the help for batch files (Microsoft, pls).
+    # MSVC will error on -v, Clang CL will give us good info.
+    with sh.override_environ(env or {}):
+      try:
+        res = sh.run([program, '-v'], shell=True, check=False, stdout=sh.PIPE, stderr=sh.STDOUT)
+        hint = 'clang'
+        if res.returncode != 0:
+          # Seems to be MSVC, which does not support a -v flag. It provides
+          # all the information when being invoked with no arguments.
+          res = sh.run([program], shell=True, check=False, stdout=sh.PIPE, stderr=sh.STDOUT)
+          hint = 'msvc'
+        output = res.stdout.decode()
+      except OSError as exc:
+        raise RuntimeError(exc)
+
+    if hint == 'clang':
+      match = cls.CLANGCL_VERSION_REGEX.match(output)
+      if not match:
+        raise RuntimeError('Clang-CL version and architecture could not be detected\n\n' + output)
+      # We've detected a version of Clang CL!
+      name = 'clang-cl'
+      version = match.group(1)
+      version_str = output.split('\n', 1)[0].strip()
+      arch = match.group(2)
+      thread_model = match.group(3)
+    else:
+      # Extract the MSVC compiler version and architecture.
+      match = cls.VERSION_REGEX.search(output)
+      if not match:
+        raise RuntimeError('MSVC version and architecture could not be detected\n\n' + output)
+
+      name = 'msvc'
+      version = match.group(1)
+      version_str = output.split('\n', 1)[0].strip()
+      arch = match.group(2)
+      thread_model = 'win32'
 
     # Determine the msvc_deps_prefix by making a small test. The
     # compilation will not succeed since no entry point is defined.
@@ -256,12 +299,13 @@ class ClInfo(nr.types.Named):
 
     return cls(
       version = version,
-      version_str = version_output.split('\n', 1)[0].strip(),
+      version_str = version_str,
       target = arch,
+      thread_model = thread_model,
       msvc_deps_prefix = deps_prefix,
-      assembler_program = 'ml64' if arch == 'x64' else 'ml',
-      link_program = 'link',
-      lib_program = 'lib',
+      assembler_program = ('ml64' if arch == 'x64' else 'ml') if name == 'msvc' else program,  # TODO: Assembler for Clang CL?
+      link_program = 'link' if name == 'msvc' else 'lld-link',
+      lib_program = 'lib' if name == 'msvc' else 'llvm-lib',
       error = error
     )
 
@@ -282,16 +326,25 @@ class MsvcToolkit(nr.types.Named):
     ('arch', str, None),
     ('platform_type', str, None),
     ('sdk_version', str, None),
+    ('cl_bin', str, 'cl'),
+    ('type', str, 'msvc'),
     ('_csc_version', str, None),
     ('_vbc_version', str, None),
     ('_cl_info', ClInfo, None),
     ('_deps_prefix', str, None)
   ]
 
+  TYPE_MSVC = 'msvc'
+  TYPE_LLVM = 'llvm'
+
   @classmethod
   def from_installation(cls, inst, arch=None, platform_type=None, sdk_version=None):
+    if not isinstance(inst, MsvcInstallation):
+      raise TypeError('expected MsvcInstallation, got {}'.format(
+        type(inst).__name__))
     environ = inst.environ(arch, platform_type, sdk_version)
-    return cls(inst.version, inst.directory, environ, arch, platform_type, sdk_version)
+    return cls(inst.version, inst.directory, environ, arch, platform_type,
+                sdk_version, type=cls.TYPE_MSVC)
 
   @classmethod
   def fromdict(cls, data):
@@ -332,6 +385,12 @@ class MsvcToolkit(nr.types.Named):
     else:
       toolkit = cache  # Nothing has changed
 
+    if options.clangcl:
+      inst = next((x for x in LlvmInstallation.list() if x.has_clang_cl), None)
+      if not inst:
+        error('No LLVM Clang-CL installation found')
+      toolkit = toolkit.with_llvm(inst)
+
     return toolkit
 
   @property
@@ -370,7 +429,7 @@ class MsvcToolkit(nr.types.Named):
   @property
   def cl_info(self):
     if not self._cl_info:
-      self._cl_info = ClInfo.from_program('cl', self.environ)
+      self._cl_info = ClInfo.from_program(self.cl_bin, self.environ)
     return self._cl_info
 
   @property
@@ -392,13 +451,22 @@ class MsvcToolkit(nr.types.Named):
       return self._deps_prefix
     return self.cl_info.msvc_deps_prefix
 
-  @classmethod
-  @functools.lru_cache()
-  def get(cls):
-    toolkit = cls.from_config()
-    log.info('MSVC v{}-{} ({})'.format(
-      toolkit.version, toolkit.arch, toolkit.directory))
-    return toolkit
+  def with_llvm(self, inst: LlvmInstallation):
+    """
+    Use Clang-CL from the specified LLVM installation. Returns a copy of
+    the #MsvcToolkit.
+    """
+
+    if not inst.has_clang_cl:
+      raise ValueError('This LLVM Installation does not have clang-cl')
+
+    import copy
+    self = copy.copy(self)
+    self.type = self.TYPE_LLVM
+    self.arch = inst.target
+    self.cl_bin = 'clang-cl'
+    self.environ['PATH'] = inst.bindir + path.pathsep + self.environ['PATH']
+    return self
 
 
 def main(argv=None, prog=None):
