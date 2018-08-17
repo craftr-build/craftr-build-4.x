@@ -34,6 +34,7 @@ options('sdkVersion', str, '')
 options('clangcl', bool, False)
 
 import contextlib
+import copy
 import functools
 import json
 import nr.types
@@ -385,7 +386,7 @@ class MsvcToolkit(nr.types.Named):
     else:
       toolkit = cache  # Nothing has changed
 
-    if options.clangcl:
+    if options.clangcl and toolkit.type != toolkit.TYPE_LLVM:
       inst = next((x for x in LlvmInstallation.list() if x.has_clang_cl), None)
       if not inst:
         error('No LLVM Clang-CL installation found')
@@ -460,8 +461,13 @@ class MsvcToolkit(nr.types.Named):
     if not inst.has_clang_cl:
       raise ValueError('This LLVM Installation does not have clang-cl')
 
-    import copy
-    self = copy.copy(self)
+    # Need to create a deepcopy. Otherwise we modify the original environ
+    # that is currently sitting in the build_cache, causing subsequent
+    # calls to this function on another invokation of Craftr to append the
+    # LLVM path another time, ultimately leading to all build set hashes
+    # to be dirty.
+
+    self = copy.deepcopy(self)
     self.type = self.TYPE_LLVM
     self.arch = inst.target
     self.cl_bin = 'clang-cl'
