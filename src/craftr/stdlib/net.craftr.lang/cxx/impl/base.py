@@ -115,11 +115,11 @@ class Compiler(nr.types.Named):
 
   @property
   def is32bit(self):
-    return self.arch == 'x86'
+    return '64' not in self.arch
 
   @property
   def is64bit(self):
-    return self.arch == 'x64'
+    return '64' in self.arch
 
   def __repr__(self):
     return '<{} name={!r} version={!r}>'.format(type(self).__name__, self.name, self.version)
