@@ -345,6 +345,7 @@ def main(argv=None, prog=None):
     res = backend.build(build_sets, verbose=args.verbose, sequential=args.sequential)
     if args.notify and ntfy:
       notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
+    sys.exit(res)
 
 
 if __name__ == '__main__':
