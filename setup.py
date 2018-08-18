@@ -10,7 +10,7 @@ with io.open('README.md', encoding='utf8') as fp:
 
 setuptools.setup(
   name = 'craftr-build',
-  version = '4.0.0.dev1',
+  version = '4.0.0.dev2',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   description = 'A Python based meta build system for various languages.',
