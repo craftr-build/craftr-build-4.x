@@ -123,10 +123,10 @@ def export_operator(writer, operator, non_explicit):
 
   all_output_files = []
   for index, bset in enumerate(operator.build_sets):
-    output_files = list(stream.concat(bset.outputs.values()))
+    output_files = list(concat(bset.outputs.values()))
     all_output_files += output_files
     writer.build(
-      inputs = list(stream.concat(bset.inputs.values())),
+      inputs = list(concat(bset.inputs.values())),
       outputs = output_files or [phony_name],
       rule = rule_name,
       order_only = [],
@@ -225,7 +225,7 @@ def build(build_sets, verbose=False, sequential=False, **options):
       command += ['-j', '1']
     #command += self.args
     if build_sets:
-      command += [make_rule_name(x.operator) for x in build_sets]
+      command += [next(concat(x.outputs.values()), make_rule_name(x.operator)) for x in build_sets]
     return subprocess.call(command)
 
 
