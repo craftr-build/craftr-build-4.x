@@ -448,12 +448,12 @@ class Target(_build.Target):
     returned object.
     """
 
-    def worker(target, private=False):
+    def worker(target, include_private=False):
       for dep in target.dependencies:
-        if dep.public or private:
+        if dep.public or include_private:
           yield dep
         yield from worker(dep.target)
-    return stream.unique(worker(self, private=True))
+    return stream.unique(worker(self, include_private=True))
 
 
 class Operator(_build.Operator):
@@ -606,7 +606,7 @@ def link_module(path, alias=None):
   session.link_resolver.add_alias(alias, module)
 
 
-def target(name=None, bind=True, ctx=False, scope=None, builders=None):
+def target(name=None, bind=True, ctx=False, directory=None, scope=None, builders=None):
   """
   Create a new target with the specified *name* in the current scope and
   set it as the current target.
@@ -624,10 +624,10 @@ def target(name=None, bind=True, ctx=False, scope=None, builders=None):
 
   if name is None:
     def decorator(fun):
-      t = target(fun.__name__)
-      fun() if fun.__code__.co_argcount == 0 else fun(t)
-      [x() for x in builders or ()]
-      return t
+      with target(fun.__name__, ctx=True, directory=directory, scope=scope) as t:
+        fun() if fun.__code__.co_argcount == 0 else fun(t)
+        [x() for x in builders or ()]
+        return t
     return decorator
   else:
     if builders is not None:
@@ -636,12 +636,14 @@ def target(name=None, bind=True, ctx=False, scope=None, builders=None):
       raise ValueError('target(builders) only supported when used as a decorator')
     scope = scope or current_scope()
     t = session.add_target(Target(name, scope))
+    if directory:
+      t['this.directory'] = directory
     if bind and not ctx:
       bind_target(t)
     if bind and ctx:
       @contextlib.contextmanager
       def target_bind_context():
-        prev = current_target()
+        prev = current_target(False)
         bind_target(t)
         try: yield t
         finally: bind_target(prev)
