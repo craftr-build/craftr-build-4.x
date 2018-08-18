@@ -26,14 +26,15 @@ Runs a batch file and outputs the environment variables after that batch file
 has run as a JSON object.
 """
 
-project('net.craftr.tool.batchvars', '1.0-0')
-
 import json
 import subprocess
 import sys
 import os
+import {OS, project} from 'craftr'
 
 from craftr.utils import sh
+
+project('net.craftr.tool.batchvars', '1.0-0')
 
 
 def batchvars(batchfile, *args):

@@ -32,11 +32,13 @@ import shlex
 import sys
 import maven from './tools/maven'
 import platform_commands from './tools/platform-commands'
+import * from 'craftr'
 
 from nr.stream import stream
 
 project('net.craftr.lang.java', '1.0-0')
 
+options = module.options
 options('onejar', str, path.join(module.directory, "tools", "one-jar-boot-0.97.jar"))
 options('javac', str, 'javac')
 options('javacJar', str, 'jar')

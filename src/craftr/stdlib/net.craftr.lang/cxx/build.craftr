@@ -21,24 +21,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('net.craftr.lang.cxx', '1.0-0')
-
-if OS.id == 'win32':
-  if OS.type == 'nt':
-    _toolchainDefault = 'msvc'
-  else:
-    _toolchainDefault = 'mingw'
-elif OS.id == 'darwin':
-  _toolchainDefault = 'llvm'
-else:
-  _toolchainDefault = 'gcc'
-
-options('architecture', str, OS.arch)
-options('toolchain', str, _toolchainDefault)
-options('staticRuntime', bool, False)
-
 import sys
 import nr.fs
+import craftr, {OS, path, project} from 'craftr'
+
+project('net.craftr.lang.cxx', '1.0-0')
+
+options = module.options
+options('architecture', str, OS.arch)
+options('toolchain', str, '')
+options('staticRuntime', bool, False)
+
+if not options.toolchain:
+  if OS.id == 'win32':
+    if OS.type == 'nt':
+      options.toolchain = 'msvc'
+    else:
+      options.toolchain = 'mingw'
+  elif OS.id == 'darwin':
+    options.toolchain = 'llvm'
+  else:
+    options.toolchain = 'gcc'
+
 import base from './impl/base'
 
 # TODO: Handle staticRuntime option.
@@ -52,7 +56,7 @@ def _load_compiler():
 
 
 def _init_properties():
-  props = session.target_props
+  props = craftr.session.target_props
   # Largely inspired by the Qbs cpp module.
   # https://doc.qt.io/qbs/cpp-module.html
 
@@ -281,7 +285,7 @@ def _init_properties():
   # Dependency Properties
   # =======================
 
-  props = session.dependency_props
+  props = craftr.session.dependency_props
 
   # If False, the dependency will not be linked, even if it is a valid
   # input for a linker rule. This property affects library dependencies only.
@@ -293,8 +297,9 @@ compiler = _load_compiler()
 compiler.init()
 print(compiler.info_string())
 
+
 def build():
-  target = current_target()
+  target = craftr.current_target()
   build_dir = target.build_directory
   data = target.get_props('cxx.', as_object=True)
 
@@ -334,7 +339,7 @@ def build():
   # Handle cxx.embedFiles -- turning data files into C files and add
   # them to the sources list.
   if data.embedFiles:
-    bin2c = str(session.nodepy_context.require.resolve('net.craftr.tool.bin2c').filename)
+    bin2c = str(require.resolve('net.craftr.tool.bin2c').filename)
     command = [sys.executable, bin2c]
 
     outfiles = []
@@ -368,8 +373,8 @@ def build():
       command += ['--cstring']
 
     command += ['{}={}'.format(f, sym) for sym, f in data.embedFiles.items()]
-    operator('cxx.bin2c', commands=[command])
-    build_set({'in': data.embedFiles.values()}, {'out': outfiles})
+    craftr.operator('cxx.bin2c', commands=[command])
+    craftr.build_set({'in': data.embedFiles.values()}, {'out': outfiles})
 
   for filename in data.srcs:
     if filename.endswith('.c'):
@@ -408,7 +413,7 @@ def build():
 
   if data.outObjFiles and data.type == 'executable':
     command = [path.abs(data.productFilename)]
-    operator('cxx.run', commands=[command], explicit=True, syncio=True, cwd=data.runCwd)
-    build_set({'in': data.productFilename}, {}, description='$<in')
+    craftr.operator('cxx.run', commands=[command], explicit=True, syncio=True, cwd=data.runCwd)
+    craftr.build_set({'in': data.productFilename}, {}, description='$<in')
 
   compiler.on_completion(target, data)

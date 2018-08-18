@@ -1,5 +1,7 @@
+import {project, target, depends, properties, glob} from 'craftr'
+import java from 'java'
+
 project('examples.java', '1.0-0')
-java = require('java')
 
 target('lib')
 properties({

@@ -28,12 +28,13 @@ is locally unique for the current build variant, the #g object is globally
 available for all build variants.
 """
 
-project('net.craftr.tool.cache', '1.0-0')
-
 import atexit
 import contextlib
 import hashlib
 import json
+import {path, project, session} from 'craftr'
+
+project('net.craftr.tool.cache', '1.0-0')
 
 
 class CacheManager:

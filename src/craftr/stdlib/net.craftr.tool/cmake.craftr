@@ -21,14 +21,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('net.craftr.tool.cmake', '1.0-0')
-
 import collections
 import os
 import re
 import string
-
+import {project} from 'craftr'
 from nr.types.map import ChainMap
+
+project('net.craftr.tool.cmake', '1.0-0')
+
 
 ConfigResult = collections.namedtuple('ConfigResult', 'output directory')
 

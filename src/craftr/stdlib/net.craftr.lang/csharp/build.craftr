@@ -25,13 +25,6 @@
 This module allows you to compile and bundle C# applications.
 """
 
-project('net.craftr.lang.csharp', '1.0-0')
-
-options('impl', str, 'net' if OS.type == 'nt' else 'mono')
-options('csc', str, '')
-options('monoArch', str, '')  # Used to determine the Mono installation path. Must be either x64 or x86
-options('mergeTool', str, '')  # The name of the tool to merge assemblies, either ILRepack or ILMerge
-
 import functools
 import nr.types
 import os
@@ -39,7 +32,7 @@ import re
 import requests
 import subprocess
 import nupkg from './nupkg'
-
+import * from 'craftr'
 from craftr.utils import sh
 
 if OS.type == 'nt':
@@ -47,7 +40,17 @@ if OS.type == 'nt':
 else:
   msvc = None
 
-artifacts_dir = path.join(scope.build_directory, 'csharp', 'nuget')
+project('net.craftr.lang.csharp', '1.0-0')
+
+options = module.options
+options('impl', str, 'net' if OS.type == 'nt' else 'mono')
+options('csc', str, '')
+options('monoArch', str, '')  # Used to determine the Mono installation path. Must be either x64 or x86
+options('mergeTool', str, '')  # The name of the tool to merge assemblies, either ILRepack or ILMerge
+
+
+
+artifacts_dir = path.join(module.scope.build_directory, 'csharp', 'nuget')
 
 
 class CscInfo(nr.types.Named):
@@ -133,7 +136,7 @@ class CscInfo(nr.types.Named):
     is_mcs = path.rmvsuffix(program).lower().endswith('mcs')
 
     if options.impl == 'net':
-      toolkit = msvc.MsvcToolkit.get()
+      toolkit = msvc.MsvcToolkit.from_config()
       csc = CscInfo(options.impl, [program], toolkit.environ, toolkit.csc_version)
     else:
       environ = {}

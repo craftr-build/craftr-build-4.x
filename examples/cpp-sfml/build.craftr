@@ -1,5 +1,8 @@
+import {project, target, depends, properties} from 'craftr'
+import cxx from 'cxx'
+
 project('examples.cpp-sfml', '1.0-0')
-cxx = require('cxx')
+
 target('main')
 depends('net.craftr.lib.sfml:sfml')
 properties({

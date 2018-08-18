@@ -38,13 +38,11 @@ Tested with
 * MSYS2 Mingw32 and Mingw64
 """
 
-project('net.craftr.compiler.mingw', '1.0-0')
-options('installDirectory', str, '')
-
 import os
 import re
 import subprocess
 import sys
+import {path, project} from 'craftr'
 
 from nr.types import named
 from nr.stream import stream
@@ -54,6 +52,11 @@ try:
   from craftr.utils import winreg
 except ImportError:
   winreg = None
+
+project('net.craftr.compiler.mingw', '1.0-0')
+
+options = module.options
+options('installDirectory', str, '')
 
 
 def get_gcc_info(program, environ=None):

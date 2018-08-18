@@ -21,10 +21,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('net.craftr.tool.pkg-config', '1.0-0')
-
+import {project, current_target} from 'craftr'
 import cxx from 'net.craftr.lang.cxx'
 from craftr.utils import sh
+
+project('net.craftr.tool.pkg-config', '1.0-0')
 
 
 class PkgConfigError(Exception):

@@ -25,14 +25,6 @@
 Detect MSVC installations on the current system (Windows only).
 """
 
-project('net.craftr.compiler.msvc', '1.0-0')
-options('installDir', str, '')
-options('version', str, '')
-options('arch', str, 'x86' if OS.arch == 'x86' else 'amd64')
-options('platformType', str, '')
-options('sdkVersion', str, '')
-options('clangcl', bool, False)
-
 import contextlib
 import copy
 import functools
@@ -49,12 +41,23 @@ import sys
 import tempfile
 import typing as t
 import logging as log
-
+import {OS, project, path} from 'craftr'
 import {batchvars} from 'net.craftr.tool.batchvars'
 import {v as build_cache} from 'net.craftr.tool.cache'
 import {LlvmInstallation} from 'net.craftr.compiler.llvm'
 
 from craftr.utils import sh
+
+project('net.craftr.compiler.msvc', '1.0-0')
+
+options = module.options
+options('installDir', str, '')
+options('version', str, '')
+options('arch', str, 'x86' if OS.arch == 'x86' else 'amd64')
+options('platformType', str, '')
+options('sdkVersion', str, '')
+options('clangcl', bool, False)
+
 
 class MsvcInstallation(nr.types.Named):
   """

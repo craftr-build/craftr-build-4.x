@@ -103,17 +103,14 @@ class CraftrModule(nodepy.loader.PythonModule):
     self.is_main = is_main
     self.session = session
     self.scope = None
+    self.options = None
 
   def _exec_code(self, code):
     assert self.loaded
     assert isinstance(code, str), type(code)
-    from craftr import api
-    for name in api.__all__:
-      setattr(self.namespace, name, getattr(api, name))
-    with self.session.enter_scope(self.name, None, str(self.directory)) as scope:
+    with self.session.enter_scope(None, None, str(self.directory)) as scope:
       self.scope = scope
-      self.namespace.scope = scope
-      self.namespace.options = ModuleOptions(self.session, self.scope)
+      self.options = ModuleOptions(self.session, self.scope)
       super()._exec_code(code)
 
   @property

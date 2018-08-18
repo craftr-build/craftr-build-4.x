@@ -21,7 +21,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import {project, target, properties, error, fmt, path, OS} from 'craftr'
+import cxx from 'net.craftr.lang.cxx'
+import {get_source_archive} from 'net.craftr.tool.download'
+import {pkg_config} from 'net.craftr.tool.pkg-config'
+import {configure_file} from 'net.craftr.tool.cmake'
+
 project('net.craftr.lib.glfw', '1.0-0')
+
+options = module.options
 options('sourceDir', str, '')
 options('binaryDir', str, '')
 options('version', str, '3.2.1')
@@ -31,10 +39,6 @@ options('static', bool, True)
 options('x11', bool, True)
 options('wayland', bool, True)
 
-import cxx from 'net.craftr.lang.cxx'
-import {get_source_archive} from 'net.craftr.tool.download'
-import {pkg_config} from 'net.craftr.tool.pkg-config'
-import {configure_file} from 'net.craftr.tool.cmake'
 
 if options.fromSource:
   mode = 'source'

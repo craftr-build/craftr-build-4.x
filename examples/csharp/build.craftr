@@ -1,5 +1,8 @@
+import {project, target, properties, glob} from 'craftr'
+import cs from 'csharp'
+
 project('examples.csharp', '1.0-0')
-cs = require('csharp')
+
 target('main')
 properties({
   'csharp.srcs': glob('src/*.cs'),

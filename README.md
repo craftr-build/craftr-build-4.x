@@ -45,24 +45,36 @@ requirements for modern applications.
 
 ## How does it work?
 
-Build scripts in Craftr always have access to the members exported by the
-`craftr.api` module. Every build script begins with a call to the `project()`
-function. The Craftr API is implements as a "state machine" where subsequent
-calls often depend on previous ones. As an example, the `target()` functions
-creates a new target and binds it for future calls to `properties()` and
-`operator()`.
+Craftr build scripts are executed with the [Node.py] runtime, allowing them
+to use the `import <...> from 'module'` syntax to import from other Craftr
+build scripts/modules.
 
-The Craftr standard library provides functions that declare target properties
-and functions to convert these properties into build operators. Such modules
-must be loaded with `require()` before the properties can be set. Then after
-the target information is complete, the module usually provides a `build()`
-method that takes these parameters and turns it into concrete elements in the
-build graph.
+While the Craftr API can also be acceseed via the `craftr.api` module, it is
+often more convenient to import from the `'craftr'` module instead. All API
+functions must be imported explicitly, either one by one, using the starred
+import or into a module object.
+
+```python
+import {project, target, properties} from 'craftr'  # 1)
+import * from 'craftr'                              # 2)
+import craftr from 'craftr'                         # 3)
+```
+
+The Craftr build script API is implemented as "state machine" where the
+last declared target is "bound" for future operations like `properties()`
+or `operator()`.
+
+Build modules need to be imported before properties belonging to that module
+are set on a target with the `properties()` function. After a target has been
+set up, that modules `build()` method must be called.
 
 ```python
 # build.craftr
+import {project, target, properties, glob, options} from 'craftr'
+import cxx from 'cxx'
+
 project('myproject', '1.0-0')
-cxx = require('cxx')
+
 target('main')
 properties({
   'cxx.srcs': glob('src/*.c'),
@@ -70,6 +82,57 @@ properties({
 })
 cxx.build()
 ```
+
+There are some fundamental built-ins available to Craftr modules that
+do not need to be imported:
+
+<table>
+<tr><th>Name</th><th>Description</th></tr>
+<tr>
+  <td><code>module</code></td>
+  <td>The <code>CraftrModule</code> object.</td>
+</tr>
+<tr>
+  <td><code>module.options</code></td>
+  <td>
+
+  This is actually a member of the `module` object but it is important to be
+  described separately. This object allows you to conveniently specify typed
+  build options that can be used later on in your build script.
+  *Important:* You must call `project()` before declaring options, otherwise
+  your module has no scope name assigned.
+
+  ```python
+  project('com.me.myapp', '1.0-0')
+  options = module.options
+  options.add('version', str, '7.51.0')
+  ```
+
+  The `version` option can now be set with `-Omyapp:version=8.21.2` or to be
+  more explicit with `-Ocom.me.myapp:version=8.21.2`.
+
+  </td>
+</tr>
+<tr>
+  <td><code>require</code></td>
+  <td>
+
+  This is the function/object that is used to load other Craftr/Node.py
+  modules. Using the `import <...> from 'module'` syntax is automatically
+  converted to a pure Python statement that uses the `require()` function.
+
+  You can use it to load a module from the Craftr standard library or load
+  other helper modules into your build script.
+
+  ```python
+  cxx = require('net.craftr.lang.cxx')
+  utils = require('./utils')
+  import {do_stuff} from './utils'
+  ```
+
+  </td>
+</tr>
+</table>
 
 ## How to install?
 

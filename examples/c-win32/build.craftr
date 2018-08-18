@@ -1,5 +1,8 @@
+import {project, target, properties} from 'craftr'
+import cxx from 'cxx'
+
 project('examples.c-win32', '1.0-0')
-cxx = require('cxx')
+
 target('main')
 properties({
   'cxx.srcs': ['src/main.c'],

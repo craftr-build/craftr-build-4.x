@@ -21,19 +21,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('net.craftr.lang.cython', '1.0-0')
-
-options('bin', str, 'cython')
-options('binArgs', str, '')
 
 import sys
-import python from "net.craftr.lang.python"
-
-from craftr import api
+import python from 'net.craftr.lang.python'
+import cxx from 'net.craftr.lang.cxx'
+import {project, path, session, current_target, operator, properties,
+        build_set, depends, target as declare_target, bind_target}
+    from 'craftr'
 from craftr.utils import sh
 
-cxx = require('net.craftr.lang.cxx')
-target('foo')
+project('net.craftr.lang.cython', '1.0-0')
+
+options = module.options
+options('bin', str, 'cython')
+options('binArgs', str, '')
 
 
 if options.binArgs:
@@ -114,7 +115,7 @@ def build():
         product = base + '$(ext)'
         bset.add_input_files('_modules', modules)
 
-      api.target('{}/{}'.format(target.name, base))
+      declare_target('{}/{}'.format(target.name, base))
       depends('net.craftr.lang.python:python')
       properties({
         'this.buildDirectory': build_dir,

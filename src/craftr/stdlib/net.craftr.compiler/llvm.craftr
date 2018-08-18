@@ -26,10 +26,13 @@ Detect LLVM installation on your system.
 """
 
 import os
+import {project, path, OS} from 'craftr'
 import {get_gcc_info} from './mingw'
 from nr.types import named
 
 project('net.craftr.compiler.llvm', '1.0-0')
+
+options = module.options
 options.add('installDirectory', str, '')
 
 

@@ -26,11 +26,13 @@ import json
 import re
 import shlex
 import subprocess
-
+import {project, target, properties, path, BUILD, OS} from 'craftr'
+import 'net.craftr.lang.cxx'
 from craftr.utils import sh
 
 project('net.craftr.lang.python', '1.0-0')
 
+options = module.options
 options('bin', str, sys.executable)
 options('binArgs', str, '')
 
@@ -82,7 +84,6 @@ if (cfg['_ISDEBUG'] and BUILD.release) or (cfg['_ISRELEASE'] and BUILD.debug):
     cfg["VERSION"], sh.join(python), BUILD.variant))
 
 
-require('net.craftr.lang.cxx')
 target('python')
 properties({
   '@cxx.includes': [cfg['INCLUDEPY']],

@@ -1,5 +1,8 @@
+import {project, target, properties} from 'craftr'
+import cython from 'cython'
+
 project('examples.cython', '1.0-0')
-cython = require('cython')
+
 target('main')
 properties({
   'cython.srcs': ['Primes.pyx'],

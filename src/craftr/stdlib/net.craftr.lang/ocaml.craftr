@@ -21,6 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import craftr, {project, path, session, OS} from 'craftr'
+
 project('net.craftr.lang.ocaml', '1.0-0')
 
 if OS.type == 'nt':
@@ -36,7 +38,7 @@ session.target_props.add('ocaml.compilerFlags','StringList', options={'inherit':
 
 
 def build():
-  target = current_target()
+  target = craftr.current_target()
   src_dir = target.scope.directory
   build_dir = target.build_directory
   data = target.get_props('ocaml.', as_object=True)
@@ -54,10 +56,10 @@ def build():
     # Action to compile an executable.
     command = ['ocamlopt' if data.standalone else 'ocamlc']
     command += ['-o', '$@out', '$<in']
-    operator(name='ocaml.compile', commands=[command])
-    build_set({'in': data.srcs}, {'out': data.productFilename})
+    craftr.operator(name='ocaml.compile', commands=[command])
+    craftr.build_set({'in': data.srcs}, {'out': data.productFilename})
 
     # Action to run the executable.
     command = [data.productFilename]
-    operator('ocaml.run', commands=[command], explicit=True, syncio=True)
-    build_set({'in': data.productFilename}, {}, description='$@in')
+    craftr.operator('ocaml.run', commands=[command], explicit=True, syncio=True)
+    craftr.build_set({'in': data.productFilename}, {}, description='$<in')

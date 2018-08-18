@@ -21,13 +21,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import cxx from 'cxx'
+import {project, target, depends, properties, path, error, OS} from 'craftr'
+import {pkg_config} from 'net.craftr.tool.pkg-config'
+
 project('net.craftr.lib.opencl', '1.0-0')
+
+options = module.options
 options('vendor', str, '' if OS.id == 'win32' else 'pkg-config')
 options('intelSdk', str, 'C:\\Intel\\OpenCL\\sdk' if OS.id == 'win32' else '')
 options('cudaSdk', str, '')
 
-import os
-import {pkg_config} from 'net.craftr.tool.pkg-config'
 
 VALID_VENDORS = ('pkg-config', 'amd', 'intel', 'nvidia')
 if options.vendor not in VALID_VENDORS:
@@ -40,7 +45,6 @@ if options.vendor == 'nvidia':
   if not os.path.isdir(options.cudaSdk):
     error('cudaSdk: directory "{}" does not exist'.format(options.cudaSdk))
 
-cxx = require('net.craftr.lang.cxx')
 
 target('opencl')
 if options.vendor == 'pkg-config':
@@ -52,7 +56,7 @@ if options.vendor == 'intel':
     error('OpenCL vendor "intel" on "{}" not implemented.'.format(OS.id))
   properties({
     '@cxx.includes+': [path.join(options.intelSdk, 'include')],
-    '@cxx.libraryPaths+': [path.join(options.intelSdk, 'lib', cxx.compiler.arch)],
+    '@cxx.libraryPaths+': [path.join(options.intelSdk, 'lib', 'x64' if cxx.compiler.is64bit else 'x86')],
     '@cxx.systemLibraries+': ['OpenCL']
   })
 if options.vendor == 'nvidia':

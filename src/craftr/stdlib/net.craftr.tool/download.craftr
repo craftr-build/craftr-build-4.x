@@ -21,15 +21,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('net.craftr.tool.download', '1.0-0')
-
 import nr.fs
 import posixpath
 import re
 import requests
 import tarfile
 import zipfile
+import {project, path, session} from 'craftr'
 import {g as build_cache} from 'net.craftr.tool.cache'
+
+project('net.craftr.tool.download', '1.0-0')
 
 
 def get_source_archive(url):

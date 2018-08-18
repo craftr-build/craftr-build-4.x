@@ -1,5 +1,8 @@
+import {project, target, properties, glob} from 'craftr'
+import oc from 'net.craftr.lang.ocaml'
+
 project('examples.ocaml', '1.0-0')
-oc = require('net.craftr.lang.ocaml')
+
 target('main')
 properties({
   'ocaml.srcs': glob('src/*.ml'),

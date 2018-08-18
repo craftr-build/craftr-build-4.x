@@ -1,6 +1,7 @@
-project('examples.c-clglshare', '1.0-0')
-
+import {project, target, depends, properties} from 'craftr'
 import cxx from 'cxx'
+
+project('examples.c-clglshare', '1.0-0')
 
 target('main')
 depends([

@@ -21,16 +21,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import {project, target, properties, path, fmt, OS} from 'craftr'
+import cxx from 'net.craftr.lang.cxx'
+import {get_source_archive} from 'net.craftr.tool.download'
+import {pkg_config} from 'net.craftr.tool.pkg-config'
+
 project('net.craftr.lib.glew', '1.0-0')
-print('--->', module.name)
+
+options = module.options
 options('version', str, '2.1.0')
 options('binaryDir', str, '')
 options('static', bool, OS.id == 'win32')
 
 target('glew')
 if OS.id == 'win32':
-  import cxx from 'net.craftr.lang.cxx'
-  import {get_source_archive} from 'net.craftr.tool.download'
 
   if cxx.compiler.id in ('msvc', 'mingw', 'gcc'):
     if not options.binaryDir:
@@ -58,5 +62,4 @@ if OS.id == 'win32':
   })
 
 else:
-  import {pkg_config} from 'net.craftr.tool.pkg-config'
   pkg_config('glew', static=options.static)

@@ -1,5 +1,8 @@
+import {project, target, properties} from 'craftr'
+import cxx from 'cxx'
+
 project('examples.c', '1.0-0')
-cxx = require('cxx')
+
 target('main')
 properties({
   'cxx.type': 'executable',
