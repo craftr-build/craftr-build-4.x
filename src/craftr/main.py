@@ -45,13 +45,13 @@ def resolve_build_sets(session, target_specifiers):
 
   basename_map = {}
   for k, v in session._output_files.items():
-    base = nr.fs.base(k)
+    base = nr.fs.base(k).lower()
     basename_map.setdefault(base, set()).add(v)
 
   build_sets = []
   for spec in target_specifiers:
-    if spec in basename_map:
-      build_sets += basename_map[spec]
+    if spec.lower() in basename_map:
+      build_sets += basename_map[spec.lower()]
       continue
     abs_spec = nr.fs.canonical(spec)
     if abs_spec in session._output_files:
