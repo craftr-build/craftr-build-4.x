@@ -1,9 +1,9 @@
 glob2>=0.6
 nodepy-runtime>=2.1.5
-nr.fs>=1.0.4
+nr.fs>=1.1.0
 nr.interface>=1.0.3
-nr.stream>=1.0.1
-nr.types>=1.0.6
+nr.stream>=1.0.2
+nr.types>=1.1.0
 requests>=2.19.1
 toml>=0.9.4
 werkzeug>=0.14.1
