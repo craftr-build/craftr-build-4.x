@@ -659,7 +659,7 @@ def depends(target, public=False, to=None):
   """
 
   if isinstance(target, (list, tuple)):
-    [depends(x) for x in target]
+    [depends(x, public) for x in target]
     return
 
   if isinstance(target, str):
