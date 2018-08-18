@@ -2,6 +2,8 @@
 
 # The Craftr build system
 
+<img align="right" src="logo.png">
+
 Craftr is a Python based meta build system with native support for C, C++,
 C#, Java and Cython projects. It can be tailored to satisfy all build
 requirements for modern applications.
