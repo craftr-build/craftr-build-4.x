@@ -501,7 +501,7 @@ def current_scope(do_raise=True):
   scope = session.current_scope
   if do_raise and scope is None:
     raise RuntimeError('no current scope')
-  if not scope.name or not scope.version:
+  if scope and (not scope.name or not scope.version):
     raise RuntimeError('current scope has no name/version, use '
                        'project() function to initialize')
   return scope
@@ -587,7 +587,7 @@ def link_module(path, alias=None):
   """
 
   if not nr.fs.isabs(path):
-    path = nr.fs.abs(path, current_scope().directory)
+    path = nr.fs.abs(path, current_directory(False))
   path = nr.fs.canonical(path)
   module = session.nodepy_context.require.resolve(path)
   if alias is None:

@@ -295,6 +295,13 @@ def main(argv=None, prog=None):
     key, value = opt.partition('=')[::2]
     session.options[key] = value
 
+  # Link modules as specified on the command-line or in the configuration.
+  [api.link_module(nr.fs.abs(x)) for x in args.link]
+  for item in session.options.get('craftr:linkModules', []):
+    if args.config_file:
+      item = nr.fs.abs(item, nr.fs.dir(args.config_file))
+    api.link_module(item)
+
   if args.tool is not None:
     tool_name, argv = tool_argv[0], tool_argv[1:]
     try:
@@ -304,8 +311,6 @@ def main(argv=None, prog=None):
         raise
       module = session.load_module(tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
-
-  [api.link_module(nr.fs.abs(x)) for x in args.link]
 
   graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
   if args.config:
