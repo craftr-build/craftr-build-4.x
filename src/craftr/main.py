@@ -108,6 +108,13 @@ def get_argument_parser(prog=None):
     help='Choose the build variant (debug|release).')
 
   group.add_argument(
+    '--variant-suffix',
+    default='',
+    metavar='NAME',
+    help='Add a suffix to the build variant. This has only an effect on the '
+         'automatically selected build output directory.')
+
+  group.add_argument(
     '--project',
     default='build.craftr',
     metavar='PATH',
@@ -286,7 +293,7 @@ def main(argv=None, prog=None):
       args.targets.remove(x)
 
   # Create a new session.
-  build_directory = nr.fs.join(args.build_root, args.variant)
+  build_directory = nr.fs.join(args.build_root, args.variant + args.variant_suffix)
   session = api.session = api.Session(args.build_root, build_directory, args.variant)
   session.add_module_search_path(args.module_path)
   if args.config_file:
