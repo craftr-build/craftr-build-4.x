@@ -165,10 +165,8 @@ class MsvcCompiler(base.Compiler):
 
   # @override
   def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
-    rel = path.rel(src, target.scope.directory)
-    obj = path.setsuffix(path.join(objdir, rel), '.obj')
-    buildset.add_output_files('obj', [obj])
-
+    super().add_objects_for_source(target, data, lang, src, buildset, objdir)
+    obj = buildset.outputs['obj'][0]
     if BUILD.debug and data.separateDebugInformation:
       pdb = path.setsuffix(obj, '.pdb')
       buildset.add_output_files('outPdb', [pdb])

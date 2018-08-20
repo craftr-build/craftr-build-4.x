@@ -94,11 +94,6 @@ class GccCompiler(base.Compiler):
       commands.append(['install_name_tool'] + data.osxInstallNameTool + ['${@product}'])
     return commands
 
-  def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
-    rel = path.rel(src, target.scope.directory)
-    obj = path.setsuffix(path.join(objdir, rel), '.o')
-    buildset.add_output_files('obj', [obj])
-
   def on_completion(self, target, data):
     if options.enableGcov and data.type == 'executable':
       commands = [

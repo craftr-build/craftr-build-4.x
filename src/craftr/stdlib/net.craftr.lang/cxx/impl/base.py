@@ -8,18 +8,34 @@ from craftr.core.template import TemplateCompiler
 from typing import List, Dict, Union, Callable
 from nr.stream import stream
 
-options('namingScheme', str, '')
 
+class NamingScheme:
+  def __init__(self, data):
+    if isinstance(data, str):
+      data = {k.lower(): v for k, v in (x.partition('=')[::2] for x in data.split(','))}
+    self.data = data
+  def __str__(self):
+    return 'NamingScheme({!r})'.format(self.to_str())
+  def __getitem__(self, key):
+    return self.data[key]
+  def to_str(self):
+    return ','.join('{}={}'.format(k, v) for k, v in self.data.items())
+  def with_defaults(self, scheme):
+    if not isinstance(scheme, NamingScheme):
+      scheme = NamingScheme(scheme)
+    return NamingScheme({**scheme.data, **self.data})
+  def get(self, key, default=None):
+    return self.data.get(key, default)
+
+NamingScheme.WIN = NamingScheme('e=.exe,lp=,ls=.lib,ld=.dll,o=.obj')
+NamingScheme.OSX = NamingScheme('e=,lp=lib,ls=.a,ld=.dylib,o=.o')
+NamingScheme.LINUX = NamingScheme('e=,lp=lib,ls=.a,ld=.so,o=.o')
+NamingScheme.CURRENT = {'win32': NamingScheme.WIN, 'darwin': NamingScheme.OSX}.get(OS.id, NamingScheme.LINUX)
+
+options.add('namingScheme', str, '')
 if not options.namingScheme:
-  if OS.id == 'win32':
-    options.namingScheme = 'e=.exe,lp=,ls=.lib,ld=.dll'
-  elif OS.id == 'darwin':
-    options.namingScheme = 'e=,lp=lib,ls=.a,ld=.dylib'
-  else:
-    options.namingScheme = 'e=,lp=lib,ls=.a,ld=.so'
-
-naming_scheme = {k.lower(): v for k, v in (
-  x.partition('=')[::2] for x in options.namingScheme.split(','))}
+  options.namingScheme = NamingScheme.CURRENT.to_str()
+options.namingScheme = NamingScheme(options.namingScheme).with_defaults(NamingScheme.CURRENT)
 
 
 def short_path(x):
@@ -53,6 +69,7 @@ class Compiler(nr.types.Named):
     ('library_prefix', str),
     ('library_shared_suffix', str),
     ('library_static_suffix', str),
+    ('object_suffix', str),
 
     ('compiler_c', List[str]),               # Arguments to invoke the C compiler.
     ('compiler_cpp', List[str]),             # Arguments to invoke the C++ compiler.
@@ -108,10 +125,11 @@ class Compiler(nr.types.Named):
     ('archiver_out', List[str]),             # Flag(s) to specify the output file.
   ]
 
-  executable_suffix = naming_scheme.get('e', '')
-  library_prefix = naming_scheme.get('lp', '')
-  library_shared_suffix = naming_scheme.get('ld', '')
-  library_static_suffix = naming_scheme.get('ls', '')
+  executable_suffix = options.namingScheme['e']
+  library_prefix = options.namingScheme['lp']
+  library_shared_suffix = options.namingScheme['ld']
+  library_static_suffix = options.namingScheme['ls']
+  object_suffix = options.namingScheme['o']
 
   @property
   def is32bit(self):
@@ -260,7 +278,7 @@ class Compiler(nr.types.Named):
 
     return op
 
-  def add_objects_for_source(sefl, target, data, lang, src, buildset, objdir):
+  def add_objects_for_source(self, target, data, lang, src, buildset, objdir):
     """
     This method is called from #create_compile_action() in order to construct
     the object output filename for the specified C or C++ source file and add
@@ -271,7 +289,14 @@ class Compiler(nr.types.Named):
     should be tagged with at least `out` and maybe `optional`.
     """
 
-    raise NotImplementedError
+    obj = path.rel(src, target.directory)
+    if not path.issub(obj):
+      obj = path.rel(src, session.build_directory)
+      if not path.issub(obj):
+        # Just keep it in the directory that it is in.
+        obj = path.abs(src)
+    obj = path.setsuffix(path.abs(obj, objdir), self.object_suffix)
+    buildset.add_output_files('obj', [obj])
 
   def get_link_command(self, target, data, lang):
     """
