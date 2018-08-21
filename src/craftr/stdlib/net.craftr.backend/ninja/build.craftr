@@ -247,9 +247,11 @@ def clean(build_sets, recursive=False, verbose=False, **options):
       targets = [make_rule_name(x.operator) for x in build_sets]
     else:
       # Use -r and passing rules only cleans files that have been created by that rule.
-      targets = ['rule_' + make_rule_name(x.operator) for x in build_sets]
+      targets = [next(concat(x.outputs.values()), make_rule_name(x.operator)) for x in build_sets]
       if targets:
         targets.insert(0, '-r')
+  else:
+    targets = []
 
   command = [ninja, '-f', path.join(session.build_directory, 'build.ninja'), '-t', 'clean']
   #command += args.clean_args
