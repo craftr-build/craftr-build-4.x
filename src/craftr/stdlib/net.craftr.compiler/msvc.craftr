@@ -69,11 +69,10 @@ class MsvcInstallation(nr.types.Named):
     ('version', int),
     ('type', str),
     ('directory', str),
-    ('_environ', dict, None),
-    ('llvm', LlvmInstallation, None)
+    ('_environ', dict, None)
   ]
 
-  TYPE_VISUALSTUDIO ='VisualStudio'
+  TYPE_VISUALSTUDIO = 'VisualStudio'
   TYPE_BUILDTOOLS = 'BuildTools'
 
   @property
@@ -84,10 +83,10 @@ class MsvcInstallation(nr.types.Named):
 
     if self._environ is not None:
       return self._environ
-    if self.type == self.TYPE_BUILDTOOLS:
-      return path.join(self.directory, 'vcbuildtools.bat')
-    elif self.version >= 141:
+    if self.version >= 141:
       return path.join(self.directory, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat')
+    elif self.type == self.TYPE_BUILDTOOLS:
+      return path.join(self.directory, 'vcbuildtools.bat')
     else:
       return path.join(self.directory, 'VC', 'vcvarsall.bat')
 
@@ -106,9 +105,6 @@ class MsvcInstallation(nr.types.Named):
     is raised.
     """
 
-    if self.llvm:
-      return self.llvm.environ
-
     arch = options.arch
     if arch == 'x86_64':
       arch = 'x86_amd64'
@@ -121,13 +117,23 @@ class MsvcInstallation(nr.types.Named):
     return batchvars(self.vcvarsall, *args)
 
   @classmethod
-  def list(cls):
+  def list(cls, type=None, version=None):
     """
     List all available MSVC installations.
     """
 
+    if type is not None or version is not None:
+      result = []
+      for x in cls.list():
+        if type and x.type != type: continue
+        if version and x.version != version: continue
+        result.append(x)
+      return result
+
     if cls._list is not None:
       return cls._list
+
+    programfiles_x86 = os.getenv('ProgramFiles(x86)', '') or os.getenv('ProgramFiles', '')
 
     # Check all VS_COMNTOOLS environment variables.
     results = []
@@ -150,29 +156,27 @@ class MsvcInstallation(nr.types.Named):
 
       results.append(cls(ver, cls.TYPE_VISUALSTUDIO, value))
 
-    build_tools_dir = r'C:\Program Files (x86)\Microsoft Visual C++ Build Tools'
-    if path.isdir(build_tools_dir):
-      # TODO: Is there a (good) way to determine the versio of the Build Tools?
-      #       It seems there is no version information besides the year in the
-      #       filenames of the links that open respective consoles.
-      results.append(cls(140, cls.TYPE_BUILDTOOLS, build_tools_dir))
-
     have_versions = set(x.version for x in results)
 
-    # Special handling for MSVC 2017.
-    # TODO: Can MSVC 2017 be installed in an alternative location?
-    if 141 not in have_versions:
-      programfiles = os.getenv('ProgramFiles(x86)', '') or os.getenv('ProgramFiles', '')
-      if programfiles:
-        vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Community')
-        if not path.isdir(vspath):
-          vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Professional')
-        if not path.isdir(vspath):
-          vspath = path.join(programfiles, 'Microsoft Visual Studio\\2017\\Enterprise')
+    # Special handling for MSVC 2017 (141).
+    if 141 not in have_versions and programfiles_x86:
+      # TODO: Can MSVC 2017 be installed in an alternative location?
+      for x in ['Community', 'Professional', 'Enterprise']:
+        vspath = path.join(programfiles_x86, 'Microsoft Visual Studio\\2017', x)
         if path.isdir(vspath):
           results.append(cls(141, cls.TYPE_VISUALSTUDIO, vspath))
 
     # TODO: Special handling for newer MSVC versions?
+
+    # VS 2015 Build Tools.
+    build_tools_dir = path.join(programfiles_x86, r'Microsoft Visual C++ Build Tools')
+    if path.isdir(build_tools_dir):
+      results.append(cls(140, cls.TYPE_BUILDTOOLS, build_tools_dir))
+
+    # VS 2017 Build Tools.
+    build_tools_dir = path.join(programfiles_x86, r'Microsoft Visual Studio\\2017\\BuildTools')
+    if path.isdir(build_tools_dir):
+      results.append(cls(141, cls.TYPE_BUILDTOOLS, build_tools_dir))
 
     result = sorted(results, key=operator.attrgetter('version'), reverse=True)
 
@@ -482,10 +486,16 @@ def main(argv=None, prog=None):
   import argparse
   parser = argparse.ArgumentParser(prog=prog, allow_abbrev=False)
   parser.add_argument('--json', action='store_true', help='Output in JSON format.')
+  parser.add_argument('--version', type=int, help='The MSVC Version to look out for.')
+  parser.add_argument('--type', choices=(MsvcInstallation.TYPE_VISUALSTUDIO, MsvcInstallation.TYPE_BUILDTOOLS))
+  parser.add_argument('--first', action='store_true')
   parser.add_argument('argv', nargs='...')
   args = parser.parse_args(argv)
 
-  installs = MsvcInstallation.list()
+  installs = MsvcInstallation.list(type=args.type, version=args.version)
+  if args.first:
+    installs = installs[:1]
+
   if args.argv:
     with sh.override_environ(installs[0].environ()):
       return subprocess.call(args.argv)
@@ -493,7 +503,10 @@ def main(argv=None, prog=None):
   if args.json:
     result = []
     for inst in installs:
-      data = {"version": inst.version, "directory": inst.directory}
+      tk = MsvcToolkit.from_installation(inst)
+      data = {"version": inst.version, "directory": inst.directory,
+              "compilerVersion": tk.cl_info.version,
+              "type": inst.type}
       result.append(data)
     print(json.dumps(result, indent=2))
   else:
@@ -503,8 +516,10 @@ def main(argv=None, prog=None):
     for inst in installs:
       tk = MsvcToolkit.from_installation(inst)
       version = tk.cl_info.version
-      print('- {}: {}'.format(inst.version, inst.directory))
-      print('  cl Version: {}'.format(tk.cl_info.version))
+      print('- Version:', inst.version)
+      print('  Compiler Version:', tk.cl_info.version)
+      print('  Install Type:', inst.type)
+      print('  Install Directory:', inst.directory)
       if tk.cl_info.error:
         print('  ERROR: {}'.format(tk.cl_info.error.message))
         for line in tk.cl_info.error.info.split('\n'):
