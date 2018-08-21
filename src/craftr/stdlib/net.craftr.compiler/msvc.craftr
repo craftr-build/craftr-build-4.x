@@ -52,7 +52,8 @@ project('net.craftr.compiler.msvc', '1.0-0')
 
 options = module.options
 options('installDir', str, '')
-options('version', str, '')
+options('version', int, 0)
+options('type', str, '')
 options('arch', str, 'x86' if OS.arch == 'x86' else 'amd64')
 options('platformType', str, '')
 options('sdkVersion', str, '')
@@ -123,6 +124,9 @@ class MsvcInstallation(nr.types.Named):
     """
 
     if type is not None or version is not None:
+      if type not in (cls.TYPE_VISUALSTUDIO, cls.TYPE_BUILDTOOLS):
+        raise ValueError('invalid type, expected {!r} or {!r}, got {!r}'
+          .format(cls.TYPE_VISUALSTUDIO, cls.TYPE_BUILDTOOLS, type))
       result = []
       for x in cls.list():
         if type and x.type != type: continue
@@ -363,9 +367,11 @@ class MsvcToolkit(nr.types.Named):
   @classmethod
   @functools.lru_cache()
   def from_config(cls):
-    installations = MsvcInstallation.list()
+    installations = MsvcInstallation.list(type=options.type, version=options.version)
     if not installations:
-      raise RuntimeError('Unable to detect any MSVC installation. Is it installed?')
+      raise RuntimeError('Unable to detect any MSVC installation matching '
+                         'the specified options (type={!r}, version={!r}). '
+                         'Is it installed?'.format(options.type, options.version))
 
     version = options.version
     if version:
@@ -382,7 +388,7 @@ class MsvcToolkit(nr.types.Named):
     sdk_version = options.sdkVersion
 
     cache = None
-    cache_key = 'craftr/tools/msvc'
+    cache_key = module.name + ':type={!r}:version={!r}'.format(install.type, install.version)
     if cache_key in build_cache:
       cache = cls.fromdict(build_cache[cache_key])
 
