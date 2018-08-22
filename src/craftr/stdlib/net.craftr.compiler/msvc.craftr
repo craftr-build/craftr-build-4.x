@@ -124,7 +124,7 @@ class MsvcInstallation(nr.types.Named):
     """
 
     if type or version:
-      if type not in (cls.TYPE_VISUALSTUDIO, cls.TYPE_BUILDTOOLS):
+      if type and type not in (cls.TYPE_VISUALSTUDIO, cls.TYPE_BUILDTOOLS):
         raise ValueError('invalid type, expected {!r} or {!r}, got {!r}'
           .format(cls.TYPE_VISUALSTUDIO, cls.TYPE_BUILDTOOLS, type))
       result = []
