@@ -442,10 +442,10 @@ class Target(_build.Target):
 
   def transitive_dependencies(self):
     """
-    Returns an iterator that yields the #Dependency objects of this target
-    and all of their (public) transitive dependencies. The returned iterator
-    is a #stream instance, thus you can use any streaming operations on the
-    returned object.
+    Returns a #stream for all (transitive) dependencies of this target.
+    If the transitive dependencies of the target contain the same target
+    more than once, only the first encountered dependency to that target
+    will be contained in the stream.
     """
 
     def worker(target, include_private=False):
@@ -453,7 +453,8 @@ class Target(_build.Target):
         if dep.public or include_private:
           yield dep
         yield from worker(dep.target)
-    return stream.unique(worker(self, include_private=True))
+    it = worker(self, include_private=True)
+    return stream.unique(it, key=lambda d: d.target)
 
 
 class Operator(_build.Operator):
