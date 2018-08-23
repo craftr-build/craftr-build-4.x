@@ -94,18 +94,18 @@ def _init_properties():
   props.add('cxx.combineCppSources', 'Bool', False)
 
   # Allow the linker to discard data that appears to be unused.
-  # This value being undefined uses the linker's default.
+  # If this value is undefined, the linker's default is used.
   props.add('cxx.discardUnusedData', 'Bool')
 
   # Whether to store debug information in an external file or bundle
-  # instead of within the binary. Defaults to True for MSVC, False
-  # otherwise.
-  props.add('cxx.separateDebugInformation', 'Bool')
+  # instead of within the binary.
+  props.add('cxx.separateDebugInformation', 'Bool', False)
 
   # Preprocessor definitions to set when compiling.
   props.add('cxx.defines', 'StringList', options={'inherit': True})
   props.add('cxx.definesForStaticBuild', 'StringList', options={'inherit': True})
   props.add('cxx.definesForSharedBuild', 'StringList', options={'inherit': True})
+  props.add('cxx.addDebugDefines', 'Bool', True)
 
   # Include search paths. Supports glob patterns!
   props.add('cxx.includes', 'PathList', options={'inherit': True})

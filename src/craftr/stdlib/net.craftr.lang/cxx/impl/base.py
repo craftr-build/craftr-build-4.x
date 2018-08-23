@@ -236,9 +236,12 @@ class Compiler(nr.types.Named):
     if stdlib_value:
       command.extend(self.expand(getattr(self, lang + '_stdlib'), stdlib_value))
 
-    for include in includes:
+    if BUILD.debug and data.addDebugDefines:
+      defines += ['DEBUG', '_DEBUG']
+
+    for include in stream.unique(includes):
       command.extend(self.expand(self.include_flag, include))
-    for define in defines:
+    for define in stream.unique(defines):
       command.extend(self.expand(self.define_flag, define))
     command.extend(flags)
     if is_sharedlib(data):

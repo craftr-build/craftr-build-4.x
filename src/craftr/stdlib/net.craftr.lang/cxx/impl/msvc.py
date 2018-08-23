@@ -127,9 +127,6 @@ class MsvcCompiler(base.Compiler):
 
   # @override
   def get_compile_command(self, target, data, lang):
-    if data.separateDebugInformation is None:
-      data.separateDebugInformation = False
-
     command = super().get_compile_command(target, data, lang)
 
     if BUILD.debug:
