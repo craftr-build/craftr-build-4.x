@@ -25,6 +25,8 @@
 A simplistic, non-parallel backend implemented in Python.
 """
 
+import * from 'craftr'
+
 project('net.craftr.backend.python', '1.0-0')
 
 import errno
