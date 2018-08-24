@@ -56,7 +56,7 @@ class MsvcCompiler(base.Compiler):
   save_temps = ['/P', '/Fi$out.i']  # TODO: Prevents the compilation step. :(
 
   compiler_supports_openmp = True
-  compiler_enable_openmp = ['/openmp']
+  compiler_enable_openmp = lambda: lambda self: ['-Xclang', '-fopenmp'] if 'clang' in self.name.lower() else ['/openmp']
   linker_enable_openmp = []
 
   #linker_c = ['link', '/nologo']
@@ -93,6 +93,11 @@ class MsvcCompiler(base.Compiler):
       deps_prefix = toolkit.deps_prefix
     )
     self.toolkit = toolkit
+
+    for key in self.__annotations__:
+      value = getattr(self, key)
+      if callable(value):
+        setattr(self, key, value(self))
 
   def info_string(self):
     return '{} v{version} ({id}) {cl_version} for {arch}'.format(
