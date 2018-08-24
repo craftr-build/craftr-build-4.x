@@ -348,7 +348,14 @@ def main(argv=None, prog=None):
 
   if not args.backend:
     args.backend = session.options.get('build:backend', 'net.craftr.backend.ninja')
-  backend = session.load_module(args.backend).namespace
+
+  try:
+    backend = session.load_module(args.backend).namespace
+  except session.ResolveError as exc:
+    if str(exc.request.string) != args.backend:
+      raise
+    backend = session.load_module('net.craftr.backend.' + args.backend).namespace
+
   if args.config:
     backend.export()
   if args.clean:
