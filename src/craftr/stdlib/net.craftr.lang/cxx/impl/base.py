@@ -181,11 +181,32 @@ class Compiler(nr.types.Named):
     if data.type not in ('executable', 'library'):
       error('invalid cxx.type: {!r}'.format(data.type))
 
+    # TODO: Keep track of which level in the transitive the dependencies
+    #       the define is coming from in order to properly merge it with
+    #       the definesForSharedBuild/definesForStaticBuild and so we can
+    #       remove any overwritten defines in a proper order.
     defines = list(data.defines)
     if data.type == 'library' and data.preferredLinkage == 'shared':
       defines += list(data.definesForSharedBuild)
     elif data.type == 'library' and data.preferredLinkage == 'static':
       defines += list(data.definesForStaticBuild)
+    if BUILD.debug and data.addDebugDefines:
+      defines = ['DEBUG', '_DEBUG'] + defines
+
+    # Strip any overriding defines (keep the first encountered define
+    # from the right, roughly correlating to the transitive dependency order).
+    defines_new = []
+    defines_set = set()
+    for d in reversed(defines):
+      v = ''
+      if '=' in d:
+        d, v = d.partition('=')[::2]
+        v = '=' + v
+      if d not in defines_set:
+        defines_new.append(d + v)
+        defines_set.add(d)
+      # TODO: Maybe show a warning that a define was ignored?
+    defines = defines_new
 
     def expand_glob(x):
       if nr.fs.isglob(x):
@@ -202,24 +223,6 @@ class Compiler(nr.types.Named):
       else:
         flags += self.compiler_enable_openmp
 
-    # TODO: Find exported information from dependencies.
-    """
-    for dep in build.target.deps(with_behaviour=CxxBuild).attr('impl'):
-      includes.extend(dep.exported_includes)
-      defines.extend(dep.exported_defines)
-      forced_includes.extend(dep.exported_forced_includes)
-      flags.extend(dep.exported_compiler_flags)
-      if dep.type == 'library' and dep.preferred_linkage == 'shared':
-        defines.extend(dep.exported_shared_defines)
-      else:
-        defines.extend(dep.exported_static_defines)
-    for dep in build.target.deps(with_behaviour=CxxPrebuilt).attr('impl'):
-      includes.extend(dep.includes)
-      defines.extend(dep.defines)
-      flags.extend(dep.compiler_flags)
-      forced_includes.extend(dep.forced_includes)
-    """
-
     command = self.expand(getattr(self, 'compiler_' + lang))
     command.append('${<src}')
     command.extend(self.expand(self.compiler_out, '${@obj}'))
@@ -235,9 +238,6 @@ class Compiler(nr.types.Named):
     stdlib_value = getattr(data, lang + 'Stdlib')
     if stdlib_value:
       command.extend(self.expand(getattr(self, lang + '_stdlib'), stdlib_value))
-
-    if BUILD.debug and data.addDebugDefines:
-      defines += ['DEBUG', '_DEBUG']
 
     for include in stream.unique(includes):
       command.extend(self.expand(self.include_flag, include))
