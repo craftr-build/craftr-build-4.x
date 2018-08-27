@@ -305,7 +305,7 @@ def main(argv=None, prog=None):
 
   for x in args.targets[:]:
     index = x.find('=')
-    if index != (x.find('@=') + 1):
+    if index >= 0 and index != (x.find('@=') + 1):
       # This looks like an option.
       args.options.append(x)
       args.targets.remove(x)
