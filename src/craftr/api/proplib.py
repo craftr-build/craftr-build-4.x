@@ -86,10 +86,12 @@ class PropType:
     raise NotImplementedError
 
   def inherit(self, name, values):
-    try:
-      return next(iter(values))
-    except StopIteration:
-      return self.default()
+    """
+    Can raise a #StopIteration if there are no values specified. In that
+    case, a default value should be used (eg. the return value of #default()).
+    """
+
+    return next(iter(values))
 
   @staticmethod
   def typeerror(name, expected, value):

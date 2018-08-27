@@ -405,7 +405,10 @@ class Target(_build.Target):
           if target.public_properties.is_set(prop_name):
             yield target.public_properties[prop_name]
       prop = self.properties.propset[prop_name]
-      return prop.type.inherit(prop_name, iter_values())
+      try:
+        return prop.type.inherit(prop_name, iter_values())
+      except StopIteration:
+        return prop.get_default(self.properties.owner)
     else:
       if self.public_properties.is_set(prop_name):
         return self.public_properties[prop_name]
