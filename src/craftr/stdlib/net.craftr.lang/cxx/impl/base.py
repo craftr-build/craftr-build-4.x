@@ -244,7 +244,9 @@ class Compiler(nr.types.Named):
     for define in stream.unique(defines):
       command.extend(self.expand(self.define_flag, define))
     command.extend(flags)
-    if is_sharedlib(data):
+    if data.positionIndependentCode is None and data.type == 'library':
+      data.positionIndependentCode = True
+    if data.positionIndependentCode:
       command += self.expand(self.pic_flag)
 
     if data.warningLevel == 'all':

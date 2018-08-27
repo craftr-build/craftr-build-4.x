@@ -131,6 +131,9 @@ def _init_properties():
   # Link with system libraries, where unspecified linkage.
   props.add('cxx.systemLibraries', 'StringList', options={'inherit': True})
 
+  # Add default system libraries.
+  props.add('cxx.defaultSystemLibraries', 'Bool', True, options={'inherit': True})
+
   # List of files to automatically include at the beginning of
   # each translation unit.
   props.add('cxx.prefixHeaders', 'PathList', options={'inherit': True})
