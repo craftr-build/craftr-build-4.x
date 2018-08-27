@@ -34,6 +34,7 @@ every time.
 
 import concurrent.futures
 import json
+import shlex
 import socket
 import socketserver
 import struct
@@ -92,12 +93,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
       pass
 
   def _get_additional_args(self, target: 'Target', operator: 'Operator', bset: 'BuildSet'):
-    # TODO
-    #if action not in self.additional_args:
-    #  action = action.partition('#')[0]
-    #  if action not in self.additional_args:
-    #    return []
-    #return shlex.split(self.additional_args[action])
+    if bset.additional_args:
+      return shlex.split(bset.additional_args)
     return []
 
 

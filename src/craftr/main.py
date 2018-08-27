@@ -39,8 +39,17 @@ def notify(message, title):
 
 def resolve_build_sets(session, target_specifiers):
   """
-  Returns a list of the build sets that are selected in the list of
-  *target_specifiers*.
+  Returns a list of the build sets that are defined in the list of
+  *target_specifiers*. A target specifier may be the absolute path
+  to an output file, the filename of an output file (case insensitive)
+  or a target/operator specifier in the form of
+
+      [<scope>@]<target>[:<operator>][@=<additional_args>]
+
+  Sets the "additional_args" property on the selected build sets
+  that is not serialized. The additional arguments are taken into
+  account for the current build but may not mark the build set as
+  dirty.
   """
 
   basename_map = {}
@@ -49,13 +58,20 @@ def resolve_build_sets(session, target_specifiers):
     basename_map.setdefault(base, set()).add(v)
 
   build_sets = []
+  def add_build_set(bset, add_args):
+    if bset.additional_args:
+      raise ValueError('duplicate additional arguments found for BuildSet {}'.format(bset))
+    bset.additional_args = add_args
+    build_sets.append(bset)
+
   for spec in target_specifiers:
+    spec, add_args = spec.partition('@=')[::2]
     if spec.lower() in basename_map:
-      build_sets += basename_map[spec.lower()]
+      [add_build_set(x, add_args) for x in basename_map[spec.lower()]]
       continue
     abs_spec = nr.fs.canonical(spec)
     if abs_spec in session._output_files:
-      build_sets.append(session._output_files[abs_spec])
+      add_build_set(session._output_files[abs_spec], add_args)
       continue
 
     name = spec
@@ -85,7 +101,7 @@ def resolve_build_sets(session, target_specifiers):
       for op in target.operators:
         if (not op_name and not op.explicit) or op.name.partition('#')[0] == op_name:
           found_sets = True
-          build_sets += op.build_sets
+          [add_build_set(x, add_args) for x in op.build_sets]
 
     if not found_sets:
       raise ValueError('no operators matched {!r}'.format(spec))
@@ -288,7 +304,9 @@ def main(argv=None, prog=None):
         args.config_file = None
 
   for x in args.targets[:]:
-    if '=' in x:
+    index = x.find('=')
+    if index != (x.find('@=') + 1):
+      # This looks like an option.
       args.options.append(x)
       args.targets.remove(x)
 
