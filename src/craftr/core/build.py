@@ -188,6 +188,7 @@ class BuildSet:
     self._outputs = data['outputs']
     self._variables = data['variables']
     self._operator = operator
+    self.additional_args = None
     [master._declare_output(self, x) for x in stream.concat(self.outputs.values())]
     return self
 
