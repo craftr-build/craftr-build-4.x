@@ -56,8 +56,8 @@ class MsvcCompiler(base.Compiler):
   save_temps = ['/P', '/Fi$out.i']  # TODO: Prevents the compilation step. :(
 
   compiler_supports_openmp = True
-  compiler_enable_openmp = lambda: lambda self: ['-Xclang', '-fopenmp'] if 'clang' in self.name.lower() else ['/openmp']
-  linker_enable_openmp = []
+  compiler_enable_openmp = lambda: lambda self: ['-Xclang', '-fopenmp'] if self.is_clang_cl else ['/openmp']
+  linker_enable_openmp = lambda: lambda self: ['libiomp5md.lib'] if self.is_clang_cl else []
 
   #linker_c = ['link', '/nologo']
   #linker_cpp = linker_c
@@ -93,6 +93,7 @@ class MsvcCompiler(base.Compiler):
       deps_prefix = toolkit.deps_prefix
     )
     self.toolkit = toolkit
+    self.is_clang_cl = 'clang' in self.name.lower()
 
     for key in self.__annotations__:
       value = getattr(self, key)
