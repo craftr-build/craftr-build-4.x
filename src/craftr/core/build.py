@@ -590,8 +590,10 @@ class Master:
     # Note: filename must be canonicalized
     assert self.canonicalize_path(filename) == filename
     if filename in self._output_files:
-      raise ValueError('Two build sets with the same output file can not '
-                       'co-exist ({}, filename={!r})'.format(build_set, filename))
+      raise ValueError(
+        'Two build sets with the same output file can not co-exist.\n'
+        '  Filename: {}\n  Incoming Buildset: {}\n  Existing Buildset: {}'
+        .format(filename, build_set, self._output_files[filename]))
     self._output_files[filename] = build_set
 
   def all_operators(self) -> Iterable[Operator]:
