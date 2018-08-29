@@ -86,7 +86,7 @@ class GccCompiler(base.Compiler):
     flags = super().get_link_command(target, data, lang)
     if options.enableGcov:
       flags += ['-lgcov']
-    if data.defaultSystemLibraries:
+    if data.defaultSystemLibraries and OS.id == 'linux':
       flags += ['-lm', '-lpthread']
     return flags
 
