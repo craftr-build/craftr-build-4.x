@@ -32,6 +32,7 @@ project('net.craftr.backend.ninja', '1.0-0')
 options = module.options
 options('local', bool, False)  # Use a local build of the Ninja tool
 
+import errno
 import io
 import nodepy
 import os
@@ -246,10 +247,13 @@ def clean(build_sets, recursive=False, verbose=False, **options):
     if recursive:
       targets = [make_rule_name(x.operator) for x in build_sets]
     else:
-      # Use -r and passing rules only cleans files that have been created by that rule.
-      targets = [next(concat(x.outputs.values()), make_rule_name(x.operator)) for x in build_sets]
-      if targets:
-        targets.insert(0, '-r')
+      for fname in stream.concat(stream.concat(x.outputs.values() for x in build_sets)):
+        try:
+          os.remove(fname)
+        except OSError as e:
+          if e.errno != errno.ENOENT:
+            print('{}: {}'.format(fname, e))
+      return
   else:
     targets = []
 
