@@ -191,8 +191,8 @@ class Compiler(nr.types.Named):
       defines += list(data.definesForSharedBuild)
     elif data.type == 'library' and data.preferredLinkage == 'static':
       defines += list(data.definesForStaticBuild)
-    if BUILD.debug and data.addDebugDefines:
-      defines = ['DEBUG', '_DEBUG'] + defines
+    if data.addDebugDefines:
+      defines = (['DEBUG', '_DEBUG'] if BUILD.debug else ['NDEBUG']) + defines
 
     # Strip any overriding defines (keep the first encountered define
     # from the right, roughly correlating to the transitive dependency order).

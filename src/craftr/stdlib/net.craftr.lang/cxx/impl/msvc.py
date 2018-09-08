@@ -130,6 +130,8 @@ class MsvcCompiler(base.Compiler):
       operator('cxx.msvcRc', commands=[command], environ=self.compiler_env)
       build_set({'in': data.msvcResourceFiles}, {'out': outfiles})
       properties(target, {'@cxx.outMsvcResourceFiles+': outfiles})
+    if base.is_sharedlib(data):
+      data.defines += ['_WINDLL']
 
   # @override
   def get_compile_command(self, target, data, lang):
