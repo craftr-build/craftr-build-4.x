@@ -99,6 +99,7 @@ class Compiler(nr.types.Named):
     ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix.
     ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $out.
     ('deps_prefix', str, None),              # The deps prefix (don't mix with depfile_name).
+    ('use_framework', str, None),
 
     # OpenMP settings.
     ('compiler_supports_openmp', bool, False),
@@ -337,29 +338,11 @@ class Compiler(nr.types.Named):
       command.extend(self.expand(self.linker_shared if is_shared else self.linker_exe))
 
     flags = list(data.linkerFlags)
+
     if data.enableOpenmp and self.compiler_supports_openmp:
       flags += self.linker_enable_openmp
 
-    # TODO: Tell the compiler to link staticLibraries and dynamicLibraries
-    #       statically/dynamically respectively?
-    libs = data.systemLibraries + data.staticLibraries + data.dynamicLibraries
-
-    # Inherit options from dependencies.
-    """
-    for dep_target in target.transitive_dependencies().attr('sources').concat():
-      libs += dep.exported_syslibs
-      if dep.type == 'library':
-        additional_input_files.extend(dep.linkname_full or dep.outname_full)
-        flags.extend(dep.linker_flags)
-    for dep in build.target.deps(with_behaviour=CxxPrebuilt).attr('impl'):
-      libs += dep.syslibs
-      libpath += dep.libpath
-      flags.extend(dep.linker_flags)
-      if build.link_style == 'static' and dep.static_libs or not dep.shared_libs:
-        additional_input_files.extend(dep.static_libs)
-      elif build.link_style == 'shared' and dep.shared_libs or not dep.static_libs:
-        additional_input_files.extend(dep.shared_libs)
-    """
+    libs = data.systemLibraries
 
     if not is_staticlib(data):
       runtime = self.linker_runtime.get(lang, {})
@@ -371,8 +354,14 @@ class Compiler(nr.types.Named):
     flags += stream.concat([self.expand(self.linker_libpath, x) for x in stream.unique(data.libraryPaths)])
     if not is_staticlib(data):
       flags += stream.concat([self.expand(self.linker_lib, x) for x in stream.unique(libs)])
+      flags += stream.concat([self.expand(self.use_framework, x) for x in stream.unique(data.frameworks)])
 
-    return command + ['$<in'] + flags
+    command = command + ['$<in'] + flags
+
+    # TODO: Tell the compiler to link staticLibraries and dynamicLibraries
+    #       statically/dynamically respectively?
+
+    return command
 
   def get_link_commands(self, target, data, lang):
     command = self.get_link_command(target, data, lang)
@@ -385,9 +374,11 @@ class Compiler(nr.types.Named):
     commands = self.get_link_commands(target, data, lang)
     input_files = list(object_files)
     if not is_staticlib(data):
-      input_files += data.outLinkLibraries
+      input_files += data.outLinkLibraries + data.staticLibraries + data.dynamicLibraries
     op = operator(action_name, commands=commands, environ=self.linker_env)
-    bset = BuildSet({'in': input_files}, {'product': data.productFilename})
+    bset = BuildSet(
+      {'in': input_files},
+      {'product': data.productFilename})
     self.add_link_outputs(target, data, lang, bset)
     op.add_build_set(bset)
     return op

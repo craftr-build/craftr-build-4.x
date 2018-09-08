@@ -71,6 +71,9 @@ class GccCompiler(base.Compiler):
   archiver_env = None
   archiver_out = '%ARG%'
 
+  if OS.id == 'darwin':
+    use_framework = ['-F', '/System/Library/Frameworks', '-framework', '%ARG%']
+
   def init(self):
     options.add('enableGcov', bool, False)
     if OS.id == 'darwin':
