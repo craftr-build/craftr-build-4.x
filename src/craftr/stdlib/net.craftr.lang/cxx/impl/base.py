@@ -90,6 +90,7 @@ class Compiler(nr.types.Named):
     ('optimize_none_flag', List[str]),
     ('optimize_speed_flag', List[str]),
     ('optimize_size_flag', List[str]),
+    ('optimize_best_flag', List[str]),
     ('enable_exceptions', List[str]),
     ('disable_exceptions', List[str]),
     ('enable_rtti', List[str]),
@@ -256,8 +257,8 @@ class Compiler(nr.types.Named):
       command.extend(self.expand(self.warnings_as_errors))
     command.extend(self.expand(self.enable_exceptions if data.enableExceptions else self.disable_exceptions))
     command.extend(self.expand(self.enable_rtti if data.enableRtti else self.disable_rtti))
-    if not BUILD.debug and data.optimization:
-      command += self.expand(getattr(self, 'optimize_' + data.optimization + '_flag'))
+    if not BUILD.debug:
+      command += self.expand(getattr(self, 'optimize_' + (data.optimization or 'best') + '_flag'))
     if BUILD.debug:
       command += self.expand(self.debug_flag)
     if forced_includes:

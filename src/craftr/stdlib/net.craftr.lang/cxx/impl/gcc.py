@@ -41,8 +41,9 @@ class GccCompiler(base.Compiler):
   warnings_flag = []  # TODO: -Wall by default?
   warnings_as_errors_flag = '-Werror'
   optimize_none_flag = '-Od'
-  optimize_speed_flag = '-O3'
+  optimize_speed_flag = '-O2'
   optimize_size_flag = '-Os'
+  optimize_best_flag = '-O3'
   enable_exceptions = []
   disable_exceptions = '-fno-exceptions'
   enable_rtti = []

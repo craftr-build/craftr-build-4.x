@@ -48,6 +48,7 @@ class MsvcCompiler(base.Compiler):
   optimize_none_flag = '/Od'
   optimize_speed_flag = '/O2'
   optimize_size_flag = ['/O1', '/Os']
+  optimize_best_flag = ['/Ox']
   enable_exceptions = '/EHsc'
   disable_exceptions = []
   enable_rtti = '/GR'
@@ -136,6 +137,10 @@ class MsvcCompiler(base.Compiler):
   # @override
   def get_compile_command(self, target, data, lang):
     command = super().get_compile_command(target, data, lang)
+
+    # Translate a potentially unknown C++ standard name for MSVC.
+    if data.cppStd == 'c++17':
+      data.cppStd = 'c++latest'
 
     if BUILD.debug:
       command += ['/Od', '/RTC1', '/FC']

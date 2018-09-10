@@ -138,7 +138,7 @@ def _init_properties():
   # each translation unit.
   props.add('cxx.prefixHeaders', 'PathList', options={'inherit': True})
 
-  # Optimization level. Valid values are `none`, `size` and `speed`.
+  # Optimization level. Valid values are `none`, `size`, `speed` and `best`.
   props.add('cxx.optimization', 'String')
 
   # Whether to treat warnings as errors.
