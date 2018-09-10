@@ -340,7 +340,7 @@ class Compiler(nr.types.Named):
 
     flags = list(data.linkerFlags)
 
-    if data.enableOpenmp and self.compiler_supports_openmp:
+    if data.enableOpenmp and self.compiler_supports_openmp and not is_staticlib(data):
       flags += self.linker_enable_openmp
 
     libs = data.systemLibraries
