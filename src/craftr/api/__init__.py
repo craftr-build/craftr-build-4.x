@@ -363,10 +363,14 @@ class Target(_build.Target):
   def dependencies(self):
     return list(self._dependencies)
 
-  def add_dependency(self, target: 'Target', public: bool):
+  def add_dependency(self, target: 'Target', public: bool, do_raise: bool = False):
     """
     Adds another target as a dependency to this target. This will cause public
     properties to be inherited when using the #prop() method.
+
+    If *do_raise* is #True, a #RuntimeError will be raised if the dependency
+    already exists. If it is #False, the dependency will be made public if it
+    is not already and *public* is #True and the dependency will be returned.
     """
 
     if not isinstance(target, Target):
@@ -375,7 +379,11 @@ class Target(_build.Target):
 
     for x in self._dependencies:
       if x.target is target:
-        raise RuntimeError('dependency to "{}" already exists'.format(target.id))
+        if do_raise:
+          raise RuntimeError('dependency to "{}" already exists'.format(target.id))
+        x.public = x.public or public
+        return x
+
     dep = Target.Dependency(target, public)
     self._dependencies.append(dep)
     return dep
