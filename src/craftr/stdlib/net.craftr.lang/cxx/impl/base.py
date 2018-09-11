@@ -352,8 +352,8 @@ class Compiler(nr.types.Named):
       else:
         flags += self.expand(runtime.get('dynamic', []))
 
-    flags += stream.concat([self.expand(self.linker_libpath, x) for x in stream.unique(data.libraryPaths)])
     if not is_staticlib(data):
+      flags += stream.concat([self.expand(self.linker_libpath, x) for x in stream.unique(data.libraryPaths)])
       flags += stream.concat([self.expand(self.linker_lib, x) for x in stream.unique(libs)])
       flags += stream.concat([self.expand(self.use_framework, x) for x in stream.unique(data.frameworks)])
 
