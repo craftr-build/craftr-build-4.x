@@ -111,7 +111,7 @@ class GccCompiler(base.Compiler):
       ]
       operator('cxx.gcov', commands=commands, syncio=True, explicit=True,
         environ=self.compiler_env, cwd=data.runCwd)
-      build_set({'objs': data.outObjFiles, 'in': data.productFilename}, {})
+      build_set({'objs': data._outObjFiles, 'in': data.productFilename}, {})
 
 
 def get_compiler(fragment, compiler_class=GccCompiler):

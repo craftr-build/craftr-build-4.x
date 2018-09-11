@@ -69,6 +69,9 @@ def _init_properties():
   # Link object files to an executable/library.
   props.add('cxx.link', 'Bool', default=True)
 
+  # Take the object files of dependent targets that have cxx.link=False for linking.
+  props.add('cxx.takeInputObjects', 'Bool', default=True)
+
   # The name of the output file. This string may contain the string
   # `$(ext)` which will be replaced with the platform's proper extension.
   # It may also contain the string `$(lib)` which will be replaced by
@@ -284,6 +287,7 @@ def _init_properties():
   # =======================
 
   props.add('cxx.outLinkLibraries', 'PathList', options={'inherit': True})
+  props.add('cxx.outObjectFiles', 'PathList', options={'inherit': True})
 
   # Dependency Properties
   # =======================
@@ -315,22 +319,19 @@ def build():
     data.productName = '$(lib)' + target.name + '-' + target.scope.version + '$(ext)'
   if data.type == 'executable':
     repl = {'$(lib)': '', '$(ext)': compiler.executable_suffix}
-    tags = ['exe']
     suggestedName = '{}$(ext)'
   elif base.is_sharedlib(data):
     repl = {'$(lib)': compiler.library_prefix, '$(ext)': compiler.library_shared_suffix}
-    tags = ['lib', 'sharedlib']
   elif base.is_staticlib(data):
     repl = {'$(lib)': compiler.library_prefix, '$(ext)': compiler.library_static_suffix}
-    tags = ['lib', 'staticlib']
   else:
-    raise RuntimeError('what is this?', data)
+    error('invalid cxx.type: {!r}'.format(data.type))
+
   for a, b in repl.items():
     data.productName = data.productName.replace(a, b)
 
   if not data.productDirectory:
     data.productDirectory = build_dir
-  data.productTags = tags
   data.productFilename = path.join(data.productDirectory, data.productName)
 
   compiler.translate_target(target, data)
@@ -400,21 +401,23 @@ def build():
       [fp.write('#include "{}"\n'.format(path.abs(x))) for x in cpp_srcs]
     cpp_srcs = [unity_cpp_file]
 
-  data.outObjFiles = []
+  data._outObjFiles = []
   for srcs, lang in ((c_srcs, 'c'), (cpp_srcs, 'cpp')):
     if not srcs: continue
     name = 'cxx.compile' + lang.capitalize()
     op = compiler.create_compile_action(target, data, name, lang, srcs)
-    data.outObjFiles += [x.outputs['obj'][0] for x in op.build_sets]
+    data._outObjFiles += [x.outputs['obj'][0] for x in op.build_sets]
     if required_headers:
       for x in op.build_sets:
         x.add_input_files('?required-headers', required_headers)
 
-  if data.outObjFiles and data.link:
+  if data._outObjFiles and data.link:
     lang = 'cpp' if cpp_srcs else 'c'
-    compiler.create_link_action(target, data, 'cxx.link', lang, data.outObjFiles)
+    compiler.create_link_action(target, data, 'cxx.link', lang, data._outObjFiles)
+  elif data._outObjFiles:
+    compiler.nolink(target, data, data._outObjFiles)
 
-  if data.outObjFiles and data.type == 'executable':
+  if data._outObjFiles and data.type == 'executable':
     command = [path.abs(data.productFilename)]
     craftr.operator('cxx.run', commands=[command], explicit=True, syncio=True, cwd=data.runCwd)
     craftr.build_set({'in': data.productFilename}, {}, description='$<in')

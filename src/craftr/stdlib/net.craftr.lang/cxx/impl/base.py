@@ -376,6 +376,8 @@ class Compiler(nr.types.Named):
     input_files = list(object_files)
     if not is_staticlib(data):
       input_files += data.outLinkLibraries + data.staticLibraries + data.dynamicLibraries
+    if data.takeInputObjects:
+      input_files += data.outObjectFiles
     op = operator(action_name, commands=commands, environ=self.linker_env)
     bset = BuildSet(
       {'in': input_files},
@@ -387,6 +389,13 @@ class Compiler(nr.types.Named):
   def add_link_outputs(self, target, data, lang, buildset):
     if is_staticlib(data):
       properties({'@+cxx.outLinkLibraries': [data.productFilename]}, target=target)
+
+  def nolink(self, target, data, obj):
+    """
+    Called when the target is not linked and only object files are compiled.
+    """
+
+    properties({'@+cxx.outObjectFiles': obj})
 
   def on_completion(self, target, data):
     pass
