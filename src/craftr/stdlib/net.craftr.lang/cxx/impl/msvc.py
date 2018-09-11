@@ -152,6 +152,7 @@ class MsvcCompiler(base.Compiler):
       else:
         command += ['/Z7']
     command += ['/wd' + str(x) for x in unique(data.msvcDisableWarnings)]
+    command += ['/bigobj']
 
     if not data.runtimeLibrary:
       data.runtimeLibrary = 'static' if options.staticRuntime else 'dynamic'
