@@ -27,7 +27,7 @@ import re
 import shlex
 
 from shutil import which
-from subprocess import PIPE, STDOUT, call, check_call, check_output, run, CalledProcessError
+from subprocess import PIPE, STDOUT, DEVNULL, call, check_call, check_output, run, CalledProcessError
 
 
 class safe(str):
