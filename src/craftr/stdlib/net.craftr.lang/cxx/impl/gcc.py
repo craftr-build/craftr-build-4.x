@@ -75,8 +75,8 @@ class GccCompiler(base.Compiler):
   if OS.id == 'darwin':
     use_framework = ['-F', '/System/Library/Frameworks', '-framework', '%ARG%']
     compiler_supports_openmp = path.isdir('/usr/local/opt/libomp')
-    compiler_enable_openmp = ['-Xpreprocessor', '-fopenmp', '-lomp', '-I/usr/local/opt/libomp/include']
-    linker_enable_openmp = ['-L/usr/local/opt/libomp/lib', '-lomp']
+    compiler_enable_openmp = ['-Xpreprocessor', '-fopenmp', '-I/usr/local/opt/libomp/include']
+    linker_enable_openmp = ['/usr/local/opt/libomp/lib/libomp.a']
 
   def init(self):
     options.add('enableGcov', bool, False)
