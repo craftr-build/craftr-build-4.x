@@ -337,6 +337,16 @@ def main(argv=None, prog=None):
       module = session.load_module(tool_name).namespace
     return module.main(argv, 'craftr --tool {}'.format(tool_name))
 
+  if not args.backend:
+    args.backend = session.options.get('build:backend', 'net.craftr.backend.ninja')
+
+  try:
+    backend = session.load_module(args.backend).namespace
+  except session.ResolveError as exc:
+    if str(exc.request.string) != args.backend:
+      raise
+    backend = session.load_module('net.craftr.backend.' + args.backend).namespace
+
   graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
   if args.config:
     try:
@@ -344,6 +354,8 @@ def main(argv=None, prog=None):
     except FileNotFoundError as e:
       print('fatal: "{}" file not found'.format(nr.fs.rel(e.filename)), file=sys.stderr)
       return 1
+    if hasattr(backend, 'prepare'):
+      backend.prepare()
     nr.fs.makedirs(nr.fs.dir(graph_file))
     session.save(graph_file)
   else:
@@ -375,16 +387,6 @@ def main(argv=None, prog=None):
       p = subprocess.Popen(command, stdout=fp, stdin=subprocess.PIPE)
       p.communicate(dotstr)
     return 0
-
-  if not args.backend:
-    args.backend = session.options.get('build:backend', 'net.craftr.backend.ninja')
-
-  try:
-    backend = session.load_module(args.backend).namespace
-  except session.ResolveError as exc:
-    if str(exc.request.string) != args.backend:
-      raise
-    backend = session.load_module('net.craftr.backend.' + args.backend).namespace
 
   if args.config:
     backend.export()
