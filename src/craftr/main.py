@@ -339,7 +339,11 @@ def main(argv=None, prog=None):
 
   graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
   if args.config:
-    session.load_module_from_file(args.project, is_main=True)
+    try:
+      session.load_module_from_file(args.project, is_main=True)
+    except FileNotFoundError as e:
+      print('fatal: "{}" file not found'.format(nr.fs.rel(e.filename)), file=sys.stderr)
+      return 1
     nr.fs.makedirs(nr.fs.dir(graph_file))
     session.save(graph_file)
   else:
