@@ -347,7 +347,15 @@ def main(argv=None, prog=None):
     nr.fs.makedirs(nr.fs.dir(graph_file))
     session.save(graph_file)
   else:
-    session.load(graph_file)
+    try:
+      session.load(graph_file)
+    except FileNotFoundError as e:
+      print('fatal: "{}" file not found'.format(nr.fs.rel(e.filename)), file=sys.stderr)
+      command = 'craftr -c --variant={}'.format(args.variant)
+      if args.variant_suffix:
+        command += ' --variant-suffix={}'.format(args.variant_suffix)
+      print('  did you forget to run "{}"?'.format(command), file=sys.stderr)
+      return 1
 
   # Determine the build sets that are supposed to be built.
   if args.targets:
