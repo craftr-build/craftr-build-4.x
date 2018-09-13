@@ -110,7 +110,7 @@ def write_shell_script(fp, bset):
       fp.write('export {}={}\n'.format(key, quote(value)))
     def command(cmd):
       fp.write(' '.join(map(quote, cmd)))
-      fp.write('\nlocal status=$?; if [[ $? -ne 0 ]]; then exit $status; fi\n')
+      fp.write('\nstatus=$?; if [[ $status -ne 0 ]]; then exit $status; fi\n')
   for key, value in bset.get_environ().items():
     if key not in os.environ or os.environ[key] != value:
       variable(key, value)
@@ -179,6 +179,7 @@ def export_operator(writer, operator, non_explicit):
         write_shell_script(fp, bset)
 
       command = shell_prefix_args + [command_file, bset.compute_hash()]
+      command = ' '.join(quote(x, for_ninja=True) for x in command)
 
       writer.rule(
         bset_rule,
