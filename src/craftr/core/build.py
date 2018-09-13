@@ -459,6 +459,9 @@ class Operator:
       if var_name not in self._variables and var_name not in build_set._variables:
         raise RuntimeError('operator requires ${{{}}} which is not provided '
                            'by this build set'.format(var_name))
+    if build_set.depfile and self.deps_prefix:
+      raise RuntimeError('incompatible BuildSet: BuildSet.depsprefix can not '
+                         'be used when Operator.deps_prefix is set.')
     self._build_sets.append(build_set)
     return build_set
 
