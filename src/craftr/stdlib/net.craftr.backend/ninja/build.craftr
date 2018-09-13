@@ -133,7 +133,7 @@ def export_operator(writer, operator, non_explicit):
     # Note: We add the hash into the command so that Ninja knows when an
     # operator has been changed since the last time it was executed.
     command = [
-      '$python', str(require.resolve('./build_slave').filename),
+      '$python', str(require.resolve('./build_client').filename),
       operator.target.id, operator.name, '$index', '$hash'
     ]
     command = ' '.join(quote(x, for_ninja=True) for x in command)
