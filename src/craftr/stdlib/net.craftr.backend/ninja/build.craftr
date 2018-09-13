@@ -25,12 +25,13 @@
 This module implements the Ninja build backend for Craftr.
 """
 
-import {path, project, session} from 'craftr'
+import {path, project, session, OS} from 'craftr'
 
 project('net.craftr.backend.ninja', '1.0-0')
 
 options = module.options
-options('local', bool, False)  # Use a local build of the Ninja tool
+options.add('local', bool, False)  # Use a local build of the Ninja tool
+options.add('speed', bool, False)  # Export for speed, but increase number of files exported
 
 import errno
 import io
@@ -88,44 +89,80 @@ def make_rule_name(operator):
   return re.sub(r'[^\d\w_\.]+', '_', operator.id)
 
 
+if OS.id == 'win32':
+  shell_prefix_args = ['cmd']
+  shell_suffix = '.bat'
+else:
+  # TODO: Support other shells than bash?
+  shell_prefix_args = ['bash']
+  shell_suffix = '.bash'
+
+
+def write_shell_script(fp, bset):
+  if OS.id == 'win32':
+    def variable(key, value):
+      fp.write('set {}={}\n'.format(key, value))
+    def command(cmd):
+      fp.write(' '.join(map(quote, cmd)))
+      fp.write('\nif %errorlevel% neq 0 exit %errorlevel%\n')
+  else:
+    def variable(key, value):
+      fp.write('export {}={}\n'.format(key, quote(value)))
+    def command(cmd):
+      fp.write(' '.join(map(quote, cmd)))
+      fp.write('\nlocal status=$?; if [[ $? -ne 0 ]]; then exit $status; fi\n')
+  for key, value in bset.get_environ().items():
+    if key not in os.environ or os.environ[key] != value:
+      variable(key, value)
+  cwd = bset.get_cwd()
+  if cwd:
+    fp.write('cd {}\n'.format(quote(cwd)))
+  for cmd in bset.get_commands():
+    command(cmd)
+
 def export_operator(writer, operator, non_explicit):
   phony_name = make_rule_name(operator)
   rule_name = 'rule_' + phony_name
   if not operator.explicit:
     non_explicit.append(phony_name)
 
-  # Note: We add the hash into the command so that Ninja knows when an
-  # operator has been changed since the last time it was executed.
-  command = [
-    '$python', str(require.resolve('./build_slave').filename),
-    operator.target.id, operator.name, '$index', '$hash'
-  ]
-  command = ' '.join(quote(x, for_ninja=True) for x in command)
-
-  #order_only = []
-  #for dep in action.deps:
-  #  output_files = dep.get_output_files()
-  #  if output_files:
-  #    order_only.extend(output_files)
-  #  else:
-  #    order_only.append(make_rule_name(graph, dep))
-
-  has_depfile = any(x.depfile for x in operator.build_sets)
-
-  writer.rule(
-    rule_name,
-    command,
-    description='$build_description',
-    pool = 'console' if operator.syncio else None,
-    depfile = '$build_depfile' if has_depfile else None,
-    deps = 'gcc' if has_depfile else ('msvc' if operator.deps_prefix else None)
-  )
-  if operator.deps_prefix:
-    writer.variable('msvc_deps_prefix', operator.deps_prefix, indent=1)
-  if operator.restat:
-    writer.variable('restat', '1', indent=1)
-
   all_output_files = []
+  commands_dir = path.abs(path.join(session.build_directory, '.commands'))
+
+  if not options.speed:
+    # Note: We add the hash into the command so that Ninja knows when an
+    # operator has been changed since the last time it was executed.
+    command = [
+      '$python', str(require.resolve('./build_slave').filename),
+      operator.target.id, operator.name, '$index', '$hash'
+    ]
+    command = ' '.join(quote(x, for_ninja=True) for x in command)
+
+    #order_only = []
+    #for dep in action.deps:
+    #  output_files = dep.get_output_files()
+    #  if output_files:
+    #    order_only.extend(output_files)
+    #  else:
+    #    order_only.append(make_rule_name(graph, dep))
+
+    has_depfile = any(x.depfile for x in operator.build_sets)
+
+    writer.rule(
+      rule_name,
+      command,
+      description = '$build_description',
+      pool = 'console' if operator.syncio else None,
+      depfile = '$build_depfile' if has_depfile else None,
+      deps = 'gcc' if has_depfile else ('msvc' if operator.deps_prefix else None)
+    )
+    if operator.deps_prefix:
+      writer.variable('msvc_deps_prefix', operator.deps_prefix, indent=1)
+    if operator.restat:
+      writer.variable('restat', '1', indent=1)
+  else:
+    path.makedirs(commands_dir)
+
   for index, bset in enumerate(operator.build_sets):
     output_files = list(concat(bset.outputs.values()))
     if operator.run_always:
@@ -134,18 +171,47 @@ def export_operator(writer, operator, non_explicit):
       output_files.append('{}_??'.format(operator.id))
 
     all_output_files += output_files
-    writer.build(
-      inputs = list(concat(bset.inputs.values())),
-      outputs = output_files or [phony_name],
-      rule = rule_name,
-      order_only = [],
-      variables = {
-        'index': str(index),
-        'hash': bset.compute_hash(),
-        'build_description': bset.get_description() or '',
-        'build_depfile': bset.depfile
-      }
-    )
+
+    if options.speed:
+      bset_rule = rule_name + '_' + str(index)
+      command_file = path.join(commands_dir, bset_rule + shell_suffix)
+      with open(command_file, 'w') as fp:
+        write_shell_script(fp, bset)
+
+      command = shell_prefix_args + [command_file, bset.compute_hash()]
+
+      writer.rule(
+        bset_rule,
+        command,
+        description = bset.get_description() or '',
+        pool = 'console' if operator.syncio else None,
+        depfile = bset.depfile,
+        deps = 'gcc' if bset.depfile else ('msvc' if operator.deps_prefix else None)
+      )
+      if operator.deps_prefix:
+        writer.variable('msvc_deps_prefix', operator.deps_prefix, indent=1)
+      if operator.restat:
+        writer.variable('restat', '1', indent=1)
+      writer.build(
+        inputs = list(concat(bset.inputs.values())),
+        outputs = output_files or [phony_name],
+        rule = bset_rule,
+        order_only = []
+      )
+
+    else:
+      writer.build(
+        inputs = list(concat(bset.inputs.values())),
+        outputs = output_files or [phony_name],
+        rule = rule_name,
+        order_only = [],
+        variables = {
+          'index': str(index),
+          'hash': bset.compute_hash(),
+          'build_description': bset.get_description() or '',
+          'build_depfile': bset.depfile
+        }
+      )
 
   if all_output_files:
     writer.build([phony_name], 'phony', all_output_files)
