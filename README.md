@@ -44,6 +44,17 @@ __Explanation__
 5) Set the `cxx.type` property to "executable" in order to create an
    executable from the source files.
 
+__Important Built-ins and API Members__
+
+- `BUILD` <sup>api</sup>
+- `OS` <sup>api</sup>
+- `project()` <sup>api</sup>
+- `target()` <sup>api</sup>
+- `properties()` <sup>api</sup>
+- `module` <sup>builtin</sup>
+- `module.options` <sup>builtin</sup>
+- `require()` <sup>builtin</sup>
+
 ## Installation
 
 Craftr requires Python 3.6 or newer (preferrably CPython) and can be installed
