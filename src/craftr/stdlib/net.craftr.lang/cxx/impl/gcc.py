@@ -6,6 +6,8 @@ import {options} from '../build'
 
 from craftr.api import *
 
+options.add('osx:minversion', str, None)
+
 
 class GccCompiler(base.Compiler):
 
@@ -87,6 +89,8 @@ class GccCompiler(base.Compiler):
     flags = super().get_compile_command(target, data, lang)
     if options.enableGcov:
       flags += ['-fprofile-arcs', '-ftest-coverage']
+    if OS.id == 'darwin' and options.minversion:
+      flags += ['-mmacos-version-min=' + options.minversion]
     return flags
 
   def get_link_command(self, target, data, lang):
