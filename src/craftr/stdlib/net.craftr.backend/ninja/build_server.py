@@ -65,7 +65,10 @@ class RequestHandler(socketserver.BaseRequestHandler):
         request_size = struct.unpack('!I', data)[0]
         request = json.loads(self.request.recv(request_size).decode('utf8'))
 
-        if not all(x in request for x in ('target', 'operator', 'build_set')):
+        if 'reload_build_server' in request:
+          self.master.reload()
+          response = {'status': 'ok'}
+        elif not all(x in request for x in ('target', 'operator', 'build_set')):
           response = {'error': 'BadRequest'}
         else:
           try:

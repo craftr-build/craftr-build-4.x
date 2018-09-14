@@ -82,12 +82,8 @@ class BuildClient:
   def __exit__(self, *args):
     self.end_connection()
 
-  def get_build_set(self, master: build.Master, target: str, operator: str, build_set: int):
-    request = json.dumps({
-      'target': target,
-      'operator': operator,
-      'build_set': build_set
-    }).encode('utf8')
+  def _send_receive(self, request):
+    request = json.dumps(request).encode('utf8')
     self._client.sendall(struct.pack('!I', len(request)))
     self._client.sendall(request)
     response_size = struct.unpack('!I', self._client.recv(4))[0]
@@ -95,6 +91,17 @@ class BuildClient:
     response = json.loads(response_data)
     if 'error' in response:
       raise RuntimeError(response['error'])
+    return response
+
+  def reload_build_server(self):
+    self._send_receive({'reload_build_server': True})
+
+  def get_build_set(self, master: build.Master, target: str, operator: str, build_set: int):
+    response = self._send_receive({
+      'target': target,
+      'operator': operator,
+      'build_set': build_set
+    })
     target = build.Target.from_json(master, response['data']['target'])
     bset = next(iter(target.operators)).build_sets[0]
     return bset, response['data']['hash'], response['data']['additional_args']
