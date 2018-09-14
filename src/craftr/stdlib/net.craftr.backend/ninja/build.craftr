@@ -32,6 +32,15 @@ project('net.craftr.backend.ninja', '1.0-0')
 options = module.options
 options.add('local', bool, False)  # Use a local build of the Ninja tool
 options.add('speed', bool, False)  # Export for speed, but increase number of files exported
+options.add('build:regen', bool, True)  # Export a regenerate target
+
+# This option is used to specify the number of generations of the Ninja
+# build scripts. When creating a generator target in Ninja, it will invoke
+# that generator target always at least once if it is not contained in the
+# .ninja_deps database. To avoid exporting the same build files again, we
+# create a pseudo that does nothing on the first run except for inserting
+# the correct generator command.
+options.add('_internal_regen', int, 0)
 
 import errno
 import io
@@ -92,7 +101,7 @@ def make_rule_name(operator):
 
 
 if OS.id == 'win32':
-  shell_prefix_args = ['cmd']
+  shell_prefix_args = ['cmd', '/C']
   shell_suffix = '.bat'
 else:
   # TODO: Support other shells than bash?
@@ -102,31 +111,39 @@ else:
 
 def write_shell_script(fp, bset):
   if OS.id == 'win32':
+    fp.write('@echo off\n')
     def variable(key, value):
       fp.write('set {}={}\n'.format(key, value))
     def command(cmd):
       fp.write(' '.join(map(quote, cmd)))
       fp.write('\nif %errorlevel% neq 0 exit %errorlevel%\n')
+    def write_cwd(cwd):
+      fp.write('cd {}\n'.format(quote(cwd)))
   else:
     def variable(key, value):
       fp.write('export {}={}\n'.format(key, quote(value)))
     def command(cmd):
       fp.write(' '.join(map(quote, cmd)))
       fp.write('\nstatus=$?; if [[ $status -ne 0 ]]; then exit $status; fi\n')
+    def write_cwd(cwd):
+      fp.write('cd {}\n'.format(quote(cwd)))
   for key, value in bset.get_environ().items():
     if key not in os.environ or os.environ[key] != value:
       variable(key, value)
   cwd = bset.get_cwd()
   if cwd:
-    fp.write('cd {}\n'.format(quote(cwd)))
+    write_cwd(cwd)
   for cmd in bset.get_commands():
     command(cmd)
 
-def export_operator(writer, operator, non_explicit, is_generator=False):
+
+def export_operator(writer, operator, non_explicit):
   phony_name = make_rule_name(operator)
   rule_name = 'rule_' + phony_name
   if not operator.explicit:
     non_explicit.append(phony_name)
+
+  is_generator = (operator == session.options.get('__ninja_generator_op'))
 
   all_output_files = []
   commands_dir = path.abs(path.join(session.build_directory, '.commands'))
@@ -260,8 +277,15 @@ def check_ninja_version(build_directory, download=False):
   return ninja
 
 
-def prepare(**options):
+def prepare(**kwargs):
+  if not options.regen:
+    return
+
+  # Create a target for re generation of the Ninja build files
+  # depending on the build scripts.
+
   build_file = path.join(session.build_directory, 'build.ninja')
+
   module_files = []
   main_module = None
   for module in session.nodepy_context.modules.values():
@@ -271,11 +295,33 @@ def prepare(**options):
 
   with session.enter_scope('craftr', '1.0', '.'):
     command = [sys.executable, '-m', 'craftr.main', '-c',
-               '--project', str(main_module.filename),
-               '--variant', session.build_variant]
-    api.target('reexport')
-    api.operator('do', commands=[command], restat=True, cwd=os.getcwd())
-    api.build_set({'module': module_files}, {'out': build_file})
+               '--variant', session.build_variant] + session.cli_options
+    # Remove the ninja:_internal_regen flag from the options.
+    command = [x for x in command if 'ninja:_internal_regen=' not in x]
+    # Increase the regen-step.
+    command += ['-Oninja:_internal_regen={}'.format(options._internal_regen + 1)]
+
+    if options._internal_regen == 0:
+      command = [
+        sys.executable,
+        str(require.resolve('./regenerator.py').filename),
+        'INPUTS:', '$<modules',
+        'OUTPUTS:', '$@out',
+        'COMMAND:'] + command
+
+    # For windows, we have to ping-pong the batch file that is generated
+    # when ninja:speed is enabled for the generator command. When the
+    # generator rewrites the batc file while it is run, it will yield
+    # weird results.
+    if options._internal_regen % 2 == 1:
+      suffix = '_pong'
+    else:
+      suffix = '_ping'
+
+    api.target('regen')
+    op = api.operator('do' + suffix, commands=[command], restat=True, cwd=os.getcwd())
+    session.options['__ninja_generator_op'] = op
+    api.build_set({'modules': module_files}, {'out': build_file})
 
 
 def export(**options):
@@ -309,6 +355,12 @@ def export(**options):
 
     if non_explicit:
       writer.default(non_explicit)
+
+  if 'CRAFTR_BUILD_SERVER' in os.environ:
+    # Send a reload event to the build server.
+    import {BuildClient} from './build_client'
+    client = BuildClient()
+    client.reload_build_server()
 
 
 def build(build_sets, verbose=False, sequential=False, **options):
