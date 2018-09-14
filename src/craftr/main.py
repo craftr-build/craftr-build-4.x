@@ -118,17 +118,10 @@ def get_argument_parser(prog=None):
 
   group.add_argument(
     '--variant',
-    metavar='[=debug]',
-    choices=('debug', 'release'),
-    default='debug',
-    help='Choose the build variant (debug|release).')
-
-  group.add_argument(
-    '--variant-suffix',
-    default='',
-    metavar='NAME',
-    help='Add a suffix to the build variant. This has only an effect on the '
-         'automatically selected build output directory.')
+    metavar='[debug]',
+    default=None,
+    help='Choose the build variant. Should contain the string "debug" or '
+         '"release". Also defines the default build directory.')
 
   group.add_argument(
     '--project',
@@ -162,14 +155,14 @@ def get_argument_parser(prog=None):
   group.add_argument(
     '--build-root',
     default='build',
-    metavar='PATH=[build]',
+    metavar='[./build]',
     help='The build root directory. When used, this option must be specified '
          'with every invokation of Craftr, even after the config step.')
 
   group.add_argument(
     '--backend',
     default=None,
-    metavar='MODULE',
+    metavar='[ninja]',
     help='Override the build backend. Can also be specified with the '
          'build:backend option. Defaults to "net.craftr.backend.ninja".')
 
@@ -193,7 +186,7 @@ def get_argument_parser(prog=None):
     '--pywarn',
     nargs='?',
     default=NotImplemented,
-    metavar='=once',
+    metavar='once',
     help='Set the filter for the Python warnings module.'
   )
 
@@ -310,15 +303,22 @@ def main(argv=None, prog=None):
       args.options.append(x)
       args.targets.remove(x)
 
+  cmdline_options = {}
+  for opt in args.options or ():
+      key, value = opt.partition('=')[::2]
+      cmdline_options[key] = value
+  if not args.variant and 'build:variant' in cmdline_options:
+    args.variant = cmdline_options['build:variant']
+  if not args.variant:
+    args.variant = 'debug'
+
   # Create a new session.
-  build_directory = nr.fs.join(args.build_root, args.variant + args.variant_suffix)
+  build_directory = nr.fs.join(args.build_root, args.variant)
   session = api.session = api.Session(args.build_root, build_directory, args.variant)
   session.add_module_search_path(args.module_path)
   if args.config_file:
     session.load_config(args.config_file)
-  for opt in args.options or ():
-    key, value = opt.partition('=')[::2]
-    session.options[key] = value
+  session.options.update(cmdline_options)
 
   # Link modules as specified on the command-line or in the configuration.
   [api.link_module(nr.fs.abs(x)) for x in args.link]
@@ -364,8 +364,6 @@ def main(argv=None, prog=None):
     except FileNotFoundError as e:
       print('fatal: "{}" file not found'.format(nr.fs.rel(e.filename)), file=sys.stderr)
       command = 'craftr -c --variant={}'.format(args.variant)
-      if args.variant_suffix:
-        command += ' --variant-suffix={}'.format(args.variant_suffix)
       print('  did you forget to run "{}"?'.format(command), file=sys.stderr)
       return 1
 

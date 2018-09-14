@@ -268,9 +268,11 @@ def prepare(**options):
     if isinstance(module, CraftrModule) and module.is_main:
       main_module = module
     module_files.append(str(module.filename))
-  with session.enter_scope('craftr', '1.0', '.'):
 
-    command = [sys.executable, '-m', 'craftr.main', '-c', '--project', str(main_module.filename)]
+  with session.enter_scope('craftr', '1.0', '.'):
+    command = [sys.executable, '-m', 'craftr.main', '-c',
+               '--project', str(main_module.filename),
+               '--variant', session.build_variant]
     api.target('reexport')
     api.operator('do', commands=[command], restat=True, cwd=os.getcwd())
     api.build_set({'module': module_files}, {'out': build_file})

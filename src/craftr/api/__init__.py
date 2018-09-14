@@ -93,14 +93,15 @@ class OsInfo(Named):
 
 class BuildInfo(Named):
   variant: str
+  debug: bool
+  release: bool
 
-  @property
-  def debug(self):
-    return self.variant == 'debug'
-
-  @property
-  def release(self):
-    return self.variant == 'release'
+  def __init__(self, variant):
+    release = 'release' in variant.lower()
+    if not release and 'debug' not in variant.lower():
+      print('Warning: variant contains neither "release" nor "debug".')
+      print('         Falling back to "debug".')
+    super().__init__(variant, not release, release)
 
 
 class Session(_build.Master):
