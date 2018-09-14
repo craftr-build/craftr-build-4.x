@@ -194,7 +194,7 @@ class Session(_build.Master):
       handle_key(key, value)
 
   def load_module(self, name):
-    return self.nodepy_context.require(name, exports=False)
+    return self.require(name, exports=False)
 
   def load_module_from_file(self, filename, is_main=False):
     filename = pathlib.Path(nr.fs.canonical(filename))
@@ -205,6 +205,9 @@ class Session(_build.Master):
     if is_main:
       self.main_module = module.scope.name
     return module
+
+  def require(self, *args, **kwargs):
+    return self.nodepy_context.require(*args, **kwargs)
 
   @property
   def build_root(self):
@@ -224,6 +227,7 @@ class Session(_build.Master):
     self._current_scopes.append(scope)
     try: yield scope
     finally:
+      finalize_target()
       assert self._current_scopes.pop() is scope
 
   @property
@@ -324,6 +328,8 @@ class Target(_build.Target):
     self.name = name
     self.scope = scope
     self.current_operator = None
+    self.finalizers = []
+    self.finalized = False
     self.properties = Properties(session.target_props, owner=Target.PropertiesOwner(self))
     self.public_properties = Properties(session.target_props, owner=Target.PropertiesOwner(self))
     self._dependencies = []
@@ -532,6 +538,8 @@ def current_scope(do_raise=True):
   if do_raise and scope is None:
     raise RuntimeError('no current scope')
   if scope and (not scope.name or not scope.version):
+    if not do_raise:
+      return None
     raise RuntimeError('current scope has no name/version, use '
                        'project() function to initialize')
   return scope
@@ -636,7 +644,7 @@ def link_module(path, alias=None):
   session.link_resolver.add_alias(alias, module)
 
 
-def target(name=None, bind=True, ctx=False, directory=None, scope=None, builders=None):
+def target(name=None, finalize=None, props=None, *, bind=True, ctx=False, directory=None, scope=None, builders=None):
   """
   Create a new target with the specified *name* in the current scope and
   set it as the current target.
@@ -654,7 +662,8 @@ def target(name=None, bind=True, ctx=False, directory=None, scope=None, builders
 
   if name is None:
     def decorator(fun):
-      with target(fun.__name__, ctx=True, directory=directory, scope=scope) as t:
+      with target(fun.__name__, finalize, props, ctx=True,
+                  directory=directory, scope=scope) as t:
         fun() if fun.__code__.co_argcount == 0 else fun(t)
         [x() for x in builders or ()]
         return t
@@ -664,12 +673,32 @@ def target(name=None, bind=True, ctx=False, directory=None, scope=None, builders
       # TODO: We could invoke the builders for this target when the next
       # target is created or the current scope is exited.
       raise ValueError('target(builders) only supported when used as a decorator')
+    finalize_target()
     scope = scope or current_scope()
     t = session.add_target(Target(name, scope))
     if directory:
       t['this.directory'] = directory
+    if isinstance(finalize, str):
+      finalize = [finalize]
+    if not finalize:
+      finalize = []
+    for x in finalize:
+      if isinstance(x, str):
+        module, member = x.partition(':')[::2]
+        if not module or not member:
+          raise ValueError('invalid finalizer string: {!r}'.format(x))
+        m = session.require(module)
+        if not hasattr(m, member):
+          raise ValueError('module {!r} has no member {!r}'.format(module, member))
+        if not callable(getattr(m, member)):
+          raise ValueError('member {!r} of module {!r} is not a builder'.format(member, module))
+      elif not callable(x):
+        raise TypeError('finalizer must be string or callable, got {!r}'.format(type(x).__name__))
+    t.finalizers.extend(finalize)
     if bind and not ctx:
       bind_target(t)
+    if props is not None:
+      properties(props, target=t)
     if bind and ctx:
       @contextlib.contextmanager
       def target_bind_context():
@@ -679,6 +708,29 @@ def target(name=None, bind=True, ctx=False, directory=None, scope=None, builders
         finally: bind_target(prev)
       return target_bind_context()
     return t
+
+
+def finalize_target(target=None):
+  if not target:
+    target = current_target(do_raise=False)
+    if not target:
+      return
+  if target.finalized:
+    return
+  target.finalized = True
+  # Bind the target temporarily.
+  prev_target = current_target()
+  bind_target(target)
+  try:
+    for x in target.finalizers:
+      if isinstance(x, str):
+        module, member = x.partition(':')[::2]
+        m = session.require(module)
+        getattr(m, member)()
+      else:
+        x()
+  finally:
+    bind_target(prev_target)
 
 
 def depends(target, public=False, to=None):

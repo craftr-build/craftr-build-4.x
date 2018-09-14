@@ -371,11 +371,9 @@ def main(argv=None, prog=None):
     backend = session.load_module('net.craftr.backend.' + args.backend).namespace
 
   if args.config:
-    try:
-      session.load_module_from_file(args.project, is_main=True)
-    except FileNotFoundError as e:
-      print('fatal: "{}" file not found'.format(nr.fs.rel(e.filename)), file=sys.stderr)
-      return 1
+    if not os.path.isfile(args.project):
+      print('fatal: "{}" file not found'.format(nr.fs.rel(args.project)), file=sys.stderr)
+    session.load_module_from_file(args.project, is_main=True)
     if hasattr(backend, 'prepare'):
       backend.prepare()
     session.save()

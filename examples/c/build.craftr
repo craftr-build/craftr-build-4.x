@@ -1,11 +1,8 @@
-import {project, target, properties} from 'craftr'
-import cxx from 'cxx'
+import * from 'craftr'
+project('myproject', '1.0-0')
 
-project('examples.c', '1.0-0')
-
-target('main')
-properties({
-  'cxx.type': 'executable',
-  'cxx.srcs': ['main.c']
+target('main', 'cxx:build',
+{
+  'cxx.srcs': glob('*.c'),
+  'cxx.type': 'executable'
 })
-cxx.build()
