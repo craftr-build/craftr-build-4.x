@@ -29,6 +29,11 @@ target('main', 'cxx:build',       # 3)
 })
 ```
 
+To build and run the executable, use (6)
+
+    $ craftr -cb --variant=release main:cxx.run@="World"
+    Hello, World!
+
 __Explanation__
 
 1) Import all members of the Craftr API. We only use `project()` and
@@ -43,6 +48,19 @@ __Explanation__
    directory relative to the build script's parent directory.
 5) Set the `cxx.type` property to "executable" in order to create an
    executable from the source files.
+6) The `-c` flag, or `--configure`, is used to run the build script and
+   generate a Ninja build manifest.  
+   The `-b` flag, or `--build`, indicates that the build should be executed right
+   afterwards.  
+   With `--variant=release`, you specify a release build (as opposed to the
+   default `--variant=debug`).  
+   The `main:cxx.run` argument specifies the target and operator to build --
+   and this is the name of the target that is automatically generated for
+   invoking the executable that is built for the target `main`.  
+   The `@="World"` part that is appended directly to the operator is passed
+   to the executable that is executed with the `main:cxx.run` operator. In the
+   example above, the executable takes the first argument and prints it as
+   `Hello, %s!`.
 
 __Important Built-ins and API Members__
 
