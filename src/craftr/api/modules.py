@@ -78,10 +78,15 @@ class ModuleOptions:
           default = NotImplemented):
     prop_type = self.__PROPTYPE_MAP.get(prop_type, prop_type)
     prop_type = proplib.prop_type(prop_type)
-    aliases = [self._scope.name, self._scope.name.rpartition('.')[2]]
+
+    if ':' in name:
+      scope, name = name.rpartition(':')[::2]
+    else:
+      scope = self._scope.name
+    aliases = [scope, scope.rpartition('.')[2]]
     for alias in stream.chain(aliases, self._aliases):
       if alias is None: continue
-      option_name = alias + ':' + name
+      option_name = (alias + ':' + name) if alias else name
       if option_name in self._session.options:
         value = self._session.options[option_name]
         break
