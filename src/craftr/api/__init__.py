@@ -114,12 +114,14 @@ class Session(_build.Master):
 
   ResolveError = nodepy.base.ResolveError
 
-  def __init__(self, build_root: str, build_directory: str, build_variant: str):
+  def __init__(self, build_root: str, build_directory: str, build_variant: str, cli_options: list):
     super().__init__()
     self._build_root = nr.fs.canonical(build_root)
     self._build_directory = nr.fs.canonical(build_directory)
     self._build_variant = build_variant
     self._current_scopes = []
+    self.graph_filename = nr.fs.join(build_root, 'craftr_graph.{}.json'.format(build_variant))
+    self.cli_options = cli_options
     self.options = {}
     self.loader = CraftrModuleLoader(self)
     self.link_resolver = CraftrLinkResolver()
@@ -234,6 +236,10 @@ class Session(_build.Master):
       return self._current_scopes[-1].current_target
     return None
 
+  def reload(self):
+    super().__init__()
+    self.load()
+
   # Master overrides
 
   def to_json(self):
@@ -248,6 +254,17 @@ class Session(_build.Master):
   def add_target(self, target):
     target.scope.targets[target.name] = target
     return super().add_target(target)
+
+  def save(self, filename=None):
+    if not filename:
+      filename = self.graph_filename
+    nr.fs.makedirs(nr.fs.dir(filename))
+    super().save(filename)
+
+  def load(self, filename=None):
+    if not filename:
+      filename = self.graph_filename
+    super().load(filename)
 
 
 class Scope:

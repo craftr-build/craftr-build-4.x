@@ -185,7 +185,7 @@ def get_argument_parser(prog=None):
   group.add_argument(
     '--pywarn',
     nargs='?',
-    default=NotImplemented,
+    default='none',
     metavar='once',
     help='Set the filter for the Python warnings module.'
   )
@@ -281,8 +281,9 @@ def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
   args = parser.parse_args(argv)
 
-  if args.pywarn is not NotImplemented:
-    warnings.simplefilter(args.pywarn or 'once')
+  if args.pywarn != 'none':
+    args.pywarn = args.pywarn or 'once'
+    warnings.simplefilter(args.pywarn)
 
   if args.notify and not ntfy:
     print('warning: ntfy module is not available, --notify is ignored.')
@@ -312,9 +313,31 @@ def main(argv=None, prog=None):
   if not args.variant:
     args.variant = 'debug'
 
+  # Reconstruct the CLI options. This is important for creating a
+  # generator target by the backends.
+  cli_options = ['-O' + x for x in args.options]
+  if args.project:
+    cli_options += ['--project', args.project]
+  for x in args.module_path:
+    cli_options += ['--module-path', x]
+  if args.config_file:
+    cli_options += ['--config-file', args.config_file]
+  if args.build_root != 'build':
+    cli_options += ['--build-root', args.build_root]
+  if args.pywarn != 'none':
+    cli_options += ['--pywarn', args.pywarn or 'once']
+  for x in args.link:
+    cli_options += ['--link', x]
+  if args.backend:
+    cli_options += ['--backend', args.backend]
+  if args.verbose:
+    cli_options += ['--verbose']
+  if args.sequential:
+    cli_options += ['--sequential']
+
   # Create a new session.
   build_directory = nr.fs.join(args.build_root, args.variant)
-  session = api.session = api.Session(args.build_root, build_directory, args.variant)
+  session = api.session = api.Session(args.build_root, build_directory, args.variant, cli_options)
   session.add_module_search_path(args.module_path)
   if args.config_file:
     session.load_config(args.config_file)
@@ -347,7 +370,6 @@ def main(argv=None, prog=None):
       raise
     backend = session.load_module('net.craftr.backend.' + args.backend).namespace
 
-  graph_file = nr.fs.join(session.build_root, 'craftr_graph.{}.json'.format(session.build_variant))
   if args.config:
     try:
       session.load_module_from_file(args.project, is_main=True)
@@ -356,11 +378,10 @@ def main(argv=None, prog=None):
       return 1
     if hasattr(backend, 'prepare'):
       backend.prepare()
-    nr.fs.makedirs(nr.fs.dir(graph_file))
-    session.save(graph_file)
+    session.save()
   else:
     try:
-      session.load(graph_file)
+      session.load()
     except FileNotFoundError as e:
       print('fatal: "{}" file not found'.format(nr.fs.rel(e.filename)), file=sys.stderr)
       command = 'craftr -c --variant={}'.format(args.variant)
