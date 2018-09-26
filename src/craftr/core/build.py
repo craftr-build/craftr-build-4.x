@@ -521,7 +521,7 @@ class Target:
 
   @property
   def operators(self):
-    return ValueIterableMap(internal=self._operators)
+    return ValueIterableMap(map=self._operators)
 
   def add_operator(self, operator):
     if not isinstance(operator, Operator):
@@ -579,7 +579,7 @@ class Master:
 
   @property
   def targets(self):
-    return ValueIterableMap(internal=self._targets)
+    return ValueIterableMap(map=self._targets)
 
   def add_target(self, target):
     if not isinstance(target, Target):

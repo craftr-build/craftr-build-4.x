@@ -6,7 +6,7 @@ import {options} from '../build'
 
 from craftr.api import *
 
-options.add('osx:minversion', str, None)
+options.add('osx:minversion', str, '')
 
 
 class GccCompiler(base.Compiler):
