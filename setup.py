@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from pip.req import parse_requirements
 from setuptools import setup, find_packages
 
 import functools
@@ -27,12 +26,6 @@ if sys.version < '3.4' or sys.version >= '3.6':
   print("WARNING: Craftr officially supports Python 3.4, 3.5")
   print("WARNING: Your current version is Python {}".format(sys.version[:5]))
   print('-----------------------------------------------------------------')
-
-# parse_requirements() interface has changed in Pip 6.0
-if pip.__version__ >= '6.0':
-  parse_requirements = functools.partial(
-      parse_requirements, session=pip.download.PipSession())
-
 
 def readme():
   if os.path.isfile('README.md') and any('dist' in x for x in sys.argv[1:]):
@@ -78,7 +71,17 @@ setup(
   description = 'Meta build system based on Ninja and Python',
   long_description = readme(),
   url = 'https://gitlab.niklasrosenstein.com/niklas/craftr',
-  install_requires = [str(x.req) for x in parse_requirements('requirements.txt')],
+  install_requires = [
+    'colorama>=0.3.7',
+    'cson>=0.7',
+    'glob2>=0.5',
+    'jsonschema>=2.5.1',
+    'ninja-syntax>=1.6.0',
+    'nr>=1.4.7,<2.0.0',
+    'requests>=2.18.1',
+    'termcolor>=1.1.0',
+    'Werkzeug>=0.11.11',
+  ],
   entry_points = dict(
     console_scripts = [
       'craftr = craftr.__main__:main_and_exit'
