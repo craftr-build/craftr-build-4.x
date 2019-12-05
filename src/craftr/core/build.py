@@ -44,8 +44,9 @@ import re
 import shlex
 import subprocess
 
-from nr.types.map import ChainMap, ValueIterableMap
-from nr.stream import stream
+from craftr.utils.maps import ValueIterableDict
+from nr.collections import ChainDict
+from nr.stream import Stream as stream
 from typing import Dict, Iterable, List, Union
 from .template import TemplateCompiler
 
@@ -148,7 +149,7 @@ class BuildSet:
 
     if not self._operator:
       raise TypeError('build set is not attached to an operator')
-    variables = ChainMap(self._variables, self._operator._variables)
+    variables = ChainDict(self._variables, self._operator._variables)
     return self._operator.commands.render(self._inputs, self._outputs, variables)
 
   def get_description(self):
@@ -161,11 +162,11 @@ class BuildSet:
     if not self._operator:
       return self.description
     template = TemplateCompiler().compile_list(shlex.split(self.description))
-    variables = ChainMap(self._variables, self._operator._variables)
+    variables = ChainDict(self._variables, self._operator._variables)
     return ' '.join(template.render(self._inputs, self._outputs, variables))
 
   def get_environ(self):
-    return ChainMap(self._environ or {}, self._operator.environ or {})
+    return ChainDict(self._environ or {}, self._operator.environ or {})
 
   def get_cwd(self):
     return self._cwd or self._operator.cwd
@@ -521,7 +522,7 @@ class Target:
 
   @property
   def operators(self):
-    return ValueIterableMap(map=self._operators)
+    return ValueIterableDict(map=self._operators)
 
   def add_operator(self, operator):
     if not isinstance(operator, Operator):
@@ -579,7 +580,7 @@ class Master:
 
   @property
   def targets(self):
-    return ValueIterableMap(map=self._targets)
+    return ValueIterableDict(map=self._targets)
 
   def add_target(self, target):
     if not isinstance(target, Target):

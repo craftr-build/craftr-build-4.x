@@ -28,7 +28,7 @@ This module implements the glue for Node.py and Craftr modules.
 import nodepy
 import warnings
 
-from nr.stream import stream
+from nr.stream import Stream as stream
 from typing import Union
 from . import proplib
 

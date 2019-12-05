@@ -56,7 +56,7 @@ import zipfile
 
 from craftr import api
 from craftr.api.modules import CraftrModule
-from nr.stream import stream
+from nr.stream import Stream as stream
 concat = stream.concat
 
 import {Writer as NinjaWriter} from './ninja_syntax'

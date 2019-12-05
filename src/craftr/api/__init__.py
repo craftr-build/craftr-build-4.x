@@ -56,10 +56,10 @@ import toml
 
 from craftr.core import build as _build
 from nodepy.utils import pathlib
-from nr.stream import stream
-from nr.types.named import Named
-from nr.types.map import MapAsObject
-from nr.types.set import OrderedSet
+from craftr.utils.maps import ObjectAsDict
+from nr.collections import OrderedSet
+from nr.databind.core import Struct as Named  # Backwards compatibility
+from nr.stream import Stream as stream
 from werkzeug.local import LocalProxy
 from .modules import CraftrModuleLoader, CraftrLinkResolver
 from .proplib import PropertySet, Properties, NoSuchProperty
@@ -313,8 +313,8 @@ class Target(_build.Target):
     def __getitem__(self, key):
       return self.properties[key]
 
-  class PropertiesOwner(nr.interface.Implementation):
-    nr.interface.implements(proplib.Path.OwnerInterface)
+  @nr.interface.implements(proplib.Path.OwnerInterface)
+  class PropertiesOwner(object):
 
     def __init__(self, target):
       self._target = target
@@ -464,7 +464,7 @@ class Target(_build.Target):
     # Parameters
     prefix (str): The prefix to filter properties.
     as_object (bool): Return an object instead of a dictionary.
-    return (dict, MapAsObject)
+    return (dict, ObjectAsDict)
     """
 
     result = {}
@@ -472,7 +472,7 @@ class Target(_build.Target):
     for prop in filter(lambda x: x.name.startswith(prefix), propset.values()):
       result[prop.name[len(prefix):]] = self[prop.name]
     if as_object:
-      result = MapAsObject(result)
+      result = ObjectAsDict(result)
     return result
 
   def transitive_dependencies(self):

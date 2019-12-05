@@ -28,7 +28,7 @@ Detect LLVM installation on your system.
 import os
 import {project, path, OS} from 'craftr'
 import {get_gcc_info} from './mingw'
-from nr.types import named
+from nr.databind.core import Struct as Named
 
 project('net.craftr.compiler.llvm', '1.0-0')
 
@@ -40,7 +40,7 @@ class InvalidLlvmInstallation(Exception):
   pass
 
 
-class LlvmInstallation(named.Named):
+class LlvmInstallation(Named):
   directory: str
   environ: dict
 

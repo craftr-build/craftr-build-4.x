@@ -26,7 +26,7 @@ This module allows you to compile and bundle C# applications.
 """
 
 import functools
-import nr.types
+import nr.databind.core import Struct as Named
 import os
 import re
 import requests
@@ -53,7 +53,7 @@ options('mergeTool', str, '')  # The name of the tool to merge assemblies, eithe
 artifacts_dir = path.join(module.scope.build_directory, 'csharp', 'nuget')
 
 
-class CscInfo(nr.types.Named):
+class CscInfo(Named):
 
   __annotations__ = [
     ('impl', str),

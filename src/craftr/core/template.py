@@ -40,25 +40,25 @@ __all__ = ['TemplateCompiler']
 import collections
 import re
 
-from nr.stream import stream
-from nr.types.sumtype import Sumtype
+from nr.stream import Stream as stream
+from nr.sumtype import Constructor, Sumtype
 from typing import List
 
 
 class _Part(Sumtype):
-  FileSet = Sumtype.Constructor('type', 'name')
-  Var = Sumtype.Constructor('name')
-  Str = Sumtype.Constructor('val')
+  FileSet = Constructor('type, name')
+  Var = Constructor('name')
+  Str = Constructor('val')
 
-  @Sumtype.MemberOf(FileSet)
+  @FileSet.member
   def to_str(self):
     return '${{{}{}}}'.format(self.type, self.name)
 
-  @Sumtype.MemberOf(Var)
+  @Var.member
   def to_str(self):
     return '${{{}}}'.format(self.name)
 
-  @Sumtype.MemberOf(Str)
+  @Str.member
   def to_str(self):
     return self.val
 

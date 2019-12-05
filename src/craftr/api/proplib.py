@@ -27,7 +27,7 @@ properties and their datatype.
 """
 
 from nr import fs as path
-from nr.types.generic import GenericMeta
+from nr.collections.generic import GenericMeta
 
 import builtins
 import collections
