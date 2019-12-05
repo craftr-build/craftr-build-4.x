@@ -21,7 +21,7 @@
 This module implements the parser for the Craftr DSL.
 """
 
-from nr import parse
+from nr.parsing import core as parse
 
 import collections
 import contextlib
@@ -480,7 +480,8 @@ class Parser:
       if lexer.accept('>>'):
         is_remainder = True
       lexer.next('nl')
-      loc.lineno += 1
+      loc = parse.Cursor(loc.index, loc.lineno + 1, loc.colno)
+      #loc.lineno += 1
 
     if is_remainder and parent_indent:
       raise ParseError(lexer.token.cursor, 'eval:>> block only on top-level')

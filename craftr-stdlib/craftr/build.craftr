@@ -7,8 +7,8 @@ eval:>>
 __all__ = __builtins__ = ['BUILD', 'OS', 'path', 'error', 'fmt', 'glob']
 
 from nr import fs as path
-from nr.types import Named
-from nr.stream import stream
+from nr.databind.core import Struct as Named
+from nr.stream import Stream as stream
 
 import collections
 import os

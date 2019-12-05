@@ -22,11 +22,11 @@ The core module in Craftr implements targets and their properties independent
 from the aspect of Craftr DSL.
 """
 
-from nr.stream import stream
-from nr.types import MapAsObject
+from nr.stream import Stream
 
 import abc
 import collections
+import {ObjectFromDict} from './utils/maps'
 import {Action, ActionSet, BuildGraph, FileSet} from './build'
 import proplib from './proplib'
 
@@ -309,7 +309,7 @@ class Target:
     # Parameters
     prefix (str): The prefix to filter properties.
     as_object (bool): Return an object instead of a dictionary.
-    return (dict, MapAsObject)
+    return (dict, ObjectFromDict)
     """
 
     result = {}
@@ -318,7 +318,7 @@ class Target:
       result[prop.name[len(prefix):]] = self[prop.name]
 
     if as_object:
-      result = MapAsObject(result)
+      result = ObjectFromDict(result)
 
     return result
 
@@ -347,7 +347,7 @@ class Target:
           yield dep
         for t in dep.sources:
           yield from worker(t)
-    return stream.unique(worker(self, private=True))
+    return Stream.unique(worker(self, private=True))
 
   def transitive_targets(self):
     """
@@ -443,7 +443,7 @@ class Target:
     if input:
       for target in self.transitive_targets():
         deps += target.output_actions
-      deps = list(stream.chain(deps, self.input_actions).unique())
+      deps = list(Stream.chain(deps, self.input_actions).unique())
     elif deps_was_unset and self.actions:
       output_actions = self.output_actions
       if output_actions:

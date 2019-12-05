@@ -24,13 +24,14 @@ creates a child Node.py context with the ability to load Craftr modules.
 """
 
 from nr import fs as path
-from nr.parse import Cursor
-from nr.types import ChainMap, ObjectAsMap
+from nr.parsing.core   import Cursor
+from nr.collections import ChainDict
 from nodepy.utils import pathlib
 
 import nodepy
 import shutil
 import sys
+import {ObjectAsDict} from '../utils/maps'
 import {CraftrModuleLoader, do_link} from './nodepy_glue'
 import core from '../core'
 import proplib from '../proplib'
@@ -87,7 +88,7 @@ class DslModule(core.Module):
   @property
   def scope(self):
     assert self.nodepy_module, "DslModule.nodepy_module is not set"
-    return ObjectAsMap(self.nodepy_module.namespace)
+    return ObjectAsDict(self.nodepy_module.namespace)
 
 
 class DslTarget(core.Target):
@@ -101,7 +102,7 @@ class DslTarget(core.Target):
 
   @property
   def scope(self):
-    return ChainMap(self._scope, self.module.scope)
+    return ChainDict(self._scope, self.module.scope)
 
   @property
   def output_directory(self):
@@ -163,7 +164,7 @@ class DslDependency(core.Dependency):
 
   @property
   def scope(self):
-    return ChainMap(self._scope, self.target.scope)
+    return ChainDict(self._scope, self.target.scope)
 
 
 class Context(core.Context):

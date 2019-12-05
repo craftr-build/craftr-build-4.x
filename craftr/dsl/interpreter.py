@@ -19,7 +19,7 @@
 # SOFTWARE.
 
 from nr import fs as path
-from nr.ast.dynamic_eval import dynamic_exec, dynamic_eval
+from nr.commons.py.ast.dynamic_eval import dynamic_exec, dynamic_eval
 from nodepy.utils.path import pathlib
 
 import nodepy

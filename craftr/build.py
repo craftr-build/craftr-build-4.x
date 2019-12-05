@@ -21,7 +21,7 @@
 This module implementations the representation of final build information.
 """
 
-from nr.stream import stream
+from nr.stream import Stream
 
 import collections
 import hashlib
@@ -281,7 +281,7 @@ class ActionSet:
     """
 
     if self._files is None:
-      self._files = list(stream.concat(
+      self._files = list(Stream.concat(
         x.all_files_tagged(self.tags) for x in self.actions))
     return self._files
 

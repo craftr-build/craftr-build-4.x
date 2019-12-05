@@ -22,7 +22,7 @@ Implements the Craftr command-line interface.
 """
 
 from nr import fs as path
-from nr.stream import stream
+from nr.stream import Stream
 
 import argparse
 import collections
@@ -268,7 +268,7 @@ def main(argv=None):
     print('digraph {')
     for action in context.graph.actions():
       print('  "{}";'.format(action.identifier()))
-      for dep in stream.unique(action.deps):
+      for dep in Stream.unique(action.deps):
         print('    "{}" -> "{}";'.format(dep.identifier(), action.identifier()))
     print('}')
     return
