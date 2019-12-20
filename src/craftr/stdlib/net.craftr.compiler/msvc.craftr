@@ -46,7 +46,7 @@ import {v as build_cache} from 'net.craftr.tool.cache'
 import {LlvmInstallation} from 'net.craftr.compiler.llvm'
 
 from craftr.utils import sh
-from nr.databind.core import Struct
+from nr.databind.core import Struct, Mixin
 
 project('net.craftr.compiler.msvc', '1.0-0')
 
@@ -328,6 +328,8 @@ class MsvcToolkit(Struct):
   installation, however it is fixed to a specific target architecture and
   Windows SDK, etc. Additionally, it can be saved to and loaded from disk.
   """
+
+  Mixin('asdict')
 
   CSC_VERSION_REGEX = re.compile(r'compiler\s+version\s+([\d\.]+)', re.I | re.M)
 

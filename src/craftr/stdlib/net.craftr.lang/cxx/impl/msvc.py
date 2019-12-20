@@ -95,7 +95,7 @@ class MsvcCompiler(base.Compiler):
     self.toolkit = toolkit
     self.is_clang_cl = 'clang' in self.name.lower()
 
-    for key in self.__annotations__:
+    for key in self.__fields__:
       value = getattr(self, key)
       if callable(value):
         setattr(self, key, value(self))
