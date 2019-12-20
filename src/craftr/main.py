@@ -1,6 +1,7 @@
 
 import argparse
 import contextlib
+import enum
 import io
 import os
 import nr.fs
@@ -13,6 +14,18 @@ except ImportError: ntfy = None
 
 from craftr import api
 from craftr.core.build import to_graph
+from nr.stream import groupby
+from termcolor import colored
+
+if sys.version_info[0] != 3:
+  raise RuntimeError('Python 3 is required to run Craftr.')
+
+
+class ShowLevels(enum.IntEnum):
+  modules = 0
+  targets = 1
+  operators = 2
+  commands = 3
 
 
 @contextlib.contextmanager
@@ -261,6 +274,14 @@ def get_argument_parser(prog=None):
          'to stdout or the specified FILE. Override the layout engine with '
          'the DOTENGINE environment variable (defaults to "dot").')
 
+  group.add_argument(
+    '--show',
+    nargs='?',
+    default=NotImplemented,
+    choices=(x.name for x in ShowLevels),
+    help='Show the selected build set(s) in the console up to the specified '
+         'detail. The default detail is "operators".')
+
   return parser
 
 
@@ -392,6 +413,13 @@ def main(argv=None, prog=None):
   else:
     build_sets = None
 
+  if args.show is not NotImplemented:
+    if args.show is None:
+      args.show = ShowLevels.operators.name
+    build_sets = build_sets or session.all_build_sets()
+    show_buildsets_in_console(args.show, build_sets, session.main_module)
+    return 0
+
   if args.dump_graphviz is not NotImplemented:
     with open_cli_file(args.dump_graphviz, 'w') as fp:
       to_graph(session).render(fp)
@@ -414,6 +442,54 @@ def main(argv=None, prog=None):
     if args.notify and ntfy:
       notify('Build completed.' if res == 0 else 'Build errored.', 'Craftr')
     sys.exit(res)
+
+
+def show_buildsets_in_console(show, build_sets, main_module):
+  level = ShowLevels[show]
+  build_sets = list(build_sets)
+
+  def by_module(b):
+    return b.operator.target.id.partition('@')[0]
+  def by_target(b):
+    return b.operator.target.id
+  def by_operator(b):
+    return b.operator.name.partition('#')[0]
+  def by_operator_instance(b):
+    return b.operator
+
+  def show_modules(build_sets):
+    modules = groupby(build_sets, by_module, True).sort()
+    for module, build_sets in modules:
+      suffix = colored(' (main module)', 'magenta') if module == main_module else ''
+      print(colored(module, 'magenta', attrs=['bold', 'underline']) + suffix)
+      if level >= ShowLevels.targets:
+        show_targets(build_sets)
+      print()
+
+  def show_targets(build_sets):
+    targets = groupby(build_sets, by_target, True).sort()
+    for target, build_sets in targets:
+      name = target.partition('@')[2]
+      print('  @{}'.format(colored(name, 'green', attrs=['bold'])))
+      if level >= ShowLevels.operators:
+        show_operators(build_sets)
+
+  def show_operators(build_sets):
+    operators = groupby(build_sets, by_operator, True).sort()
+    for operator, build_sets in operators:
+      print('    :{}'.format(colored(operator, 'cyan')))
+      if level >= ShowLevels.commands:
+        show_commands(build_sets)
+
+  def show_commands(build_sets):
+    operators = groupby(build_sets, by_operator_instance, True).sort().collect()
+    for operator, build_sets in operators:
+      index = operator.name.partition('#')[2]
+      print('      #{}'.format(colored(index, 'blue', attrs=['bold'])))
+      for command in operator.commands:
+        print('        -', colored(str(list(command)), 'grey', attrs=['bold']))
+
+  show_modules(build_sets)
 
 
 if __name__ == '__main__':

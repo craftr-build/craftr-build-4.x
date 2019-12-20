@@ -7,5 +7,6 @@ nr.fs>=1.1.1
 nr.stream>=0.1.0
 nr.sumtype>=0.1.0
 requests>=2.19.1
+termcolor>=1.1.0
 toml>=0.9.4
 werkzeug>=0.14.1
