@@ -97,10 +97,11 @@ class GccCompiler(base.Compiler):
 
   def get_link_command(self, target, data, lang):
     flags = super().get_link_command(target, data, lang)
-    if options.enableGcov:
-      flags += ['-lgcov']
-    if data.defaultSystemLibraries and OS.id == 'linux':
-      flags += ['-lm', '-lpthread']
+    if data.preferredLinkage == 'shared':
+      if options.enableGcov:
+        flags += ['-lgcov']
+      if data.defaultSystemLibraries and OS.id == 'linux':
+        flags += ['-lm', '-lpthread']
     return flags
 
   def get_link_commands(self, target, data, lang):
