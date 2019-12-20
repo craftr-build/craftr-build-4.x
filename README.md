@@ -1,7 +1,7 @@
 [Ninja]: https://ninja-build.org/
 [Node.py]: https://github.com/nodepy/nodepy
 
-# The Craftr build system
+# The Craftr build system (v4.x)
 
 <img align="right" src="logo.png">
 
