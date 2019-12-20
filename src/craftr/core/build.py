@@ -318,6 +318,9 @@ class Commands:
   def __iter__(self):
     return (x for x in self._commands)
 
+  def __len__(self):
+    return len(self._commands)
+
   @property
   def inputs(self):
     return self._inputs
@@ -391,7 +394,7 @@ class Operator:
 
   @property
   def id(self):
-    return self._target.id + '@' + self._name
+    return self._target.id + ':' + self._name
 
   @property
   def name(self):

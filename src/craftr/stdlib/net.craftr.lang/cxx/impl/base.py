@@ -1,5 +1,6 @@
 
 import {options} from '../build.craftr'
+import nr.fs
 
 from craftr.api import *
 from craftr.core import build

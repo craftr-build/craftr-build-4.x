@@ -145,6 +145,9 @@ class ValueIterableDict(abc.MutableMapping):
   def __iter__(self):
     return iter(self._map.values())
 
+  def __bool__(self):
+    return bool(self._map)
+
   def __getitem__(self, key):
     return self._map[key]
 
