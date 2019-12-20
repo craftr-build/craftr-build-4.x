@@ -171,7 +171,7 @@ class Path(String):
     else:
       if owner is None:
         raise RuntimeError('Path.coerce(): no owner object received')
-      if not Path.OwnerInterface.implemented_by(owner):
+      if not Path.OwnerInterface.provided_by(owner):
         raise RuntimeError('Path.coerce(): owner (type "{}") does not '
                            'implement Path.OwnerInterface'.format(
                              type(owner).__name__))

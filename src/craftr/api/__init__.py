@@ -56,7 +56,7 @@ import toml
 
 from craftr.core import build as _build
 from nodepy.utils import pathlib
-from craftr.utils.maps import ObjectAsDict
+from craftr.utils.maps import ObjectFromDict
 from nr.collections import OrderedSet
 from nr.databind.core import Struct as Named  # Backwards compatibility
 from nr.stream import Stream as stream
@@ -464,7 +464,7 @@ class Target(_build.Target):
     # Parameters
     prefix (str): The prefix to filter properties.
     as_object (bool): Return an object instead of a dictionary.
-    return (dict, ObjectAsDict)
+    return (dict, ObjectFromDict)
     """
 
     result = {}
@@ -472,7 +472,7 @@ class Target(_build.Target):
     for prop in filter(lambda x: x.name.startswith(prefix), propset.values()):
       result[prop.name[len(prefix):]] = self[prop.name]
     if as_object:
-      result = ObjectAsDict(result)
+      result = ObjectFromDict(result)
     return result
 
   def transitive_dependencies(self):

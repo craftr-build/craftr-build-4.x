@@ -41,10 +41,11 @@ import collections
 import re
 
 from nr.stream import Stream as stream
-from nr.sumtype import Constructor, Sumtype
+from nr.sumtype import Constructor, Sumtype, add_constructor_tests
 from typing import List
 
 
+@add_constructor_tests
 class _Part(Sumtype):
   FileSet = Constructor('type, name')
   Var = Constructor('name')
