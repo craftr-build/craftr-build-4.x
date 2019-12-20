@@ -26,7 +26,7 @@ import os
 import re
 import string
 import {project} from 'craftr'
-from nr.types.map import ChainMap
+from nr.collections import ChainDict
 
 project('net.craftr.tool.cmake', '1.0-0')
 
@@ -69,7 +69,7 @@ def configure_file(input, output=None, environ={}, inherit_environ=True):
       output = output[:-6]
 
   if inherit_environ:
-    environ = ChainMap(environ, os.environ)
+    environ = ChainDict(environ, os.environ)
 
   output_dir = path.dir(output)
   path.makedirs(output_dir)

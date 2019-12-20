@@ -29,7 +29,6 @@ import contextlib
 import copy
 import functools
 import json
-import nr.types
 import nr.fs
 import nr.fs as path
 import operator
@@ -47,6 +46,7 @@ import {v as build_cache} from 'net.craftr.tool.cache'
 import {LlvmInstallation} from 'net.craftr.compiler.llvm'
 
 from craftr.utils import sh
+from nr.databind.core import Struct
 
 project('net.craftr.compiler.msvc', '1.0-0')
 
@@ -60,7 +60,7 @@ options('sdkVersion', str, '')
 options('clangcl', bool, False)
 
 
-class MsvcInstallation(nr.types.Named):
+class MsvcInstallation(Struct):
   """
   Represents an MSVC installation directory.
   """
@@ -216,7 +216,7 @@ class InvalidToolset(RuntimeError):
     return '{}\n\nProgram: {}\n\n{}'.format(self.message, self.program, self.info)
 
 
-class ClInfo(nr.types.Named):
+class ClInfo(Struct):
 
   __annotations__ = [
     ('version', str),
@@ -322,7 +322,7 @@ class ClInfo(nr.types.Named):
     )
 
 
-class MsvcToolkit(nr.types.Named):
+class MsvcToolkit(Struct):
   """
   Similar to a #MsvcInstallation, this class represents an MSVC
   installation, however it is fixed to a specific target architecture and

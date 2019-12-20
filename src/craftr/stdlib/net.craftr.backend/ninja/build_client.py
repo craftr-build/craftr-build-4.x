@@ -41,7 +41,7 @@ import struct
 import subprocess
 import sys
 
-from nr.stream import stream
+from nr.stream import Stream as stream
 from craftr.core import build
 from craftr.utils.sh import quote
 

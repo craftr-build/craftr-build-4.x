@@ -39,7 +39,7 @@ import {CacheManager} from 'net.craftr.tool.cache'
 
 from craftr.core.build import topo_sort
 from craftr.utils import sh
-from nr.stream import stream
+from nr.stream import Stream as stream
 
 # This cache maps the output filenames to the hash of the last build set.
 build_log = CacheManager(path.join(session.build_root, 'craftr_build_log.{}.json'.format(session.build_variant)))

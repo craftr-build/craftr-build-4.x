@@ -1,12 +1,12 @@
 
-import nr.types
 import {options} from '../build.craftr'
 
 from craftr.api import *
 from craftr.core import build
 from craftr.core.template import TemplateCompiler
 from typing import List, Dict, Union, Callable
-from nr.stream import stream
+from nr.databind.core.struct import StructClassExposeFieldsAs, Struct
+from nr.stream import Stream as stream
 
 
 class NamingScheme:
@@ -51,13 +51,15 @@ def is_staticlib(data):
   return data.type == 'library' and data.preferredLinkage == 'static'
 
 
-class Compiler(nr.types.Named):
+class Compiler(Struct):
   """
   Represents the flags necessary to support the compilation and linking with
   a compiler in Craftr. Flag-information that expects an argument may have a
   `%ARG%` string included which will then be substituted for the argument. If
   it is not present, the argument will be appended to the flags.
   """
+
+  StructClassExposeFieldsAs('field_defaults')
 
   __annotations__ = [
     ('id', str),
@@ -118,7 +120,7 @@ class Compiler(nr.types.Named):
 
     # A dictionary for flags {lang: {static: [], dynamic: []}}
     # Non-existing keys will have appropriate default values.
-    ('linker_runtime', Dict[str, Dict[str, List[str]]], nr.types.Named.Initializer(dict)),
+    ('linker_runtime', Dict[str, Dict[str, List[str]]], dict),
 
     # XXX support MSVC /WHOLEARCHIVE
 

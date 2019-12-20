@@ -34,7 +34,7 @@ import maven from './tools/maven'
 import platform_commands from './tools/platform-commands'
 import * from 'craftr'
 
-from nr.stream import stream
+from nr.stream import Stream as stream
 
 project('net.craftr.lang.java', '1.0-0')
 

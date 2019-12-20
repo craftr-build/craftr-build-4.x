@@ -15,19 +15,19 @@ class GccCompiler(base.Compiler):
   name = 'gcc'
 
   def __init__(self, cross_prefix='', **kwargs):
-    for k, v in (('compiler_c', 'gcc'), ('compiler_cpp', 'g++'), ('linker_c', 'gcc'), ('linker_cpp', 'g++')):
-      if not getattr(self, k, None):
-        setattr(self, k, kwargs.pop(k, v))
-      if cross_prefix:
-        setattr(self, k, cross_prefix + getattr(self, k))
+    if cross_prefix:
+      for key in ('compiler_c', 'compiler_cpp', 'linker_c', 'linker_cpp'):
+        args = getattr(self, key)[:]
+        args[0] = cross_prefix + args[0]
+        setattr(self, key, args)
     if 'arch' not in kwargs or 'version' not in kwargs:
       info = get_gcc_info(self.compiler_c, self.compiler_env or kwargs.get('compiler_env'))
       kwargs.setdefault('arch', 'x64' if '64' in info['target'] else 'x86')
       kwargs.setdefault('version', info['version'])
     super().__init__(**kwargs)
 
-  compiler_c = 'gcc'
-  compiler_cpp = 'g++'
+  compiler_c = ['gcc']
+  compiler_cpp = ['g++']
   compiler_env = None
   compiler_out = ['-c', '-o', '${@obj}']
 
@@ -59,6 +59,8 @@ class GccCompiler(base.Compiler):
   compiler_enable_openmp = ['-fopenmp']
   linker_enable_openmp = ['-lgomp']
 
+  linker_c = ['gcc']
+  linker_cpp = ['g++']
   linker_env = None
   linker_out = ['-o', '%ARG%']
   linker_shared = [pic_flag, '-shared']
