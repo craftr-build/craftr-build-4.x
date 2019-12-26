@@ -42,7 +42,7 @@ import os
 import re
 import subprocess
 import sys
-import {path, project} from 'craftr'
+import {OS, path, project} from 'craftr'
 
 from nr.databind.core import Struct as Named
 from nr.stream import Stream as stream
@@ -60,7 +60,7 @@ options('installDirectory', str, '')
 
 
 def get_gcc_info(program, environ=None):  # type: (List[str], Optional[Dict[str, str]]) -> Dict[str, str]
-  assert isinstance(program, (list, tuple)), repr(program)
+  assert isinstance(program, (list, tuple)), 'expected list/tuple, got {!r}'.format(program)
   with sh.override_environ(environ or {}):
     output = sh.check_output(program + ['-v'], stderr=sh.STDOUT).decode()
     target = re.search(r'Target:\s+(.*)$', output, re.M | re.I).group(1).strip()
@@ -117,7 +117,7 @@ class MingwInstallation(Named):
   @property
   def gccinfo(self):
     if self._gccinfo is None:
-      self._gccinfo = get_gcc_info('gcc', self.environ)
+      self._gccinfo = get_gcc_info(['gcc'], self.environ)
     return self._gccinfo
 
   @property

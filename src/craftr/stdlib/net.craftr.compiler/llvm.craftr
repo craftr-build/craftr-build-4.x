@@ -22,9 +22,10 @@
 # SOFTWARE.
 
 """
-Detect LLVM installation on your system.
+Detect LLVM installation on your system (Windows only).
 """
 
+import argparse
 import os
 import {project, path, OS} from 'craftr'
 import {get_gcc_info} from './mingw'
@@ -56,7 +57,7 @@ class LlvmInstallation(Named):
   @property
   def llvm_info(self):
     if not self._llvm_info:
-      self._llvm_info = get_gcc_info('clang', self.environ)
+      self._llvm_info = get_gcc_info(['clang'], self.environ)
     return self._llvm_info
 
   @property
@@ -96,9 +97,25 @@ class LlvmInstallation(Named):
 
 
 def main(argv=None, prog=None):
-  for inst in LlvmInstallation.iter_installations():
-    print('- Version:', inst.version)
-    print('  Target:', inst.target)
-    print('  Has clang-cl:', inst.has_clang_cl)
-    print('  Directory:', inst.directory)
-    print()
+  parser = argparse.ArgumentParser(prog=prog)
+  parser.add_argument('--list', action='store_true', help='List up install '
+    'locations of LLVM (Windows only).')
+  parser.add_argument('--info', action='store_true', help='Show information '
+    'on the LLVM/GCC compiler suite.')
+  args = parser.parse_args(argv)
+
+  if args.list:
+    for inst in LlvmInstallation.iter_installations():
+      print('- Version:', inst.version)
+      print('  Target:', inst.target)
+      print('  Has clang-cl:', inst.has_clang_cl)
+      print('  Directory:', inst.directory)
+      print()
+    return 0
+  elif args.info:
+    inst = next(LlvmInstallation.iter_installations())
+    print(inst.llvm_info)
+    return 0
+  else:
+    parser.print_usage()
+    return 0

@@ -10,8 +10,8 @@ class LlvmCompiler(GccCompiler):
   id = 'llvm'
   name = 'LLVM'
 
-  compiler_c = 'clang'
-  compiler_cpp = 'clang++'
+  compiler_c = ['clang']
+  compiler_cpp = ['clang++']
   linker_c = compiler_c
   linker_cpp = compiler_cpp
 
