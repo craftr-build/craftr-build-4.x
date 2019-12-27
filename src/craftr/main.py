@@ -485,7 +485,8 @@ def show_buildsets_in_console(show, build_sets, main_module):
     operators = groupby(build_sets, by_operator_instance, True).sort().collect()
     for operator, build_sets in operators:
       index = operator.name.partition('#')[2]
-      print('      #{}'.format(colored(index, 'blue', attrs=['bold'])))
+      print('      #{}'.format(colored(index, 'red', attrs=['bold'])), end='')
+      print(colored(' ({})'.format(', '.join(sorted(x.compute_hash()[:10] for x in build_sets))), 'yellow'))
       for command in operator.commands:
         print('        -', colored(str(list(command)), 'grey', attrs=['bold']))
 
