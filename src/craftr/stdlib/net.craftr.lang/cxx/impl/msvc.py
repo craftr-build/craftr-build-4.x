@@ -30,6 +30,7 @@ class MsvcCompilerOptions(CompilerOptions):
 class MsvcCompiler(base.Compiler):
 
   id = 'msvc'
+  family = 'msvc'
 
   #compiler_c = ['cl', '/nologo']
   #compiler_cpp = ['cl', '/nologo']

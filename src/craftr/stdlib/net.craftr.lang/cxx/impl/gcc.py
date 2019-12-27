@@ -12,7 +12,8 @@ options.add('osx:minversion', str, '')
 class GccCompiler(base.Compiler):
 
   id = 'gcc'
-  name = 'gcc'
+  name = 'GCC'
+  family = 'gcc'
 
   def __init__(self, cross_prefix='', **kwargs):
     if cross_prefix:

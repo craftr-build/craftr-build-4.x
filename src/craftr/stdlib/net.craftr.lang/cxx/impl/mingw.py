@@ -7,6 +7,7 @@ class MingwCompiler(GccCompiler):
 
   id = 'mingw'
   name = 'MinGW'
+  family = 'gcc'
 
   executable_suffix = '.exe'
   library_prefix = ''

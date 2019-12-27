@@ -60,6 +60,11 @@ class Compiler(Struct):
   it is not present, the argument will be appended to the flags.
   """
 
+  id = None
+  name = None
+  family = None
+  version = None
+
   StructClassExposeFieldsAs('field_defaults')
 
   __annotations__ = [

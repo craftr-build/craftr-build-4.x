@@ -9,6 +9,7 @@ class LlvmCompiler(GccCompiler):
 
   id = 'llvm'
   name = 'LLVM'
+  family = 'gcc'
 
   compiler_c = ['clang']
   compiler_cpp = ['clang++']
