@@ -740,6 +740,10 @@ def depends(target, public=False, to=None):
   target (str, Target, List[Union[Target, str]])
   """
 
+  if not isinstance(public, bool):
+    raise TypeError('argument "public" must be bool, got {}'.format(
+      type(public).__name__))
+
   if isinstance(target, (list, tuple)):
     [depends(x, public) for x in target]
     return
