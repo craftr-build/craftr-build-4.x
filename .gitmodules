@@ -1,0 +1,3 @@
+[submodule "vendor/nr-python-libs"]
+	path = vendor/nr-python-libs
+	url = https://git.niklasrosenstein.com/NiklasRosenstein/nr-python-libs.git
