@@ -6,7 +6,7 @@ from craftr.api import *
 from craftr.core import build
 from craftr.core.template import TemplateCompiler
 from typing import List, Dict, Union, Callable
-from nr.databind.core.struct import StructClassExposeFieldsAs, Struct
+from nr.databind.core.struct import ExposeFieldsAsDecoration, Struct
 from nr.stream import Stream as stream
 
 
@@ -65,7 +65,7 @@ class Compiler(Struct):
   family = None
   version = None
 
-  StructClassExposeFieldsAs('field_defaults')
+  ExposeFieldsAsDecoration('field_defaults')
 
   __annotations__ = [
     ('id', str),
