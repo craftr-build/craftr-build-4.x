@@ -55,10 +55,10 @@ import sys
 import toml
 
 from craftr.core import build as _build
+from dataclasses import dataclass
 from nodepy.utils import pathlib
 from craftr.utils.maps import ObjectFromDict
 from nr.collections import OrderedSet
-from nr.databind.core import Struct as Named  # Backwards compatibility
 from nr.stream import Stream as stream
 from werkzeug.local import LocalProxy
 from .modules import CraftrModuleLoader, CraftrLinkResolver
@@ -71,7 +71,8 @@ OS = LocalProxy(lambda: session.os_info)
 BUILD = LocalProxy(lambda: session.build_info)
 
 
-class OsInfo(Named):
+@dataclass
+class OsInfo:
   name: str
   id: str
   type: str
@@ -91,7 +92,8 @@ class OsInfo(Named):
       raise EnvironmentError('(yet) unsupported platform: {}'.format(sys.platform))
 
 
-class BuildInfo(Named):
+@dataclass
+class BuildInfo:
   variant: str
   debug: bool
   release: bool
@@ -101,7 +103,9 @@ class BuildInfo(Named):
     if not release and 'debug' not in variant.lower():
       print('Warning: variant contains neither "release" nor "debug".')
       print('         Falling back to "debug".')
-    super().__init__(variant, not release, release)
+    self.variant = variant
+    self.debug = not release
+    self.release = release
 
 
 class Session(_build.Master):

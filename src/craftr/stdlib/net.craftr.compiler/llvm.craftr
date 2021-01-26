@@ -29,7 +29,7 @@ import argparse
 import os
 import {project, path, OS} from 'craftr'
 import {get_gcc_info} from './mingw'
-from nr.databind.core import Struct as Named
+from dataclasses import dataclass
 
 project('net.craftr.compiler.llvm', '1.0-0')
 
@@ -41,7 +41,8 @@ class InvalidLlvmInstallation(Exception):
   pass
 
 
-class LlvmInstallation(Named):
+@dataclass
+class LlvmInstallation:
   directory: str
   environ: dict
 

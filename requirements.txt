@@ -1,7 +1,6 @@
 glob2>=0.6
 nodepy-runtime>=2.1.5
 nr.collections>=0.0.1
-nr.databind>=0.0.1
 nr.interface>=0.0.1
 nr.fs>=1.1.1
 nr.stream>=0.0.1

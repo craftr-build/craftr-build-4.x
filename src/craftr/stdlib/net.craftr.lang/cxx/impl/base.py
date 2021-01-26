@@ -5,9 +5,10 @@ import nr.fs
 from craftr.api import *
 from craftr.core import build
 from craftr.core.template import TemplateCompiler
+from dataclasses import dataclass
 from typing import List, Dict, Union, Callable
-from nr.databind.core.struct import ExposeFieldsAsDecoration, Struct
 from nr.stream import Stream as stream
+from databind.core import datamodel, field
 
 
 class NamingScheme:
@@ -52,7 +53,8 @@ def is_staticlib(data):
   return data.type == 'library' and data.preferredLinkage == 'static'
 
 
-class Compiler(Struct):
+@datamodel
+class Compiler:
   """
   Represents the flags necessary to support the compilation and linking with
   a compiler in Craftr. Flag-information that expects an argument may have a
@@ -65,75 +67,71 @@ class Compiler(Struct):
   family = None
   version = None
 
-  ExposeFieldsAsDecoration('field_defaults')
+  id: str
+  name: str
+  version: str
+  arch: str
 
-  __annotations__ = [
-    ('id', str),
-    ('name', str),
-    ('version', str),
-    ('arch', str),
+  executable_suffix: str
+  library_prefix: str
+  library_shared_suffix: str
+  library_static_suffix: str
+  object_suffix: str
 
-    ('executable_suffix', str),
-    ('library_prefix', str),
-    ('library_shared_suffix', str),
-    ('library_static_suffix', str),
-    ('object_suffix', str),
+  compiler_c: List[str]               # Arguments to invoke the C compiler.
+  compiler_cpp: List[str]             # Arguments to invoke the C++ compiler.
+  compiler_env: Dict[str, str]        # Environment variables for the compiler.
+  compiler_out: List[str]             # Specify the compiler object output file.
 
-    ('compiler_c', List[str]),               # Arguments to invoke the C compiler.
-    ('compiler_cpp', List[str]),             # Arguments to invoke the C++ compiler.
-    ('compiler_env', Dict[str, str]),        # Environment variables for the compiler.
-    ('compiler_out', List[str]),             # Specify the compiler object output file.
+  c_std: List[str]
+  c_stdlib: List[str] = field(default_factory=list)
+  cpp_std: List[str]
+  cpp_stdlib: List[str] = field(default_factory=list)
+  pic_flag: List[str]                 # Flag(s) to enable position independent code.
+  debug_flag: List[str]               # Flag(s) to enable debug symbols.
+  define_flag: str                    # Flag to define a preprocessor macro.
+  include_flag: str                   # Flag to specify include directories.
+  expand_flag: List[str]              # Flag(s) to request macro-expanded source.
+  warnings_flag: List[str]            # Flag(s) to enable all warnings.
+  warnings_as_errors_flag: List[str]  # Flag(s) to turn warnings into errors.
+  optimize_none_flag: List[str]
+  optimize_speed_flag: List[str]
+  optimize_size_flag: List[str]
+  optimize_best_flag: List[str]
+  enable_exceptions: List[str]
+  disable_exceptions: List[str]
+  enable_rtti: List[str]
+  disable_rtti: List[str]
+  force_include: List[str]
+  save_temps: List[str]               # Flags to save temporary files during the compilation step.
+  depfile_args: List[str] = field(default_factory=list)  # Arguments to enable writing a depfile or producing output for deps_prefix.
+  depfile_name: str = None             # The deps filename. Usually, this would contain the variable $out.
+  deps_prefix: str = None              # The deps prefix (don't mix with depfile_name).
+  use_framework: str = None
 
-    ('c_std', List[str]),
-    ('c_stdlib', List[str], []),
-    ('cpp_std', List[str]),
-    ('cpp_stdlib', List[str], []),
-    ('pic_flag', List[str]),                 # Flag(s) to enable position independent code.
-    ('debug_flag', List[str]),               # Flag(s) to enable debug symbols.
-    ('define_flag', str),                    # Flag to define a preprocessor macro.
-    ('include_flag', str),                   # Flag to specify include directories.
-    ('expand_flag', List[str]),              # Flag(s) to request macro-expanded source.
-    ('warnings_flag', List[str]),            # Flag(s) to enable all warnings.
-    ('warnings_as_errors_flag', List[str]),  # Flag(s) to turn warnings into errors.
-    ('optimize_none_flag', List[str]),
-    ('optimize_speed_flag', List[str]),
-    ('optimize_size_flag', List[str]),
-    ('optimize_best_flag', List[str]),
-    ('enable_exceptions', List[str]),
-    ('disable_exceptions', List[str]),
-    ('enable_rtti', List[str]),
-    ('disable_rtti', List[str]),
-    ('force_include', List[str]),
-    ('save_temps', List[str]),               # Flags to save temporary files during the compilation step.
-    ('depfile_args', List[str], []),         # Arguments to enable writing a depfile or producing output for deps_prefix.
-    ('depfile_name', str, None),             # The deps filename. Usually, this would contain the variable $out.
-    ('deps_prefix', str, None),              # The deps prefix (don't mix with depfile_name).
-    ('use_framework', str, None),
+  # OpenMP settings.
+  compiler_supports_openmp: bool = False
+  compiler_enable_openmp: List[str] = None
+  linker_enable_openmp: List[str] = None
 
-    # OpenMP settings.
-    ('compiler_supports_openmp', bool, False),
-    ('compiler_enable_openmp', List[str], None),
-    ('linker_enable_openmp', List[str], None),
+  linker_c: List[str]                 # Arguments to invoke the linker for C programs.
+  linker_cpp: List[str]               # Arguments to invoke the linker for C++/C programs.
+  linker_env: Dict[str, str]          # Environment variables for the binary linker.
+  linker_out: List[str]               # Specify the linker output file.
+  linker_shared: List[str]            # Flag(s) to link a shared library.
+  linker_exe: List[str]               # Flag(s) to link an executable binary.
+  linker_lib: List[str]
+  linker_libpath: List[str]
 
-    ('linker_c', List[str]),                 # Arguments to invoke the linker for C programs.
-    ('linker_cpp', List[str]),               # Arguments to invoke the linker for C++/C programs.
-    ('linker_env', Dict[str, str]),          # Environment variables for the binary linker.
-    ('linker_out', List[str]),               # Specify the linker output file.
-    ('linker_shared', List[str]),            # Flag(s) to link a shared library.
-    ('linker_exe', List[str]),               # Flag(s) to link an executable binary.
-    ('linker_lib', List[str]),
-    ('linker_libpath', List[str]),
+  # A dictionary for flags {lang: {static: [], dynamic: []}}
+  # Non-existing keys will have appropriate default values.
+  linker_runtime: Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
 
-    # A dictionary for flags {lang: {static: [], dynamic: []}}
-    # Non-existing keys will have appropriate default values.
-    ('linker_runtime', Dict[str, Dict[str, List[str]]], dict),
+  # XXX support MSVC /WHOLEARCHIVE
 
-    # XXX support MSVC /WHOLEARCHIVE
-
-    ('archiver', List[str]),                 # Arguments to invoke the archiver.
-    ('archiver_env', List[str]),             # Environment variables for the archiver.
-    ('archiver_out', List[str]),             # Flag(s) to specify the output file.
-  ]
+  archiver: List[str]                 # Arguments to invoke the archiver.
+  archiver_env: List[str]             # Environment variables for the archiver.
+  archiver_out: List[str]             # Flag(s) to specify the output file.
 
   executable_suffix = options.namingScheme['e']
   library_prefix = options.namingScheme['lp']

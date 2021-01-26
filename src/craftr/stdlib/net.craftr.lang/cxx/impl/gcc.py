@@ -25,7 +25,9 @@ class GccCompiler(base.Compiler):
       info = get_gcc_info(self.compiler_c, self.compiler_env or kwargs.get('compiler_env'))
       kwargs.setdefault('arch', 'x64' if '64' in info['target'] else 'x86')
       kwargs.setdefault('version', info['version'])
-    super().__init__(**kwargs)
+
+    for key, value in kwargs.items():
+      setattr(self, key, value)
 
   compiler_c = ['gcc']
   compiler_cpp = ['g++']

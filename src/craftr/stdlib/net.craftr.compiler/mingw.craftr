@@ -44,7 +44,7 @@ import subprocess
 import sys
 import {OS, path, project} from 'craftr'
 
-from nr.databind.core import Struct as Named
+from dataclasses import dataclass
 from nr.stream import Stream as stream
 from craftr.utils import sh
 
@@ -81,7 +81,8 @@ class MultipleMingwInstallations(Exception):
     return str(self.choices)
 
 
-class MingwInstallation(Named):
+@dataclass
+class MingwInstallation:
   install_dir: str
   _is_64: bool = None
   _gccinfo: dict = None

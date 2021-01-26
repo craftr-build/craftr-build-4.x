@@ -182,12 +182,11 @@ class Path(String):
 
 class List(PropType, metaclass=GenericMeta):
 
-  __generic_args__ = ['item_type']
+  def __generic_init__(self, item_type):
+    self.item_type = item_type
 
   def __init__(self, item_type=None):
-    if self.__generic_bind__:
-      if item_type is not None:
-        raise RuntimeError('can not override item_type after generic bind')
+    if not hasattr(self, 'item_type'):
       item_type = self.item_type
     if isinstance(item_type, builtins.type):
       item_type = item_type()
@@ -217,10 +216,12 @@ class List(PropType, metaclass=GenericMeta):
 
 class Dict(PropType, metaclass=GenericMeta):
 
-  __generic_args__ = ['key_type', 'value_type']
+  def __generic_init__(self, key_type, value_type):
+    self.key_type = key_type
+    self.value_type = value_type
 
   def __init__(self, key_type=None, value_type=None):
-    if self.__generic_bind__:
+    if hasattr(self, 'key_type'):
       if key_type is not None:
         raise RuntimeError('can not override key_type after generic bind')
       if value_type is not None:

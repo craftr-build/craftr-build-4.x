@@ -26,7 +26,6 @@ This module allows you to compile and bundle C# applications.
 """
 
 import functools
-import nr.databind.core import Struct as Named
 import os
 import re
 import requests
@@ -34,6 +33,7 @@ import subprocess
 import nupkg from './nupkg'
 import * from 'craftr'
 from craftr.utils import sh
+from dataclasses import dataclass
 
 if OS.type == 'nt':
   import msvc from 'net.craftr.compiler.msvc'
@@ -53,15 +53,14 @@ options('mergeTool', str, '')  # The name of the tool to merge assemblies, eithe
 artifacts_dir = path.join(module.scope.build_directory, 'csharp', 'nuget')
 
 
-class CscInfo(Named):
+@dataclass
+class CscInfo:
 
-  __annotations__ = [
-    ('impl', str),
-    ('program', list),
-    ('environ', dict),
-    ('version', str),
-    ('netversion', str, 'net45')  # TODO: determine default netversion here
-  ]
+  impl: str
+  program: list
+  environ: dict
+  version: str
+  netversion: str = 'net45'  # TODO: determine default netversion here
 
   def __repr__(self):
     return '<CscInfo impl={!r} program={!r} environ=... version={!r}>'\

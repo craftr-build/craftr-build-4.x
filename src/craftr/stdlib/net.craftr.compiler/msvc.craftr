@@ -46,7 +46,7 @@ import {v as build_cache} from 'net.craftr.tool.cache'
 import {LlvmInstallation} from 'net.craftr.compiler.llvm'
 
 from craftr.utils import sh
-from nr.databind.core import Struct, MixinDecoration
+from dataclasses import dataclass
 
 project('net.craftr.compiler.msvc', '1.0-0')
 
@@ -60,18 +60,18 @@ options('sdkVersion', str, '')
 options('clangcl', bool, False)
 
 
-class MsvcInstallation(Struct):
+@dataclass
+class MsvcInstallation:
   """
   Represents an MSVC installation directory.
   """
 
   _list = None
-  __annotations__ = [
-    ('version', int),
-    ('type', str),
-    ('directory', str),
-    ('_environ', dict, None)
-  ]
+
+  version = int
+  type = str
+  directory = str
+  _environ = dict = None
 
   TYPE_VISUALSTUDIO = 'VisualStudio'
   TYPE_BUILDTOOLS = 'BuildTools'
@@ -218,17 +218,15 @@ class InvalidToolset(RuntimeError):
 
 class ClInfo(Struct):
 
-  __annotations__ = [
-    ('version', str),
-    ('version_str', str),
-    ('target', str),  # Either x86 or x64
-    ('thread_model', str),
-    ('msvc_deps_prefix', str, None),
-    ('assembler_program', str),
-    ('link_program', str),
-    ('lib_program', str),
-    ('error', InvalidToolset, None)
-  ]
+  version: str
+  version_str: str
+  target: str  # Either x86 or x64
+  thread_model: str
+  msvc_deps_prefix: str = None
+  assembler_program: str
+  link_program: str
+  lib_program: str
+  error: InvalidToolset = None
 
   VERSION_REGEX = re.compile(r'compiler\s+version\s*([\d\.]+)\s*\w+\s*(x\w+)', re.I | re.M)
   CLANGCL_VERSION_REGEX = re.compile(r'clang\s+version\s+([\d\.]+).*\n\s*target:\s*([\w\-\_]+).*\nthread\s+model:\s*(\w+)', re.I)
@@ -322,34 +320,33 @@ class ClInfo(Struct):
     )
 
 
-class MsvcToolkit(Struct):
+@dataclass
+class MsvcToolkit:
   """
   Similar to a #MsvcInstallation, this class represents an MSVC
   installation, however it is fixed to a specific target architecture and
   Windows SDK, etc. Additionally, it can be saved to and loaded from disk.
   """
 
-  MixinDecoration('asdict')
-
   CSC_VERSION_REGEX = re.compile(r'compiler\s+version\s+([\d\.]+)', re.I | re.M)
 
-  __annotations__ = [
-    ('version', int),
-    ('directory', str),
-    ('environ', dict, None),
-    ('arch', str, None),
-    ('platform_type', str, None),
-    ('sdk_version', str, None),
-    ('cl_bin', str, 'cl'),
-    ('type', str, 'msvc'),
-    ('_csc_version', str, None),
-    ('_vbc_version', str, None),
-    ('_cl_info', ClInfo, None),
-    ('_deps_prefix', str, None)
-  ]
+  version: int
+  directory: str
+  environ: dict = None
+  arch: str = None
+  platform_type: str = None
+  sdk_version: str = None
+  cl_bin: str = 'cl'
+  type: str = 'msvc'
+  _csc_version: str = None
+  _vbc_version: str = None
+  _cl_info: ClInfo = None
+  _deps_prefix: str = None
 
   TYPE_MSVC = 'msvc'
   TYPE_LLVM = 'llvm'
+
+  def asdict(
 
   @classmethod
   def from_installation(cls, inst, arch=None, platform_type=None, sdk_version=None):
