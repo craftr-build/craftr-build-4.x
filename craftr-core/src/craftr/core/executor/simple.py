@@ -7,11 +7,9 @@ import typing as t
 
 from craftr.core.executor.api import Executor
 from craftr.core.system.task import Task
-from craftr.core.system.taskstate import calculate_task_hash
 
 if t.TYPE_CHECKING:
   from craftr.core.system.executiongraph import ExecutionGraph
-  from craftr.core.util.config import Settings
 
 
 class SimpleExecutor(Executor):
