@@ -49,9 +49,9 @@ class Context:
 
     self._root_project: t.Optional[Project] = None
     self.settings = settings
-    self.executor = executor or settings.get_configurable_class_instance(
+    self.executor = executor or settings.get_instance(
         Executor, 'core.executor', self.DEFAULT_EXECUTOR)
-    self.plugin_loader = plugin_loader or settings.get_configurable_class_instance(
+    self.plugin_loader = plugin_loader or settings.get_instance(
         IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)
     self.graph = ExecutionGraph()
     self.metadata_store: NamespaceStore = JsonDirectoryStore(
@@ -100,7 +100,7 @@ class Context:
       return Path(build_directory)
 
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
-    selector = self.settings.get_configurable_class_instance(
+    selector = self.settings.get_instance(
         TaskSelector, 'core.task_selector', self.DEFAULT_SELECT)
 
     selected_tasks: t.Set[Task] = set()

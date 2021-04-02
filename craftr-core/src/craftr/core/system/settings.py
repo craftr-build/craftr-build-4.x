@@ -51,7 +51,7 @@ class Settings(metaclass=abc.ABCMeta):
       return False
     raise ValueError(f'{key!r} is not a boolean: {self[key]!r}')
 
-  def get_configurable_class_instance(self, type: t.Type[T], key: str, default: str) -> T:
+  def get_instance(self, type: t.Type[T], key: str, default: str) -> T:
     class_ = load_class(self.get(key, default))
     try:
       if hasattr(class_, 'from_settings'):
