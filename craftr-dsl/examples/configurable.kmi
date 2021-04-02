@@ -1,0 +1,27 @@
+####
+# This example demonstrates the call flow for closures.
+####
+#
+# expected output:
+#
+# Init
+# Before configure
+# Hello, World!
+# After configure
+
+let cfg = () => {
+  class Configurable:
+    def __init__(self):
+      print('Init')
+    def configure(self, func):
+      print('Before configure')
+      func(self)
+      print('After configure')
+    def say_hello(self, name):
+      print('Hello,', name)
+  return Configurable()
+}()
+
+cfg {
+  say_hello('World!')
+}

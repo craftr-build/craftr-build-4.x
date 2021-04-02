@@ -1,0 +1,29 @@
+####
+# This test case ensures that variables can be overwritten locally.
+####
+#
+# expected output:
+#
+# 42
+# foobar
+# 99
+# spam and eggs
+
+let ctx = () => {
+  class Configurable:
+    def configure(self, closure):
+      closure(self)
+  return Configurable()
+}
+
+let a = 42
+b = 'foobar'
+print(a)
+print(b)
+
+ctx() {
+  a = 99
+  let b = 'spam and eggs'
+  print(a)
+  print(b)
+}

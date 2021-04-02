@@ -1,0 +1,15 @@
+####
+# A simple hello world program in Craftr DSL that shows how closures are executed.
+####
+#
+# expected output:
+#
+# Hello, World!
+
+let closureRunner = (closure) => {
+  closure('World!')
+}
+
+closureRunner {
+  print('Hello,', self)
+}

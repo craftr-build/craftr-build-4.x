@@ -1,0 +1,16 @@
+name: craftr-dsl
+version: 0.1.2
+author: Niklas Rosenstein <rosensteinniklas@gmail.com>
+modulename: craftr.dsl
+description: Parser and transpiler for the Craftr DSL.
+typed: true
+requirements:
+- python ^3.6
+- astor ^0.8.1
+- nr.parsing.core ^2.0.0
+- nr.pylang.ast ~0.0.5
+- dataclasses ^0.6
+- nr.functional ^0.1.0
+entrypoints:
+  craftr.dsl.macros:
+  - yaml = craftr.dsl.macros.yaml:YamlMacro

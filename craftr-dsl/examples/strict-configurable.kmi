@@ -1,0 +1,32 @@
+####
+# This tests the StrictConfigurable class.
+####
+
+let strict = () => {
+  from craftr.dsl import StrictConfigurable
+
+  class Obj(StrictConfigurable):
+    def __init__(self):
+      self.a = 42
+    def b(self):
+      pass
+    c = 'spam'
+
+  return Obj()
+}()
+
+
+strict {
+  a = (self) => {
+    from pytest import raises
+    assert self is strict
+    with raises(AttributeError) as excinfo:
+      self.b = lambda: None
+    assert str(excinfo.value) == 'Obj.b cannot be overwritten'
+    with raises(AttributeError) as excinfo:
+      self.d = 'eggyolks'
+    assert str(excinfo.value) == "Obj has no attribute 'd'"
+    return 1
+  }(self)
+  c = 'more spam'
+}
