@@ -1,0 +1,8 @@
+*.py[cod]
+*.egg-info
+*.egg
+.build/
+.kahmi/
+.vscode/
+.venv*/
+/test.py

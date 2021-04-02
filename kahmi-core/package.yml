@@ -1,0 +1,8 @@
+name: kahmi-core
+version: 0.0.0
+author: Niklas Rosenstein <rosensteinniklas@gmail.com>
+modulename: kahmi.core
+description: Package description here.
+requirements:
+- python ^3.5
+- nr.caching ^0.3.2
