@@ -1,19 +1,22 @@
 
+import glob
 import string
 import typing as t
 import weakref
 from pathlib import Path
+from craftr.core.closure import Closure
 
+from craftr.core.system.extension import ExtensibleObject, IConfigurable
 from craftr.core.util.preconditions import check_not_none
+from craftr.core.system.task import Task
 
 if t.TYPE_CHECKING:
   from craftr.core.system.context import Context
-  from craftr.core.system.task import Task
 
 T_Task = t.TypeVar('T_Task', bound='Task')
 
 
-class Project:
+class Project(ExtensibleObject):
   """
   A project is a collection of tasks, usually populated through a build script, tied to a
   directory. Projects can have sub projects and there is usually only one root project in
@@ -25,6 +28,7 @@ class Project:
     parent: t.Optional['Project'],
     directory: str,
   ) -> None:
+    super().__init__()
     self._context = weakref.ref(context)
     self._parent = weakref.ref(parent) if parent is not None else parent
     self.directory = Path(directory)
@@ -32,6 +36,9 @@ class Project:
     self._build_directory: t.Optional[Path] = None
     self._tasks: t.Dict[str, 'Task'] = {}
     self._subprojects: t.Dict[str, 'Project'] = {}
+
+  def __repr__(self) -> str:
+    return f'Project("{self.name}")'
 
   @property
   def context(self) -> 'Context':
@@ -151,3 +158,54 @@ class Project:
 
     plugin = self.context.plugin_loader.load_plugin(plugin_name)
     plugin.apply(self)
+
+  def glob(self, pattern: str) -> t.List[str]:
+    """
+    Apply the specified glob pattern relative to the project directory and return a list of the
+    matched files.
+    """
+
+    return glob.glob(str(self.directory / pattern))
+
+  def add_task_extension(self, name: str, task_type: T_Task, default_name: t.Optional[str] = None) -> None:
+    self.add_extension(name, _TaskExtensionWrapper(self, default_name or name, task_type))
+
+
+class _TaskExtensionWrapper(IConfigurable, t.Generic[T_Task]):
+  """
+  Helper class that wraps a #Task subclass, returning an instance of the class when calling the
+  object or creating a new instance and configuring it when #configure() is called.
+
+  We do this to simplify the use of the Python API and Craftr DSL:
+
+  Python API:
+
+  ```py
+  my_extension = project.my_extension()  # Invokes ConfigurableWrapper.__call__()
+  # ...
+  ```
+
+  Craftr DSL:
+
+  ```py
+  my_extension {  # Invokes ConfigurableWrapper.configure()
+    # ...
+  }
+  ```
+  """
+
+  def __init__(self, project: 'Project', default_name: str, task_type: t.Type[T_Task]) -> None:
+    self._project = weakref.ref(project)
+    self._default_name = default_name
+    self._task_type = task_type
+
+  def __repr__(self) -> str:
+    return f'_TaskExtensionWrapper({self._task_type})'
+
+  def __call__(self, task_name: t.Optional[str] = None) -> T_Task:
+    return self._project().task(task_name or self._default_name, self._task_type)
+
+  def configure(self, closure: 'Closure') -> T_Task:
+    task = self()
+    task.configure(closure)
+    return task

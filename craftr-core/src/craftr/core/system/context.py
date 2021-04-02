@@ -101,7 +101,7 @@ class Context:
 
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
     selector = self.settings.get_instance(
-        TaskSelector, 'core.task_selector', self.DEFAULT_SELECT)
+        TaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)
 
     selected_tasks: t.Set[Task] = set()
 

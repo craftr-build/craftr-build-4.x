@@ -6,6 +6,7 @@ import weakref
 from nr.caching.api import KeyDoesNotExist
 
 from craftr.core.property import HavingProperties, collect_properties
+from craftr.core.system.extension import IConfigurable
 from craftr.core.system.taskstate import calculate_task_hash
 from craftr.core.util.collections import unique
 from craftr.core.util.preconditions import check_not_none
@@ -22,7 +23,7 @@ class TaskPropertyType(enum.Enum):
   Output = enum.auto()
 
 
-class Task(HavingProperties):
+class Task(HavingProperties, IConfigurable):
   """
   A task represents a set of sequential actions that are configurable through properties and may
   have dependencies on other tasks. Using the property system, dependencies between tasks can be

@@ -51,5 +51,9 @@ class DefaultPluginLoader(IPluginLoader):
 
   def load_plugin(self, plugin_name: str) -> IPlugin:
     for ep in pkg_resources.iter_entry_points(self.entrypoint_name, plugin_name):
-      return ep.load()
+      value = ep.load()
+      if not isinstance(value, IPlugin):
+        raise RuntimeError(f'Plugin "{plugin_name}" loaded by `{self}` does not implement the '
+            'IPlugin protocol.')
+      return value
     raise PluginNotFoundError(self, plugin_name)
