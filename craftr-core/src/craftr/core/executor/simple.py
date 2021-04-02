@@ -11,13 +11,10 @@ from craftr.core.system.taskstate import calculate_task_hash
 
 if t.TYPE_CHECKING:
   from craftr.core.system.executiongraph import ExecutionGraph
-  from craftr.core.util.config import Config
+  from craftr.core.util.config import Settings
 
 
 class SimpleExecutor(Executor):
-
-  def __init__(self, config: 'Config') -> None:
-    pass  # don't need the config
 
   def execute(self, graph: 'ExecutionGraph') -> None:
     outdated_tasks: t.Set[Task] = set()

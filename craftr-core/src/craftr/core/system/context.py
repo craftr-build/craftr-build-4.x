@@ -8,11 +8,12 @@ from nr.caching.api import NamespaceStore
 
 from craftr.core.executor import Executor
 from craftr.core.system.executiongraph import ExecutionGraph
+from craftr.core.system.plugin import IPluginLoader
 from craftr.core.system.project import Project
+from craftr.core.system.settings import Settings
 from craftr.core.system.task import Task
 from craftr.core.system.taskselector import TaskSelector
 from craftr.core.util.caching import JsonDirectoryStore
-from craftr.core.util.config import Config
 from craftr.core.util.preconditions import check_instance_of
 from craftr.core.util.pyimport import load_class
 
@@ -30,26 +31,31 @@ class Context:
   """
 
   DEFAULT_EXECUTOR = 'craftr.core.executor.simple.SimpleExecutor'
+  DEFAULT_PLUGIN_LOADER = 'craftr.core.system.plugin.DefaultPluginLoader'
   DEFAULT_SELECTOR = 'craftr.core.system.taskselector.DefaultTaskSelector'
-  craftr_PROPERTIES_FILE = Path('craftr.properties')
+  CRAFTR_PROPERTIES_FILE = Path('craftr.properties')
+  CRAFTR_DIRECTORY = Path('.craftr')
 
-  def __init__(self, executor: t.Optional[Executor] = None, settings: t.Optional[Config] = None) -> None:
-    self._root_project: t.Optional[Project] = None
+  def __init__(self,
+      settings: t.Optional[Settings] = None,
+      executor: t.Optional[Executor] = None,
+      plugin_loader: t.Optional[IPluginLoader] = None,
+      ) -> None:
 
-    if settings is None and self.craftr_PROPERTIES_FILE.exists():
-      settings = Config.parse(self.craftr_PROPERTIES_FILE.read_text().splitlines())
+    if settings is None and self.CRAFTR_PROPERTIES_FILE.exists():
+      settings = Settings.parse(self.CRAFTR_PROPERTIES_FILE.read_text().splitlines())
     elif settings is None:
-      settings = Config.of({})
+      settings = Settings.of({})
 
-    if executor is None:
-      executor_class = load_class(settings.get('core.executor', self.DEFAULT_EXECUTOR))
-      executor = t.cast(Executor, executor_class(settings))
-      check_instance_of(executor, Executor)
-
+    self._root_project: t.Optional[Project] = None
     self.settings = settings
-    self.executor = executor
+    self.executor = executor or settings.get_configurable_class_instance(
+        Executor, 'core.executor', self.DEFAULT_EXECUTOR)
+    self.plugin_loader = plugin_loader or settings.get_configurable_class_instance(
+        IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)
     self.graph = ExecutionGraph()
-    self.metadata_store: NamespaceStore = JsonDirectoryStore('.craftr/metadata', create_dir=True)
+    self.metadata_store: NamespaceStore = JsonDirectoryStore(
+        str(self.CRAFTR_DIRECTORY / 'metadata'), create_dir=True)
 
   @property
   def root_project(self) -> t.Optional[Project]:
@@ -94,9 +100,8 @@ class Context:
       return Path(build_directory)
 
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
-    selector_class = load_class(self.settings.get('core.task_selector', self.DEFAULT_SELECTOR))
-    selector = t.cast(TaskSelector, selector_class())
-    check_instance_of(selector, TaskSelector)
+    selector = self.settings.get_configurable_class_instance(
+        TaskSelector, 'core.task_selector', self.DEFAULT_SELECT)
 
     selected_tasks: t.Set[Task] = set()
 

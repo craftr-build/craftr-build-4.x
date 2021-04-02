@@ -4,14 +4,10 @@ import typing as t
 
 if t.TYPE_CHECKING:
   from craftr.core.system.executiongraph import ExecutionGraph
-  from craftr.core.util.config import Config
+  from craftr.core.util.config import Settings
 
 
 class Executor(metaclass=abc.ABCMeta):
-
-  @abc.abstractmethod
-  def __init__(self, config: 'Config') -> None:
-    pass
 
   @abc.abstractmethod
   def execute(self, graph: 'ExecutionGraph') -> None:

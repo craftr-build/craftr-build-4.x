@@ -68,7 +68,9 @@ class Project:
       return self._build_directory
     return self.context.get_default_build_directory(self)
 
-  # TODO(NiklasRosenstein): Setter for build_directory
+  @build_directory.setter
+  def build_directory(self, path: t.Union[str, Path]) -> None:
+    self._build_directory = Path(path)
 
   def task(self, name: str, task_class: t.Optional[t.Type[T_Task]] = None) -> T_Task:
     """
@@ -139,3 +141,13 @@ class Project:
     else:
       for subproject in self._subprojects.values():
         closure(subproject)
+
+  def apply_plugin(self, plugin_name: str) -> None:
+    """
+    Loads a plugin and applies it to the project. Plugins are loaded via #Context.plugin_loader
+    and applied to the project immediately after. The default implementation for loading plugins
+    uses Python package entrypoints.
+    """
+
+    plugin = self.context.plugin_loader.load_plugin(plugin_name)
+    plugin.apply(self)

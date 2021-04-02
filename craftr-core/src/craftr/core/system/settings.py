@@ -2,10 +2,17 @@
 import abc
 import typing as t
 
+from craftr.core.util.preconditions import check_instance_of
+from craftr.core.util.pyimport import load_class
+
 T = t.TypeVar('T')
 
 
-class Config(metaclass=abc.ABCMeta):
+class ClassInstantiationError(Exception):
+  pass
+
+
+class Settings(metaclass=abc.ABCMeta):
   """
   Interface similar to a mapping but it provides additional helpers to read values of various
   types.
@@ -44,17 +51,31 @@ class Config(metaclass=abc.ABCMeta):
       return False
     raise ValueError(f'{key!r} is not a boolean: {self[key]!r}')
 
+  def get_configurable_class_instance(self, type: t.Type[T], key: str, default: str) -> T:
+    class_ = load_class(self.get(key, default))
+    try:
+      if hasattr(class_, 'from_settings'):
+        instance = class_.from_settings(self)
+      else:
+        instance = class_()
+    except Exception:
+      raise ClassInstantiationError(
+          f'Error while instantiating instance of `{class_.__module__}.{class_.__qualname__}` '
+          f'from configuration key `{key}`')
+    check_instance_of(instance, type)
+    return instance
+
   @staticmethod
-  def of(mapping: t.MutableMapping[str, str]) -> 'Config':
-    return _MappingConfig(mapping)
+  def of(mapping: t.MutableMapping[str, str]) -> 'Settings':
+    return _MappingSettings(mapping)
 
   @staticmethod
   def parse(
     lines: t.Iterable[str],
     on_invalid_line: t.Optional[t.Callable[[int, str], None]] = None,
-  ) -> 'Config':
+  ) -> 'Settings':
     """
-    Parses a list of `key=value` lines and returns it as a #Config object. Lines starting with
+    Parses a list of `key=value` lines and returns it as a #Settings object. Lines starting with
     the hashsign (`#`) are skipped. If provided, lines that do not conform to the `key=value`
     format are passed to `on_invalid_line` and are skipped.
     """
@@ -70,10 +91,10 @@ class Config(metaclass=abc.ABCMeta):
           on_invalid_line(index, line)
         continue
       mapping[key.strip()] = value.strip()
-    return _MappingConfig(mapping)
+    return _MappingSettings(mapping)
 
 
-class _MappingConfig(Config):
+class _MappingSettings(Settings):
 
   def __init__(self, mapping: t.MutableMapping[str, str]) -> None:
     self._mapping = mapping
