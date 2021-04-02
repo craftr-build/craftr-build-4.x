@@ -2,6 +2,10 @@
 
 Craftr is a Gradle-like build-system implemented in Python.
 
+__Requirements__
+
+* Python 3.9 or newer
+
 ## Quickstart (DSL)
 
 ```py

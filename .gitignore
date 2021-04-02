@@ -1,0 +1,10 @@
+*.py[cod]
+*.egg-info
+*.egg
+.build/
+.craftr/
+.vscode/
+.mypy_cache/
+.pytest_cache/
+.venv*/
+/test.py
