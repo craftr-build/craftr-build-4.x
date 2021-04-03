@@ -39,9 +39,8 @@ class DefaultTaskSelector(TaskSelector):
 
     result: t.Set[Task] = set()
     for task in self._iter_all_tasks(project):
-      if self._matches(task.path, selection, is_abs):
-        result.add(task)
-      elif task.group and self._matches(task.project.path + ':' + task.group, selection, is_abs):
+      if self._matches(task.path, selection, is_abs) or \
+          task.group and self._matches(task.project.path + ':' + task.group, selection, is_abs):
         result.add(task)
 
     return result
