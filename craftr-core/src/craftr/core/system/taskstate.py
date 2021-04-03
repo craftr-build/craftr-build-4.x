@@ -44,7 +44,8 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:
     hasher.update(repr(prop.or_none()).encode(encoding))
 
     item_type = unpack_type_hint(prop.value_type)
-    if prop.value_type == File or item_type == File or Task.InputFile in prop.annotations:
+    if Task.Input in prop.annotations and (prop.value_type == File or item_type == File) \
+        or Task.InputFile in prop.annotations:
       if item_type is None:
         files = [x for x in [prop.or_else(None)] if x is not None]
       else:
