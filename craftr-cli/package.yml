@@ -1,0 +1,12 @@
+name: craftr-cli
+version: 5.0.0
+author: Niklas Rosenstein <rosensteinniklas@gmail.com>
+modulename: craftr.cli
+description: CLI for Craftr to execute Python and Craftr DSL build scripts.
+requirements:
+- python ^3.9
+- craftr-core ^5.0.0
+typed: true
+entrypoints:
+  console_scripts:
+  - craftr = craftr.cli.main:main
