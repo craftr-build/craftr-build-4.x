@@ -1,0 +1,12 @@
+name: craftr-stdlib
+version: 0.0.0
+author: Niklas Rosenstein <rosensteinniklas@gmail.com>
+modulename: craftr.stdlib
+description: Package description here.
+requirements:
+- python ^3.9
+entrypoints:
+  craftr.plugins:
+  - default = craftr.stdlib.default
+  - cxx = craftr.stdlib.cxx
+typed: true
