@@ -7,7 +7,7 @@ from craftr.core.types import File
 from craftr.core.util.typing import unpack_type_hint
 
 if t.TYPE_CHECKING:
-  from craftr.core.system.task import Task
+  from .task import Task
 
 
 class _IHasher(t.Protocol):
@@ -34,7 +34,7 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:  # NOSONA
   > included in it's #repr(), and that the #repr() is consistent.
   """
 
-  from craftr.core.system.task import Task
+  from .task import Task
 
   hasher = hashlib.new(hash_algo)
   encoding = 'utf-8'

@@ -4,10 +4,10 @@ import typing as t
 
 from craftr.core.property import Property
 from craftr.core.property.provider import NoValueError
-from craftr.core.system.task import Task
+from craftr.core.task import Task
 
 if t.TYPE_CHECKING:
-  from craftr.core.system.project import Project
+  from craftr.core.project import Project
 
 
 class Action(metaclass=abc.ABCMeta):

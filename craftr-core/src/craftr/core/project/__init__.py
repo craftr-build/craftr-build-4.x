@@ -6,14 +6,29 @@ import weakref
 from pathlib import Path
 from craftr.core.closure import Closure
 
-from craftr.core.system.extension import ExtensibleObject, IConfigurable
+from craftr.core.closure import IConfigurable
+from craftr.core.task import Task
 from craftr.core.util.preconditions import check_not_none
-from craftr.core.system.task import Task
 
 if t.TYPE_CHECKING:
-  from craftr.core.system.context import Context
+  from .context import Context
 
 T_Task = t.TypeVar('T_Task', bound='Task')
+
+
+class ExtensibleObject:
+
+  def __init__(self) -> None:
+    self._extensions: t.Dict[str, t.Any] = {}
+
+  def __getattr__(self, key: t.Any) -> t.Any:
+    try:
+      return object.__getattribute__(self, '_extensions')[key]
+    except KeyError:
+      raise AttributeError(f'{self} has no attribute or extension named "{key}".')
+
+  def add_extension(self, key: str, extension: t.Any) -> None:
+    self._extensions[key] = extension
 
 
 class Project(ExtensibleObject):

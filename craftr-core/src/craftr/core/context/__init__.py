@@ -6,16 +6,13 @@ from pathlib import Path
 
 from nr.caching.api import NamespaceStore
 
-from craftr.core.executor import Executor
-from craftr.core.system.executiongraph import ExecutionGraph
-from craftr.core.system.plugin import IPluginLoader
-from craftr.core.system.project import Project
-from craftr.core.system.settings import Settings
-from craftr.core.system.task import Task
-from craftr.core.system.taskselector import TaskSelector
+from craftr.core.executor import Executor, ExecutionGraph
+from craftr.core.plugin import IPluginLoader
+from craftr.core.project import Project
+from craftr.core.settings import Settings
+from craftr.core.task import Task, ITaskSelector
 from craftr.core.util.caching import JsonDirectoryStore
-from craftr.core.util.preconditions import check_instance_of, check_not_none
-from craftr.core.util.pyimport import load_class
+from craftr.core.util.preconditions import check_not_none
 
 
 class Context:
@@ -27,12 +24,12 @@ class Context:
 
   * `core.build_directory` (no default)
   * `core.executor` (defaults to `craftr.core.executor.simple.SimpleExecutor`)
-  * `core.task_selector` (defaults to `craftr.core.system.taskselector.DefaultTaskSelector`)
+  * `core.task_selector` (defaults to `craftr.core.task.selector.default.DefaultTaskSelector`)
   """
 
-  DEFAULT_EXECUTOR = 'craftr.core.executor.simple.SimpleExecutor'
-  DEFAULT_PLUGIN_LOADER = 'craftr.core.system.plugin.DefaultPluginLoader'
-  DEFAULT_SELECTOR = 'craftr.core.system.taskselector.DefaultTaskSelector'
+  DEFAULT_EXECUTOR = 'craftr.core.executor.default.DefaultExecutor'
+  DEFAULT_PLUGIN_LOADER = 'craftr.core.plugin.default.DefaultPluginLoader'
+  DEFAULT_SELECTOR = 'craftr.core.task.selector.default.DefaultTaskSelector'
   CRAFTR_PROPERTIES_FILE = Path('craftr.properties')
   CRAFTR_DIRECTORY = Path('.craftr')
 
@@ -102,7 +99,7 @@ class Context:
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
     root_project = check_not_none(self.root_project, 'no root project initialized')
     selector = self.settings.get_instance(
-        TaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)  # type: ignore
+        ITaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)  # type: ignore
 
     selected_tasks: t.Set[Task] = set()
 

@@ -2,10 +2,10 @@
 import typing as t
 import weakref
 
-from craftr.core.property.provider import Box, NoValueError, Provider, T
-from craftr.core.property.typechecking import TypeCheckingContext, type_repr, check_type, mutate_values, MutableVisitContext
 from craftr.core.util.preconditions import check_not_none
 from craftr.core.util.typing import unpack_type_hint
+from .provider import Box, NoValueError, Provider, T
+from .typechecking import TypeCheckingContext, type_repr, check_type, mutate_values, MutableVisitContext
 
 
 def _unpack_nested_providers(value: t.Any, type_hint: t.Any) -> t.Any:

@@ -7,6 +7,7 @@ import typing as t
 from craftr.core.util.preconditions import check_instance_of
 
 T = t.TypeVar('T')
+T_IConfigurable = t.TypeVar('T_IConfigurable', bound='IConfigurable')
 
 
 class _ValueRef:
@@ -166,3 +167,14 @@ def closure(owner: t.Optional[t.Any] = None) -> t.Callable[[t.Callable], Closure
     return Closure(func, frame, owner, None)
 
   return decorator
+
+
+@t.runtime_checkable
+class IConfigurable(t.Protocol):
+
+  def configure(self, closure: 'Closure') -> t.Any:
+    """
+    Configure the object with a closure.
+    """
+
+    closure.apply(self)

@@ -6,13 +6,13 @@ A very simple, sequential executor.
 import typing as t
 
 from craftr.core.executor.api import Executor
-from craftr.core.system.task import Task
+from craftr.core.task import Task
 
 if t.TYPE_CHECKING:
-  from craftr.core.system.executiongraph import ExecutionGraph
+  from .graph import ExecutionGraph
 
 
-class SimpleExecutor(Executor):
+class DefaultExecutor(Executor):
 
   def execute(self, graph: 'ExecutionGraph') -> None:
     outdated_tasks: t.Set[Task] = set()

@@ -1,7 +1,7 @@
 
 import typing as t
 
-from craftr.core.system.task import Task
+from craftr.core.task import Task
 from craftr.core.util.preconditions import check_argument
 
 

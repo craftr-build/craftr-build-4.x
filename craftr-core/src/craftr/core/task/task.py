@@ -6,10 +6,10 @@ import weakref
 from nr.caching.api import KeyDoesNotExist
 
 from craftr.core.property import HavingProperties, collect_properties
-from craftr.core.system.extension import IConfigurable
-from craftr.core.system.taskstate import calculate_task_hash
+from craftr.core.closure import IConfigurable
 from craftr.core.util.collections import unique
 from craftr.core.util.preconditions import check_not_none
+from .state import calculate_task_hash
 
 if t.TYPE_CHECKING:
   from craftr.core.actions import Action
