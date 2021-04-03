@@ -42,6 +42,14 @@ class Provider(t.Generic[T], metaclass=abc.ABCMeta):
     except NoValueError:
       return default
 
+  def or_else_get(self, default_supplier: t.Callable[[], U]) -> t.Union[T, U]:
+    """ Get the value of the property, or return the value returned by *default_supplier*. """
+
+    try:
+      return self.get()
+    except NoValueError:
+      return default_supplier()
+
   def or_none(self) -> t.Optional[T]:
     """ Get the value of the property, or return None. """
 
