@@ -13,7 +13,7 @@ from .state import calculate_task_hash
 
 if t.TYPE_CHECKING:
   from craftr.core.actions import Action
-  from craftr.core.system.project import Project
+  from craftr.core.project import Project
 
 TASK_HASH_NAMESPACE = 'task-hashes'
 

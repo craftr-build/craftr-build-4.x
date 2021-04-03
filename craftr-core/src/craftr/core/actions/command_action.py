@@ -4,7 +4,6 @@ import subprocess as sp
 import typing as t
 from dataclasses import dataclass
 
-from craftr.core.types import File
 from .action import Action
 
 
@@ -12,14 +11,14 @@ from .action import Action
 class CommandAction(Action):
 
   #: A command line to execute.
-  command: t.Optional[t.List[File]] = None
+  command: t.Optional[t.Sequence[str]] = None
 
   #: A list of command lines to execute in order. If both #command and #commands are
   #: specified, #command is executed first.
-  commands: t.Optional[t.List[t.List[File]]] = None
+  commands: t.Optional[t.Sequence[t.Sequence[str]]] = None
 
   #: The working directory in which to execute the command(s).
-  working_directory: t.Optional[File] = None
+  working_directory: t.Optional[str] = None
 
   #: If this is enabled, the command that is being run is printed to stdout.
   verbose: bool = False

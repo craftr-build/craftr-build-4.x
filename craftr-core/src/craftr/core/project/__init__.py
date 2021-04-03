@@ -11,7 +11,7 @@ from craftr.core.task import Task
 from craftr.core.util.preconditions import check_not_none
 
 if t.TYPE_CHECKING:
-  from .context import Context
+  from craftr.core.context import Context
 
 T_Task = t.TypeVar('T_Task', bound='Task')
 

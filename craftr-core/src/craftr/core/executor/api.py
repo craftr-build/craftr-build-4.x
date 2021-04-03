@@ -3,7 +3,7 @@ import abc
 import typing as t
 
 if t.TYPE_CHECKING:
-  from craftr.core.system.executiongraph import ExecutionGraph
+  from .graph import ExecutionGraph
 
 
 class Executor(metaclass=abc.ABCMeta):
