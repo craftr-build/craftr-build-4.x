@@ -6,3 +6,4 @@ description: The pure Python API for describing and executing builds with Craftr
 requirements:
 - python ^3.9
 - nr.caching ^0.3.2
+typed: true
