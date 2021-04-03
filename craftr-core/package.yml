@@ -1,5 +1,5 @@
 name: craftr-core
-version: 0.0.0
+version: 5.0.0
 author: Niklas Rosenstein <rosensteinniklas@gmail.com>
 modulename: craftr.core
 description: The pure Python API for describing and executing builds with Craftr.

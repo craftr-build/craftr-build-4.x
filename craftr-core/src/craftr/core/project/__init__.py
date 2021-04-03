@@ -164,7 +164,7 @@ class Project(ExtensibleObject):
       for subproject in self._subprojects.values():
         closure(subproject)
 
-  def apply_plugin(self, plugin_name: str) -> None:
+  def apply(self, plugin_name: str) -> None:
     """
     Loads a plugin and applies it to the project. Plugins are loaded via #Context.plugin_loader
     and applied to the project immediately after. The default implementation for loading plugins

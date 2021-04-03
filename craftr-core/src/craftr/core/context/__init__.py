@@ -30,7 +30,7 @@ class Context:
   DEFAULT_EXECUTOR = 'craftr.core.executor.default.DefaultExecutor'
   DEFAULT_PLUGIN_LOADER = 'craftr.core.plugin.default.DefaultPluginLoader'
   DEFAULT_SELECTOR = 'craftr.core.task.selector.default.DefaultTaskSelector'
-  CRAFTR_PROPERTIES_FILE = Path('craftr.properties')
+  CRAFTR_SETTINGS_FILE = Path('build.settings')
   CRAFTR_DIRECTORY = Path('.craftr')
 
   def __init__(self,
@@ -39,8 +39,8 @@ class Context:
       plugin_loader: t.Optional[IPluginLoader] = None,
       ) -> None:
 
-    if settings is None and self.CRAFTR_PROPERTIES_FILE.exists():
-      settings = Settings.parse(self.CRAFTR_PROPERTIES_FILE.read_text().splitlines())
+    if settings is None and self.CRAFTR_SETTINGS_FILE.exists():
+      settings = Settings.parse(self.CRAFTR_SETTINGS_FILE.read_text().splitlines())
     elif settings is None:
       settings = Settings.of({})
 

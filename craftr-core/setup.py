@@ -21,7 +21,7 @@ requirements = [
 
 setuptools.setup(
   name = 'craftr-core',
-  version = '0.0.0',
+  version = '5.0.0',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   description = 'The pure Python API for describing and executing builds with Craftr.',

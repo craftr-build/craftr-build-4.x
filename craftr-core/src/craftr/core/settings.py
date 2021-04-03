@@ -1,6 +1,7 @@
 
 import abc
 import typing as t
+from pathlib import Path
 
 from craftr.core.util.preconditions import check_instance_of
 from craftr.core.util.pyimport import load_class
@@ -20,6 +21,10 @@ class Settings(metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
   def __getitem__(self, key: str) -> str:
+    pass
+
+  @abc.abstractmethod
+  def __iter__(self) -> t.Iterator[str]:
     pass
 
   @abc.abstractmethod
@@ -75,6 +80,12 @@ class Settings(metaclass=abc.ABCMeta):
     check_instance_of(instance, type)
     return instance
 
+  def update(self, other: 'Settings') -> None:
+    for key in other:
+      value = other.get(key, None)
+      assert value is not None, (other, key)
+      self.set(key, value)
+
   @staticmethod
   def of(mapping: t.MutableMapping[str, str]) -> 'Settings':
     return _MappingSettings(mapping)
@@ -103,6 +114,12 @@ class Settings(metaclass=abc.ABCMeta):
       mapping[key.strip()] = value.strip()
     return _MappingSettings(mapping)
 
+  @staticmethod
+  def from_file(path: Path, not_exist_ok: bool = True) -> 'Settings':
+    if not path.exists() and not_exist_ok:
+      return Settings.of({})
+    return Settings.parse(path.read_text().splitlines())
+
 
 class _MappingSettings(Settings):
 
@@ -111,6 +128,9 @@ class _MappingSettings(Settings):
 
   def __getitem__(self, key: str) -> str:
     return self._mapping[key]
+
+  def __iter__(self) -> t.Iterator[str]:
+    return iter(self._mapping)
 
   def set(self, key: str, value: t.Union[str, int, bool]) -> None:
     if not isinstance(value, (str, int, bool)):
