@@ -35,7 +35,7 @@ class ExecutionGraph:
   def is_ready(self) -> bool:
     return self._ready
 
-  def ready(self) -> bool:
+  def ready(self) -> None:
     """ Declare that the execution graph is ready. Invokes registered listeners. """
 
     if not self._ready:

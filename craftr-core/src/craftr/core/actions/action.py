@@ -37,7 +37,7 @@ class Action(metaclass=abc.ABCMeta):
               kwargs[key] = getattr(cls, key)
             else:
               raise
-        return [cls(**kwargs)]
+        return [cls(**kwargs)]  # type: ignore
 
     ActionAsTask.__name__ = cls.__name__ + 'AsTask'
     ActionAsTask.__qualname__ = ActionAsTask.__qualname__.rpartition('.')[0] \

@@ -47,7 +47,7 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:
     if Task.Input in prop.annotations and (prop.value_type == File or item_type == File) \
         or Task.InputFile in prop.annotations:
       if item_type is None:
-        files = [x for x in [prop.or_else(None)] if x is not None]
+        files: t.List[str] = [x for x in [prop.or_else(None)] if x is not None]
       else:
         files = prop.or_else([])
       for path in map(Path, files):

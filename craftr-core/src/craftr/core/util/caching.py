@@ -22,7 +22,7 @@ class JsonDirectoryStore(NamespaceStore):
   def namespace(self, namespace: str) -> KeyValueStore:
     return JsonFileStore(os.path.join(self._directory, namespace + '.json'))
 
-  def expunge(self, namespace: t.Optional[str]) -> None:
+  def expunge(self, namespace: t.Optional[str] = None) -> None:
     if namespace:
       self.namespace(namespace).expunge()
     else:
@@ -63,6 +63,7 @@ class JsonFileStore(KeyValueStore):
     except KeyError:
       raise KeyDoesNotExist(key)
     if entry['exp'] is not None and entry['exp'] < time.time():
+      assert self._values is not None
       del self._values[key]
       raise KeyDoesNotExist(key)
     return base64.b85decode(entry['val'].encode('ascii'))

@@ -167,7 +167,7 @@ class Project(ExtensibleObject):
 
     return glob.glob(str(self.directory / pattern))
 
-  def add_task_extension(self, name: str, task_type: T_Task, default_name: t.Optional[str] = None) -> None:
+  def add_task_extension(self, name: str, task_type: t.Type[T_Task], default_name: t.Optional[str] = None) -> None:
     self.add_extension(name, _TaskExtensionWrapper(self, default_name or name, task_type))
 
 
@@ -203,7 +203,8 @@ class _TaskExtensionWrapper(IConfigurable, t.Generic[T_Task]):
     return f'_TaskExtensionWrapper({self._task_type})'
 
   def __call__(self, task_name: t.Optional[str] = None) -> T_Task:
-    return self._project().task(task_name or self._default_name, self._task_type)
+    return check_not_none(self._project(), 'lost project reference')\
+        .task(task_name or self._default_name, self._task_type)
 
   def configure(self, closure: 'Closure') -> T_Task:
     task = self()

@@ -115,7 +115,7 @@ class Task(HavingProperties, IConfigurable):
     hash_value = calculate_task_hash(self)
 
     try:
-      stored_hash = self.project.context.metadata_store.\
+      stored_hash: t.Optional[str] = self.project.context.metadata_store.\
           namespace(TASK_HASH_NAMESPACE).load(self.path).decode()
     except KeyDoesNotExist:
       stored_hash = None

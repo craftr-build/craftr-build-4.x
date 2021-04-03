@@ -46,7 +46,7 @@ class DefaultPluginLoader(IPluginLoader):
   entrypoint_name: str = 'craftr.plugins'
 
   @classmethod
-  def from_settings(cls, settings: Settings) -> None:
+  def from_settings(cls, settings: Settings) -> 'DefaultPluginLoader':
     return cls(settings.get('craftr.core.system.plugin.DefaultPluginLoader', cls.entrypoint_name))
 
   def load_plugin(self, plugin_name: str) -> IPlugin:

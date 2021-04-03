@@ -32,7 +32,7 @@ class Settings(metaclass=abc.ABCMeta):
     except KeyError:
       return default
 
-  def get_int(self, key: str, default: T) -> t.Union[int, T]:
+  def get_int(self, key: str, default: int) -> int:
     try:
       return int(self[key].strip())
     except KeyError:
@@ -40,7 +40,7 @@ class Settings(metaclass=abc.ABCMeta):
     except ValueError:
       raise ValueError(f'{key!r} is not an integer: {self[key]!r}')
 
-  def get_bool(self, key: str, default: T = False) -> t.Union[bool, T]:
+  def get_bool(self, key: str, default: bool = False) -> t.Union[bool, T]:
     try:
       value = self[key].strip().lower()
     except KeyError:
@@ -52,6 +52,16 @@ class Settings(metaclass=abc.ABCMeta):
     raise ValueError(f'{key!r} is not a boolean: {self[key]!r}')
 
   def get_instance(self, type: t.Type[T], key: str, default: str) -> T:
+    """
+    Locates a class using the string stored under the specified *key* or via the *default* string.
+    If the class provides a `from_settings()` method, that method will be used to create an
+    instance of the class by passing the settings object itself, otherwise the class will be
+    instantiated without arguments.
+
+    Note: Due to https://github.com/python/mypy/issues/5374, uses of this function may need to be
+    annotated with `# type: ignore`.
+    """
+
     class_ = load_class(self.get(key, default))
     try:
       if hasattr(class_, 'from_settings'):
@@ -105,4 +115,4 @@ class _MappingSettings(Settings):
   def set(self, key: str, value: t.Union[str, int, bool]) -> None:
     if not isinstance(value, (str, int, bool)):
       raise TypeError(f'expected typing.Union[str, int, bool], got {type(value).__name__}')
-    self._mapping[key] = value
+    self._mapping[key] = str(value)

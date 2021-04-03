@@ -15,7 +15,7 @@ if t.TYPE_CHECKING:
 @t.runtime_checkable
 class IConfigurable(t.Protocol):
 
-  def configure(self, closure: 'Closure') -> None:
+  def configure(self, closure: 'Closure') -> t.Any:
     """
     Configure the object with a closure.
     """

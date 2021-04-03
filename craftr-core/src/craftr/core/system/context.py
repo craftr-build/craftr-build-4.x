@@ -14,7 +14,7 @@ from craftr.core.system.settings import Settings
 from craftr.core.system.task import Task
 from craftr.core.system.taskselector import TaskSelector
 from craftr.core.util.caching import JsonDirectoryStore
-from craftr.core.util.preconditions import check_instance_of
+from craftr.core.util.preconditions import check_instance_of, check_not_none
 from craftr.core.util.pyimport import load_class
 
 
@@ -50,9 +50,9 @@ class Context:
     self._root_project: t.Optional[Project] = None
     self.settings = settings
     self.executor = executor or settings.get_instance(
-        Executor, 'core.executor', self.DEFAULT_EXECUTOR)
+        Executor, 'core.executor', self.DEFAULT_EXECUTOR)  # type: ignore
     self.plugin_loader = plugin_loader or settings.get_instance(
-        IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)
+        IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)  # type: ignore
     self.graph = ExecutionGraph()
     self.metadata_store: NamespaceStore = JsonDirectoryStore(
         str(self.CRAFTR_DIRECTORY / 'metadata'), create_dir=True)
@@ -100,21 +100,22 @@ class Context:
       return Path(build_directory)
 
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
+    root_project = check_not_none(self.root_project, 'no root project initialized')
     selector = self.settings.get_instance(
-        TaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)
+        TaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)  # type: ignore
 
     selected_tasks: t.Set[Task] = set()
 
     if selection is None:
-      selected_tasks.update(selector.select_default(self.root_project))
+      selected_tasks.update(selector.select_default(root_project))
     else:
       if isinstance(selection, (str, Task)):
-        selection = [selection]
+        selection = t.cast(t.Union[t.List[str], t.List[Task]], [selection])
       for item in selection:
         if isinstance(item, Task):
           selected_tasks.add(item)
         elif isinstance(item, str):
-          result_set = selector.select_tasks(item, self.root_project)
+          result_set = selector.select_tasks(item, root_project)
           if not result_set:
             raise ValueError(f'selector matched no tasks: {item!r}')
           selected_tasks.update(result_set)

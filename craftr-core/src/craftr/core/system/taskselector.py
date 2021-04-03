@@ -10,11 +10,11 @@ if t.TYPE_CHECKING:
 class TaskSelector(metaclass=abc.ABCMeta):
   """ An interface to expand a string into a set of tasks in the context of a project. """
 
-  @abc.abstractproperty
+  @abc.abstractmethod
   def select_tasks(self, selection: str, project: 'Project') -> t.Collection['Task']:
     pass
 
-  @abc.abstractproperty
+  @abc.abstractmethod
   def select_default(self, project: 'Project') -> t.Collection['Task']:
     pass
 

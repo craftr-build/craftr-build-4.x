@@ -98,7 +98,7 @@ class MutableVisitContext(BaseContext):
 
   def __init__(self,
     type_hint: t.List[t.Any],
-    mutator_func: t.Optional[t.Callable[[t.Any], t.Any]] = None,
+    mutator_func: t.Optional[t.Callable[[t.Any, t.List[t.Any], 'MutableVisitContext'], t.Any]] = None,
     always: bool = False,
   ) -> None:
     super().__init__(type_hint)

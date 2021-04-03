@@ -75,7 +75,7 @@ class Closure:
     self.stackframe = stackframe
     self.owner = owner
     self.delegate = delegate
-    self.resolve_strategy = resolve_strategy
+    self.resolve_strategy = ResolveStrategy[resolve_strategy] if isinstance(resolve_strategy, str) else resolve_strategy
     self.args = args or []
     self.kwargs = kwargs or {}
 
@@ -134,9 +134,9 @@ class Closure:
       return _ValueRef(lambda: self.delegate, _cant_be_set)
 
     if self.resolve_strategy == ResolveStrategy.OWNER_FIRST:
-      objs = [self.owner, self.delegate]
+      objs = (self.owner, self.delegate)
     elif self.resolve_strategy == ResolveStrategy.DELEGATE_FIRST:
-      objs = [self.delegate, self.owner]
+      objs = (self.delegate, self.owner)
     else:
       assert False, self.resolve_strategy
 
