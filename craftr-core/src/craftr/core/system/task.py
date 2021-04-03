@@ -20,6 +20,7 @@ TASK_HASH_NAMESPACE = 'task-hashes'
 
 class TaskPropertyType(enum.Enum):
   Input = enum.auto()
+  InputFile = enum.auto()
   Output = enum.auto()
 
 
@@ -33,6 +34,7 @@ class Task(HavingProperties, IConfigurable):
   """
 
   Input = TaskPropertyType.Input
+  InputFile = TaskPropertyType.InputFile
   Output = TaskPropertyType.Output
 
   #: Explicit dependencies of the task. Tasks in this list will always be executed before

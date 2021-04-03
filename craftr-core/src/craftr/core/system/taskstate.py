@@ -1,9 +1,27 @@
 
 import hashlib
 import typing as t
+from pathlib import Path
+
+from craftr.core.types import File
+from craftr.core.util.typing import unpack_type_hint
 
 if t.TYPE_CHECKING:
   from craftr.core.system.task import Task
+
+
+class _IHasher(t.Protocol):
+  def update(self, data: bytes) -> None:  # NOSONAR
+    pass
+
+
+def _hash_file(hasher: _IHasher, path: Path) -> None:
+  with path.open('rb') as fp:
+    while True:
+      chunk = fp.read(8048)
+      hasher.update(chunk)
+      if not chunk:
+        break
 
 
 def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:
@@ -16,6 +34,8 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:
   > included in it's #repr(), and that the #repr() is consistent.
   """
 
+  from craftr.core.system.task import Task
+
   hasher = hashlib.new(hash_algo)
   encoding = 'utf-8'
 
@@ -23,7 +43,14 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:
     hasher.update(prop.name.encode(encoding))
     hasher.update(repr(prop.or_none()).encode(encoding))
 
-  # TODO(NiklasRosenstein): Check file contents if the property value type is #File and
-  #   it is annotated as an input.
+    item_type = unpack_type_hint(prop.value_type)
+    if prop.value_type == File or item_type == File or Task.InputFile in prop.annotations:
+      if item_type is None:
+        files = [x for x in [prop.or_else(None)] if x is not None]
+      else:
+        files = prop.or_else([])
+      for path in map(Path, files):
+        if path.is_file():
+          _hash_file(hasher, path)
 
   return hasher.hexdigest()
