@@ -61,6 +61,7 @@ class Task(HavingProperties, IConfigurable):
     self._project = weakref.ref(project)
     self._name = name
     self.dependencies = []
+    self.init()
 
   def __repr__(self) -> str:
     return f'{type(self).__name__}({self.path!r})'
@@ -76,6 +77,9 @@ class Task(HavingProperties, IConfigurable):
   @property
   def path(self) -> str:
     return f'{self.project.path}:{self.name}'
+
+  def init(self) -> None:
+    pass
 
   def get_dependencies(self) -> t.List['Task']:
     """ Get all dependencies of the task, including those inherited through properties. """
