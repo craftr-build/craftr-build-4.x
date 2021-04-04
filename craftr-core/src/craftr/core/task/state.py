@@ -43,9 +43,10 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:  # NOSONA
     hasher.update(prop.name.encode(encoding))
     hasher.update(repr(prop.or_none()).encode(encoding))
 
-    item_type = unpack_type_hint(prop.value_type)
+    item_type = unpack_type_hint(prop.value_type)[1]
     is_input_file_property = (
-        Task.Input in prop.annotations and (prop.value_type == File or item_type == File) \
+        Task.Input in prop.annotations and (
+            prop.value_type == File or (item_type and item_type[0] == File))
         or Task.InputFile in prop.annotations)
 
     if is_input_file_property:
