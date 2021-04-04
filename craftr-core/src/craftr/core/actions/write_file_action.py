@@ -4,7 +4,7 @@ import typing as t
 from dataclasses import dataclass
 
 from craftr.core.types import File
-from .action import Action
+from .action import Action, ActionContext
 
 
 @dataclass
@@ -22,7 +22,7 @@ class WriteFileAction(Action):
   #: The contents of the file to write as binary data.
   data: t.Optional[bytes] = None
 
-  def execute(self) -> None:
+  def execute(self, context: ActionContext) -> None:
     os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
     if self.text is not None and self.data is not None:
       raise RuntimeError('both text and data supplied')

@@ -1,6 +1,7 @@
 
 import abc
 import typing as t
+from dataclasses import dataclass
 
 from craftr.core.property import Property
 from craftr.core.property.provider import NoValueError
@@ -10,10 +11,15 @@ if t.TYPE_CHECKING:
   from craftr.core.project import Project
 
 
+@dataclass
+class ActionContext:
+  verbose: bool
+
+
 class Action(metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
-  def execute(self) -> None:
+  def execute(self, context: ActionContext) -> None:
     pass
 
   @classmethod
