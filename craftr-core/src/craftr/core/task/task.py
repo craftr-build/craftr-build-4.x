@@ -2,6 +2,7 @@
 import enum
 import typing as t
 import weakref
+from pathlib import Path
 
 from nr.caching.api import KeyDoesNotExist
 
@@ -9,7 +10,7 @@ from craftr.core.property import HavingProperties, collect_properties
 from craftr.core.closure import IConfigurable
 from craftr.core.util.collections import unique
 from craftr.core.util.preconditions import check_not_none
-from .state import calculate_task_hash
+from .state import calculate_task_hash, unwrap_file_property
 
 if t.TYPE_CHECKING:
   from craftr.core.actions import Action
@@ -22,6 +23,7 @@ class TaskPropertyType(enum.Enum):
   Input = enum.auto()
   InputFile = enum.auto()
   Output = enum.auto()
+  OutputFile = enum.auto()
 
 
 class Task(HavingProperties, IConfigurable):
@@ -36,6 +38,7 @@ class Task(HavingProperties, IConfigurable):
   Input = TaskPropertyType.Input
   InputFile = TaskPropertyType.InputFile
   Output = TaskPropertyType.Output
+  OutputFile = TaskPropertyType.OutputFile
 
   #: Explicit dependencies of the task. Tasks in this list will always be executed before
   #: this task.
@@ -114,6 +117,12 @@ class Task(HavingProperties, IConfigurable):
 
     if self.always_outdated:
       return True
+
+    # Check if any of the output file(s) don't exist.
+    for prop in self.get_properties().values():
+      _is_input, is_output, files = unwrap_file_property(prop)
+      if is_output and any(not Path(f).exists() for f in files):
+        return True
 
     # TODO(NiklasRosenstein): If the task has no input file properties or does not produce output
     #   files should always be considered as outdated.
