@@ -4,9 +4,12 @@
 extern "C" {
 #include <cstring>
 #include <array.h>
+#include <typesafearray.h>
 }
 
 int main() {
+  std::cout << "\n\narray example\n\n";
+
   array_t array;
   array_init(&array, 16, 2);
   array_dump_info(&array);
@@ -26,4 +29,13 @@ int main() {
 
   array_dump_info(&array);
   array_destroy(&array);
+
+  std::cout << "\n\ntypesafearray example\n\n";
+  int* numbers = (int*) typesafearray_new(sizeof(int), 2);
+  std::cout << typesafearray_length(numbers) << "\n";
+  numbers[0] = 42;
+  numbers[1] = 90;
+  numbers = (int*) typesafearray_resize(numbers, 3);
+  std::cout << typesafearray_length(numbers) << "\n";
+  typesafearray_delete(numbers);
 }
