@@ -16,6 +16,8 @@ from craftr.stdlib.interfaces.executable import IExecutableProvider, ExecutableI
 
 from .interfaces import CxxLibraryInfo, ICxxLibraryProvider
 
+DEFAULT_TASK_NAMES = ['c_application', 'c_library', 'cpp_application', 'cpp_library']
+
 
 class CxxLibraryType(enum.Enum):
   static = enum.auto()
@@ -109,40 +111,40 @@ class CxxBaseTask(Task, CxxBuilderBaseProps, metaclass=abc.ABCMeta):
 class CxxApplicationTask(CxxBaseTask, CxxApplicationProps, IExecutableProvider):
 
   def get_executable_name(self) -> str:
-    name = self.executable_name.or_else(self.project.name)
+    name = self.executable_name.or_else(self.project.name if self.name in DEFAULT_TASK_NAMES else self.name)
     return name + self.naming_scheme['e']
 
-  def get_executable_path(self) -> Path:
-    return Path(self.executable_path.or_else_get(
-        lambda: self._get_preferred_output_directory() / self.get_executable_name()))
+  def init(self):
+    self.executable_path.set_default(lambda:
+        self._get_preferred_output_directory() / self.get_executable_name())
 
   # CxxBaseTask
-  _get_cxx_output_file = get_executable_path
+  def _get_cxx_output_file(self) -> Path:
+    return Path(self.executable_path.get())
 
   # IExecutableProvider
   def get_executable_info(self) -> ExecutableInfo:
-    return ExecutableInfo(str(self.get_executable_path()))
+    return ExecutableInfo(str(self.executable_path.get()))
 
 
 class CxxLibraryTask(CxxLibraryProps, CxxBaseTask, ICxxLibraryProvider):
 
   def get_library_name(self) -> str:
-    name = self.library_name.or_else(self.project.name)
+    name = self.library_name.or_else(self.project.name if self.name in DEFAULT_TASK_NAMES else self.name)
     return self.naming_scheme['lp'] + name + self.naming_scheme['ls']
 
-  def get_library_path(self) -> Path:
-    path = self.library_path.map(Path).or_else(None)
-    if path is None:
-      path = Path(self._get_preferred_output_directory() / self.get_library_name())
-    return path
+  def init(self):
+    self.library_path.set_default(lambda:
+        self._get_preferred_output_directory() / self.get_library_name())
 
   # CxxBaseTask
-  _get_cxx_output_file = get_library_path
+  def _get_cxx_output_file(self) -> Path:
+    return Path(self.library_path.get())
 
   # ICxxLibraryProvider
   def get_cxx_library_info(self) -> CxxLibraryInfo:
     include_paths = list(map(str, self.public_include_paths.or_else_get(lambda: self.include_paths.or_else([]))))
-    return CxxLibraryInfo(self.path, [str(self.get_library_path())], include_paths)
+    return CxxLibraryInfo(self.path, [str(self.library_path.get())], include_paths)
 
 
 class CApplicationTask(CxxApplicationTask):
