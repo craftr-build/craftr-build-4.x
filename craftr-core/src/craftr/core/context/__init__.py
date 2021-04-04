@@ -78,10 +78,10 @@ class Context:
   def initialize_project(self, project: Project) -> None:
     """
     Called when a project is created. Can be overwritten by subclasses to customize what happens
-    when a project is created.
+    when a project is created. The default implementationa applies the "default" plugin.
     """
 
-    pass
+    project.apply('default')
 
   def get_default_build_directory(self, project: Project) -> Path:
     """
