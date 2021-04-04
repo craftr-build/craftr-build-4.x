@@ -79,10 +79,12 @@ class Task(HavingProperties, IConfigurable):
     return f'{self.project.path}:{self.name}'
 
   def init(self) -> None:
+    """ Called from `__init__()`. Useful to implement by subclasses. """
+
     pass
 
   def get_dependencies(self) -> t.List['Task']:
-    """ Get all dependencies of the task, including those inherited through properties. """
+    """ Get all direct dependencies of the task, including those inherited through properties. """
 
     dependencies = self.dependencies[:]
 
