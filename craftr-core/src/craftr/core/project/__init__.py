@@ -174,6 +174,9 @@ class Project(ExtensibleObject):
     plugin = self.context.plugin_loader.load_plugin(plugin_name)
     plugin.apply(self)
 
+  def file(self, sub_path: str) -> Path:
+    return self.directory / sub_path
+
   def glob(self, pattern: str) -> t.List[str]:
     """
     Apply the specified glob pattern relative to the project directory and return a list of the
