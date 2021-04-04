@@ -3,6 +3,7 @@ import hashlib
 import typing as t
 from pathlib import Path
 
+from craftr.core.property import Property
 from craftr.core.types import File
 from craftr.core.util.typing import unpack_type_hint
 
@@ -24,6 +25,32 @@ def _hash_file(hasher: _IHasher, path: Path) -> None:
         break
 
 
+def check_file_property(prop: Property) -> t.Tuple[bool, bool, bool]:
+  from .task import Task
+  item_type = unpack_type_hint(prop.value_type)[1]
+  is_sequence = item_type is not None and prop.value_type != File
+  is_file_type = (prop.value_type == File or (item_type and item_type[0] == File))
+  is_input_file_property = (
+      Task.Input in prop.annotations and is_file_type
+      or Task.InputFile in prop.annotations)
+  is_output_file_property = (
+      Task.Output in prop.annotations and is_file_type
+      or Task.OutputFile in prop.annotations)
+  return is_sequence, is_input_file_property, is_output_file_property
+
+
+def unwrap_file_property(prop: Property) -> t.Tuple[bool, bool, t.List[File]]:
+  is_sequence, is_input_file_property, is_output_file_property = check_file_property(prop)
+  if not is_input_file_property and not is_output_file_property:
+    return False, False, []
+  value = prop.or_else(None)
+  if value is None:
+    result = []
+  else:
+    result = list(value if is_sequence else [value])
+  return is_input_file_property, is_output_file_property, result
+
+
 def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:  # NOSONAR
   """
   Calculates a hash for the task that represents the state of it's inputs (property values
@@ -34,8 +61,6 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:  # NOSONA
   > included in it's #repr(), and that the #repr() is consistent.
   """
 
-  from .task import Task
-
   hasher = hashlib.new(hash_algo)
   encoding = 'utf-8'
 
@@ -43,18 +68,10 @@ def calculate_task_hash(task: 'Task', hash_algo: str = 'sha1') -> str:  # NOSONA
     hasher.update(prop.name.encode(encoding))
     hasher.update(repr(prop.or_none()).encode(encoding))
 
-    item_type = unpack_type_hint(prop.value_type)[1]
-    is_input_file_property = (
-        Task.Input in prop.annotations and (
-            prop.value_type == File or (item_type and item_type[0] == File))
-        or Task.InputFile in prop.annotations)
-
-    if is_input_file_property:
-      value = prop.or_else(None)
-      if value is not None:
-        files = t.cast(t.Sequence[File], value if item_type else [value])
-        for path in map(Path, files):
-          if path.is_file():
-            _hash_file(hasher, path)
+    is_input, _is_output, files = unwrap_file_property(prop)
+    if is_input:
+      for path in map(Path, files):
+        if path.is_file():
+          _hash_file(hasher, path)
 
   return hasher.hexdigest()
