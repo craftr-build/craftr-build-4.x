@@ -4,7 +4,7 @@ import weakref
 
 from craftr.core.util.preconditions import check_not_none
 from craftr.core.util.typing import unpack_type_hint
-from .provider import Box, NoValueError, Provider, T
+from .provider import Box, NoValueError, Provider, T, visit_captured_providers
 from .typechecking import TypeCheckingContext, type_repr, check_type, mutate_values, MutableVisitContext
 
 
@@ -35,6 +35,7 @@ class Property(Provider[T]):
     self.value_type = value_type
     self.annotations = annotations
     self.name = name
+    self._default: t.Optional[t.Callable[[], T]] = None
     self._origin = weakref.ref(origin) if origin is not None else None
     self._value: t.Optional[Provider[T]] = None
     self._nested_providers: t.List[Provider] = []
@@ -52,6 +53,9 @@ class Property(Provider[T]):
   def origin(self) -> t.Optional['HavingProperties']:
     return check_not_none(self._origin(), 'lost reference to origin') \
         if self._origin is not None else None
+
+  def set_default(self, func: t.Callable[[], T]) -> None:
+    self._default = func
 
   def set(self, value: t.Union[T, Provider[T]]) -> None:
     nested_providers: t.List[Provider] = []
@@ -74,16 +78,21 @@ class Property(Provider[T]):
 
   def get(self) -> T:
     if self._value is None:
-      raise NoValueError(self.fqn)
+      if self._default is None:
+        raise NoValueError(self.fqn)
+      return self._default()
     value = _unpack_nested_providers(self._value.get(), self.value_type)
     check_type(value, TypeCheckingContext(self.value_type, lambda: f'while getting property {self.fqn}: '))
     return value
 
   def visit(self, func: t.Callable[[Provider], bool]) -> None:
-    if func(self) and self._value is not None:
-      self._value.visit(func)
-      for provider in self._nested_providers:
-        provider.visit(func)
+    if func(self):
+      if self._value is not None:
+        self._value.visit(func)
+        for provider in self._nested_providers:
+          provider.visit(func)
+      elif self._default is not None:
+        visit_captured_providers(self._default, func)
 
 
 class HavingProperties:

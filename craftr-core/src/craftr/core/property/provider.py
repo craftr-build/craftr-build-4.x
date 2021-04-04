@@ -92,7 +92,7 @@ class Box(Provider[T]):
     return self._value
 
 
-def _visit_captured_providers(subject: t.Callable, func: t.Callable[[Provider], bool]) -> None:
+def visit_captured_providers(subject: t.Callable, func: t.Callable[[Provider], bool]) -> None:
   assert isinstance(subject, types.FunctionType), type(subject)
   for cell in (subject.__closure__ or []):
     if isinstance(cell.cell_contents, Provider):
@@ -115,7 +115,7 @@ class UnaryProvider(Provider[T]):
   def visit(self, func: t.Callable[[Provider], bool]) -> None:
     if func(self):
       self._inner.visit(func)
-      _visit_captured_providers(self._func, func)
+      visit_captured_providers(self._func, func)
 
 
 class BinaryProvider(Provider[T]):
@@ -141,7 +141,7 @@ class BinaryProvider(Provider[T]):
     if func(self):
       self._left.visit(func)
       self._right.visit(func)
-      _visit_captured_providers(self._func, func)
+      visit_captured_providers(self._func, func)
 
 
 class MappedProvider(Provider[R]):
