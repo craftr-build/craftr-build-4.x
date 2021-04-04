@@ -8,6 +8,7 @@ from craftr.core.util.preconditions import check_instance_of
 T = t.TypeVar('T')
 U = t.TypeVar('U')
 V = t.TypeVar('V')
+R = t.TypeVar('R')
 
 
 def _add_operator(left: t.Any, right: t.Any) -> t.Any:
@@ -73,6 +74,12 @@ class Provider(t.Generic[T], metaclass=abc.ABCMeta):
       return Box(value)
     return value
 
+  def map(self, func: t.Callable[[T], R]) -> 'Provider[R]':
+    return MappedProvider(func, self)
+
+  def flatmap(self, func: t.Callable[[T], 'Provider[R]']) -> 'Provider[R]':
+    return FlatMappedProvider(func, self)
+
 
 class Box(Provider[T]):
 
@@ -135,3 +142,54 @@ class BinaryProvider(Provider[T]):
       self._left.visit(func)
       self._right.visit(func)
       _visit_captured_providers(self._func, func)
+
+
+class MappedProvider(Provider[R]):
+
+  def __init__(self, func: t.Callable[[T], R], sub: Provider[T]) -> None:
+    self._func = func
+    self._sub = sub
+
+  def __repr__(self) -> str:
+    return f'MappedProvider({self._func!r}, {self._sub!r})'
+
+  def __bool__(self) -> bool:
+    return bool(self._sub)
+
+  def get(self) -> R:
+    return self._func(self._sub.get())
+
+  def visit(self, visitor: t.Callable[[Provider], bool]) -> None:
+    if visitor(self):
+      self._sub.visit(visitor)
+      # Check if the closure captures any properies.
+      for cell in (self._func.__closure__ or []):
+        if isinstance(cell.cell_contents, Provider):
+          cell.cell_contents.visit(visitor)
+
+
+class FlatMappedProvider(Provider[R]):
+
+  def __init__(self, func: t.Callable[[T], Provider[R]], sub: Provider[T]) -> None:
+    self._func = func
+    self._sub = sub
+
+  def __repr__(self) -> str:
+    return f'FlatMappedProvider({self._func!r}, {self._sub!r})'
+
+  def __bool__(self) -> bool:
+    value = self._sub.or_none()
+    if value is None:
+      return False
+    return bool(self._func(value))
+
+  def get(self) -> R:
+    return self._func(self._sub.get()).get()
+
+  def visit(self, visitor: t.Callable[[Provider], bool]) -> None:
+    if visitor(self):
+      self._sub.visit(visitor)
+      # Check if the closure captures any properies.
+      for cell in (self._func.__closure__ or []):
+        if isinstance(cell.cell_contents, Provider):
+          cell.cell_contents.visit(visitor)
