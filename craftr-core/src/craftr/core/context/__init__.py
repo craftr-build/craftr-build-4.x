@@ -8,7 +8,7 @@ from nr.caching.api import NamespaceStore
 
 from craftr.core.executor import Executor, ExecutionGraph
 from craftr.core.plugin import IPluginLoader
-from craftr.core.project import Project
+from craftr.core.project import IProjectLoader, Project
 from craftr.core.settings import Settings
 from craftr.core.task import Task, ITaskSelector
 from craftr.core.util.caching import JsonDirectoryStore
@@ -30,6 +30,7 @@ class Context:
   DEFAULT_EXECUTOR = 'craftr.core.executor.default.DefaultExecutor'
   DEFAULT_PLUGIN_LOADER = 'craftr.core.plugin.default.DefaultPluginLoader'
   DEFAULT_SELECTOR = 'craftr.core.task.selector.default.DefaultTaskSelector'
+  DEFAULT_PROJECT_LOADER = 'craftr.core.project.loader.default.DefaultProjectLoader'
   CRAFTR_SETTINGS_FILE = Path('build.settings')
   CRAFTR_DIRECTORY = Path('.craftr')
 
@@ -37,6 +38,7 @@ class Context:
       settings: t.Optional[Settings] = None,
       executor: t.Optional[Executor] = None,
       plugin_loader: t.Optional[IPluginLoader] = None,
+      project_loader: t.Optional[IProjectLoader] = None,
       ) -> None:
 
     if settings is None and self.CRAFTR_SETTINGS_FILE.exists():
@@ -50,6 +52,8 @@ class Context:
         Executor, 'core.executor', self.DEFAULT_EXECUTOR)  # type: ignore
     self.plugin_loader = plugin_loader or settings.get_instance(
         IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)  # type: ignore
+    self.project_loader = project_loader or settings.get_instance(
+        IProjectLoader, 'core.project.loader', self.DEFAULT_PROJECT_LOADER)  # type: ignore
     self.graph = ExecutionGraph()
     self.metadata_store: NamespaceStore = JsonDirectoryStore(
         str(self.CRAFTR_DIRECTORY / 'metadata'), create_dir=True)
@@ -58,21 +62,13 @@ class Context:
   def root_project(self) -> t.Optional[Project]:
     return self._root_project
 
-  def project(self, directory: t.Optional[str] = None) -> Project:
+  def load_project(self, path: Path) -> Project:
     """
-    Initialize the root project and return it. If no directory is specified, the parent directory
-    of the caller's filename is used.
+    Initialize the root project and return it.
     """
 
-    if self._root_project:
-      raise RuntimeError('root project already initialized')
-
-    if directory is None:
-      directory = os.path.dirname(sys._getframe(1).f_code.co_filename)
-
-    project = Project(self, None, directory)
+    project = self.project_loader.load_project(self, None, path)
     self._root_project = project
-    self.initialize_project(project)
     return project
 
   def initialize_project(self, project: Project) -> None:
