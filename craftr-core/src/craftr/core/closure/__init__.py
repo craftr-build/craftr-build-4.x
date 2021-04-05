@@ -1,4 +1,8 @@
 
+"""
+Provides the #Closure type that is heavily inspired by Groovy.
+"""
+
 import enum
 import sys
 import types
