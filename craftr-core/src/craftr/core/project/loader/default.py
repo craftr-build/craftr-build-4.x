@@ -3,6 +3,7 @@ import enum
 import typing as t
 from pathlib import Path
 
+from craftr.dsl import execute_file
 from craftr.core.error import BuildError
 from .api import IProjectLoader
 from ..project import Project
@@ -22,7 +23,7 @@ class DefaultProjectLoader(IProjectLoader):
     project = Project(context, parent, path)
     context.initialize_project(project)
     if (filename := path / BuildScriptType.CRAFTR.value).exists():
-      raise NotImplementedError('loading build.craftr files is not currently supported')
+      execute_file(filename, project)
     elif (filename := path / BuildScriptType.PYTHON.value).exists():
       scope = {'project': project, '__file__': str(filename), '__name__': '__main__'}
       exec(compile(filename.read_text(), str(filename), 'exec'), scope, scope)
