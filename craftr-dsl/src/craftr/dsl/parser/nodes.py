@@ -6,8 +6,10 @@ transpiler can convert these custom node definitions to pure Python standard AST
 
 import ast
 import typing as t
+from dataclasses import dataclass
 
 
+@dataclass
 class Closure(ast.expr):
   """
   Represents a closure definition in the Craftr DSL. The transpiler will convert this into a
