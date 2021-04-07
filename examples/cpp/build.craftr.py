@@ -1,3 +1,4 @@
+# type: ignore
 
 project.apply('cxx')
 
