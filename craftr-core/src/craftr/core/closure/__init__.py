@@ -128,7 +128,7 @@ class Closure:
 
     return self._resolve(key).set(value)
 
-  def _resolve(self, key: str, *objs: t.Any) -> _ValueRef:
+  def _resolve(self, key: str) -> _ValueRef:
 
     def _cant_be_set(_v):
       raise RuntimeError('cannot be set')
