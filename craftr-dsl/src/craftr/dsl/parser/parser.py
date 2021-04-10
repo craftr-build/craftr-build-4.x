@@ -69,12 +69,15 @@ class SyntaxError(Exception):
   column: int
   text: str
 
+  def get_text_hint(self) -> str:
+    return '\n'.join((self.text, '~' * self.column + '^'))
+
   def __str__(self) -> str:
     lines = [
       '',
       f'  in {colored(self.filename, "blue")} at line {self.line}: {colored(self.message, "red")}',
-      '  |' + self.text,
-      '  |' + '~' * self.column + '^']
+      *('  |' + l for l in self.get_text_hint().splitlines()),
+    ]
     return '\n'.join(lines)
 
 

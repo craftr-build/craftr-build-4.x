@@ -1,2 +1,2 @@
 
-from .parser import CraftrParser
+from .parser import CraftrParser, SyntaxError
