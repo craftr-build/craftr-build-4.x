@@ -25,7 +25,7 @@ if os.path.isfile('foobar.txt'):
   print('foobar.txt exists')
 === END ===
 
-=== DISABLED TEST keyword_arguments ===
+=== TEST keyword_arguments ===
 print('Hello, world!', file=sys.stdout)
 === EXPECTS ===
 print('Hello, world!', file=sys.stdout)

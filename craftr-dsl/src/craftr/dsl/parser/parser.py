@@ -242,13 +242,15 @@ class CraftrParser:
       token.next()
       return arglist
 
-  def _rewrite_expr(self, comma_break: bool = True, parenthesised: bool = False) -> str:
+  def _rewrite_expr(self, comma_break: bool = True, parenthesised: bool = False,
+      is_function_call: bool = False) -> str:
     """
     Consumes a Python expression and returns it's code.
     """
 
     token = ProxyToken(self.tokenizer)
-    code = self._consume_whitespace(parenthesised) + self._rewrite_atom() + self._consume_whitespace(parenthesised)
+    code = self._consume_whitespace(parenthesised) + self._rewrite_atom() + \
+        self._consume_whitespace(parenthesised)
 
     binary_operators = self.BINARY_OPERATORS
     if not comma_break:
@@ -265,14 +267,19 @@ class CraftrParser:
         code += self._rewrite_expr(comma_break, parenthesised)
 
       elif token.is_control('(['):
-        code += self._rewrite_atom()
+        code += self._rewrite_atom(is_function_call=token.value == '(')
 
       else:
         break
 
+    if is_function_call and token.is_control('='):
+      assert parenthesised, 'expected parenthesised == True if is_function_call == True'
+      token.next()
+      code += '=' + self._rewrite_expr(True, True, False) + self._consume_whitespace(True)
+
     return code
 
-  def _rewrite_atom(self):
+  def _rewrite_atom(self, is_function_call: bool = False):
     """
     Consumes a Python or Craftr DSL language atom and returns it rewritten as pure Python code. If
     a closure is encountered, it will be replaced with a name reference and the closure itself will
@@ -295,7 +302,7 @@ class CraftrParser:
       token.next()
       code += self._consume_whitespace(True)
       if not token.is_control(expected_close_token):
-        code += self._rewrite_expr(comma_break=False, parenthesised=True)
+        code += self._rewrite_expr(comma_break=False, parenthesised=True, is_function_call=is_function_call)
       if not token.is_control(expected_close_token):
         raise self._syntax_error(f'expected {expected_close_token} but got {token}')
       code += expected_close_token
