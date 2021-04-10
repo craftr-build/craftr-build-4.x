@@ -30,3 +30,9 @@ print('Hello, world!', file=sys.stdout)
 === EXPECTS ===
 print('Hello, world!', file=sys.stdout)
 === END ===
+
+=== TEST keyword_arguments_on_unparenthesised_call ===
+print 'Hello, world!', file=sys.stdout
+=== EXPECTS ===
+print('Hello, world!', file=sys.stdout)
+=== END ===

@@ -273,9 +273,8 @@ class CraftrParser:
         break
 
     if is_function_call and token.is_control('='):
-      assert parenthesised, 'expected parenthesised == True if is_function_call == True'
       token.next()
-      code += '=' + self._rewrite_expr(True, True, False) + self._consume_whitespace(True)
+      code += '=' + self._rewrite_expr(True, parenthesised, False) + self._consume_whitespace(parenthesised)
 
     return code
 
@@ -412,7 +411,7 @@ class CraftrParser:
       elif not token.is_ignorable(True) and not token.is_control(')]}:'):
         if code[-1].isspace():
           code = code[:-1]
-        code += '(' + self._rewrite_expr(comma_break=False) + ')'
+        code += '(' + self._rewrite_expr(comma_break=False, is_function_call=True) + ')'
 
       return code + self._consume_whitespace(True)
 
