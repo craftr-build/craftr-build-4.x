@@ -18,7 +18,7 @@ print *args, 'Hello, world!', **kwargs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
 === END ===
 
-=== DISABLED TEST multiline_string_argument ===
+=== TEST multiline_string_argument ===
 dedent '''
   Hello, World!
 '''

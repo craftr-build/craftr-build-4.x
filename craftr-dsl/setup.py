@@ -17,7 +17,7 @@ else:
 
 requirements = [
   'astor >=0.8.1,<1.0.0',
-  'nr.parsing.core >=2.0.0,<3.0.0',
+  'nr.parsing.core >=2.0.2,<3.0.0',
   'nr.pylang.ast >=0.0.5,<0.1.0',
   'dataclasses >=0.6.0,<1.0.0',
   'nr.functional >=0.1.0,<1.0.0',
