@@ -1,0 +1,32 @@
+
+=== TEST no_code ===
+=== EXPECTS ===
+=== END ===
+
+=== TEST pure_python ===
+import os, math
+from sys import *
+
+def foo():
+  assert True, 'never gonna happen'
+  return 42
+
+if os.path.isfile('foobar.txt'):
+  print('foobar.txt exists')
+=== EXPECTS ===
+import os, math
+from sys import *
+
+def foo():
+  assert True, 'never gonna happen'
+  return 42
+
+if os.path.isfile('foobar.txt'):
+  print('foobar.txt exists')
+=== END ===
+
+=== DISABLED TEST keyword_arguments ===
+print('Hello, world!', file=sys.stdout)
+=== EXPECTS ===
+print('Hello, world!', file=sys.stdout)
+=== END ===

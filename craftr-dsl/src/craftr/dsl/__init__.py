@@ -22,5 +22,5 @@ def parse_file(path: Path) -> ast.AST:
 
 def execute_file(path: Path, owner: t.Any) -> None:
   module = parse_file(path)
-  scope = {'closure': Closure(lambda: None, sys._getframe(1), owner)}
+  scope = {'closure': Closure(lambda: None, sys._getframe(1))}
   exec(compile(module, str(path)), scope)

@@ -4,23 +4,20 @@ Parser that converts Craftr DSL code into an extended Python AST that can be tra
 AST using the #.transpiler module.
 """
 
-import abc
 import ast
+import contextlib
 import enum
 import logging
-import pdb
 import typing as t
+from dataclasses import dataclass
+from termcolor import colored
 
 import astor
 from nr.parsing.core import rules
 from nr.parsing.core.scanner import Cursor
-from nr.parsing.core.tokenizer import ProxyToken, RuleSet, Tokenizer
+from nr.parsing.core.tokenizer import ProxyToken as _ProxyToken, RuleSet, Tokenizer
 
 from . import nodes
-
-
-def syntax_error(msg: str, filename: str, line: int, col: int, text: str, cls = SyntaxError) -> Exception:
-  return cls(msg, (filename, line, col, text))
 
 
 class Token(enum.Enum):
@@ -33,8 +30,37 @@ class Token(enum.Enum):
   Literal = enum.auto()
   Control = enum.auto()
 
-  def ignorable(self) -> bool:
-    return self in (Token.Indent, Token.Whitespace, Token.Comment)
+
+class ProxyToken(_ProxyToken):
+
+  def is_ignorable(self, newlines: bool = False) -> bool:
+    if newlines and self.type == Token.Newline:
+      return True
+    return self.type in (Token.Indent, Token.Whitespace, Token.Comment)
+
+  def is_control(self, charpool: t.Collection[str]) -> bool:
+    return self.type == Token.Control and self.value in charpool
+
+
+@dataclass
+class SyntaxError(Exception):
+  """
+  Specialized Craftr DSL syntax error (the internal SyntaxError class is weird).
+  """
+
+  message: str
+  filename: str
+  line: int
+  column: int
+  text: str
+
+  def __str__(self) -> str:
+    lines = [
+      '',
+      f'  in {colored(self.filename, "blue")} at line {self.line}: {colored(self.message, "red")}',
+      '  |' + self.text,
+      '  |' + '~' * self.column + '^']
+    return '\n'.join(lines)
 
 
 rule_set = RuleSet((Token.Eof, ''))
@@ -49,20 +75,13 @@ rule_set.rule(Token.Control, rules.regex_extract(
   r'(\[|\]|\{|\}|\(|\)|<<|<|>>|>|\.|,|\->|\-|!|\+|\*|//|/|->|==|=|:|&|\||^|%|@|;)'))
 
 
-class Macro(metaclass=abc.ABCMeta):
-
-  @abc.abstractmethod
-  def parse(self, tokenizer: 'CraftrParser', expect_expression: bool) -> t.Union[ast.expr, t.List[ast.stmt]]:
-    pass
-
-
 class CraftrParser:
 
   log = logging.getLogger(__module__ + '.' + __qualname__)  # type: ignore
 
   BINARY_OPERATORS = frozenset(['-', '+', '*', '**', '/', '//', '^', '|', '&', '.'])
   PYTHON_BLOCK_KEYWORDS = frozenset(['class', 'def', 'if', 'elif', 'else', 'for', 'while', 'with'])
-  PYTHON_KEYWORDS = frozenset(['assert', 'pass']) | PYTHON_BLOCK_KEYWORDS
+  PYTHON_KEYWORDS = frozenset(['assert', 'pass', 'import', 'from', 'return']) | PYTHON_BLOCK_KEYWORDS
   EXPRESSION_DELIMITERS = frozenset([(Token.Newline, '\n'), (Token.Control, ';')])
 
   def __init__(self, text: str, filename: str) -> None:
@@ -72,14 +91,20 @@ class CraftrParser:
     self._closure_counter = 0  #: Used to assign a unique number to every closure.
     self._closures: t.Dict[str, nodes.Closure] = {}
 
+  @contextlib.contextmanager
+  def _playing_games(self) -> t.Iterator[None]:
+    state = self.tokenizer.state
+    closure_state = self._closure_counter, self._closures.copy()
+    try:
+      yield
+    finally:
+      self.tokenizer.state = state
+      self._closure_counter, self._closures = closure_state
+
   def _syntax_error(self, msg: str, pos: t.Optional[Cursor] = None) -> SyntaxError:
     pos = pos or self.tokenizer.current.pos
-    return syntax_error(
-        msg=msg,
-        filename=self.filename,
-        line=pos.line,
-        col=pos.column + 1,
-        text=self.tokenizer.scanner.getline(pos))
+    text = self.tokenizer.scanner.getline(pos)
+    return SyntaxError(msg, self.filename, pos.line, pos.column, text)
 
   def _parse_closure(self) -> t.Optional[nodes.Closure]:
     """
@@ -131,25 +156,27 @@ class CraftrParser:
     self._closure_counter += 1
     return nodes.Closure(closure_id, arglist, body, expr)
 
-  def _parse_closure_body(self) -> str:
-    token = ProxyToken(self.tokenizer)
-    state = token.save()
+  def _parse_closure_body(self) -> t.Optional[str]:
+    """
+    Parses the body of a closure and returns it's code. Expects the tokenizer to point to the
+    opening curly brace of the closure.
+    """
 
-    if token.tv != (Token.Control, '{'):
-      return None
+    token = ProxyToken(self.tokenizer)
+    assert token.tv == (Token.Control, '{'), token
     token.next()
 
-    code = self._rewrite_stmt_block(-1) + self._consume_whitespace(True)
-
-    if token.type == Token.Indent:
-      code += token.value
-      token.next()
+    code = self._consume_whitespace(True)
+    if '\n' in code:  # Multiline closure
+      code += self._rewrite_stmt_block() + self._consume_whitespace(True, False)
+    else:  # Singleline closure
+      while token.type != Token.Newline and token.tv != (Token.Control, '}'):
+        code += self._rewrite_stmt_singleline() + self._consume_whitespace(True, False)
 
     if token.tv != (Token.Control, '}'):
-      token.load(state)
-      return None
-    token.next()
+      raise self._syntax_error('expected closure closing brace')
 
+    token.next()
     return code
 
   def _parse_closure_header(self) -> t.Optional[t.List[str]]:
@@ -187,11 +214,10 @@ class CraftrParser:
     """
 
     token = ProxyToken(self.tokenizer)
+    assert token.tv == (Token.Control, '('), token
+
     state = token.save()
-
-    if token.tv != (Token.Control, '('):
-      return None
-
+    begin = token.pos.offset
     with token.set_skipped({Token.Whitespace, Token.Comment, Token.Newline, Token.Indent}):
       token.next()
 
@@ -210,6 +236,8 @@ class CraftrParser:
         is_delimited = (token.tv == (Token.Control, ','))
         if is_delimited:
           token.next()
+
+      assert token.tv == (Token.Control, ')'), token
 
       token.next()
       return arglist
@@ -236,7 +264,7 @@ class CraftrParser:
         token.next()
         code += self._rewrite_expr(comma_break, parenthesised)
 
-      elif token.type == Token.Control and token.value in '([':
+      elif token.is_control('(['):
         code += self._rewrite_atom()
 
       else:
@@ -252,19 +280,24 @@ class CraftrParser:
     """
 
     token = ProxyToken(self.tokenizer)
-    code = ''
 
+    if token.is_control('{') and self._test_dict():
+      return self._rewrite_dict()
+
+    code = ''
     if closure := self._parse_closure():
       code += closure.id
       self._closures[closure.id] = closure
 
-    elif token.type == Token.Control and token.value in '([{':
+    elif token.is_control('([{'):
       expected_close_token = {'(': ')', '[': ']', '{': '}'}[token.value]
       code += token.value
       token.next()
-      code += self._rewrite_expr(comma_break=False, parenthesised=True)
-      if token.type != Token.Control or token.value != expected_close_token:
-        raise SyntaxError(f'_rewrite_atom: Expected {expected_close_token} but got {token}')
+      code += self._consume_whitespace(True)
+      if not token.is_control(expected_close_token):
+        code += self._rewrite_expr(comma_break=False, parenthesised=True)
+      if not token.is_control(expected_close_token):
+        raise self._syntax_error(f'expected {expected_close_token} but got {token}')
       code += expected_close_token
       token.next()
 
@@ -273,22 +306,108 @@ class CraftrParser:
       token.next()
 
     else:
-      raise SyntaxError(f'_rewrite_atom: Not sure what to do with {token}')
+      raise self._syntax_error(f'not sure how to deal with {token}')
 
     return code
 
-  def _consume_whitespace(self, skip_newlines: bool = False) -> str:
+  def _test_dict(self) -> bool:
+    """
+    Tests if the code from the current opening curly brace looks like a dictionary definition.
+    """
+
+    token = ProxyToken(self.tokenizer)
+    assert token.is_control('{'), False
+
+    with self._playing_games():
+      token.next()
+      self._consume_whitespace(True, False)
+      try:
+        self._rewrite_expr(parenthesised=False)
+        self._consume_whitespace(True, False)
+        return token.is_control(':')
+      except SyntaxError:
+        return False
+
+  def _rewrite_dict(self) -> str:
+    token = ProxyToken(self.tokenizer)
+    assert token.is_control('{'), token
+    token.next()
+    code = '{'
+
+    while not token.is_control('}'):
+      code += self._consume_whitespace(True, False)
+      code += self._rewrite_expr(parenthesised=True)
+      code += self._consume_whitespace(True, False)
+      if not token.is_control(':'):
+        raise self._syntax_error('expected :')
+      code += ':'
+      token.next()
+      code += self._consume_whitespace(True, False)
+      code += self._rewrite_expr(parenthesised=True)
+      code += self._consume_whitespace(True, False)
+      if not token.is_control(','):
+        break
+      code += ','
+      token.next()
+      code += self._consume_whitespace(True, False)
+
+    if not token.is_control('}'):
+      raise self._syntax_error('expected }')
+
+    token.next()
+    return code + '}'
+
+  def _consume_whitespace(self, newlines: bool = False, reset_to_indent: bool = True) -> str:
+    """
+    Consumes whitespace, indents, comments, and, if enabled, newlines until a different token is
+    encountered. If *reset_to_indent* is enabled (default) then the tokenizer will be moved back
+    to the indent token before that different token.
+    """
+
     token = ProxyToken(self.tokenizer)
     parts: t.List[str] = []
     state = token.save()
-    while token.type.ignorable() or (skip_newlines and token.type == Token.Newline):
+    while token.is_ignorable(newlines):
       parts.append(token.value)
       state = token.save()
       token.next()
-    if state.token and state.token.type == Token.Indent:
+    if reset_to_indent and state.token and state.token.type == Token.Indent:
       token.load(state)
       parts.pop()
     return ''.join(parts)
+
+  def _rewrite_stmt_singleline(self) -> str:
+    token = ProxyToken(self.tokenizer)
+    code = self._consume_whitespace(False)
+
+    if token.type == Token.Name and token.value == 'pass':
+      token.next()
+      return code + 'pass' + self._consume_whitespace(True)
+
+    elif token.type == Token.Name and token.value in ('assert', 'return'):
+      keyword = token.value
+      token.next()
+      return code + keyword + self._rewrite_expr(False) + self._consume_whitespace(True)
+
+    elif token.type == Token.Name and token.value in ('import', 'from'):
+      while token.type != Token.Newline and token.tv != (Token.Control, ';'):
+        code += token.value
+        token.next()
+      code += token.value
+      token.next()
+      return code
+
+    else:
+      code += self._rewrite_expr(comma_break=False) + self._consume_whitespace()
+      if token.tv == (Token.Control, '='):
+        token.next()
+        code += '=' + self._consume_whitespace() + self._rewrite_expr(comma_break=False)
+      elif not token.is_ignorable(True) and not token.is_control(')]}:'):
+        if code[-1].isspace():
+          code = code[:-1]
+        code += '(' + self._rewrite_expr(comma_break=False) + ')'
+
+      return code + self._consume_whitespace(True)
 
   def _rewrite_stmt(self, indentation: int) -> str:
     """
@@ -303,6 +422,8 @@ class CraftrParser:
     assert token.type == Token.Indent, token
     if len(token.value) < indentation:
       return ''
+    elif len(token.value) > indentation:
+      raise self._syntax_error('unexpected indentation')
 
     code += token.value
     token.next()
@@ -315,44 +436,36 @@ class CraftrParser:
         code += token.value
         token.next()
       if token.tv != (Token.Control, ':'):
-        raise SyntaxError(f'_rewrite_stmt: expected semicolon, found {token}')
+        raise self._syntax_error(f'expected semicolon, found {token}')
       code += ':'
       token.next()
 
       return code + self._rewrite_stmt_block(indentation)
 
-    elif token.type == Token.Name and token.value == 'pass':
-      token.next()
-      return code + 'pass' + self._consume_whitespace(True)
-
-    # TODO(nrosenstein): assert?
-
     else:
-      code += self._rewrite_expr(comma_break=False) + self._consume_whitespace()
-      if token.tv == (Token.Control, '='):
-        token.next()
-        code += '=' + self._consume_whitespace() + self._rewrite_expr(comma_break=False)
-      elif token.type != Token.Newline and not token.type.ignorable():
-        if code[-1].isspace():
-          code = code[:-1]
-        code += '(' + self._rewrite_expr(comma_break=False) + ')'
+      return code + self._rewrite_stmt_singleline()
 
-      return code + self._consume_whitespace(True)
+  def _rewrite_stmt_block(self, parent_indentation: t.Optional[int] = None) -> str:
+    """
+    Rewrites an entire statement block and returns it's rewritten code.
+    """
 
-  def _rewrite_stmt_block(self, parent_indentation: int) -> str:
     token = ProxyToken(self.tokenizer)
     code = self._consume_whitespace(True)
+    if not token:
+      return code
     assert token.type == Token.Indent, token
-    if parent_indentation >= 0 and len(token.value) <= parent_indentation:
-      raise SyntaxError(f'_rewrite_stmt: expected indent > {parent_indentation}, found {token}')
+    if parent_indentation is not None and len(token.value) <= parent_indentation:
+      raise self._syntax_error(f'expected indent > {parent_indentation}, found {token}')
     indentation = len(token.value)
-    while stmt := self._rewrite_stmt(indentation):
+    while token and (stmt := self._rewrite_stmt(indentation)):
       code += stmt
     return code
 
+  def _rewrite(self) -> str:
+    return self._rewrite_stmt_block()
+
   def parse(self) -> ast.Module:
-    while self.tokenizer:
-      print(self._rewrite_stmt(0))
     print(self._closures.keys())
     exit()
     code = self._rewrite_body(-1)
