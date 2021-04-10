@@ -1,6 +1,8 @@
 
 === TEST no_code ===
+
 === EXPECTS ===
+
 === END ===
 
 === TEST pure_python ===
