@@ -41,7 +41,7 @@ class Project(ExtensibleObject):
   def __init__(self,
     context: 'Context',
     parent: t.Optional['Project'],
-    directory: str,
+    directory: t.Union[str, Path],
   ) -> None:
     super().__init__()
     self._context = weakref.ref(context)

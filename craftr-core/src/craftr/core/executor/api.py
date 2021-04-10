@@ -6,8 +6,8 @@ if t.TYPE_CHECKING:
   from .graph import ExecutionGraph
 
 
-class Executor(metaclass=abc.ABCMeta):
+@t.runtime_checkable
+class IExecutor(t.Protocol):
 
-  @abc.abstractmethod
   def execute(self, graph: 'ExecutionGraph') -> None:
-    pass
+    raise NotImplementedError

@@ -1,8 +1,8 @@
 
 import abc
 import typing as t
+from dataclasses import dataclass
 from pathlib import Path
-
 
 if t.TYPE_CHECKING:
   from craftr.core.context import Context
@@ -15,3 +15,11 @@ class IProjectLoader(t.Protocol, metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def load_project(self, context: 'Context', parent: t.Optional['Project'], path: Path) -> 'Project':
     pass
+
+
+@dataclass
+class CannotLoadProject(Exception):
+  loader: IProjectLoader
+  context: 'Context'
+  parent: t.Optional['Project']
+  path: Path

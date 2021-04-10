@@ -6,7 +6,7 @@ from pathlib import Path
 
 from nr.caching.api import NamespaceStore
 
-from craftr.core.executor import Executor, ExecutionGraph
+from craftr.core.executor import IExecutor, ExecutionGraph
 from craftr.core.plugin import IPluginLoader
 from craftr.core.project import IProjectLoader, Project
 from craftr.core.settings import Settings
@@ -30,13 +30,13 @@ class Context:
   DEFAULT_EXECUTOR = 'craftr.core.executor.default.DefaultExecutor'
   DEFAULT_PLUGIN_LOADER = 'craftr.core.plugin.default.DefaultPluginLoader'
   DEFAULT_SELECTOR = 'craftr.core.task.selector.default.DefaultTaskSelector'
-  DEFAULT_PROJECT_LOADER = 'craftr.core.project.loader.default.DefaultProjectLoader'
+  DEFAULT_PROJECT_LOADER = 'craftr.core.project.loader.delegate.DelegateProjectLoader'
   CRAFTR_SETTINGS_FILE = Path('build.settings')
   CRAFTR_DIRECTORY = Path('.craftr')
 
   def __init__(self,
       settings: t.Optional[Settings] = None,
-      executor: t.Optional[Executor] = None,
+      executor: t.Optional[IExecutor] = None,
       plugin_loader: t.Optional[IPluginLoader] = None,
       project_loader: t.Optional[IProjectLoader] = None,
       ) -> None:
@@ -49,7 +49,7 @@ class Context:
     self._root_project: t.Optional[Project] = None
     self.settings = settings
     self.executor = executor or settings.get_instance(
-        Executor, 'core.executor', self.DEFAULT_EXECUTOR)  # type: ignore
+        IExecutor, 'core.executor', self.DEFAULT_EXECUTOR)  # type: ignore
     self.plugin_loader = plugin_loader or settings.get_instance(
         IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)  # type: ignore
     self.project_loader = project_loader or settings.get_instance(

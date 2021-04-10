@@ -13,6 +13,14 @@ class ClassInstantiationError(Exception):
   pass
 
 
+@t.runtime_checkable
+class IHasFromSettings(t.Protocol):
+
+  @classmethod
+  def from_settings(cls: t.Type[T], settings: 'Settings') -> T:
+    raise NotImplementedError
+
+
 class Settings(metaclass=abc.ABCMeta):
   """
   Interface similar to a mapping but it provides additional helpers to read values of various
@@ -67,16 +75,24 @@ class Settings(metaclass=abc.ABCMeta):
     annotated with `# type: ignore`.
     """
 
-    class_ = load_class(self.get(key, default))
+    return self.create_instance(type, self.get(key, default), key)
+
+  def create_instance(self, type: t.Type[T], fqn: str, config_key: str = '<notset>') -> T:
+    """
+    Creates an instance of the specified type from a fully qualified name. If the class implements
+    the #IHasFromSettings protocol, the method will be called to create an instance.
+    """
+
+    class_ = load_class(fqn)
     try:
-      if hasattr(class_, 'from_settings'):
+      if isinstance(class_, IHasFromSettings):
         instance = class_.from_settings(self)
       else:
         instance = class_()
     except Exception:
       raise ClassInstantiationError(
           f'Error while instantiating instance of `{class_.__module__}.{class_.__qualname__}` '
-          f'from configuration key `{key}`')
+          f'from configuration key `{config_key}`')
     check_instance_of(instance, type)
     return instance
 

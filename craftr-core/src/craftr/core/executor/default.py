@@ -6,7 +6,7 @@ A very simple, sequential executor.
 import typing as t
 from craftr.core.actions.action import ActionContext
 
-from craftr.core.executor.api import Executor
+from craftr.core.executor.api import IExecutor
 from craftr.core.task import Task
 
 if t.TYPE_CHECKING:
@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
   from craftr.core.settings import Settings
 
 
-class DefaultExecutor(Executor):
+class DefaultExecutor(IExecutor):
 
   def __init__(self, verbose: bool = False) -> None:
     self._verbose = verbose

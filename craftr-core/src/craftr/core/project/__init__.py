@@ -1,3 +1,3 @@
 
-from .loader import IProjectLoader, DefaultProjectLoader
+from .loader import IProjectLoader
 from .project import Project

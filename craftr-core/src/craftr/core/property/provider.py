@@ -11,6 +11,11 @@ V = t.TypeVar('V')
 R = t.TypeVar('R')
 
 
+@t.runtime_checkable
+class _IHasClosure(t.Protocol):
+  __closure__: t.Tuple
+
+
 def _add_operator(left: t.Any, right: t.Any) -> t.Any:
   """
   Implements the addition behaviour for properties.
@@ -163,6 +168,7 @@ class MappedProvider(Provider[R]):
     if visitor(self):
       self._sub.visit(visitor)
       # Check if the closure captures any properies.
+      assert isinstance(self._func, _IHasClosure)
       for cell in (self._func.__closure__ or []):
         if isinstance(cell.cell_contents, Provider):
           cell.cell_contents.visit(visitor)
@@ -190,6 +196,7 @@ class FlatMappedProvider(Provider[R]):
     if visitor(self):
       self._sub.visit(visitor)
       # Check if the closure captures any properies.
+      assert isinstance(self._func, _IHasClosure)
       for cell in (self._func.__closure__ or []):
         if isinstance(cell.cell_contents, Provider):
           cell.cell_contents.visit(visitor)

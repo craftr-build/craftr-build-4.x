@@ -1,32 +1,28 @@
 
-import enum
+"""
+Implements the default project loader which loads `build.craftr.py` files and executes them as a
+plain Python script providing the current #Project in the global scope.
+"""
+
 import typing as t
 from pathlib import Path
 
-from craftr.dsl import execute_file
-from craftr.core.error import BuildError
-from .api import IProjectLoader
-from ..project import Project
+from craftr.core.project import Project
+from .api import IProjectLoader, CannotLoadProject
 
 if t.TYPE_CHECKING:
   from craftr.core.context import Context
 
-
-class BuildScriptType(enum.Enum):
-  CRAFTR = Path('build.craftr')
-  PYTHON = Path('build.craftr.py')
+BUILD_SCRIPT_FILENAME = Path('build.craftr.py')
 
 
-class DefaultProjectLoader(IProjectLoader):
+class DefaultProjectLoader(IProjectLoader, ):
 
   def load_project(self, context: 'Context', parent: t.Optional[Project], path: Path) -> Project:
-    project = Project(context, parent, path)
-    context.initialize_project(project)
-    if (filename := path / BuildScriptType.CRAFTR.value).exists():
-      execute_file(filename, project)
-    elif (filename := path / BuildScriptType.PYTHON.value).exists():
+    if (filename := path / BUILD_SCRIPT_FILENAME).exists():
+      project = Project(context, parent, path)
+      context.initialize_project(project)
       scope = {'project': project, '__file__': str(filename), '__name__': '__main__'}
       exec(compile(filename.read_text(), str(filename), 'exec'), scope, scope)
-    else:
-      raise BuildError('No build file found in current directory.')
-    return project
+      return project
+    raise CannotLoadProject(self, context, parent, path)
