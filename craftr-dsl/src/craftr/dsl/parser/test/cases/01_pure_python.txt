@@ -31,8 +31,8 @@ print('Hello, world!', file=sys.stdout)
 print('Hello, world!', file=sys.stdout)
 === END ===
 
-=== TEST keyword_arguments_on_unparenthesised_call ===
-print 'Hello, world!', file=sys.stdout
+=== TEST keyword_arguments_var ===
+print('Hello, world!', file=sys.stdout, **kwargs)
 === EXPECTS ===
-print('Hello, world!', file=sys.stdout)
+print('Hello, world!', file=sys.stdout, **kwargs)
 === END ===

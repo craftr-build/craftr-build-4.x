@@ -8,6 +8,7 @@ import ast
 import contextlib
 import enum
 import logging
+from sys import is_finalizing
 import typing as t
 from dataclasses import dataclass
 from termcolor import colored
@@ -29,6 +30,20 @@ class Token(enum.Enum):
   Name = enum.auto()
   Literal = enum.auto()
   Control = enum.auto()
+
+
+class ParseMode(enum.IntFlag):
+  #: Nothing specific.
+  DEFAULT = 0
+
+  #: The currently parsed expression is grouped in parenthesis and may wrap over lines.
+  GROUPED = 1
+
+  #: The currently parsed expression is the outter parenthesis of a function call.
+  FUNCTION_CALL = (1 << 1)
+
+  #: The currently parsed expression is an argument to a function call.
+  CALL_ARGS = (1 << 2)
 
 
 class ProxyToken(_ProxyToken):
@@ -72,7 +87,7 @@ rule_set.rule(Token.Name, rules.regex_extract(r'[A-Za-z\_][A-Za-z0-9\_]*'))
 rule_set.rule(Token.Literal, rules.regex_extract(r'[+\-]?(\d+)(\.\d*)?'))
 rule_set.rule(Token.Literal, rules.string_literal())
 rule_set.rule(Token.Control, rules.regex_extract(
-  r'(\[|\]|\{|\}|\(|\)|<<|<|>>|>|\.|,|\->|\-|!|\+|\*|//|/|->|==|=|:|&|\||^|%|@|;)'))
+  r'(\[|\]|\{|\}|\(|\)|<<|<|>>|>|\.|,|\->|\-|!|\+|\*\*|\*|//|/|->|==|=|:|&|\||^|%|@|;)'))
 
 
 class CraftrParser:
@@ -142,7 +157,7 @@ class CraftrParser:
       body = self._parse_closure_body()
     if body is None and arglist is not None:
       # We only parse an expression for the Closure body if an arglist was specified.
-      expr = self._rewrite_expr()
+      expr = self._rewrite_items(mode=ParseMode.DEFAULT)
 
     assert self._closure_stack.pop() == closure_id
 
@@ -181,7 +196,7 @@ class CraftrParser:
 
   def _parse_closure_header(self) -> t.Optional[t.List[str]]:
     """
-    Handles the possible formats for a closure header, i.e. a single argument name or an arglist
+    Handles the possible formats for a closure header, f.e. a single argument name or an arglist
     followed by an arrow (`->`). Returns `None` if there can be no closure header extracted from
     the current position of the lexer.
     """
@@ -242,43 +257,62 @@ class CraftrParser:
       token.next()
       return arglist
 
-  def _rewrite_expr(self, comma_break: bool = True, parenthesised: bool = False,
-      is_function_call: bool = False) -> str:
+  def _rewrite_expr(self, mode: ParseMode) -> str:
     """
-    Consumes a Python expression and returns it's code.
+    Consumes a Python expression and returns it's code. Does not parse over a comma.
+
+    :param mode: The current parse mode that provides context about the level that is currently
+      being parsed.
     """
 
-    token = ProxyToken(self.tokenizer)
-    code = self._consume_whitespace(parenthesised) + self._rewrite_atom() + \
-        self._consume_whitespace(parenthesised)
+    print('_rewrite_expr', mode, self.tokenizer.current.tv)
+    code = self._consume_whitespace(mode & ParseMode.GROUPED)
+    code += self._rewrite_atom(mode)
 
     binary_operators = self.BINARY_OPERATORS
-    if not comma_break:
-      binary_operators = binary_operators | set(',')
-
+    token = ProxyToken(self.tokenizer)
     while True:
-      code += self._consume_whitespace(parenthesised)
+      code += self._consume_whitespace(mode & ParseMode.GROUPED)
       if not token:
         break
 
       if token.type == Token.Control and token.value in binary_operators:
         code += token.value
         token.next()
-        code += self._rewrite_expr(comma_break, parenthesised)
+        code += self._rewrite_expr(mode)
 
       elif token.is_control('(['):
-        code += self._rewrite_atom(is_function_call=token.value == '(')
+        code += self._rewrite_atom(ParseMode.FUNCTION_CALL | ParseMode.GROUPED if token.value == '(' else ParseMode.DEFAULT)
 
       else:
         break
 
-    if is_function_call and token.is_control('='):
-      token.next()
-      code += '=' + self._rewrite_expr(True, parenthesised, False) + self._consume_whitespace(parenthesised)
-
     return code
 
-  def _rewrite_atom(self, is_function_call: bool = False):
+  def _rewrite_items(self, mode: ParseMode) -> str:
+    """
+    Rewrites expressions separated by commas.
+    """
+
+    token = ProxyToken(self.tokenizer)
+    code = ''
+    print('_rewrite_items', mode, token.tv)
+    while True:
+      code += self._consume_whitespace(mode & ParseMode.GROUPED)
+      code += self._rewrite_expr(mode=mode)
+      code += self._consume_whitespace(mode & ParseMode.GROUPED)
+      if mode & ParseMode.CALL_ARGS and token.is_control('='):
+        code += '='
+        token.next()
+        # TODO(NiklasRosenstein): This may be problematic in unparenthesised calls?
+        code += self._rewrite_expr(mode=mode)
+      if not token.is_control(','):
+        break
+      code += ','
+      token.next()
+    return code
+
+  def _rewrite_atom(self, mode: ParseMode = ParseMode.DEFAULT) -> str:
     """
     Consumes a Python or Craftr DSL language atom and returns it rewritten as pure Python code. If
     a closure is encountered, it will be replaced with a name reference and the closure itself will
@@ -296,23 +330,33 @@ class CraftrParser:
       self._closures[closure.id] = closure
 
     elif token.is_control('([{'):
+      assert not (mode & ParseMode.FUNCTION_CALL) or token.is_control('('), \
+          'ParseMode.FUNCTION_CALL requires current token be opening parenthesis'
+
       expected_close_token = {'(': ')', '[': ']', '{': '}'}[token.value]
       code += token.value
       token.next()
       code += self._consume_whitespace(True)
       if not token.is_control(expected_close_token):
-        code += self._rewrite_expr(comma_break=False, parenthesised=True, is_function_call=is_function_call)
+        new_mode = ParseMode.CALL_ARGS if mode & ParseMode.FUNCTION_CALL else ParseMode.DEFAULT
+        code += self._rewrite_items(new_mode | ParseMode.GROUPED)
       if not token.is_control(expected_close_token):
         raise self._syntax_error(f'expected {expected_close_token} but got {token}')
+
       code += expected_close_token
       token.next()
+
+    elif mode & ParseMode.CALL_ARGS and (token.is_control(['*', '**'])):
+      code += token.value
+      token.next()
+      code += self._rewrite_expr(mode=ParseMode.DEFAULT)
 
     elif token.type in (Token.Name, Token.Literal):
       code += token.value
       token.next()
 
     else:
-      raise self._syntax_error(f'not sure how to deal with {token}')
+      raise self._syntax_error(f'not sure how to deal with {token} {mode}')
 
     return code
 
@@ -328,7 +372,7 @@ class CraftrParser:
       token.next()
       self._consume_whitespace(True, False)
       try:
-        self._rewrite_expr(parenthesised=False)
+        self._rewrite_expr(mode=ParseMode.GROUPED)
         self._consume_whitespace(True, False)
         return token.is_control(':')
       except SyntaxError:
@@ -342,14 +386,14 @@ class CraftrParser:
 
     while not token.is_control('}'):
       code += self._consume_whitespace(True, False)
-      code += self._rewrite_expr(parenthesised=True)
+      code += self._rewrite_expr(mode=ParseMode.GROUPED)
       code += self._consume_whitespace(True, False)
       if not token.is_control(':'):
         raise self._syntax_error('expected :')
       code += ':'
       token.next()
       code += self._consume_whitespace(True, False)
-      code += self._rewrite_expr(parenthesised=True)
+      code += self._rewrite_expr(mode=ParseMode.GROUPED)
       code += self._consume_whitespace(True, False)
       if not token.is_control(','):
         break
@@ -393,7 +437,7 @@ class CraftrParser:
     elif token.type == Token.Name and token.value in ('assert', 'return'):
       keyword = token.value
       token.next()
-      return code + keyword + self._rewrite_expr(False) + self._consume_whitespace(True)
+      return code + keyword + self._rewrite_items(ParseMode.DEFAULT) + self._consume_whitespace(True)
 
     elif token.type == Token.Name and token.value in ('import', 'from'):
       while token.type != Token.Newline and token.tv != (Token.Control, ';'):
@@ -404,16 +448,26 @@ class CraftrParser:
       return code
 
     else:
-      code += self._rewrite_expr(comma_break=False) + self._consume_whitespace()
-      if token.tv == (Token.Control, '='):
-        token.next()
-        code += '=' + self._consume_whitespace() + self._rewrite_expr(comma_break=False)
-      elif not token.is_ignorable(True) and not token.is_control(')]}:'):
-        if code[-1].isspace():
-          code = code[:-1]
-        code += '(' + self._rewrite_expr(comma_break=False, is_function_call=True) + ')'
+      return code + self._rewrite_stmt_line_expr_or_assign()
 
-      return code + self._consume_whitespace(True)
+  def _rewrite_stmt_line_expr_or_assign(self) -> str:
+    token = ProxyToken(self.tokenizer)
+    print('_rewrite_stmt_line_expr_or_assign', token)
+    code = self._rewrite_items(ParseMode.DEFAULT)
+    code += self._consume_whitespace(newlines=False)
+
+    if token.tv == (Token.Control, '='):  # Assignment
+      token.next()
+      code += '=' + self._consume_whitespace(newlines=False) + self._rewrite_items(ParseMode.DEFAULT)
+
+    elif not token.is_ignorable(True) and not token.is_control(')]}:'):  # Unparenthesises functionc all
+      if code[-1].isspace():
+        code = code[:-1]
+      # TODO(NiklasRosenstein): We may want to indicate here that we're parsing call arguments,
+      #   but that the call is not parenthesised.
+      code += '(' + self._rewrite_items(ParseMode.CALL_ARGS) + ')'
+
+    return code + self._consume_whitespace(True)
 
   def _rewrite_stmt(self, indentation: int) -> str:
     """
