@@ -77,7 +77,7 @@ class Context:
     when a project is created. The default implementationa applies the "default" plugin.
     """
 
-    project.apply('default')
+    pass
 
   def get_default_build_directory(self, project: Project) -> Path:
     """
