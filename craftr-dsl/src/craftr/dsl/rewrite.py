@@ -334,10 +334,8 @@ class Rewriter:
     code += self._rewrite_atom(mode)
 
     token = ProxyToken(self.tokenizer)
-    while True:
+    while token:
       code += self._consume_whitespace(mode)
-      if not token:
-        break
 
       if token.type == Token.Control and token.value in self.BINARY_OPERATORS:
         code += token.value
@@ -502,7 +500,7 @@ class Rewriter:
       token.next()
       code += '=' + self._consume_whitespace(newlines=False) + self._rewrite_items(ParseMode.DEFAULT)
 
-    elif not token.is_ignorable(True) and not token.is_control(')]}:'):  # Unparenthesises functionc all
+    elif token and not token.is_ignorable(True) and not token.is_control(')]}:'):  # Unparenthesises functionc all
       if code[-1].isspace():
         code = code[:-1]
       # TODO(NiklasRosenstein): We may want to indicate here that we're parsing call arguments,
