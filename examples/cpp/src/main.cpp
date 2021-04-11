@@ -20,6 +20,7 @@ int main() {
   const char* val2 = "Hello, World!";
   array_push(&array, val2, strlen(val2) + 1);
 
+
   float val3 = 3.14;
   array_push(&array, &val3, sizeof(float));
 
