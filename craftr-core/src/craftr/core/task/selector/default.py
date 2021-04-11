@@ -42,7 +42,7 @@ class DefaultTaskSelector(ITaskSelector):
     return result
 
   def _iter_all_tasks(self, project: 'Project') -> t.Iterator['Task']:
-    yield from project.tasks()
+    yield from project.tasks
     for subproject in project.subprojects():
       yield from self._iter_all_tasks(subproject)
 

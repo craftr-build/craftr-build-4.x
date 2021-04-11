@@ -3,6 +3,7 @@
 Provides the #Closure type that is heavily inspired by Groovy.
 """
 
+import builtins
 import enum
 import sys
 import types
@@ -44,6 +45,18 @@ class _ValueRef:
       raise RuntimeError('setting outter local variable from Closure is not supported. '
           'Use the `nonlocal` keyword.')
     return _ValueRef(lambda: frame.f_locals[key], setter)
+
+  @classmethod
+  def frame_globals(cls, frame: types.FrameType, key: str) -> '_ValueRef':
+    def setter(_v):
+      raise RuntimeError('setting globals from inside a Closure is not supported')
+    return _ValueRef(lambda: frame.f_globals[key], setter)
+
+  @classmethod
+  def builtin(cls, key: str) -> '_ValueRef':
+    def setter(_v):
+      raise RuntimeError('setting builtins is not supported')
+    return _ValueRef(lambda: getattr(builtins, key), setter)
 
 
 class ResolveStrategy(enum.Enum):
@@ -157,6 +170,12 @@ class Closure:
     if key in self.stackframe.f_locals:
       return _ValueRef.frame_locals(self.stackframe, key)
 
+    if key in self.stackframe.f_globals:
+      return _ValueRef.frame_globals(self.stackframe, key)
+
+    if key in vars(builtins):
+      return _ValueRef.builtin(key)
+
     raise NameError(key, objs)
 
 
@@ -176,9 +195,12 @@ def closure(owner: t.Optional[t.Any] = None) -> t.Callable[[t.Callable], Closure
 @t.runtime_checkable
 class IConfigurable(t.Protocol):
 
-  def configure(self, closure: 'Closure') -> t.Any:
-    """
-    Configure the object with a closure.
-    """
+  def __call__(self, closure: 'Closure') -> t.Any:
+    """ Syntactic sugar for DSL code. """
 
-    closure.apply(self)
+    return self.configure(closure)
+
+  def configure(self, closure: 'Closure') -> t.Any:
+    """ Configure the object with a closure. """
+
+    return closure.apply(self)

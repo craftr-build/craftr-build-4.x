@@ -107,20 +107,11 @@ class Project(ExtensibleObject):
     self._tasks[name] = task
     return t.cast(T_Task, task)
 
-  @t.overload
-  def tasks(self) -> t.List['Task']:
-    """ Return a list of the project's tasks. """
+  @property
+  def tasks(self) -> 'TaskContainer':
+    """ Returns the #TaskContainer object for this project. """
 
-  @t.overload
-  def tasks(self, closure: t.Callable[['Task'], None]) -> None:
-    """ Call *closure* for every task. """
-
-  def tasks(self, closure = None):
-    if closure is None:
-      return list(self._tasks.values())
-    else:
-      for task in self._tasks.values():
-        closure(task)
+    return TaskContainer(self._tasks)
 
   def subproject(self, directory: str) -> 'Project':
     """
@@ -189,7 +180,7 @@ class Project(ExtensibleObject):
     self.add_extension(name, _TaskExtensionWrapper(self, default_name or name, task_type))
 
 
-class _TaskExtensionWrapper(IConfigurable, t.Generic[T_Task]):
+class _TaskExtensionWrapper(t.Generic[T_Task]):
   """
   Helper class that wraps a #Task subclass, returning an instance of the class when calling the
   object or creating a new instance and configuring it when #configure() is called.
@@ -220,11 +211,41 @@ class _TaskExtensionWrapper(IConfigurable, t.Generic[T_Task]):
   def __repr__(self) -> str:
     return f'_TaskExtensionWrapper({self._task_type})'
 
-  def __call__(self, task_name: t.Optional[str] = None) -> T_Task:
-    return check_not_none(self._project(), 'lost project reference')\
-        .task(task_name or self._default_name, self._task_type)
+  def __call__(self, arg: t.Union[str, 'Closure'] = None) -> T_Task:
+    """
+    Create a new instance of the task type. If a string is specified, it will be used as the task
+    name. If a closure is specified, the default task name will be used and the task will be
+    configured with the closure.
+    """
 
-  def configure(self, closure: 'Closure') -> T_Task:
-    task = self()
-    task.configure(closure)
+    project = check_not_none(self._project(), 'lost project reference')
+    if isinstance(arg, str):
+      task = project.task(arg or self._default_name, self._task_type)
+    else:
+      task = project.task(self._default_name, self._task_type)
+      task.configure(arg)
     return task
+
+  # TODO(NiklasRosenstein): We only need configure() once we figured out how to distinguish between
+  #   configure calls in DSL and propagate it to the transpiler as well as the runtime.
+
+  #def configure(self, closure: 'Closure') -> T_Task:
+  #  task = self()
+  #  task.configure(closure)
+  #  return task
+
+
+class TaskContainer(IConfigurable):
+
+  def __init__(self, tasks: t.Dict[str, 'Task']) -> None:
+    self._tasks = tasks
+
+  def __iter__(self):
+    return iter(self._tasks.values())
+
+  def configure(self, closure: 'Closure') -> None:
+    for task in self._tasks.values():
+      task.configure(closure)
+
+  def __getattr__(self, key: str) -> 'Task':
+    return self._tasks[key]
