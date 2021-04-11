@@ -330,7 +330,6 @@ class Rewriter:
       being parsed.
     """
 
-    print('_rewrite_expr', mode, self.tokenizer.current.tv)
     code = self._consume_whitespace(mode)
     code += self._rewrite_atom(mode)
 
@@ -360,7 +359,6 @@ class Rewriter:
 
     token = ProxyToken(self.tokenizer)
     code = ''
-    print('_rewrite_items', mode, token.tv)
     while True:
       code += self._consume_whitespace(mode)
       code += self._rewrite_expr(mode=mode)
@@ -497,7 +495,6 @@ class Rewriter:
 
   def _rewrite_stmt_line_expr_or_assign(self) -> str:
     token = ProxyToken(self.tokenizer)
-    print('_rewrite_stmt_line_expr_or_assign', token)
     code = self._rewrite_items(ParseMode.DEFAULT)
     code += self._consume_whitespace(newlines=False)
 
