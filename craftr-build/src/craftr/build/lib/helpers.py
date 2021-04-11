@@ -102,14 +102,30 @@ class PluginRegistration:
   def __init__(self) -> None:
     self._exports: t.Dict[str, t.Any] = {}
 
+  @t.overload
   def exports(self, value: T, name: t.Optional[str] = None) -> T:
-    if name is None:
-      if isinstance(value, type) or isinstance(value, types.FunctionType):
-        name = value.__name__
+    pass
+
+  @t.overload
+  def exports(self, name: str) -> t.Callable[[T], T]:
+    pass
+
+  def exports(self, arg1, arg2=None):
+    if isinstance(arg1, str):
+      name = arg1
+      def decorator(value: T) -> T:
+        self.exports(value, name)
+        return value
+      return decorator
+
+    if arg2 is None:
+      if isinstance(arg1, type) or isinstance(arg1, types.FunctionType):
+        arg2 = arg1.__name__
       else:
-        raise ValueError(f'unable to derive name from value of type {type(value).__name__}')
-    self._exports[name] = value
-    return value
+        raise ValueError(f'unable to derive name from value of type {type(arg1).__name__}')
+
+    self._exports[arg2] = arg1
+    return arg1
 
   def build_namespace(self, project: Project, name: str) -> t.Any:
     obj = _Namespace(name)

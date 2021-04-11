@@ -51,7 +51,7 @@ class Props(HavingProperties):
   outputs: t.Annotated[Property[t.List[File]], Task.Output]
 
 
-@plugin.exports
+@plugin.exports('compile')
 class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=abc.ABCMeta):
 
   def _get_preferred_output_directory(self) -> Path:

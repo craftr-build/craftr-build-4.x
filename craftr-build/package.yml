@@ -7,8 +7,8 @@ requirements:
 - python ^3.9
 entrypoints:
   craftr.plugins:
-  - default = craftr.build.plugins.default
   - cxx = craftr.build.plugins.cxx
+  - run = craftr.build.plugins.run
   console_scripts:
   - craftr = craftr.build.main:main
 typed: true

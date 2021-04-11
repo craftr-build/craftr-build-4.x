@@ -29,8 +29,8 @@ setuptools.setup(
   data_files = [],
   entry_points = {
     'craftr.plugins': [
-      'default = craftr.build.plugins.default',
       'cxx = craftr.build.plugins.cxx',
+      'run = craftr.build.plugins.run',
     ],
     'console_scripts': [
       'craftr = craftr.build.main:main',

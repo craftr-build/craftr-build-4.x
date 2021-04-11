@@ -1,10 +1,11 @@
 
 import typing as t
 
+from craftr.build.lib import ExecutableInfo, IExecutableProvider, TaskFactoryExtension
 from craftr.core.actions import Action, CommandAction
 from craftr.core.property import Property
+from craftr.core.project import Project
 from craftr.core.task import Task
-from craftr.build.lib import ExecutableInfo, IExecutableProvider
 
 
 class RunTask(Task):
@@ -34,3 +35,7 @@ class RunTask(Task):
 
     assert isinstance(executable, ExecutableInfo)
     return [CommandAction(executable.invokation_layout or [executable.filename])]
+
+
+def apply(project: 'Project', _name: str):
+  project.add_extension('run', TaskFactoryExtension(project, 'run', RunTask))
