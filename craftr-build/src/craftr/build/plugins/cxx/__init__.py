@@ -78,6 +78,15 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
     object_dir = self._get_objects_output_directory()
     return [str((object_dir / Path(f).name).with_suffix(self.naming_scheme['o'])) for f in self.sources.get()]
 
+  def _detect_language(self, source_file: str) -> str:
+    if source_file.endswith('.cpp') or source_file.endswith('.cc'):
+      return Language.CPP
+    else:
+      return Language.C
+
+  def _get_compiler(self, language: Language) -> str:
+    return 'g++' if language == Language.CPP else 'gcc'
+
   # IExecutableProvider
   def get_executable_info(self) -> ExecutableInfo:
     if self.product_type.get() == ProductType.EXECUTABLE:
@@ -133,11 +142,14 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
     actions.append(CreateDirectoryAction(self._get_objects_output_directory()))
 
     # Generate actions to compile object files.
-    compiler = 'g++' if self.language.get() == Language.CPP else 'gcc'
+    languages: t.Set[Language] = set()
     object_files = self._get_objects_paths()
     for source_file, object_file in zip(map(str, self.sources.get()), object_files):
+      language = self.language.or_else_get(lambda: self._detect_language(source_file))
+      compiler = self._get_compiler(language)
       compile_command = [compiler] + flags + ['-c', source_file, '-o', object_file]
       actions.append(CommandAction(command=compile_command))
+      languages.add(language)
 
     # Generate the archive or link action.
     if self.product_type.get() == ProductType.STATIC:
