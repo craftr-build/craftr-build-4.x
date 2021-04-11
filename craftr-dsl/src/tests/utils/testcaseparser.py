@@ -1,10 +1,11 @@
 
+import functools
 import re
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
+import pytest
 from .sectionfileparser import parse_section_file, Type
-
 
 @dataclass
 class CaseData:
@@ -64,3 +65,24 @@ def parse_testcase_file(content: str, filename: str) -> t.Iterator[CaseData]:
         yield CaseData(filename, test_name, test_body.value, test_body.line, expects_body.value, expects_body.line, bool(expects_syntax_error))
   except StopIteration:
     raise ValueError(f'{filename}: incomplete test case section')
+
+
+def cases_from(path: Path) -> t.Callable[[t.Callable], t.Callable]:
+  """
+  Decorator for a test function to parametrize it wil the test cases from a directory.
+  """
+
+
+  def _load(path):
+    return {t.name: t for t in parse_testcase_file(path.read_text(), str(path))}
+  test_cases = {path: _load(path) for path in path.iterdir()}
+  test_parameters = [(path, name) for path, tests in test_cases.items() for name in tests]
+
+  def decorator(func: t.Callable) -> t.Callable:
+    @pytest.mark.parametrize('path,name', test_parameters)
+    #@functools.wraps(func)
+    def wrapper(path, name):
+      return func(test_cases[path][name])
+    return wrapper
+
+  return decorator

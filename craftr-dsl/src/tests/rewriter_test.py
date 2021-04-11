@@ -1,27 +1,22 @@
 
 from pathlib import Path
-
 import pytest
-
 from craftr.dsl.rewrite import Rewriter, SyntaxError
-from .utils.testcaseparser import CaseData, parse_testcase_file
+from .utils.testcaseparser import CaseData, cases_from
 
 
-testcases_dir = Path(__file__).parent / 'parser_testcases'
-test_cases = {path: {t.name: t for t in parse_testcase_file(path.read_text(), str(path))} for path in testcases_dir.iterdir()}
-test_parameters = [(path, name) for path, tests in test_cases.items() for name in tests]
-
-
-@pytest.mark.parametrize('path,name', test_parameters)
-def test_parser(path, name):
-  case_data: CaseData = test_cases[path][name]
+@cases_from(Path(__file__).parent / 'rewriter_testcases')
+def test_parser(case_data: CaseData) -> None:
+  print('='*30)
   print(case_data.input)
+  print('='*30)
+  print(case_data.expects)
+  print('='*30)
 
-  rewriter = Rewriter(case_data.input + '\n', str(path))
-
+  rewriter = Rewriter(case_data.input, case_data.filename)
   if case_data.expects_syntax_error:
     with pytest.raises(SyntaxError) as excinfo:
       rewriter.rewrite()
     assert excinfo.value.get_text_hint() == case_data.expects
   else:
-    assert rewriter.rewrite().code == case_data.expects + '\n'
+    assert rewriter.rewrite().code == case_data.expects
