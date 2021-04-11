@@ -8,12 +8,11 @@ import enum
 import typing as t
 from pathlib import Path
 
+from craftr.build.lib import IExecutableProvider, ExecutableInfo
 from craftr.core import Action, HavingProperties, Project, Property, Task
 from craftr.core.actions import CommandAction, CreateDirectoryAction
 from craftr.core.types import File
-from craftr.stdlib.cxx.namingscheme import NamingScheme
-from craftr.stdlib.interfaces.executable import IExecutableProvider, ExecutableInfo
-
+from .namingscheme import NamingScheme
 from .interfaces import CxxLibraryInfo, ICxxLibraryProvider
 
 DEFAULT_TASK_NAMES = ['c_application', 'c_library', 'cpp_application', 'cpp_library']

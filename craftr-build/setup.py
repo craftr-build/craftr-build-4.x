@@ -31,6 +31,9 @@ setuptools.setup(
     'craftr.plugins': [
       'default = craftr.build.plugins.default',
       'cxx = craftr.build.plugins.cxx',
+    ],
+    'console_scripts': [
+      'craftr = craftr.build.main:main',
     ]
   },
   cmdclass = {},
