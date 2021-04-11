@@ -33,9 +33,9 @@ app.executable_name(f'main-{gitversion()}')
 
 Craftr is composed of three main components:
 
+* `craftr-build` &ndash; Frontend and standard plugins.
 * `craftr-core` &ndash; The pure Python API for describing and executing builds.
 * `craftr-dsl` &ndash; Craftr DSL parser and transpiler.
-* `craftr-stdlib` &ndash; Standard library of Craftr plugins.
 
 ---
 
