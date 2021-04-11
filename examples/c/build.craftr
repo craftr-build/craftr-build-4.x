@@ -5,7 +5,7 @@ apply 'run'
 
 cxx.compile('lib') {
   sources = [project.file('src/hellosayer.c')]
-  product_type = 'STATIC'
+  produces = 'static_library'
 }
 
 cxx.compile('main') {
