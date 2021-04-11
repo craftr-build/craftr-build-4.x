@@ -14,7 +14,7 @@ Python code, so everything you can do in the DSL you can also do in Python, thou
 is usually more convenient to use the DSL.
 
 Most commonly, the first thing to do in the build script is to apply a plugin. Plugins
-provide functionality to describe build tasks for languages.
+provide the means to describe specific build tasks.
 
 <table align="center">
   <tr><th>Craftr DSL</th><th>Python</th></tr>
