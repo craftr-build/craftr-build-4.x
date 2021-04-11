@@ -1,0 +1,20 @@
+# type: ignore
+
+apply 'cxx'
+apply 'run'
+
+cxx.compile('lib') {
+  language = 'C'
+  sources = [project.file('src/hellosayer.c')]
+  product_type = 'STATIC'
+}
+
+cxx.compile('main') {
+  language = cxx.Language.C
+  sources = [project.file('src/main.c')]
+  dependencies.append tasks.lib
+}
+
+run {
+  dependencies.append tasks.main
+}
