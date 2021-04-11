@@ -1,13 +1,10 @@
 
-import re
-import typing as t
-from functools import partial
 from pathlib import Path
+
+import pytest
 
 from craftr.dsl.rewrite import Rewriter, SyntaxError
 from .utils.testcaseparser import CaseData, parse_testcase_file
-
-import pytest
 
 
 testcases_dir = Path(__file__).parent / 'parser_testcases'
