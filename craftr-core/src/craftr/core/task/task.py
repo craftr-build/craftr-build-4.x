@@ -7,7 +7,7 @@ from pathlib import Path
 from nr.caching.api import KeyDoesNotExist
 
 from craftr.core.property import HavingProperties, collect_properties
-from craftr.core.closure import IConfigurable
+from craftr.core.closure import Closure, IConfigurable
 from craftr.core.util.collections import unique
 from craftr.core.util.preconditions import check_not_none
 from .state import calculate_task_hash, unwrap_file_property
@@ -63,6 +63,7 @@ class Task(HavingProperties, IConfigurable):
     super().__init__()
     self._project = weakref.ref(project)
     self._name = name
+    self._finalized = False
     self.dependencies = []
     self.init()
 
@@ -81,10 +82,29 @@ class Task(HavingProperties, IConfigurable):
   def path(self) -> str:
     return f'{self.project.path}:{self.name}'
 
+  @property
+  def finalized(self) -> bool:
+    """ True if #finalize() was called. """
+
+    return self._finalized
+
   def init(self) -> None:
     """ Called from `__init__()`. Useful to implement by subclasses. """
 
     pass
+
+  def finalize(self) -> None:
+    """
+    Called to finalize the task. This is called automatically after the task is configured.
+    Properties are finalized in this call. The subclass gets a chance to set any output properties
+    that are derived other properties.
+    """
+
+    if self._finalized:
+      raise RuntimeError('Task already finalized')
+    self._finalized = True
+    for prop in self.get_properties().values():
+      prop.finalize()
 
   def get_dependencies(self) -> t.List['Task']:
     """ Get all direct dependencies of the task, including those inherited through properties. """
@@ -145,3 +165,8 @@ class Task(HavingProperties, IConfigurable):
     if not self.always_outdated:
       self.project.context.metadata_store.\
           namespace(TASK_HASH_NAMESPACE).store(self.path, calculate_task_hash(self).encode())
+
+  # IConfigurable
+  def configure(self, closure: 'Closure') -> None:
+    closure.apply(self)
+    self.finalize()
