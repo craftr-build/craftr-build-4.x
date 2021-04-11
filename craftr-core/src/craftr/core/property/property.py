@@ -25,6 +25,10 @@ class Property(Provider[T]):
 
   Properties perform extensive runtime type checking when setting a bare value and after
   evaluating it.
+
+  A property can be finalized in which case it's value is calculated and cached. Subsequent calls
+  to #get() will return the cached value and attempts to set the property value will result in a
+  #RuntimeError.
   """
 
   def __init__(self,
@@ -40,6 +44,9 @@ class Property(Provider[T]):
     self._origin = weakref.ref(origin) if origin is not None else None
     self._value: t.Optional[Provider[T]] = None
     self._nested_providers: t.List[Provider] = []
+    self._finalized = False
+    self._finalized_no_value = False
+    self._finalized_value: t.Any = None
 
   def __repr__(self) -> str:
     return f'{type(self).__name__}[{type_repr(self.value_type)}]({self.fqn!r})'
@@ -59,6 +66,8 @@ class Property(Provider[T]):
     self._default = func
 
   def set(self, value: t.Union[T, Provider[T]]) -> None:
+    if self._finalized:
+      raise RuntimeError(f'{self} is finalized')
     nested_providers: t.List[Provider] = []
     if not isinstance(value, Provider):
       if isinstance(value, str) and issubclass(self.value_type, enum.Enum):
@@ -80,6 +89,10 @@ class Property(Provider[T]):
     self._nested_providers = nested_providers
 
   def get(self) -> T:
+    if self._finalized:
+      if self._finalized_no_value:
+        raise NoValueError(self.fqn)
+      return self._finalized_value
     if self._value is None:
       if self._default is None:
         raise NoValueError(self.fqn)
@@ -87,6 +100,16 @@ class Property(Provider[T]):
     value = _unpack_nested_providers(self._value.get(), self.value_type)
     check_type(value, TypeCheckingContext(self.value_type, lambda: f'while getting property {self.fqn}: '))
     return value
+
+  def finalize(self) -> None:
+    """ Finalize the property. If already finalized, nothing happens. """
+
+    if not self._finalized:
+      try:
+        self._finalized_value = self.get()
+      except NoValueError:
+        self._finalized_no_value = True
+      self._finalized = True
 
   def visit(self, func: t.Callable[[Provider], bool]) -> None:
     if func(self):
