@@ -18,7 +18,7 @@ else:
 requirements = []
 
 setuptools.setup(
-  name = 'craftr-stdlib',
+  name = 'craftr-build',
   version = '0.0.0',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',

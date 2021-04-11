@@ -1,4 +1,4 @@
-name: craftr-stdlib
+name: craftr-build
 version: 0.0.0
 author: Niklas Rosenstein <rosensteinniklas@gmail.com>
 modulename: craftr.stdlib
