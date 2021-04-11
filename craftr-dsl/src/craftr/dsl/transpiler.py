@@ -73,11 +73,13 @@ class ClosureRewriter(ast.NodeTransformer):
 
   def visit_Name(self, name: ast.Name) -> ast.Name:
     if name.id in self.closures:
-      for node in self._hierarchy:
+      for node in reversed(self._hierarchy):
         if isinstance(node, ast.stmt):
           self._closure_inserts.setdefault(node, []).append(name.id)
           break
-    return name
+        elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+          raise RuntimeError('did not find inner statement to inject closure')
+    return self.generic_visit(name)
 
   def visit_Module(self, node: ast.Module) -> ast.Module:
     preamble = ast.parse(self.options.preamble, self.filename, mode='exec')
@@ -91,7 +93,8 @@ class ClosureRewriter(ast.NodeTransformer):
       if node in self._closure_inserts:
         result = [result]
         for closure_id in self._closure_inserts.get(node, []):
-          result.insert(len(result)-1, self._get_closure_def(closure_id))
+          func = self.visit(self._get_closure_def(closure_id))
+          result.insert(len(result)-1, func)
       return result
     finally:
       assert self._hierarchy.pop() == node
