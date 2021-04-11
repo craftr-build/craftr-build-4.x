@@ -1,9 +1,47 @@
 
+=== TEST nested_closures ===
+project.buildscripts[1]('main') {
+  for config in configurations:
+    config.runtime 'my-dependency-name', on_resolve={
+      return do_not_resolve()
+    }
+}
+=== EXPECTS ===
+from craftr.core.closure import closure
+
+
+@closure(__closure__)
+def _closure_1(__closure__):
+    for config in configurations:
+
+        @closure(__closure__)
+        def _closure_1_closure_1(__closure__):
+            return do_not_resolve()
+        config.runtime('my-dependency-name', on_resolve=_closure_1_closure_1)
+
+
+project.buildscripts[1]('main')(_closure_1)
+=== END ===
+
+
 === TEST multiline_dict_with_closure_keys_or_values ===
 {
   () -> 10: { print 'Hello, World!' }(),
   'foo': 'bar'
 }
 === EXPECTS ===
+from craftr.core.closure import closure
+
+
+@closure(__closure__)
+def _closure_1(__closure__):
+    return 10
+
+
+@closure(__closure__)
+def _closure_2(__closure__):
+    print('Hello, World!')
+
+
 {_closure_1: _closure_2(), 'foo': 'bar'}
 === END ===

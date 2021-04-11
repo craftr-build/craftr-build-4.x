@@ -1,6 +1,5 @@
 
 from pathlib import Path
-import pytest
 from craftr.dsl.transpiler import transpile_to_source
 from .utils.testcaseparser import CaseData, cases_from
 
@@ -15,4 +14,5 @@ def test_transpiler(case_data: CaseData) -> None:
 
   output = transpile_to_source(case_data.input, case_data.filename).rstrip()
   print(output)
+
   assert output == case_data.expects.rstrip()

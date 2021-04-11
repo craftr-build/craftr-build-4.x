@@ -1,5 +1,4 @@
 
-import functools
 import re
 import typing as t
 from dataclasses import dataclass
@@ -80,9 +79,9 @@ def cases_from(path: Path) -> t.Callable[[t.Callable], t.Callable]:
 
   def decorator(func: t.Callable) -> t.Callable:
     @pytest.mark.parametrize('path,name', test_parameters)
-    #@functools.wraps(func)
     def wrapper(path, name):
       return func(test_cases[path][name])
+    wrapper.__name__ = func.__name__
     return wrapper
 
   return decorator
