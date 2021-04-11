@@ -6,36 +6,85 @@ __Requirements__
 
 * Python 3.9 or newer
 
-## Quickstart (DSL)
+## Getting started
 
-```py
-apply_plugin('cxx')
-apply_plugin('gitversion')
+Builds in Craftr are described using the Craftr DSL or plain Python in a file called
+`build.craftr` or `build.craftr.py`, respectively. DSL code is transpiled into pure
+Python code, so everything you can do in the DSL you can also do in Python, though it
+is usually more convenient to use the DSL.
 
-cpp_application {
-  sources glob('src/**/*.cpp')
-  executable_name f'main-{gitversion()}'
-}
-```
+Most commonly, the first thing to do in the build script is to apply a plugin. Plugins
+provide functionality to describe build tasks for languages.
 
-## Quickstart (Python)
+<table align="center">
+  <tr><th>Craftr DSL</th><th>Python</th></tr>
+  <tr><td>
 
-```py
-project.apply_plugin('cxx')
-project.apply_plugin('gitversion')
+  ```py
+  apply 'cxx'
+  apply 'run'
+  ```
+  </td><td>
 
-app = project.cpp_application()
-app.sources(project.glob('src/**/*.cpp'))
-app.executable_name(f'main-{gitversion()}')
-```
+  ```py
+  project.apply('cxx')
+  project.apply('run')
+  ```
+  </td></tr>
+</table>
 
-## Development
+Plugins register extensions to the project object which can be accessed through the `project`
+object (which is accessed implicitly in the DSL if the variable cannot be otherwise resolved).
 
-Craftr is composed of three main components:
+<table align="center">
+  <tr><th>Craftr DSL</th><th>Python</th></tr>
+  <tr><td>
 
-* `craftr-build` &ndash; Frontend and standard plugins.
-* `craftr-core` &ndash; The pure Python API for describing and executing builds.
-* `craftr-dsl` &ndash; Craftr DSL parser and transpiler.
+  ```py
+  cxx.compile {
+    sources = glob('src/**/*.cpp')
+    produces = 'executable'
+  }
+  ```
+  </td><td>
+
+  ```py
+  compile_task = project.cxx.compile()
+  compile_task.sources = project.glob('src/**/*.cpp')
+  compile_task.produces = 'executable'
+  compile_task.finalize()
+  ```
+  </td></tr>
+</table>
+
+Some built-in extensions are available by default through the `defaults` plugin, such
+as the `run` task builder which executes the product of task that provides an executable.
+
+<table align="center">
+  <tr><th>Craftr DSL</th><th>Python</th></tr>
+  <tr><td>
+
+  ```py
+  run {
+    dependencies.append tasks.compile
+  }
+  ```
+  </td><td>
+
+  ```py
+  run_task = project.run()
+  run_task.dependencies.append(compile_task)
+  run_task.finalize()
+  ```
+  </td></tr>
+</table>
+
+The build can then be executed using the Craftr CLI.
+
+    $ craftr run
+    > Task my-project:compile
+    > Task my-project:run
+    Hello, World!
 
 ---
 
