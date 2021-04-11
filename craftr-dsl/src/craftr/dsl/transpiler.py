@@ -27,7 +27,7 @@ def transpile_to_ast(code: str, filename: str, options: t.Optional[TranspileOpti
   module = ast.parse(rewrite.code, filename, mode='exec', type_comments=False)
   module = ClosureRewriter(filename, options or TranspileOptions(), rewrite.closures).visit(module)
   module = NameRewriter(options or TranspileOptions()).visit(module)
-  return module
+  return ast.fix_missing_locations(module)
 
 
 def transpile_to_source(code: str, filename: str, options: t.Optional[TranspileOptions] = None) -> str:
