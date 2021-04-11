@@ -13,6 +13,8 @@ parser.add_argument('--settings-file', default=Context.CRAFTR_SETTINGS_FILE, typ
   help='Point to another settings file. (default: %(default)s)')
 parser.add_argument('tasks', metavar='task', nargs='*')
 parser.add_argument('-t', '--transpile', help='Transpile the specified file and print its output.')
+parser.add_argument('-v', '--verbose', action='store_true',
+  help='Enable verbose mode (like -Ocraftr.core.verbose=true).')
 
 
 def main():
@@ -23,6 +25,9 @@ def main():
 
   settings = Settings.from_file(Path(args.settings_file))
   settings.update(Settings.parse(args.option))
+  if args.verbose:
+    settings.set('craftr.core.verbose', True)
+
   context = Context(settings)
   context.load_project(Path.cwd())
   context.execute(args.tasks or None)

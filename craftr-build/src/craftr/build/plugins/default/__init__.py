@@ -3,10 +3,9 @@
 Provides the extensions that are always available in a project.
 """
 
-from craftr.core.project import Project
-
+from craftr.build.lib import PluginRegistration
 from .run import RunTask
 
-
-def apply(project: Project) -> None:
-  project.add_task_extension('run', RunTask)
+plugin = PluginRegistration()
+plugin.exports(RunTask)
+apply = plugin.apply

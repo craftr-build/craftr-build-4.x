@@ -25,5 +25,25 @@ class ExecutableInfo:
 class IExecutableProvider(t.Protocol, metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
-  def get_executable_info(self) -> ExecutableInfo:
+  def get_executable_info(self) -> t.Optional[ExecutableInfo]:
+    pass
+
+
+@dataclass
+class NativeLibInfo:
+  #: Simple readable name of the native library.
+  name: str
+
+  #: A list of filenames for the native library.
+  library_files: t.List[str]
+
+  #: Public include directories for using the library.
+  include_paths: t.List[str]
+
+
+@t.runtime_checkable
+class INativeLibProvider(t.Protocol, metaclass=abc.ABCMeta):
+
+  @abc.abstractmethod
+  def get_native_lib_info(self) -> t.Optional[NativeLibInfo]:
     pass

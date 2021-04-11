@@ -8,162 +8,149 @@ import enum
 import typing as t
 from pathlib import Path
 
-from craftr.build.lib import IExecutableProvider, ExecutableInfo
-from craftr.core import Action, HavingProperties, Project, Property, Task
+from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, PluginRegistration
+from craftr.build.lib.interfaces.native import NativeLibInfo
+from craftr.core import Action, HavingProperties, Property, Task
 from craftr.core.actions import CommandAction, CreateDirectoryAction
 from craftr.core.types import File
 from .namingscheme import NamingScheme
-from .interfaces import CxxLibraryInfo, ICxxLibraryProvider
 
-DEFAULT_TASK_NAMES = ['c_application', 'c_library', 'cpp_application', 'cpp_library']
-
-
-class CxxLibraryType(enum.Enum):
-  static = enum.auto()
-  shared = enum.auto()
+plugin = PluginRegistration()
+apply = plugin.apply
 
 
-class CxxBuilderBaseProps(HavingProperties):
+@plugin.exports
+class ProductType(enum.Enum):
+  OBJECTS = enum.auto()
+  EXECUTABLE = enum.auto()
+  STATIC = enum.auto()
+  SHARED = enum.auto()
+
+  @property
+  def is_lib(self) -> bool:
+    return self in (ProductType.SHARED, ProductType.STATIC)
+
+
+@plugin.exports
+class Language(enum.Enum):
+  C = enum.auto()
+  CPP = enum.auto()
+
+
+class Props(HavingProperties):
   """ Base props for building C/C++ libraries or applications. """
 
   naming_scheme: NamingScheme = NamingScheme.CURRENT
   sources: t.Annotated[Property[t.List[File]], Task.Input]
-  include_paths: t.Annotated[Property[t.List[File]], Task.Input]
-  build_options: Property[t.List[str]]
-
-
-class CxxApplicationProps(CxxBuilderBaseProps):
-  executable_name: t.Annotated[Property[str], Task.Output]
-  executable_path: t.Annotated[Property[File], Task.Output]
-
-
-class CxxLibraryProps(CxxBuilderBaseProps):
+  include_paths: Property[t.List[File]]
   public_include_paths: Property[t.List[File]]
-  library_type: Property[CxxLibraryType]
-  library_name: t.Annotated[Property[str], Task.Output]
-  library_path: t.Annotated[Property[File], Task.Output]
+  build_options: Property[t.List[str]]
+  language: Property[Language]
+  product_name: Property[str]
+  product_type: Property[ProductType]
+  outputs: t.Annotated[Property[t.List[File]], Task.Output]
 
 
-class CppProps(HavingProperties):
-  pass
-
-
-class CxxBaseTask(Task, CxxBuilderBaseProps, metaclass=abc.ABCMeta):
-
-  @abc.abstractmethod
-  def _get_cxx_output_file(self) -> Path:
-    pass
+@plugin.exports
+class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=abc.ABCMeta):
 
   def _get_preferred_output_directory(self) -> Path:
     return self.project.build_directory / self.name
 
+  def _get_executable_name(self) -> str:
+    assert self.product_type.get() == ProductType.EXECUTABLE, self.product_type.get()
+    return self.product_name.get() + self.naming_scheme['e']
+
+  def _get_executable_path(self) -> str:
+    return str(self._get_preferred_output_directory() / self._get_executable_name())
+
+  def _get_library_name(self) -> str:
+    assert self.product_type.get().is_lib, self.product_type.get()
+    return self.naming_scheme['lp'] + self.product_name.get() + self.naming_scheme['ls']
+
+  def _get_library_path(self) -> str:
+    return str(self._get_preferred_output_directory() / self._get_library_name())
+
+  def _get_objects_output_directory(self) -> Path:
+    return self._get_preferred_output_directory() / 'obj'
+
+  def _get_objects_paths(self) -> t.List[str]:
+    object_dir = self._get_objects_output_directory()
+    return [str((object_dir / Path(f).name).with_suffix(self.naming_scheme['o'])) for f in self.sources.get()]
+
+  # IExecutableProvider
+  def get_executable_info(self) -> ExecutableInfo:
+    if self.product_type.get() == ProductType.EXECUTABLE:
+      return ExecutableInfo(self._get_executable_path())
+    return None
+
+  # INativeLibProvider
+  def get_native_lib_info(self) -> t.Optional[NativeLibInfo]:
+    if self.product_type.get().is_lib:
+      include_paths = list(map(str, self.public_include_paths.or_else_get(lambda: self.include_paths.or_else([]))))
+      return NativeLibInfo(name=self.path, library_files=[self._get_library_path()], include_paths=include_paths)
+    return None
+
+  # Task
+  def init(self) -> None:
+    self.product_name.set_default(lambda: self.project.name)
+    self.product_type = ProductType.EXECUTABLE
+
+  # Task
+  def finalize(self) -> None:
+    if self.product_type.get() == ProductType.EXECUTABLE:
+      self.outputs = [self._get_executable_path()]
+    elif self.product_type.get().is_lib:
+      self.outputs = [self._get_library_path()]
+    elif self.product_type.get() == ProductType.OBJECTS:
+      self.outputs = self._get_objects_paths()
+    else: assert False, self.product_type
+    super().finalize()
+
+  # Task
   def get_actions(self) -> t.List['Action']:
-    object_dir = self._get_preferred_output_directory() / 'obj'
-    product_filename = self._get_cxx_output_file()
-
-    include_paths: t.List[File] = self.include_paths.or_else([])
-    static_libs: t.List[str] = []
-
-    # Collect libraries from dependencies.
-    # TODO(NiklasRosenstein): Collect dependencies transitively?
+    # Collect native libs from dependencies.
+    # TODO(nrosenstein): Transitive dependencies?
+    native_deps: t.List[NativeLibInfo] = []
     for dep in self.get_dependencies():
-      if isinstance(dep, ICxxLibraryProvider):
-        info = dep.get_cxx_library_info()
-        include_paths += info.include_paths
-        static_libs += info.library_files
+      if isinstance(dep, INativeLibProvider):
+        info = dep.get_native_lib_info()
+        if info is not None:
+          native_deps.append(info)
 
+    # Collect the include paths.
+    include_paths = self.include_paths.or_else([]) + self.public_include_paths.or_else([])
+
+    # Generate the compiler flags.
     flags: t.List[str] = []
-    is_static = False
-    if isinstance(self, CxxLibraryProps):
-      library_type = self.library_type.or_else(CxxLibraryType.static)
-      if library_type == CxxLibraryType.shared:
-        flags += ['-shared']
-      elif library_type == CxxLibraryType.static:
-        is_static = True
+    if self.product_type.get() == ProductType.SHARED:
+      flags += ['-shared', '-fPIC']
     for path in include_paths:
       flags.append('-I' + str(path))
 
     actions: t.List[Action] = []
-    actions.append(CreateDirectoryAction(object_dir))
-    actions.append(CreateDirectoryAction(product_filename.parent))
+    actions.append(CreateDirectoryAction(self._get_preferred_output_directory()))
+    actions.append(CreateDirectoryAction(self._get_objects_output_directory()))
 
     # Generate actions to compile object files.
-    compiler = 'g++' if isinstance(self, CppProps) else 'gcc'
-    object_files: t.List[str] = []
-    for source_file in self.sources.get():
-      object_file = (object_dir / Path(source_file).name).with_suffix('.o')
-      object_files.append(str(object_file))
-      compile_command = [compiler] + flags + ['-c', str(source_file), '-o', str(object_file)]
+    compiler = 'g++' if self.language.get() == Language.CPP else 'gcc'
+    object_files = self._get_objects_paths()
+    for source_file, object_file in zip(map(str, self.sources.get()), object_files):
+      compile_command = [compiler] + flags + ['-c', source_file, '-o', object_file]
       actions.append(CommandAction(command=compile_command))
 
-
-    if is_static:
-      archive_command = ['ar', 'rcs', str(product_filename)] + object_files
+    # Generate the archive or link action.
+    if self.product_type.get() == ProductType.STATIC:
+      archive_command = ['ar', 'rcs', self._get_library_path()] + self._get_objects_paths()
       actions.append(CommandAction(command=archive_command))
-    else:
+    elif self.product_type.get() != ProductType.OBJECTS:
+      if self.product_type.get() == ProductType.EXECUTABLE:
+        product_filename = self._get_executable_path()
+      elif self.product_type.get() == ProductType.SHARED:
+        product_filename = self._get_library_path()
+      else: assert False, self.product_type.get()
+      static_libs = [y for x in native_deps for y in x.library_files]
       linker_command = [compiler] + flags + object_files + static_libs + ['-o', str(product_filename)]
       actions.append(CommandAction(command=linker_command))
 
     return actions
-
-
-class CxxApplicationTask(CxxBaseTask, CxxApplicationProps, IExecutableProvider):
-
-  def get_executable_name(self) -> str:
-    name = self.executable_name.or_else(self.project.name if self.name in DEFAULT_TASK_NAMES else self.name)
-    return name + self.naming_scheme['e']
-
-  def init(self):
-    self.executable_path.set_default(lambda:
-        self._get_preferred_output_directory() / self.get_executable_name())
-
-  # CxxBaseTask
-  def _get_cxx_output_file(self) -> Path:
-    return Path(self.executable_path.get())
-
-  # IExecutableProvider
-  def get_executable_info(self) -> ExecutableInfo:
-    return ExecutableInfo(str(self.executable_path.get()))
-
-
-class CxxLibraryTask(CxxLibraryProps, CxxBaseTask, ICxxLibraryProvider):
-
-  def get_library_name(self) -> str:
-    name = self.library_name.or_else(self.project.name if self.name in DEFAULT_TASK_NAMES else self.name)
-    return self.naming_scheme['lp'] + name + self.naming_scheme['ls']
-
-  def init(self):
-    self.library_path.set_default(lambda:
-        self._get_preferred_output_directory() / self.get_library_name())
-
-  # CxxBaseTask
-  def _get_cxx_output_file(self) -> Path:
-    return Path(self.library_path.get())
-
-  # ICxxLibraryProvider
-  def get_cxx_library_info(self) -> CxxLibraryInfo:
-    include_paths = list(map(str, self.public_include_paths.or_else_get(lambda: self.include_paths.or_else([]))))
-    return CxxLibraryInfo(self.path, [str(self.library_path.get())], include_paths)
-
-
-class CApplicationTask(CxxApplicationTask):
-  pass
-
-
-class CppApplicationTask(CppProps, CxxApplicationTask):
-  pass
-
-
-class CLibraryTask(CxxLibraryTask):
-  pass
-
-
-class CppLibraryTask(CxxLibraryTask):
-  pass
-
-
-def apply(project: Project):
-  project.add_task_extension('c_application', CApplicationTask)
-  project.add_task_extension('cpp_application', CppApplicationTask)
-  project.add_task_extension('c_library', CLibraryTask)
-  project.add_task_extension('cpp_library', CppLibraryTask)
