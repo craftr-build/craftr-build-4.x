@@ -1,12 +1,12 @@
 name: craftr-build
 version: 0.0.0
 author: Niklas Rosenstein <rosensteinniklas@gmail.com>
-modulename: craftr.stdlib
+modulename: craftr.build
 description: Package description here.
 requirements:
 - python ^3.9
 entrypoints:
   craftr.plugins:
-  - default = craftr.stdlib.default
-  - cxx = craftr.stdlib.cxx
+  - default = craftr.build.plugins.default
+  - cxx = craftr.build.plugins.cxx
 typed: true

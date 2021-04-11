@@ -4,7 +4,7 @@ import typing as t
 from craftr.core.actions import Action, CommandAction
 from craftr.core.property import Property
 from craftr.core.task import Task
-from craftr.stdlib.interfaces.executable import ExecutableInfo, IExecutableProvider
+from craftr.build.lib import ExecutableInfo, IExecutableProvider
 
 
 class RunTask(Task):

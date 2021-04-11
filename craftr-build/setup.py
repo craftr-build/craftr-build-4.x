@@ -7,14 +7,6 @@ import os
 import setuptools
 import sys
 
-readme_file = 'README.md'
-if os.path.isfile(readme_file):
-  with io.open(readme_file, encoding='utf8') as fp:
-    long_description = fp.read()
-else:
-  print("warning: file \"{}\" does not exist.".format(readme_file), file=sys.stderr)
-  long_description = None
-
 requirements = []
 
 setuptools.setup(
@@ -23,8 +15,8 @@ setuptools.setup(
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   description = 'Package description here.',
-  long_description = long_description,
-  long_description_content_type = 'text/markdown',
+  long_description = None,
+  long_description_content_type = None,
   url = None,
   license = None,
   packages = setuptools.find_packages('src', ['test', 'test.*', 'tests', 'tests.*', 'docs', 'docs.*']),
@@ -37,8 +29,8 @@ setuptools.setup(
   data_files = [],
   entry_points = {
     'craftr.plugins': [
-      'default = craftr.stdlib.default',
-      'cxx = craftr.stdlib.cxx',
+      'default = craftr.build.plugins.default',
+      'cxx = craftr.build.plugins.cxx',
     ]
   },
   cmdclass = {},
