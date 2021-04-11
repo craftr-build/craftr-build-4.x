@@ -4,7 +4,7 @@ import typing as t
 from functools import partial
 from pathlib import Path
 
-from craftr.dsl.parser import CraftrParser, SyntaxError
+from craftr.dsl.rewrite import Rewriter, SyntaxError
 from .utils.testcaseparser import CaseData, parse_testcase_file
 
 import pytest
@@ -20,11 +20,11 @@ def test_parser(path, name):
   case_data: CaseData = test_cases[path][name]
   print(case_data.input)
 
-  parser = CraftrParser(case_data.input + '\n', str(path))
+  rewriter = Rewriter(case_data.input + '\n', str(path))
 
   if case_data.expects_syntax_error:
     with pytest.raises(SyntaxError) as excinfo:
-      parser._rewrite()
+      rewriter.rewrite()
     assert excinfo.value.get_text_hint() == case_data.expects
   else:
-    assert parser._rewrite() == case_data.expects + '\n'
+    assert rewriter.rewrite().code == case_data.expects + '\n'
