@@ -16,7 +16,7 @@ if t.TYPE_CHECKING:
 BUILD_SCRIPT_FILENAME = Path('build.craftr.py')
 
 
-class DefaultProjectLoader(IProjectLoader, ):
+class DefaultProjectLoader(IProjectLoader):
 
   def load_project(self, context: 'Context', parent: t.Optional[Project], path: Path) -> Project:
     if (filename := path / BUILD_SCRIPT_FILENAME).exists():
