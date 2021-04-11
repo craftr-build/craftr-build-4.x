@@ -21,7 +21,7 @@ class PluginNotFoundError(Exception):
 class IPlugin(t.Protocol, metaclass=abc.ABCMeta):
 
   @abc.abstractmethod
-  def apply(self, project: 'Project') -> None:
+  def apply(self, project: 'Project', name: str) -> None:
     """
     Apply the plugin to the given project.
     """

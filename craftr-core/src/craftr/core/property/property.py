@@ -1,4 +1,5 @@
 
+import enum
 import typing as t
 import weakref
 
@@ -60,6 +61,8 @@ class Property(Provider[T]):
   def set(self, value: t.Union[T, Provider[T]]) -> None:
     nested_providers: t.List[Provider] = []
     if not isinstance(value, Provider):
+      if isinstance(value, str) and issubclass(self.value_type, enum.Enum):
+        value = self.value_type[value]
       # TODO(NiklasRosenstein): `force_accept` parameter should check if the types match.
       def force_accept(value: t.Any) -> bool:
         if isinstance(value, Provider):

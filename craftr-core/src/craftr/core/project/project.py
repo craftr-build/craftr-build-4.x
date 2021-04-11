@@ -163,7 +163,7 @@ class Project(ExtensibleObject):
     """
 
     plugin = self.context.plugin_loader.load_plugin(plugin_name)
-    plugin.apply(self)
+    plugin.apply(self, plugin_name)
 
   def file(self, sub_path: str) -> Path:
     return self.directory / sub_path
@@ -175,64 +175,6 @@ class Project(ExtensibleObject):
     """
 
     return glob.glob(str(self.directory / pattern))
-
-  def add_task_extension(self, name: str, task_type: t.Type[T_Task], default_name: t.Optional[str] = None) -> None:
-    self.add_extension(name, _TaskExtensionWrapper(self, default_name or name, task_type))
-
-
-class _TaskExtensionWrapper(t.Generic[T_Task]):
-  """
-  Helper class that wraps a #Task subclass, returning an instance of the class when calling the
-  object or creating a new instance and configuring it when #configure() is called.
-
-  We do this to simplify the use of the Python API and Craftr DSL:
-
-  Python API:
-
-  ```py
-  my_extension = project.my_extension()  # Invokes ConfigurableWrapper.__call__()
-  # ...
-  ```
-
-  Craftr DSL:
-
-  ```py
-  my_extension {  # Invokes ConfigurableWrapper.configure()
-    # ...
-  }
-  ```
-  """
-
-  def __init__(self, project: 'Project', default_name: str, task_type: t.Type[T_Task]) -> None:
-    self._project = weakref.ref(project)
-    self._default_name = default_name
-    self._task_type = task_type
-
-  def __repr__(self) -> str:
-    return f'_TaskExtensionWrapper({self._task_type})'
-
-  def __call__(self, arg: t.Union[str, 'Closure'] = None) -> T_Task:
-    """
-    Create a new instance of the task type. If a string is specified, it will be used as the task
-    name. If a closure is specified, the default task name will be used and the task will be
-    configured with the closure.
-    """
-
-    project = check_not_none(self._project(), 'lost project reference')
-    if isinstance(arg, str):
-      task = project.task(arg or self._default_name, self._task_type)
-    else:
-      task = project.task(self._default_name, self._task_type)
-      task.configure(arg)
-    return task
-
-  # TODO(NiklasRosenstein): We only need configure() once we figured out how to distinguish between
-  #   configure calls in DSL and propagate it to the transpiler as well as the runtime.
-
-  #def configure(self, closure: 'Closure') -> T_Task:
-  #  task = self()
-  #  task.configure(closure)
-  #  return task
 
 
 class TaskContainer(IConfigurable):
