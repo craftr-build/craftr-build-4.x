@@ -23,12 +23,12 @@ apply = plugin.apply
 class ProductType(enum.Enum):
   OBJECTS = enum.auto()
   EXECUTABLE = enum.auto()
-  STATIC = enum.auto()
-  SHARED = enum.auto()
+  STATIC_LIBRARY = enum.auto()
+  SHARED_LIBRARY = enum.auto()
 
   @property
   def is_lib(self) -> bool:
-    return self in (ProductType.SHARED, ProductType.STATIC)
+    return self in (ProductType.SHARED_LIBRARY, ProductType.STATIC_LIBRARY)
 
 
 @plugin.exports
@@ -47,7 +47,7 @@ class Props(HavingProperties):
   build_options: Property[t.List[str]]
   language: Property[Language]
   product_name: Property[str]
-  product_type: Property[ProductType]
+  produces: Property[ProductType]
   outputs: t.Annotated[Property[t.List[File]], Task.Output]
 
 
@@ -58,14 +58,14 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
     return self.project.build_directory / self.name
 
   def _get_executable_name(self) -> str:
-    assert self.product_type.get() == ProductType.EXECUTABLE, self.product_type.get()
+    assert self.produces.get() == ProductType.EXECUTABLE, self.produces.get()
     return self.product_name.get() + self.naming_scheme['e']
 
   def _get_executable_path(self) -> str:
     return str(self._get_preferred_output_directory() / self._get_executable_name())
 
   def _get_library_name(self) -> str:
-    assert self.product_type.get().is_lib, self.product_type.get()
+    assert self.produces.get().is_lib, self.produces.get()
     return self.naming_scheme['lp'] + self.product_name.get() + self.naming_scheme['ls']
 
   def _get_library_path(self) -> str:
@@ -89,13 +89,13 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
 
   # IExecutableProvider
   def get_executable_info(self) -> ExecutableInfo:
-    if self.product_type.get() == ProductType.EXECUTABLE:
+    if self.produces.get() == ProductType.EXECUTABLE:
       return ExecutableInfo(self._get_executable_path())
     return None
 
   # INativeLibProvider
   def get_native_lib_info(self) -> t.Optional[NativeLibInfo]:
-    if self.product_type.get().is_lib:
+    if self.produces.get().is_lib:
       include_paths = list(map(str, self.public_include_paths.or_else_get(lambda: self.include_paths.or_else([]))))
       return NativeLibInfo(name=self.path, library_files=[self._get_library_path()], include_paths=include_paths)
     return None
@@ -103,17 +103,17 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
   # Task
   def init(self) -> None:
     self.product_name.set_default(lambda: self.project.name)
-    self.product_type = ProductType.EXECUTABLE
+    self.produces = ProductType.EXECUTABLE
 
   # Task
   def finalize(self) -> None:
-    if self.product_type.get() == ProductType.EXECUTABLE:
+    if self.produces.get() == ProductType.EXECUTABLE:
       self.outputs = [self._get_executable_path()]
-    elif self.product_type.get().is_lib:
+    elif self.produces.get().is_lib:
       self.outputs = [self._get_library_path()]
-    elif self.product_type.get() == ProductType.OBJECTS:
+    elif self.produces.get() == ProductType.OBJECTS:
       self.outputs = self._get_objects_paths()
-    else: assert False, self.product_type
+    else: assert False, self.produces
     super().finalize()
 
   # Task
@@ -132,7 +132,7 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
 
     # Generate the compiler flags.
     flags: t.List[str] = []
-    if self.product_type.get() == ProductType.SHARED:
+    if self.produces.get() == ProductType.SHARED_LIBRARY:
       flags += ['-shared', '-fPIC']
     for path in include_paths:
       flags.append('-I' + str(path))
@@ -152,15 +152,15 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
       languages.add(language)
 
     # Generate the archive or link action.
-    if self.product_type.get() == ProductType.STATIC:
+    if self.produces.get() == ProductType.STATIC_LIBRARY:
       archive_command = ['ar', 'rcs', self._get_library_path()] + self._get_objects_paths()
       actions.append(CommandAction(command=archive_command))
-    elif self.product_type.get() != ProductType.OBJECTS:
-      if self.product_type.get() == ProductType.EXECUTABLE:
+    elif self.produces.get() != ProductType.OBJECTS:
+      if self.produces.get() == ProductType.EXECUTABLE:
         product_filename = self._get_executable_path()
-      elif self.product_type.get() == ProductType.SHARED:
+      elif self.produces.get() == ProductType.SHARED_LIBRARY:
         product_filename = self._get_library_path()
-      else: assert False, self.product_type.get()
+      else: assert False, self.produces.get()
       static_libs = [y for x in native_deps for y in x.library_files]
       linker_command = [compiler] + flags + object_files + static_libs + ['-o', str(product_filename)]
       actions.append(CommandAction(command=linker_command))
