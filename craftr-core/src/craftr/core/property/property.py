@@ -17,6 +17,22 @@ def _unpack_nested_providers(value: t.Any, type_hint: t.Any) -> t.Any:
   return mutate_values(value, MutableVisitContext(type_hint, mutator, True))
 
 
+def on_property_set_value(prop: 'Property', value: t.Any) -> t.Any:
+  """
+  Called when #Property.set() is called with not a real value. Allows to transform the value.
+  """
+
+  if isinstance(value, str) and issubclass(prop.value_type, enum.Enum):
+    # Find the matching enum value, case in-sensitive.
+    value_lower = value.lower()
+    enum_value = next((v for v in prop.value_type if v.name.lower() == value_lower), None)
+    if enum_value is None:
+      raise ValueError(f'{prop.value_type.__name__}.{value} does not exist')
+    return enum_value
+
+  return value
+
+
 class Property(Provider[T]):
   """
   Properties are mutable providers that sit as attributes on objects of the #HavingProperties
@@ -70,8 +86,7 @@ class Property(Provider[T]):
       raise RuntimeError(f'{self} is finalized')
     nested_providers: t.List[Provider] = []
     if not isinstance(value, Provider):
-      if isinstance(value, str) and issubclass(self.value_type, enum.Enum):
-        value = self.value_type[value]
+      value = on_property_set_value(self, value)
       # TODO(NiklasRosenstein): `force_accept` parameter should check if the types match.
       def force_accept(value: t.Any) -> bool:
         if isinstance(value, Provider):
