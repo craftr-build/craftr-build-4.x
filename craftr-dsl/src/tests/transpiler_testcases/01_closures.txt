@@ -2,8 +2,10 @@
 === TEST nested_closures ===
 project.buildscripts[1]('main') {
   for config in configurations:
+
+    my_var = config.get_some_value()
     config.runtime 'my-dependency-name', on_resolve={
-      return do_not_resolve()
+      return do_not_resolve(my_var)
     }
 }
 === EXPECTS ===
@@ -12,15 +14,16 @@ from craftr.core.closure import closure
 
 @closure(__closure__)
 def _closure_1(__closure__):
-    for config in configurations:
+    for config in __closure__['configurations']:
+        __closure__['my_var'] = config.get_some_value()
 
         @closure(__closure__)
         def _closure_1_closure_1(__closure__):
-            return do_not_resolve()
+            return __closure__['do_not_resolve'](__closure__['my_var'])
         config.runtime('my-dependency-name', on_resolve=_closure_1_closure_1)
 
 
-project.buildscripts[1]('main')(_closure_1)
+__closure__['project'].buildscripts[1]('main')(_closure_1)
 === END ===
 
 
