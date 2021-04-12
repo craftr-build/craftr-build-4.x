@@ -19,6 +19,9 @@ def flatten(it):
 
 if os.path.isfile('foobar.txt'):
   print('foobar.txt exists')
+
+assert True == True
+assert object() is not object()
 === EXPECTS ===
 import os, math
 from sys import *
@@ -33,6 +36,9 @@ def flatten(it):
 
 if os.path.isfile('foobar.txt'):
   print('foobar.txt exists')
+
+assert True == True
+assert object() is not object()
 === END ===
 
 === TEST keyword_arguments ===

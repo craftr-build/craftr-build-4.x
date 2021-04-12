@@ -31,11 +31,12 @@ rule_set.rule(Token.Indent, rules.regex_extract(r'[\t ]*', at_line_start_only=Tr
 rule_set.rule(Token.Newline, rules.regex_extract(r'\n'))
 rule_set.rule(Token.Whitespace, rules.regex_extract(r'\s+'))
 rule_set.rule(Token.Comment, rules.regex_extract(r'#.*'))
+rule_set.rule(Token.Control, rules.regex_extract(r'is|not'))
 rule_set.rule(Token.Name, rules.regex_extract(r'[A-Za-z\_][A-Za-z0-9\_]*'))
 rule_set.rule(Token.Literal, rules.regex_extract(r'[+\-]?(\d+)(\.\d*)?'))
 rule_set.rule(Token.Literal, rules.string_literal())
 rule_set.rule(Token.Control, rules.regex_extract(
-  r'(\[|\]|\{|\}|\(|\)|<<|<|>>|>|\.|,|\->|\-|!|\+|\*\*|\*|//|/|->|==|=|:|&|\||^|%|@|;)'))
+  r'(\[|\]|\{|\}|\(|\)|<<|<|>>|>|\.|,|\->|\-|!|\+|\*\*|\*|//|/|->|==|<=|>=|<|>|=|:|&|\||^|%|@|;)'))
 
 
 class ProxyToken(_ProxyToken):
@@ -131,7 +132,8 @@ class RewriteResult:
 
 class Rewriter:
 
-  BINARY_OPERATORS = frozenset(['-', '+', '*', '**', '/', '//', '^', '|', '&', '.'])
+  UNARY_OPERATORS = frozenset(['not', '~'])
+  BINARY_OPERATORS = frozenset(['-', '+', '*', '**', '/', '//', '^', '|', '&', '.', '==', '<=', '>=', '<', '>', 'is'])
   PYTHON_BLOCK_KEYWORDS = frozenset(['class', 'def', 'if', 'elif', 'else', 'for', 'while', 'with'])
 
   def __init__(self, text: str, filename: str) -> None:
@@ -420,6 +422,12 @@ class Rewriter:
     elif token.type in (Token.Name, Token.Literal):
       code += token.value
       token.next()
+
+    elif token.type == Token.Control and token.value in self.UNARY_OPERATORS:
+      code += token.value
+      token.next()
+      code += self._rewrite_expr(mode=mode)
+      return code
 
     else:
       raise self._syntax_error(f'not sure how to deal with {token} {mode}')
