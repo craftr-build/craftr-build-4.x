@@ -133,7 +133,7 @@ class RewriteResult:
 class Rewriter:
 
   UNARY_OPERATORS = frozenset(['not', '~'])
-  BINARY_OPERATORS = frozenset(['-', '+', '*', '**', '/', '//', '^', '|', '&', '.', '==', '<=', '>=', '<', '>', 'is'])
+  BINARY_OPERATORS = frozenset(['-', '+', '*', '**', '/', '//', '^', '|', '&', '.', '==', '<=', '>=', '<', '>', 'is', '%'])
   PYTHON_BLOCK_KEYWORDS = frozenset(['class', 'def', 'if', 'elif', 'else', 'for', 'while', 'with'])
 
   def __init__(self, text: str, filename: str) -> None:
