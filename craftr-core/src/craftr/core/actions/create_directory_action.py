@@ -1,8 +1,8 @@
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
-from craftr.core.types import File
 from .action import Action, ActionContext
 
 
@@ -10,7 +10,7 @@ from .action import Action, ActionContext
 class CreateDirectoryAction(Action):
 
   #: The path of the directory to create.
-  path: File
+  path: Path
 
   def execute(self, context: ActionContext) -> None:
     if not os.path.isdir(self.path):

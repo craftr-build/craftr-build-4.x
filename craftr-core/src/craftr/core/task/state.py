@@ -4,7 +4,6 @@ import typing as t
 from pathlib import Path
 
 from craftr.core.property import Property
-from craftr.core.types import File
 from craftr.core.util.typing import unpack_type_hint
 
 if t.TYPE_CHECKING:
@@ -28,8 +27,8 @@ def _hash_file(hasher: _IHasher, path: Path) -> None:
 def check_file_property(prop: Property) -> t.Tuple[bool, bool, bool]:
   from .task import Task
   item_type = unpack_type_hint(prop.value_type)[1]
-  is_sequence = item_type is not None and prop.value_type != File
-  is_file_type = (prop.value_type == File or (item_type and item_type[0] == File))
+  is_sequence = item_type is not None and prop.value_type != Path
+  is_file_type = (prop.value_type == Path or (item_type and item_type[0] == Path))
   is_input_file_property = (
       Task.Input in prop.annotations and is_file_type
       or Task.InputFile in prop.annotations)
@@ -39,7 +38,7 @@ def check_file_property(prop: Property) -> t.Tuple[bool, bool, bool]:
   return is_sequence, is_input_file_property, is_output_file_property
 
 
-def unwrap_file_property(prop: Property) -> t.Tuple[bool, bool, t.List[File]]:
+def unwrap_file_property(prop: Property) -> t.Tuple[bool, bool, t.List[Path]]:
   is_sequence, is_input_file_property, is_output_file_property = check_file_property(prop)
   if not is_input_file_property and not is_output_file_property:
     return False, False, []

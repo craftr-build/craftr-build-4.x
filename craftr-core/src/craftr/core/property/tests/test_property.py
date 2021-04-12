@@ -1,7 +1,8 @@
 
+import enum
 import typing as t
+from pathlib import Path
 import pytest
-
 from craftr.core.property.property import Box, Property, HavingProperties
 from craftr.core.property.typechecking import TypeCheckingError
 
@@ -94,3 +95,26 @@ def test_property_nesting_2():
   prop1.set([['hello', prop2]])
   prop2.set('world')
   assert prop1.get() == [['hello', 'world']]
+
+
+def test_property_enum_coercion():
+  class MyEnum(enum.Enum):
+    ABC = enum.auto()
+
+  prop = Property(MyEnum, [], 'myprop', None)
+  prop.set('abc')
+  assert prop.get() == MyEnum.ABC
+
+  prop = Property(t.List[MyEnum], [], 'myprop', None)
+  prop.set(['abc'])
+  assert prop.get() == [MyEnum.ABC]
+
+
+def test_property_path_coercion():
+  prop = Property(Path, [], 'pathprop', None)
+  prop.set('hello/world.c')
+  assert prop.get() == Path('hello/world.c')
+
+  prop = Property(t.List[Path], [], 'pathlistprop', None)
+  prop.set(['hello/world.c'])
+  assert prop.get() == [Path('hello/world.c')]

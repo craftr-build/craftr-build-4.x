@@ -2,8 +2,8 @@
 import os
 import typing as t
 from dataclasses import dataclass
+from pathlib import Path
 
-from craftr.core.types import File
 from .action import Action, ActionContext
 
 
@@ -11,7 +11,7 @@ from .action import Action, ActionContext
 class WriteFileAction(Action):
 
   #: The path of the file to write to.
-  file_path: File
+  file_path: Path
 
   #: The contents of the file as text.
   text: t.Optional[str] = None

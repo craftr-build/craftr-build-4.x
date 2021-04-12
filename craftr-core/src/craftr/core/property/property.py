@@ -2,6 +2,7 @@
 import enum
 import typing as t
 import weakref
+from pathlib import Path
 
 from craftr.core.util.preconditions import check_not_none
 from craftr.core.util.typing import unpack_type_hint
@@ -17,18 +18,30 @@ def _unpack_nested_providers(value: t.Any, type_hint: t.Any) -> t.Any:
   return mutate_values(value, MutableVisitContext(type_hint, mutator, True))
 
 
-def on_property_set_value(prop: 'Property', value: t.Any) -> t.Any:
+def on_property_set_value(value_type: t.Any, value: t.Any) -> t.Any:
   """
   Called when #Property.set() is called with not a real value. Allows to transform the value.
   """
 
-  if isinstance(value, str) and issubclass(prop.value_type, enum.Enum):
+  assert isinstance(value_type, type) or isinstance(value_type, (t._SpecialForm, t._GenericAlias)), repr(value_type)
+
+  if isinstance(value, str) and isinstance(value_type, type) and issubclass(value_type, enum.Enum):
     # Find the matching enum value, case in-sensitive.
     value_lower = value.lower()
-    enum_value = next((v for v in prop.value_type if v.name.lower() == value_lower), None)
+    enum_value = next((v for v in value_type if v.name.lower() == value_lower), None)
     if enum_value is None:
-      raise ValueError(f'{prop.value_type.__name__}.{value} does not exist')
+      raise ValueError(f'{value_type.__name__}.{value} does not exist')
     return enum_value
+
+  generic, args = unpack_type_hint(value_type)
+  if generic is not None and generic in (t.List, list, t.Set, set) and isinstance(value, t.Sequence):
+    if isinstance(value_type, str):
+      raise TypeError('expected non-string sequence')
+    constructor = getattr(generic, '__origin__', generic)
+    value = constructor(on_property_set_value(args[0], x) for x in value)
+
+  elif value_type == Path or generic == t.Union and Path in args:
+    value = Path(value)
 
   return value
 
@@ -86,7 +99,7 @@ class Property(Provider[T]):
       raise RuntimeError(f'{self} is finalized')
     nested_providers: t.List[Provider] = []
     if not isinstance(value, Provider):
-      value = on_property_set_value(self, value)
+      value = on_property_set_value(self.value_type, value)
       # TODO(NiklasRosenstein): `force_accept` parameter should check if the types match.
       def force_accept(value: t.Any) -> bool:
         if isinstance(value, Provider):

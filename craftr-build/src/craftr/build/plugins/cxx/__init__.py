@@ -12,7 +12,6 @@ from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProv
 from craftr.build.lib.interfaces.native import NativeLibInfo
 from craftr.core import Action, HavingProperties, Property, Task
 from craftr.core.actions import CommandAction, CreateDirectoryAction
-from craftr.core.types import File
 from .namingscheme import NamingScheme
 
 plugin = PluginRegistration()
@@ -41,14 +40,14 @@ class Props(HavingProperties):
   """ Base props for building C/C++ libraries or applications. """
 
   naming_scheme: NamingScheme = NamingScheme.CURRENT
-  sources: t.Annotated[Property[t.List[File]], Task.Input]
-  include_paths: Property[t.List[File]]
-  public_include_paths: Property[t.List[File]]
+  sources: t.Annotated[Property[t.List[Path]], Task.Input]
+  include_paths: Property[t.List[Path]]
+  public_include_paths: Property[t.List[Path]]
   build_options: Property[t.List[str]]
   language: Property[Language]
   product_name: Property[str]
   produces: Property[ProductType]
-  outputs: t.Annotated[Property[t.List[File]], Task.Output]
+  outputs: t.Annotated[Property[t.List[Path]], Task.Output]
 
 
 @plugin.exports('compile')
