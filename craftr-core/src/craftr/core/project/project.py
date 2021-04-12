@@ -168,13 +168,13 @@ class Project(ExtensibleObject):
   def file(self, sub_path: str) -> Path:
     return self.directory / sub_path
 
-  def glob(self, pattern: str) -> t.List[str]:
+  def glob(self, pattern: str) -> t.List[Path]:
     """
     Apply the specified glob pattern relative to the project directory and return a list of the
     matched files.
     """
 
-    return glob.glob(str(self.directory / pattern))
+    return [Path(f) for f in glob.glob(str(self.directory / pattern))]
 
 
 class TaskContainer(IConfigurable):
@@ -191,7 +191,10 @@ class TaskContainer(IConfigurable):
     return self
 
   def __getattr__(self, key: str) -> 'Task':
-    return self._tasks[key]
+    try:
+      return self._tasks[key]
+    except KeyError:
+      raise AttributeError(key)
 
   def __getitem__(self, key: str) -> 'Task':
     return self._tasks[key]

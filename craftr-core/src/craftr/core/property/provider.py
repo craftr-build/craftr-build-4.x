@@ -82,7 +82,7 @@ class Provider(t.Generic[T], metaclass=abc.ABCMeta):
   def map(self, func: t.Callable[[T], R]) -> 'Provider[R]':
     return MappedProvider(func, self)
 
-  def flatmap(self, func: t.Callable[[T], 'Provider[R]']) -> 'Provider[R]':
+  def flatmap(self, func: t.Callable[[T], R]) -> 'Provider[R]':
     return FlatMappedProvider(func, self)
 
 
@@ -98,7 +98,7 @@ class Box(Provider[T]):
 
 
 def visit_captured_providers(subject: t.Callable, func: t.Callable[[Provider], bool]) -> None:
-  assert isinstance(subject, types.FunctionType), type(subject)
+  assert isinstance(subject, (types.FunctionType, types.MethodType)), type(subject)
   for cell in (subject.__closure__ or []):
     if isinstance(cell.cell_contents, Provider):
       cell.cell_contents.visit(func)
@@ -176,7 +176,7 @@ class MappedProvider(Provider[R]):
 
 class FlatMappedProvider(Provider[R]):
 
-  def __init__(self, func: t.Callable[[T], Provider[R]], sub: Provider[T]) -> None:
+  def __init__(self, func: t.Callable[[T], R], sub: Provider[T]) -> None:
     self._func = func
     self._sub = sub
 
@@ -190,7 +190,8 @@ class FlatMappedProvider(Provider[R]):
     return bool(self._func(value))
 
   def get(self) -> R:
-    return self._func(self._sub.get()).get()
+    value = self._sub.get()
+    return type(value)(map(self._func, value))
 
   def visit(self, visitor: t.Callable[[Provider], bool]) -> None:
     if visitor(self):
