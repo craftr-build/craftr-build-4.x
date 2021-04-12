@@ -82,7 +82,7 @@ class Closure:
 
   def __init__(self,
     func: t.Callable,
-    stackframe: types.FrameType,
+    stackframe: t.Optional[types.FrameType],
     owner: t.Any,
     delegate: t.Optional[t.Any],
     resolve_strategy: t.Union[str, ResolveStrategy] = ResolveStrategy.OWNER_FIRST,
@@ -177,11 +177,11 @@ class Closure:
       if hasattr(obj, key) or key in getattr(type(obj), '__annotations__', {}):
         return _ValueRef.attr(obj, key)
 
-    if key in self.stackframe.f_locals:
-      return _ValueRef.frame_locals(self.stackframe, key)
-
-    if key in self.stackframe.f_globals:
-      return _ValueRef.frame_globals(self.stackframe, key)
+    if self.stackframe:
+      if key in self.stackframe.f_locals:
+        return _ValueRef.frame_locals(self.stackframe, key)
+      if key in self.stackframe.f_globals:
+        return _ValueRef.frame_globals(self.stackframe, key)
 
     if key in vars(builtins):
       return _ValueRef.builtin(key)
@@ -189,12 +189,14 @@ class Closure:
     raise NameError(key, objs)
 
 
-def closure(owner: t.Optional[t.Any] = None) -> t.Callable[[t.Callable], Closure]:
+def closure(owner: t.Optional[t.Any] = None, frame: t.Optional[types.FrameType] = None,
+  capture_frame: bool = True) -> t.Callable[[t.Callable], Closure]:
   """
   Decorator for closure functions.
   """
 
-  frame = sys._getframe(1)
+  if frame is None and capture_frame:
+    frame = sys._getframe(1)
 
   def decorator(func: t.Callable) -> Closure:
     return Closure(func, frame, owner, None)

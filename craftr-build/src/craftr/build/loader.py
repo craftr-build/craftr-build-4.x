@@ -15,7 +15,7 @@ class DslProjectLoader(IProjectLoader):
     if (filename := path / BUILD_SCRIPT_FILENAME).exists():
       project = Project(context, parent, path)
       context.initialize_project(project)
-      @closure(project)
+      @closure(project, capture_frame=False)
       def _execute(__closure__):
         module = transpile_to_ast(filename.read_text(), str(filename))
         scope = {'project': project, '__file__': str(filename), '__name__': project.name, '__closure__': __closure__}
