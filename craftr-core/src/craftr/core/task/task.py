@@ -64,6 +64,7 @@ class Task(HavingProperties, IConfigurable):
     self._project = weakref.ref(project)
     self._name = name
     self._finalized = False
+    self.do_first_actions: t.List['Action'] = []
     self.do_last_actions: t.List['Action'] = []
     self.dependencies = []
     self.init()
@@ -166,6 +167,14 @@ class Task(HavingProperties, IConfigurable):
     if not self.always_outdated:
       self.project.context.metadata_store.\
           namespace(TASK_HASH_NAMESPACE).store(self.path, calculate_task_hash(self).encode())
+
+  def do_first(self, action: t.Union['Action', Closure]) -> None:
+    from craftr.core.actions import Action, LambdaAction
+    check_instance_of(action, (Action, Closure), 'action')
+    if isinstance(action, Closure):
+      closure = action
+      action = LambdaAction(lambda context: closure.with_locals(context=context).apply(self))
+    self.do_first_actions.append(action)
 
   def do_last(self, action: t.Union['Action', Closure]) -> None:
     from craftr.core.actions import Action, LambdaAction

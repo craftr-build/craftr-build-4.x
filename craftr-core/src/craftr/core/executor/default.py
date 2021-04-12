@@ -30,7 +30,7 @@ class DefaultExecutor(IExecutor):
       if task.is_outdated() or any(x in outdated_tasks for x in task.get_dependencies()):
         outdated_tasks.add(task)
         print('> Task', task.path)
-        actions = task.get_actions() + task.do_last_actions
+        actions = task.do_first_actions + task.get_actions() + task.do_last_actions
         for action in actions:
           action.execute(context)
         task.completed()
