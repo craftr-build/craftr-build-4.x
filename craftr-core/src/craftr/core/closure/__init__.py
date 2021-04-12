@@ -210,7 +210,8 @@ class IConfigurable(t.Protocol):
 
     return self.configure(closure)
 
-  def configure(self, closure: 'Closure') -> t.Any:
+  def configure(self: T, closure: 'Closure') -> T:
     """ Configure the object with a closure. """
 
-    return closure.apply(self)
+    closure.apply(self)
+    return self

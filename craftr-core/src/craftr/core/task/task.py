@@ -176,6 +176,7 @@ class Task(HavingProperties, IConfigurable):
     self.do_last_actions.append(action)
 
   # IConfigurable
-  def configure(self, closure: 'Closure') -> None:
+  def configure(self, closure: 'Closure') -> 'Task':
     closure.apply(self)
     self.finalize()
+    return self

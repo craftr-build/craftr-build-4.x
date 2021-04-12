@@ -185,9 +185,10 @@ class TaskContainer(IConfigurable):
   def __iter__(self):
     return iter(self._tasks.values())
 
-  def configure(self, closure: 'Closure') -> None:
+  def configure(self, closure: 'Closure') -> 'TaskContainer':
     for task in self._tasks.values():
       task.configure(closure)
+    return self
 
   def __getattr__(self, key: str) -> 'Task':
     return self._tasks[key]
