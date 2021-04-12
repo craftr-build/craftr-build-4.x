@@ -230,7 +230,7 @@ class Rewriter:
       body = self._parse_closure_body()
     if body is None and arglist is not None:
       # We only parse an expression for the Closure body if an arglist was specified.
-      expr = self._rewrite_items(mode=ParseMode.DEFAULT)
+      expr = self._rewrite_expr(mode=ParseMode.DEFAULT)
 
     assert self._closure_stack.pop() == closure_id
 
