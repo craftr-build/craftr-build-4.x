@@ -191,3 +191,6 @@ class TaskContainer(IConfigurable):
 
   def __getattr__(self, key: str) -> 'Task':
     return self._tasks[key]
+
+  def __getitem__(self, key: str) -> 'Task':
+    return self._tasks[key]
