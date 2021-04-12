@@ -1,0 +1,14 @@
+
+=== TEST function_def_vs_local_var_def ===
+def foobar():
+  pass
+contextvar = 42
+def localvar = 'foobar'
+print(contextvar, localvar)
+=== EXPECTS ===
+def foobar():
+  pass
+contextvar = 42
+_def_localvar = 'foobar'
+print(contextvar, localvar)
+=== END ===

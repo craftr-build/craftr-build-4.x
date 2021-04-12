@@ -142,19 +142,25 @@ class Rewriter:
     self._closures: t.Dict[str, Closure] = {}
 
   @contextlib.contextmanager
-  def _playing_games(self) -> t.Iterator[None]:
+  def _playing_games(self) -> t.Iterator[t.Callable[[], None]]:
     """
     Context manager to save the current tokenizer and closure state and restore it on exit. This is
-    useful for lookaheads, like :meth:`_test_dict`.
+    useful for lookaheads, like :meth:`_test_dict`. If the returned callable is called, the
+    tokenizer and closure state is not restored.
     """
 
     state = self.tokenizer.state
     closure_state = self._closure_counter, self._closures.copy(), self._closure_stack[:]
+    do_restore = True
+    def commit():
+      nonlocal do_restore
+      do_restore = False
     try:
-      yield
+      yield commit
     finally:
-      self.tokenizer.state = state
-      self._closure_counter, self._closures, self._closure_stack = closure_state
+      if do_restore:
+        self.tokenizer.state = state
+        self._closure_counter, self._closures, self._closure_stack = closure_state
 
   def _syntax_error(self, msg: str, pos: t.Optional[Cursor] = None) -> SyntaxError:
     """ Raise a syntax error on the current position of the tokenizer, or the specified *pos*. """
@@ -515,6 +521,32 @@ class Rewriter:
 
     return code + self._consume_whitespace(True)
 
+  def _test_local_def(self) -> t.Optional[str]:
+    """
+    Tests if the current `def` keyword introduces a local variable assignment, and if so,
+    returns the code for the rewritten code for the entire assignment.
+    """
+
+    token = ProxyToken(self.tokenizer)
+    assert token.tv == (Token.Name, 'def'), token
+
+    with self._playing_games() as commit:
+      #import pdb; pdb.set_trace()
+      token.next()
+      self._consume_whitespace(False)
+      if token.type != Token.Name:
+        return None
+      code = '_def_' + token.value
+      token.next()
+      code += self._consume_whitespace(False)
+      if not token.is_control('='):
+        return None
+      code += token.value
+      token.next()
+      code += self._rewrite_expr(ParseMode.DEFAULT)
+      commit()
+      return code
+
   def _rewrite_stmt(self, indentation: int) -> str:
     """
     Parses a line statement of Python code. Returns an empty string if the actual indendation of
@@ -533,6 +565,9 @@ class Rewriter:
 
     code += token.value
     token.next()
+
+    if token.tv == (Token.Name, 'def') and (defcode := self._test_local_def()):
+      return code + defcode
 
     if token.type == Token.Name and token.value in self.PYTHON_BLOCK_KEYWORDS:
       # Parse to the next colon.

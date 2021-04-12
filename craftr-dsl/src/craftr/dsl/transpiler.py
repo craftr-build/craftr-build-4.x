@@ -20,6 +20,7 @@ class TranspileOptions:
   preamble: str = 'from craftr.core.closure import closure\n'
   closure_def_prefix: str = '@closure(__closure__)\n'
   closure_arguments_prefix: str = '__closure__, '
+  local_vardef_prefix: str = '_def_'
 
 
 def transpile_to_ast(code: str, filename: str, options: t.Optional[TranspileOptions] = None) -> ast.Module:
@@ -155,6 +156,14 @@ class NameRewriter(ast.NodeTransformer):
       value=ast.Name(id=self.options.closure_target, ctx=ast.Load()),
       slice=ast.Constant(value=node.id),
       ctx=node.ctx)
+
+  def visit_Assign(self, assign: ast.Assign) -> ast.Name:
+    if len(assign.targets) == 1 and isinstance(assign.targets[0], ast.Name):
+      name = assign.targets[0]
+      if name.id.startswith(self.options.local_vardef_prefix):
+        name.id = name.id[len(self.options.local_vardef_prefix):]
+        self._add_to_locals({name.id})
+    return self.generic_visit(assign)
 
   def visit_For(self, node: ast.For) -> ast.For:
     with self._with_locals_from_target(node.target):
