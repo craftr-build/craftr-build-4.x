@@ -171,7 +171,17 @@ class NameRewriter(ast.NodeTransformer):
 
   def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
     self._add_to_locals({node.name})
-    return self.generic_visit(node)
+    names: t.Set[str] = set()
+    for arg in node.args.args:
+      names.add(arg.arg)
+    for arg in node.args.kwonlyargs:
+      names.add(arg.arg)
+    if node.args.vararg:
+      names.add(node.args.vararg.arg)
+    if node.args.kwarg:
+      names.add(node.args.kwarg.arg)
+    with self._with_locals(names):
+      return self.generic_visit(node)
 
   def visit_ClassDef(self, node: ast.ClassDef) -> ast.ClassDef:
     self._add_to_locals({node.name})
