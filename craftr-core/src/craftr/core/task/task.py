@@ -9,7 +9,7 @@ from nr.caching.api import KeyDoesNotExist
 from craftr.core.property import HavingProperties, collect_properties
 from craftr.core.closure import Closure, IConfigurable
 from craftr.core.util.collections import unique
-from craftr.core.util.preconditions import check_not_none
+from craftr.core.util.preconditions import check_instance_of, check_not_none
 from .state import calculate_task_hash, unwrap_file_property
 
 if t.TYPE_CHECKING:
@@ -64,6 +64,7 @@ class Task(HavingProperties, IConfigurable):
     self._project = weakref.ref(project)
     self._name = name
     self._finalized = False
+    self.do_last_actions: t.List['Action'] = []
     self.dependencies = []
     self.init()
 
@@ -128,7 +129,7 @@ class Task(HavingProperties, IConfigurable):
   def get_actions(self) -> t.List['Action']:
     """ Get the list of actions for this task. This should be called when everything is loaded. """
 
-    raise NotImplementedError(f'{type(self).__name__}.get_actions()')
+    return []
 
   def is_outdated(self) -> bool:
     """
@@ -165,6 +166,14 @@ class Task(HavingProperties, IConfigurable):
     if not self.always_outdated:
       self.project.context.metadata_store.\
           namespace(TASK_HASH_NAMESPACE).store(self.path, calculate_task_hash(self).encode())
+
+  def do_last(self, action: t.Union['Action', Closure]) -> None:
+    from craftr.core.actions import Action, LambdaAction
+    check_instance_of(action, (Action, Closure), 'action')
+    if isinstance(action, Closure):
+      closure = action
+      action = LambdaAction(lambda context: closure.with_locals(context=context).apply(self))
+    self.do_last_actions.append(action)
 
   # IConfigurable
   def configure(self, closure: 'Closure') -> None:
