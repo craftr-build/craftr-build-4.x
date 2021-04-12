@@ -13,6 +13,10 @@ def foo():
   assert True, 'never gonna happen'
   return 42
 
+def flatten(it):
+  for item in it:
+    yield from item
+
 if os.path.isfile('foobar.txt'):
   print('foobar.txt exists')
 === EXPECTS ===
@@ -22,6 +26,10 @@ from sys import *
 def foo():
   assert True, 'never gonna happen'
   return 42
+
+def flatten(it):
+  for item in it:
+    yield from item
 
 if os.path.isfile('foobar.txt'):
   print('foobar.txt exists')

@@ -475,10 +475,16 @@ class Rewriter:
       token.next()
       return code + 'pass' + self._consume_whitespace(True)
 
-    elif token.type == Token.Name and token.value in ('assert', 'return'):
-      keyword = token.value
+    elif token.type == Token.Name and token.value in ('assert', 'return', 'yield'):
+      code += token.value
+      is_yield = token.value == 'yield'
       token.next()
-      return code + keyword + self._rewrite_items(ParseMode.DEFAULT) + self._consume_whitespace(True)
+      code += self._consume_whitespace(False)
+      if is_yield and token.tv == (Token.Name, 'from'):
+        code += token.value
+        token.next()
+      code += self._rewrite_items(ParseMode.DEFAULT) + self._consume_whitespace(True)
+      return code
 
     elif token.type == Token.Name and token.value in ('import', 'from'):
       while token.type != Token.Newline and token.tv != (Token.Control, ';'):
