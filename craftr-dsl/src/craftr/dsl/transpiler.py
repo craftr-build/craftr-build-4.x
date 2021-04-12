@@ -173,6 +173,24 @@ class NameRewriter(ast.NodeTransformer):
     self._add_to_locals({node.name})
     return self.generic_visit(node)
 
+  def visit_ClassDef(self, node: ast.ClassDef) -> ast.ClassDef:
+    self._add_to_locals({node.name})
+    return self.generic_visit(node)
+
+  def visit_Import(self, node: ast.Import) -> ast.Import:
+    names: t.Set[str] = set()
+    for name in node.names:
+      if name.asname:
+        names.add(name.asname)
+      else:
+        names.add(name.name.rpartition('.')[-1])
+    self._add_to_locals(names)
+    return self.generic_visit(node)
+
+  def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:
+    self.visit_Import(ast.Import(names=node.names))  # Dispatch name detection
+    return self.generic_visit(node)
+
   # TODO(NiklasRosenstein): Handle more nodes that define local variables and := operator.
 
   def visit(self, node: ast.AST) -> ast.AST:

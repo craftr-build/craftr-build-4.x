@@ -17,3 +17,32 @@ __closure__['contextvar'] = 42
 localvar = 'foobar'
 print(__closure__['contextvar'], localvar)
 === END ===
+
+
+=== TEST python_imports ===
+from craftr.core.task import Task
+class MyTask(MyPropsBase, Task):
+  pass
+def foobar():
+  def baz():
+    pass
+  return baz
+MyTask(foobar())
+=== EXPECTS ===
+from craftr.core.closure import closure
+from craftr.core.task import Task
+
+
+class MyTask(__closure__['MyPropsBase'], Task):
+    pass
+
+
+def foobar():
+
+    def baz():
+        pass
+    return baz
+
+
+MyTask(foobar())
+=== END ===
