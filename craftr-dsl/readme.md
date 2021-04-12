@@ -1,129 +1,96 @@
 # craftr-dsl
 
-The Craftr DSL is an extension of the Python language with support for Groovy-like closures.
+This package provides a transpiler for the Craftr domain-specific-language. The language is
+a full syntactic superset of Python (with some exceptions\*) and a sprinkle of Groovy-style
+closures and unparenthesised function calls.
 
-__Example:__
+__Requirements__
 
-```python
-buildscript {
-  dependencies = ["craftr-git", "craftr-cxx"]
+* Python 3.6 or newer
+
+<small>_\*exceptions_
+
+* set literals
+* type annotations
+* walrus operator
+
+> These syntactical features could be supported in theory but are not prioritised.
+</small>
+
+
+
+## Introduction
+
+Variables are looked up through the context's current closure (a `craftr.core.closure.Closure`
+object) with the special name `__closure__`. Unless previously explicitly declared, a variable
+always refers to a member of an object resolved from the current context. On the global level,
+and in the context of a Craftr build script, the closure delegates to a Craftr `Project` object.
+
+The following statements are equal:
+
+```py
+print(name)
+print(project.name)
+print(__closure__.delegate.name)
+```
+
+And such are the following assignments:
+
+```py
+name = 'my-project-name'
+project.name = 'my-project-name'
+__closure__.delegate.name = 'my-project-name'
+```
+
+In order to define a local variable that is not looked up through the closure, it must be prefixed
+with the `def` keyword.
+
+```py
+def name = 'local variable called name'
+assert project.name != name
+```
+
+Function calls at the root of the statement do not need to be parenthesised, but it may be needed
+to disambiguate certain syntactical constructors.
+
+```py
+print 'Hello, World', file=sys.stderr
+print *args  # Multiply print by args?
+print(*args) # Ah yes, that's it
+print *args, file=sys.stderr  # Actually a syntax error
+```
+
+A new closure can be defined by using the `() -> { ... } ` or just `{ ... }` syntax. It is a common
+pattern in Craftr build scripts to pass a closure to a function in order to allow that function to
+invoke it with a new delegate (for example a `Task` object).
+
+```py
+task('sayHello') {
+  assert __closure__.delegate is project.tasks.sayHello
+  do_last {
+    print 'Hello, World!'
+  }
 }
 
-def cxx = load("craftr-cxx")
-def git = load("craftr-git")
-
-name = "myproject"
-version = git.version()
-
-cxx.executable {
-  srcs = glob("src/*.cpp")
+# Error: Unable to resolve 'do_last' in Project context
+do_last {
+  print 'Not happening'
 }
 ```
 
-This code is transpiled to the following Python code:
+Closures can also accept arguments. With an argument list provided, a closure definition may also omit
+the curly braces and contain exactly one expression.
 
-```python
-@__closure__.sub
-def _closure_1(__closure__):
-  __closure__['dependencies'] = ['craftr-git', 'craftr-cxx']
-__closure__['buildscript'](_closure_1)
+```py
+print list(filter(k -> k % 2, range(10)))  # 1, 3, 5, 7, 9
 
-cxx = __closure__['load']('craftr-cxx')
-git = __closure__['load']('craftr-git')
-
-__closure__['name'] = 'myproject'
-__closure__['version'] = git.version()
-
-@__closure__.sub
-def _closure_2(__closure__):
-  __closure__['srcs'] = __closure__['glob']['src/*.cpp']
-__closure__['cxx'].executable(_closure_2)
+promise.then((status, value) -> {
+  if status is not None:
+    raise Exception(status)
+  return do_something(value)
+})
 ```
 
-## Syntax & Semantics
-
-The Craftr DSL is not a strict superset of the Python language, instead it wraps Python code and
-swaps between DSL parsing and Python code parsing.
-
-### Craftr DSL Syntax
-
-1. **Define a local variable with the `def` Keyword**
-
-    Local variables are defined using the `def` keyword. The variable can then be addressed in
-    Python expressions or as call block targets (see below). The right hand side of the assignment
-    must be a Python expression.
-
-    ```python
-    def my_variable = 42
-    ```
-
-2. **Set owner/delegate property**
-
-    Assigning to a name that was not previously defined with the `def` keyword will attempt to
-    assign the variable to a property of the closure's owner or delegate, or any of the parent
-    closures.
-
-    ```python
-    name = "my-project"
-    version = git.version()
-    ```
-
-3. **Parentheses-less function calls**
-
-    Functions may be called without parentheses.
-
-    ```python
-    print "Hello, World!"  # Call without body
-
-    buildscript {
-      dependencies = ["craftr-python"]
-    }
-
-    cxx.build("main") {
-      srcs = glob("src/*.cpp")
-    }
-    ```
-
-4. **Closures**
-
-    The Kamhi DSL provides a syntax for defining a `craftr.core.closure.Closure` object. It is
-    essentially a multi-line lambda definition enclosed in curly braces, similar to how other
-    languages define lambdas (e.g. Java, TypeScript, Groovy).
-
-    ```python
-    def get_random_number = {
-      import random
-      random.randint(0, 255)
-    }
-
-    print get_random_number()
-    ```
-
-    The last expression in a closure is it's return value, but the `return` keyword is of course
-    also supported. Closures may accept arguments by defining the parameter list before an arrow.
-
-    ```python
-    def incrementer = n -> { n + 1 }
-    def adder = (a, b) -> { a + b }
-    ```
-
-    > Note: Python 3 set syntax is not supported in Craftr. For example, `{a, b, c}` would be
-    > interpreter as a closure returning a tuple of the values a, b and c instead of a set that
-    > containts the three values.
-
-5. **Macros**
-
-    Macros are plugins that can be enabled in the Craftr DSL parser to implement custom parsing
-    logic following a macro identifier. The Craftr DSL parser comes with a YAML plugin out of the
-    box:
-
-    ```python
-    buildscript {
-      dependencies = !yaml {
-        - craftr-git
-        - craftr-python
-      }
-    }
 
 ---
 
