@@ -531,7 +531,6 @@ class Rewriter:
     assert token.tv == (Token.Name, 'def'), token
 
     with self._playing_games() as commit:
-      #import pdb; pdb.set_trace()
       token.next()
       self._consume_whitespace(False)
       if token.type != Token.Name:
