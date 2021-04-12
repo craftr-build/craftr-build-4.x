@@ -46,3 +46,17 @@ print('Hello, world!', file=sys.stdout, **kwargs)
 === EXPECTS ===
 print('Hello, world!', file=sys.stdout, **kwargs)
 === END ===
+
+=== TEST class_definition ===
+
+class Foo:
+
+  def __init__(self):
+    pass
+=== EXPECTS ===
+
+class Foo:
+
+  def __init__(self):
+    pass
+=== END ===
