@@ -96,6 +96,7 @@ class Closure:
     self.resolve_strategy = ResolveStrategy[resolve_strategy] if isinstance(resolve_strategy, str) else resolve_strategy
     self.args = args or []
     self.kwargs = kwargs or {}
+    self.locals: t.Dict[str, t.Any] = {}
 
   @property
   def resolve_strategy(self) -> ResolveStrategy:
@@ -118,6 +119,12 @@ class Closure:
 
     self.delegate = delegate
     return self(*args, **kwargs)
+
+  def with_locals(self, **kwargs) -> 'Closure':
+    """ Modifies the closure object to update the #locals and returns `self`. """
+
+    self.locals.update(kwargs)
+    return self
 
   def curry(self, *args, **kwargs) -> 'Closure':
     """ Return a copy of the closure with the specified arguments curried. """
@@ -150,6 +157,9 @@ class Closure:
       return _ValueRef(lambda: self.owner, _cant_be_set)
     if key == 'delegate':
       return _ValueRef(lambda: self.delegate, _cant_be_set)
+
+    if key in self.locals:
+      return _ValueRef(lambda: self.locals[key], _cant_be_set)
 
     if self.resolve_strategy == ResolveStrategy.OWNER_FIRST:
       objs = (self.owner, self.delegate)
