@@ -34,14 +34,23 @@ def on_property_set_value(value_type: t.Any, value: t.Any) -> t.Any:
     return enum_value
 
   generic, args = unpack_type_hint(value_type)
+
   if generic is not None and generic in (t.List, list, t.Set, set) and isinstance(value, t.Sequence):
     if isinstance(value_type, str):
       raise TypeError('expected non-string sequence')
     constructor = getattr(generic, '__origin__', generic)
     value = constructor(on_property_set_value(args[0], x) for x in value)
 
+  elif generic is not None and generic in (t.Dict, dict, t.Mapping, t.MutableMapping) and isinstance(value, t.Mapping):
+    constructor = getattr(generic, '__origin__', generic)
+    value = constructor((k, on_property_set_value(args[1], v)) for k, v in value.items())
+
   elif value_type == Path or generic == t.Union and Path in args:
     value = Path(value)
+
+  elif value_type == str and isinstance(value, Path):
+    # Allow paths to be cast to strings automatically.
+    value = str(value)
 
   return value
 
