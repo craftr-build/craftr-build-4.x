@@ -14,7 +14,11 @@ Python code, so everything you can do in the DSL you can also do in Python, thou
 is usually more convenient to use the DSL.
 
 Most commonly, the first thing to do in the build script is to apply a plugin. Plugins
-provide the means to describe specific build tasks.
+provide the means to describe specific build tasks. They do so by registering named extensions
+to the `project` object, which in the Craftr DSL is used implicitly to resolve variables.
+
+We'll use the `cxx` plugin to define a build task for a C program and the `run` plugin to
+add a non-default task to execute the built program.
 
 <table align="center">
   <tr><th>Craftr DSL</th><th>Python</th></tr>
@@ -23,48 +27,12 @@ provide the means to describe specific build tasks.
   ```py
   apply 'cxx'
   apply 'run'
-  ```
-  </td><td>
 
-  ```py
-  project.apply('cxx')
-  project.apply('run')
-  ```
-  </td></tr>
-</table>
-
-Plugins register extensions to the project object which can be accessed through the `project`
-object (which is accessed implicitly in the DSL if the variable cannot be otherwise resolved).
-
-<table align="center">
-  <tr><th>Craftr DSL</th><th>Python</th></tr>
-  <tr><td>
-
-  ```py
   cxx.compile {
     sources = glob('src/**/*.cpp')
     produces = 'executable'
   }
-  ```
-  </td><td>
 
-  ```py
-  compile_task = project.cxx.compile()
-  compile_task.sources = project.glob('src/**/*.cpp')
-  compile_task.produces = 'executable'
-  compile_task.finalize()
-  ```
-  </td></tr>
-</table>
-
-Some built-in extensions are available by default through the `defaults` plugin, such
-as the `run` task builder which executes the product of task that provides an executable.
-
-<table align="center">
-  <tr><th>Craftr DSL</th><th>Python</th></tr>
-  <tr><td>
-
-  ```py
   run {
     dependencies.append tasks.compile
   }
@@ -72,6 +40,14 @@ as the `run` task builder which executes the product of task that provides an ex
   </td><td>
 
   ```py
+  project.apply('cxx')
+  project.apply('run')
+
+  compile_task = project.cxx.compile()
+  compile_task.sources = project.glob('src/**/*.cpp')
+  compile_task.produces = 'executable'
+  compile_task.finalize()
+
   run_task = project.run()
   run_task.dependencies.append(compile_task)
   run_task.finalize()
