@@ -48,6 +48,7 @@ class Props(HavingProperties):
   product_name: Property[str]
   produces: Property[ProductType]
   outputs: t.Annotated[Property[t.List[Path]], Task.Output]
+  executable: t.Annotated[Property[IExecutableProvider], Task.Output]
 
 
 @plugin.exports('compile')
@@ -103,6 +104,7 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
   def init(self) -> None:
     self.product_name.set_default(lambda: self.project.name)
     self.produces = ProductType.EXECUTABLE
+    self.executable.set_default(self.get_executable_info)
 
   # Task
   def finalize(self) -> None:
