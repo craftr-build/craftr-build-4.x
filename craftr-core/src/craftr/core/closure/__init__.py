@@ -122,11 +122,31 @@ class Closure:
 
     return self.func(self, *self.args, *args, **{**self.kwargs, **kwargs})
 
-  def apply(self, delegate: t.Optional[t.Any], *args, **kwargs) -> t.Any:
-    """ Set the closure's delegate and invoke it with the specified arguments. """
+  def copy(self) -> 'Closure':
+    """ Creates a copy of the closure. """
 
-    self.delegate = delegate
-    return self(*args, **kwargs)
+    return Closure(
+      self.func,
+      self.stackframe,
+      self.owner,
+      self.delegate,
+      self.resolve_strategy,
+      self.args,
+      self.kwargs
+    )
+
+  def apply(self, delegate: t.Optional[t.Any], *args, **kwargs) -> t.Any:
+    """
+    Calls the closure with the specified delegate. If the *delegate* is any different from the
+    Closure's current delegate, it will be copied first.
+    """
+
+    if delegate is self.delegate:
+      return self(*args, **kwargs)
+    else:
+      copy = self.copy()
+      copy.delegate = delegate
+      return copy(*args, **kwargs)
 
   def with_locals(self, **kwargs) -> 'Closure':
     """ Modifies the closure object to update the #locals and returns `self`. """
