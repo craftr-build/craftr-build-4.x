@@ -50,7 +50,7 @@ class Project(ExtensibleObject):
     self._name: t.Optional[str] = None
     self._build_directory: t.Optional[Path] = None
     self._tasks: t.Dict[str, 'Task'] = {}
-    self._subprojects: t.Dict[str, 'Project'] = {}
+    self._subprojects: t.Dict[Path, 'Project'] = {}
 
   def __repr__(self) -> str:
     return f'Project("{self.name}")'
@@ -119,14 +119,11 @@ class Project(ExtensibleObject):
     been loaded yet, it will be created and initialized.
     """
 
-    directory = str(self.directory.joinpath(directory).resolve())
-
-    if directory not in self._subprojects:
-      project = Project(self.context, self, directory)
-      self.context.initialize_project(project)
-      self._subprojects[directory] = project
-
-    return self._subprojects[directory]
+    path = (self.directory / directory).resolve()
+    if path not in self._subprojects:
+      project = self.context.project_loader.load_project(self.context, None, path)
+      self._subprojects[path] = project
+    return self._subprojects[path]
 
   def get_subproject_by_name(self, name: str) -> 'Project':
     """
