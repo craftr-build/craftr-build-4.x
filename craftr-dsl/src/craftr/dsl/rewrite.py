@@ -607,7 +607,7 @@ class Rewriter:
       raise self._syntax_error(f'expected indent > {parent_indentation}, found {token}')
     indentation = len(token.value)
     while token and (stmt := self._rewrite_stmt(indentation)):
-      code += stmt
+      code += stmt + self._consume_whitespace(True)
     return code
 
   def rewrite(self) -> RewriteResult:
