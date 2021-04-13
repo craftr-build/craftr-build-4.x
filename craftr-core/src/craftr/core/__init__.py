@@ -9,3 +9,4 @@ from craftr.core.plugin import IPlugin, IPluginLoader
 from craftr.core.project import Project
 from craftr.core.property import HavingProperties, Property
 from craftr.core.task import Task
+from craftr.core.settings import Settings

@@ -125,6 +125,9 @@ class Property(Provider[T]):
     self._value = value
     self._nested_providers = nested_providers
 
+  def _get_internal(self) -> t.Optional['Provider[T]']:
+    return self._value
+
   def get(self) -> T:
     if self._finalized:
       if self._finalized_no_value:

@@ -36,6 +36,9 @@ class NoValueError(Exception):
 
 class Provider(t.Generic[T], metaclass=abc.ABCMeta):
 
+  def _get_internal(self) -> t.Optional['Provider[T]']:
+    return self
+
   @abc.abstractmethod
   def get(self) -> T:
     """ Get the value of the propery, or raise a #NoValueError. """
@@ -65,13 +68,22 @@ class Provider(t.Generic[T], metaclass=abc.ABCMeta):
     func(self)
 
   def __add__(self, other: t.Union[T, 'Provider[T]']) -> 'Provider[T]':
-    return BinaryProvider(_add_operator, self, Provider.of(other))
+    left = self._get_internal()
+    if left is not None:
+      return BinaryProvider(_add_operator, left, Provider.of(other))
+    return Provider.of(other)
 
   def __radd__(self, other: t.Union[T, 'Provider[T]']) -> 'Provider[T]':
-    return BinaryProvider(_add_operator, Provider.of(other), self)
+    right = self._get_internal()
+    if right is not None:
+      return BinaryProvider(_add_operator, Provider.of(other), right)
+    return Provider.of(other)
 
   def __iadd__(self, other: t.Union[T, 'Provider[T]']) -> 'Provider[T]':
-    return BinaryProvider(_add_operator, self, Provider.of(other))
+    left = self._get_internal()
+    if left is not None:
+      return BinaryProvider(_add_operator, left, Provider.of(other))
+    return Provider.of(other)
 
   @staticmethod
   def of(value: t.Union[T, 'Provider[T]']) -> 'Provider[T]':
