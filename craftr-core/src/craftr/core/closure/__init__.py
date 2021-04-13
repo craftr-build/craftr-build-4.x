@@ -17,9 +17,13 @@ T_IConfigurable = t.TypeVar('T_IConfigurable', bound='IConfigurable')
 
 class _ValueRef:
 
-  def __init__(self, get: t.Callable[[], t.Any], set: t.Callable[[t.Any], None]) -> None:
+  def __init__(self, get: t.Callable[[], t.Any], set: t.Callable[[t.Any], None], info: t.Callable[[], str]) -> None:
     self.get = get
     self.set = set
+    self.info = info
+
+  def __repr__(self) -> str:
+    return f'_ValueRef({self.info()})'
 
   @classmethod
   def attr(cls, obj: t.Any, key: str) -> '_ValueRef':
@@ -29,11 +33,11 @@ class _ValueRef:
       if isinstance(has_value, (types.FunctionType, types.MethodType)):
         raise RuntimeError(f'cannot set function/method')
       setattr(obj, key, v)
-    return _ValueRef(lambda: getattr(obj, key), setter)
+    return _ValueRef(lambda: getattr(obj, key), setter, lambda: f'attr {key!r} of {obj!r}')
 
   @classmethod
   def dict(cls, dct: t.Dict[str, t.Any], key: str) -> '_ValueRef':
-    return _ValueRef(lambda: dct[key], lambda v: dct.__setitem__(key, v))
+    return _ValueRef(lambda: dct[key], lambda v: dct.__setitem__(key, v), lambda: f'key {key!r} of {dct!r}')
 
   @classmethod
   def frame_locals(cls, frame: types.FrameType, key: str) -> '_ValueRef':
@@ -44,19 +48,19 @@ class _ValueRef:
     def setter(_v):
       raise RuntimeError('setting outter local variable from Closure is not supported. '
           'Use the `nonlocal` keyword.')
-    return _ValueRef(lambda: frame.f_locals[key], setter)
+    return _ValueRef(lambda: frame.f_locals[key], setter, lambda: f'{key!r} of locals')
 
   @classmethod
   def frame_globals(cls, frame: types.FrameType, key: str) -> '_ValueRef':
     def setter(_v):
       raise RuntimeError('setting globals from inside a Closure is not supported')
-    return _ValueRef(lambda: frame.f_globals[key], setter)
+    return _ValueRef(lambda: frame.f_globals[key], setter, lambda: f'{key!r} of globals')
 
   @classmethod
   def builtin(cls, key: str) -> '_ValueRef':
     def setter(_v):
       raise RuntimeError('setting builtins is not supported')
-    return _ValueRef(lambda: getattr(builtins, key), setter)
+    return _ValueRef(lambda: getattr(builtins, key), setter, lambda: f'{key!r} of builtins')
 
 
 class ResolveStrategy(enum.Enum):
@@ -157,13 +161,13 @@ class Closure:
     def _cant_be_set(_v):
       raise RuntimeError('cannot be set')
 
-    if key == 'owner':
-      return _ValueRef(lambda: self.owner, _cant_be_set)
-    if key == 'delegate':
-      return _ValueRef(lambda: self.delegate, _cant_be_set)
+    if key == 'owner' and self.owner is not None:
+      return _ValueRef(lambda: self.owner, _cant_be_set, 'closure owner')
+    if key == 'delegate' and self.delegate is not None:
+      return _ValueRef(lambda: self.delegate, _cant_be_set, 'closure delegate')
 
     if key in self.locals:
-      return _ValueRef(lambda: self.locals[key], _cant_be_set)
+      return _ValueRef(lambda: self.locals[key], _cant_be_set, 'closure locals')
 
     if self.resolve_strategy == ResolveStrategy.OWNER_FIRST:
       objs = (self.owner, self.delegate)
