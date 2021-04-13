@@ -31,6 +31,7 @@ setuptools.setup(
     'craftr.plugins': [
       'cxx = craftr.build.plugins.cxx',
       'run = craftr.build.plugins.run',
+      'processor = craftr.build.plugins.processor',
     ],
     'console_scripts': [
       'craftr = craftr.build.main:main',
