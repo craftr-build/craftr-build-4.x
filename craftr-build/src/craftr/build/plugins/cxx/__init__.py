@@ -3,14 +3,15 @@
 Provides the C++ build configuration tools.
 """
 
-import abc
 import enum
+import json
+import shlex as sh
+import subprocess as sp
 import typing as t
 from pathlib import Path
 
-from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, PluginRegistration
-from craftr.build.lib.interfaces.native import NativeLibInfo
-from craftr.core import Action, HavingProperties, Property, Task
+from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, NativeLibInfo, PluginRegistration
+from craftr.core import Action, HavingProperties, Property, Settings, Task
 from craftr.core.actions import CommandAction, CreateDirectoryAction
 from .namingscheme import NamingScheme
 
@@ -44,6 +45,7 @@ class Props(HavingProperties):
   include_paths: Property[t.List[Path]]
   public_include_paths: Property[t.List[Path]]
   build_options: Property[t.List[str]]
+  libs: Property[t.List[NativeLibInfo]] = []
   language: Property[Language]
   product_name: Property[str]
   produces: Property[ProductType]
@@ -52,7 +54,7 @@ class Props(HavingProperties):
 
 
 @plugin.exports('compile')
-class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=abc.ABCMeta):
+class Compile(Task, Props, IExecutableProvider, INativeLibProvider):
 
   def _get_preferred_output_directory(self) -> Path:
     return self.project.build_directory / self.name
@@ -86,6 +88,13 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
 
   def _get_compiler(self, language: Language) -> str:
     return 'g++' if language == Language.CPP else 'gcc'
+
+  def pkg_config(self, pkg_name: str, static: bool = True) -> None:
+    """
+    Retrieves native lib info from the `pkg-config` tool and appends it to the #libs property.
+    """
+
+    self.libs += [pkg_config(pkg_name, static, self.project.context.settings)]
 
   # IExecutableProvider
   def get_executable_info(self) -> ExecutableInfo:
@@ -121,7 +130,7 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
   def get_actions(self) -> t.List['Action']:
     # Collect native libs from dependencies.
     # TODO(nrosenstein): Transitive dependencies?
-    native_deps: t.List[NativeLibInfo] = []
+    native_deps: t.List[NativeLibInfo] = self.libs.or_else([])[:]
     for dep in self.get_dependencies():
       if isinstance(dep, INativeLibProvider):
         info = dep.get_native_lib_info()
@@ -132,11 +141,14 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
     include_paths = self.include_paths.or_else([]) + self.public_include_paths.or_else([])
 
     # Generate the compiler flags.
-    flags: t.List[str] = []
+    flags: t.List[str] = self.build_options.or_else([])[:]
     if self.produces.get() == ProductType.SHARED_LIBRARY:
       flags += ['-shared', '-fPIC']
     for path in include_paths:
       flags.append('-I' + str(path))
+    for ndep in native_deps:
+      flags += ['-I' + x for x in ndep.include_paths]
+      flags += ['-D' + x for x in ndep.defines]
 
     actions: t.List[Action] = []
     actions.append(CreateDirectoryAction(self._get_preferred_output_directory()))
@@ -163,7 +175,102 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider, metaclass=ab
         product_filename = self._get_library_path()
       else: assert False, self.produces.get()
       static_libs = [y for x in native_deps for y in x.library_files]
+      for ndep in native_deps:
+        flags += ['-L' + x for x in ndep.library_search_paths]
+        flags += ['-l' + x for x in ndep.library_names]
       linker_command = [compiler] + flags + object_files + static_libs + ['-o', str(product_filename)]
       actions.append(CommandAction(command=linker_command))
 
     return actions
+
+
+
+
+class PkgConfigError(Exception):
+  pass
+
+
+def pkg_config(pkg_names: t.List[str], static: bool, settings: 'Settings') -> NativeLibInfo:
+  """
+  This function runs the `pkg-config` command with the specified *pkg_name* and returns the
+  library data that can be consumed by the #Compile task.
+
+  The following keys are supported in the JSON file or dictionary mode:
+
+  * includes
+  * defines
+  * syslibs
+  * libpath
+  * cflags
+  * ldflags
+  """
+
+  if isinstance(pkg_names, str):
+    pkg_names = [pkg_names]
+
+  includes: t.List[str] = []
+  defines: t.List[str] = []
+  syslibs: t.List[str] = []
+  libpath: t.List[str] = []
+  compile_flags: t.List[str] = []
+  link_flags: t.List[str] = []
+  flags: t.List[str] = []
+  skip: t.Set[str] = set()
+
+  # Collect overrides (JSON files configured from settings).
+  for pkg in pkg_names:
+    override = settings.get('cxx.pkg-config.' + pkg, None)
+    if override is None:
+      continue
+    data: t.Dict[str, t.Any] = {}
+    if override.endswith('.json'):
+      with open(override) as fp:
+        data = json.load(fp)
+    else:
+      flags += sh.split(override)
+    includes += data.get('includes', [])
+    defines += data.get('defines', [])
+    syslibs += data.get('syslibs', [])
+    libpath += data.get('libpath', [])
+    compile_flags += data.get('compile_flags', [])
+    link_flags += data.get('link_flags', [])
+
+  # Get the remaining package data from pkg-config.
+  pkg_names = [x for x in pkg_names if x not in skip]
+  if pkg_names:
+    command = ['pkg-config'] + pkg_names + ['--cflags', '--libs']
+    if static:
+      command.append('--static')
+
+    try:
+      flags += sh.split(sp.check_output(command).decode())
+    except FileNotFoundError as exc:
+      raise PkgConfigError('pkg-config is not available ({})'.format(exc))
+    except sp.CalledProcessError as exc:
+      raise PkgConfigError('{} not installed on this system\n\n{}'.format(
+          pkg_names, exc.stderr or exc.stdout))
+
+  # Parse the flags.
+  for flag in flags:
+    if flag.startswith('-I'):
+      includes.append(flag[2:])
+    elif flag.startswith('-D'):
+      defines.append(flag[2:])
+    elif flag.startswith('-l'):
+      syslibs.append(flag[2:])
+    elif flag.startswith('-L'):
+      libpath.append(flag[2:])
+    elif flag.startswith('-Wl,'):
+      link_flags.append(flag[4:])
+    else:
+      compile_flags.append(flag)
+
+  return NativeLibInfo(
+    name='pkg-config[' + ','.join(pkg_names) + ']',
+    include_paths=includes,
+    library_files=[],
+    library_search_paths=libpath,
+    library_names=syslibs,
+    defines=defines,
+    compiler_flags=compile_flags,
+    linker_flags=link_flags)

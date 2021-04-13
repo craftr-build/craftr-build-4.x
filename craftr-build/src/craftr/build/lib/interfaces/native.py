@@ -35,10 +35,25 @@ class NativeLibInfo:
   name: str
 
   #: A list of filenames for the native library.
-  library_files: t.List[str]
+  library_files: t.List[str] = field(default_factory=list)
+
+  #: A list of library search paths:
+  library_search_paths: t.List[str] = field(default_factory=list)
+
+  #: A list of library names from the search paths.
+  library_names: t.List[str] = field(default_factory=list)
 
   #: Public include directories for using the library.
-  include_paths: t.List[str]
+  include_paths: t.List[str] = field(default_factory=list)
+
+  #: Defines for using the library.
+  defines: t.List[str] = field(default_factory=list)
+
+  #: A list of compiler flags.
+  compiler_flags: t.List[str] = field(default_factory=list)
+
+  #: A list of linker flags.
+  linker_flags: t.List[str] = field(default_factory=list)
 
 
 @t.runtime_checkable
