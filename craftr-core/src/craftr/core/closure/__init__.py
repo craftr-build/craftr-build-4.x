@@ -89,7 +89,7 @@ class Closure:
     stackframe: t.Optional[types.FrameType],
     owner: t.Any,
     delegate: t.Optional[t.Any],
-    resolve_strategy: t.Union[str, ResolveStrategy] = ResolveStrategy.OWNER_FIRST,
+    resolve_strategy: t.Union[str, ResolveStrategy] = ResolveStrategy.DELEGATE_FIRST,
     args: t.Optional[t.List[t.Any]] = None,
     kwargs: t.Optional[t.Mapping[str, t.Any]] = None,
   ) -> None:
