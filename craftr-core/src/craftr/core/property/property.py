@@ -45,7 +45,7 @@ def on_property_set_value(value_type: t.Any, value: t.Any) -> t.Any:
     constructor = getattr(generic, '__origin__', generic)
     value = constructor((k, on_property_set_value(args[1], v)) for k, v in value.items())
 
-  elif value_type == Path or generic == t.Union and Path in args:
+  elif isinstance(value_type, type) and issubclass(value_type, Path) or generic == t.Union and Path in args:
     value = Path(value)
 
   elif value_type == str and isinstance(value, Path):
@@ -135,6 +135,7 @@ class Property(Provider[T]):
         raise NoValueError(self.fqn)
       return self._default()
     value = _unpack_nested_providers(self._value.get(), self.value_type)
+    value = on_property_set_value(self.value_type, value)
     check_type(value, TypeCheckingContext(self.value_type, lambda: f'while getting property {self.fqn}: '))
     return value
 
