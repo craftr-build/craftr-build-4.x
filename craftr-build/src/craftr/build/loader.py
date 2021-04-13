@@ -19,6 +19,7 @@ class DslProjectLoader(IProjectLoader):
       def _execute(__closure__):
         module = transpile_to_ast(filename.read_text(), str(filename))
         scope = {'project': project, '__file__': str(filename), '__name__': project.name, '__closure__': __closure__}
+        __closure__.locals = scope
         exec(compile(module, str(filename), 'exec'), scope, scope)
       _execute()
       return project
