@@ -70,3 +70,13 @@ do_something({ return True }, range(10))
 === EXPECTS ==
 do_something(_closure_1, range(10))
 === END ==
+
+=== TEST assign_closure ===
+def myfunc = (project) -> {
+  class MyTask(Task):
+    pass
+  project.add_extension('mytask', MyTask)
+}
+=== EXPECTS ===
+_def_myfunc = _closure_1
+=== END ===
