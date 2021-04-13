@@ -89,12 +89,12 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider):
   def _get_compiler(self, language: Language) -> str:
     return 'g++' if language == Language.CPP else 'gcc'
 
-  def pkg_config(self, pkg_name: str, static: bool = True) -> None:
+  def pkg_config(self, *pkg_names: str, static: bool = True) -> None:
     """
     Retrieves native lib info from the `pkg-config` tool and appends it to the #libs property.
     """
 
-    self.libs += [pkg_config(pkg_name, static, self.project.context.settings)]
+    self.libs += [pkg_config(pkg_names, static, self.project.context.settings)]
 
   # IExecutableProvider
   def get_executable_info(self) -> ExecutableInfo:
