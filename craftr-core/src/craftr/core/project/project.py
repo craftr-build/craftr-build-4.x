@@ -8,7 +8,7 @@ from craftr.core.closure import Closure
 
 from craftr.core.closure import IConfigurable
 from craftr.core.task import Task
-from craftr.core.util.preconditions import check_not_none
+from craftr.core.util.preconditions import check_instance_of, check_not_none
 
 if t.TYPE_CHECKING:
   from craftr.core.context import Context
@@ -51,9 +51,10 @@ class Project(ExtensibleObject):
     self._build_directory: t.Optional[Path] = None
     self._tasks: t.Dict[str, 'Task'] = {}
     self._subprojects: t.Dict[Path, 'Project'] = {}
+    self._on_apply: t.Optional[Closure] = None
 
   def __repr__(self) -> str:
-    return f'Project("{self.name}")'
+    return f'Project("{self.path}")'
 
   @property
   def context(self) -> 'Context':
@@ -121,7 +122,7 @@ class Project(ExtensibleObject):
 
     path = (self.directory / directory).resolve()
     if path not in self._subprojects:
-      project = self.context.project_loader.load_project(self.context, None, path)
+      project = self.context.project_loader.load_project(self.context, self, path)
       self._subprojects[path] = project
     return self._subprojects[path]
 
@@ -152,15 +153,39 @@ class Project(ExtensibleObject):
       for subproject in self._subprojects.values():
         closure(subproject)
 
-  def apply(self, plugin_name: str) -> None:
+  def on_apply(self, func: Closure) -> None:
+    """
+    Register a function to call when the project is applied using `apply from_project: <project>`.
+    """
+
+    if self._on_apply is not None:
+      raise RuntimeError(f'{self}.on_apply() already set')
+    self._on_apply = func
+
+  def apply(self, plugin_name: t.Optional[str] = None, from_project: t.Union[None, str, 'Project'] = None) -> None:
     """
     Loads a plugin and applies it to the project. Plugins are loaded via #Context.plugin_loader
     and applied to the project immediately after. The default implementation for loading plugins
     uses Python package entrypoints.
     """
 
-    plugin = self.context.plugin_loader.load_plugin(plugin_name)
-    plugin.apply(self, plugin_name)
+    if plugin_name is not None:
+      if from_project is not None:
+        raise TypeError('plugin_name and from_project should not be specified at the same time')
+
+      check_instance_of(plugin_name, str, 'plugin_name')
+      plugin = self.context.plugin_loader.load_plugin(plugin_name)
+      plugin.apply(self, plugin_name)
+
+    elif from_project is not None:
+      from_project = self.subproject(from_project) if isinstance(from_project, str) else from_project
+      check_instance_of(from_project, (str, Project), 'from_project')
+      if not from_project._on_apply:
+        raise ValueError(f'{from_project} has no on_apply handler')
+      from_project._on_apply.apply(self)
+
+    else:
+      raise TypeError('need plugin_name or from_project')
 
   def file(self, sub_path: str) -> Path:
     return self.directory / sub_path
