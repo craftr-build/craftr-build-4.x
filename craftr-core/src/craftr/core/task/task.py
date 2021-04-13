@@ -168,6 +168,19 @@ class Task(HavingProperties, IConfigurable):
       self.project.context.metadata_store.\
           namespace(TASK_HASH_NAMESPACE).store(self.path, calculate_task_hash(self).encode())
 
+  def depends_on(self, *tasks: t.Union[str, 'Task']) -> None:
+    """
+    Specify that the task dependends on the specified other tasks. Strings are resolved from
+    the tasks own project.
+    """
+
+    for index, item in enumerate(tasks):
+      check_instance_of(item, (str, Task), lambda: 'task ' + str(index))
+      if isinstance(item, str):
+        self.dependencies += self.project.tasks.resolve(item)
+      elif isinstance(item, Task):
+        self.dependencies.append(item)
+
   def do_first(self, action: t.Union['Action', Closure]) -> None:
     from craftr.core.actions import Action, LambdaAction
     check_instance_of(action, (Action, Closure), 'action')

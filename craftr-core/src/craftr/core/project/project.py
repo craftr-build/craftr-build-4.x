@@ -111,7 +111,7 @@ class Project(ExtensibleObject):
   def tasks(self) -> 'TaskContainer':
     """ Returns the #TaskContainer object for this project. """
 
-    return TaskContainer(self._tasks)
+    return TaskContainer(self, self._tasks)
 
   def subproject(self, directory: str) -> 'Project':
     """
@@ -174,24 +174,30 @@ class Project(ExtensibleObject):
     return [Path(f) for f in glob.glob(str(self.directory / pattern))]
 
 
-class TaskContainer(IConfigurable):
+class TaskContainer:
 
-  def __init__(self, tasks: t.Dict[str, 'Task']) -> None:
+  def __init__(self, project: 'Project', tasks: t.Dict[str, 'Task']) -> None:
+    self._project = weakref.ref(project)
     self._tasks = tasks
 
   def __iter__(self):
     return iter(self._tasks.values())
 
-  def configure(self, closure: 'Closure') -> 'TaskContainer':
+  def for_each(self, closure: 'Closure') -> None:
     for task in self._tasks.values():
       task.configure(closure)
-    return self
+
+  def resolve(self, selector: str, raise_empty: bool = True) -> t.Set['Task']:
+    tasks = self._project().context.task_selector.select_tasks(selector, self._project())
+    if not tasks and raise_empty:
+      raise ValueError(f'no task matched selector {selector!r} in project {self._project()}')
+    return tasks
 
   def __getattr__(self, key: str) -> 'Task':
     try:
-      return self._tasks[key]
+      return self[key]
     except KeyError:
       raise AttributeError(key)
 
-  def __getitem__(self, key: str) -> 'Task':
+  def __getitem__(self, key: str) -> t.Union['Task', t.Set['Task']]:
     return self._tasks[key]

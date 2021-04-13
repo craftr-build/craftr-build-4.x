@@ -54,6 +54,8 @@ class Context:
         IPluginLoader, 'core.plugin.loader', self.DEFAULT_PLUGIN_LOADER)  # type: ignore
     self.project_loader = project_loader or settings.get_instance(
         IProjectLoader, 'core.project.loader', self.DEFAULT_PROJECT_LOADER)  # type: ignore
+    self.task_selector = self.settings.get_instance(
+        ITaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)  # type: ignore
     self.graph = ExecutionGraph()
     self.metadata_store: NamespaceStore = JsonDirectoryStore(
         str(self.CRAFTR_DIRECTORY / 'metadata'), create_dir=True)
@@ -94,13 +96,10 @@ class Context:
 
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
     root_project = check_not_none(self.root_project, 'no root project initialized')
-    selector = self.settings.get_instance(
-        ITaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)  # type: ignore
-
     selected_tasks: t.Set[Task] = set()
 
     if selection is None:
-      selected_tasks.update(selector.select_default(root_project))
+      selected_tasks.update(self.task_selector.select_default(root_project))
     else:
       if isinstance(selection, (str, Task)):
         selection = t.cast(t.Union[t.List[str], t.List[Task]], [selection])
@@ -108,7 +107,7 @@ class Context:
         if isinstance(item, Task):
           selected_tasks.add(item)
         elif isinstance(item, str):
-          result_set = selector.select_tasks(item, root_project)
+          result_set = self.task_selector.select_tasks(item, root_project)
           if not result_set:
             raise ValueError(f'selector matched no tasks: {item!r}')
           selected_tasks.update(result_set)
