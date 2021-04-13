@@ -197,7 +197,7 @@ class FlatMappedProvider(Provider[R]):
     if visitor(self):
       self._sub.visit(visitor)
       # Check if the closure captures any properies.
-      assert isinstance(self._func, _IHasClosure)
+      assert isinstance(self._func, _IHasClosure), self._func
       for cell in (self._func.__closure__ or []):
         if isinstance(cell.cell_contents, Provider):
           cell.cell_contents.visit(visitor)

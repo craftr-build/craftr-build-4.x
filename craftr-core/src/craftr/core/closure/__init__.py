@@ -109,6 +109,10 @@ class Closure:
     check_instance_of(strategy, ResolveStrategy)
     self._resolve_strategy = strategy
 
+  @property
+  def __closure__(self) -> t.Any:
+    return self.func.__closure__  # type: ignore
+
   def __call__(self, *args, **kwargs) -> t.Any:
     """ Invokes the closure with the specified arguments. """
 
