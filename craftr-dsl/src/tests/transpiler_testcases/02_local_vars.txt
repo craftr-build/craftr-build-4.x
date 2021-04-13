@@ -4,9 +4,9 @@ def foobar():
   pass
 contextvar = 42
 def localvar = 'foobar'
-print(contextvar, localvar)
+__closure__['print'](contextvar, localvar)
 === EXPECTS ===
-from craftr.core.closure import closure
+from craftr.core.closure import closure as __closure_decorator__
 
 
 def foobar():
@@ -15,7 +15,7 @@ def foobar():
 
 __closure__['contextvar'] = 42
 localvar = 'foobar'
-print(__closure__['contextvar'], localvar)
+__closure__['print'](__closure__['contextvar'], localvar)
 === END ===
 
 
@@ -29,7 +29,7 @@ def foobar():
   return baz
 MyTask(foobar())
 === EXPECTS ===
-from craftr.core.closure import closure
+from craftr.core.closure import closure as __closure_decorator__
 from craftr.core.task import Task
 
 

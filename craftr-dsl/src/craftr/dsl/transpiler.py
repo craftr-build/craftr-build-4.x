@@ -16,9 +16,9 @@ class TranspileOptions:
   """ Options for transpiling Craftr DSL code. """
 
   closure_target: str = '__closure__'
-  pure_builtins: t.Set[str] = frozenset(['closure', 'print'])
-  preamble: str = 'from craftr.core.closure import closure\n'
-  closure_def_prefix: str = '@closure(__closure__)\n'
+  pure_builtins: t.Set[str] = frozenset(['__closure_decorator__'])
+  preamble: str = 'from craftr.core.closure import closure as __closure_decorator__\n'
+  closure_def_prefix: str = '@__closure_decorator__(__closure__)\n'
   closure_arguments_prefix: str = '__closure__, '
   local_vardef_prefix: str = '_def_'
 
