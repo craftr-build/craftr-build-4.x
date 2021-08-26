@@ -8,11 +8,10 @@ def foobar():
   return baz
 MyTask(foobar())
 === EXPECTS ===
-from craftr.core.closure import closure as __closure_decorator__
 from craftr.core.task import Task
 
 
-class MyTask(__closure__['MyPropsBase'], Task):
+class MyTask(MyPropsBase, Task):
     pass
 
 

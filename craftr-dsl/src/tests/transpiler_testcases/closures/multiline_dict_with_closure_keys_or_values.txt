@@ -4,17 +4,12 @@
   'foo': 'bar'
 }
 === EXPECTS ===
-from craftr.core.closure import closure as __closure_decorator__
-
-
-@__closure_decorator__(__closure__)
-def _closure_1(__closure__):
+def _closure_1():
     return 10
 
 
-@__closure_decorator__(__closure__)
-def _closure_2(__closure__):
-    __closure__['print']('Hello, World!')
+def _closure_2(self):
+    print('Hello, World!')
 
 
 {_closure_1: _closure_2(), 'foo': 'bar'}
@@ -23,13 +18,9 @@ def _closure_2(__closure__):
 === TEST closure_with_arg ===
 filter(k -> k == 2, range(10))
 === EXPECTS ===
-from craftr.core.closure import closure as __closure_decorator__
-
-
-@__closure_decorator__(__closure__)
-def _closure_1(__closure__, k):
+def _closure_1(k):
     return k == 2
 
 
-__closure__['filter'](_closure_1, __closure__['range'](10))
+filter(_closure_1, range(10))
 === END ===

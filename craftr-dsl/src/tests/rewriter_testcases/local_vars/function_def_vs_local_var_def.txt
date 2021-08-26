@@ -2,12 +2,12 @@
 def foobar():
   pass
 contextvar = 42
-def localvar = 'foobar'
+localvar = 'foobar'
 print(contextvar, localvar)
 === EXPECTS ===
 def foobar():
   pass
 contextvar = 42
-_def_localvar = 'foobar'
+localvar = 'foobar'
 print(contextvar, localvar)
 === END ===
