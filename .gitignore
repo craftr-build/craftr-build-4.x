@@ -1,6 +1,7 @@
 *.py[cod]
 *.egg-info
 *.egg
+build/
 .build/
 .craftr/
 .vscode/
