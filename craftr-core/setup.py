@@ -7,7 +7,7 @@ import os
 import setuptools
 import sys
 
-readme_file = 'README.md'
+readme_file = 'readme.md'
 if os.path.isfile(readme_file):
   with io.open(readme_file, encoding='utf8') as fp:
     long_description = fp.read()

@@ -7,7 +7,7 @@ import os
 import setuptools
 import sys
 
-readme_file = 'README.md'
+readme_file = 'readme.md'
 if os.path.isfile(readme_file):
   with io.open(readme_file, encoding='utf8') as fp:
     long_description = fp.read()
@@ -21,6 +21,7 @@ requirements = [
   'nr.pylang.ast >=0.0.5,<0.1.0',
   'dataclasses >=0.6.0,<1.0.0',
   'nr.functional >=0.1.0,<1.0.0',
+  'termcolor >=1.1.0,<2.0.0',
 ]
 
 setuptools.setup(

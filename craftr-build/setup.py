@@ -7,6 +7,14 @@ import os
 import setuptools
 import sys
 
+readme_file = 'readme.md'
+if os.path.isfile(readme_file):
+  with io.open(readme_file, encoding='utf8') as fp:
+    long_description = fp.read()
+else:
+  print("warning: file \"{}\" does not exist.".format(readme_file), file=sys.stderr)
+  long_description = None
+
 requirements = []
 
 setuptools.setup(
@@ -15,8 +23,8 @@ setuptools.setup(
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
   description = 'Package description here.',
-  long_description = None,
-  long_description_content_type = None,
+  long_description = long_description,
+  long_description_content_type = 'text/markdown',
   url = None,
   license = None,
   packages = setuptools.find_packages('src', ['test', 'test.*', 'tests', 'tests.*', 'docs', 'docs.*']),
