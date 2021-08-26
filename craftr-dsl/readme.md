@@ -1,96 +1,181 @@
 # craftr-dsl
 
-This package provides a transpiler for the Craftr domain-specific-language. The language is
-a full syntactic superset of Python (with some exceptions\*) and a sprinkle of Groovy-style
-closures and unparenthesised function calls.
+The Craftr DSL is a transpiler for the Python language that introduces the concept of **closures** an 
+**function calls without parentheses** into the language.
 
-__Requirements__
+## Getting started
 
-* Python 3.6 or newer
+### Installation 
 
-<small>_\*exceptions_
+From Pip:
 
-* set literals
-* type annotations
-* walrus operator
+    $ pip install craftr-dsl
 
-> These syntactical features could be supported in theory but are not prioritised.
-</small>
+Latest from GitHub:
 
+    $ pip install git+https://github.com/craftr-build/craftr-dsl
 
+Requirements: Python 3.6 or newer
 
-## Introduction
+### Hello, World!
 
-Variables are looked up through the context's current closure (a `craftr.core.closure.Closure`
-object) with the special name `__closure__`. Unless previously explicitly declared, a variable
-always refers to a member of an object resolved from the current context. On the global level,
-and in the context of a Craftr build script, the closure delegates to a Craftr `Project` object.
-
-The following statements are equal:
+A convoluted Hello, World! example in Craftr DSL might look like this:
 
 ```py
-print(name)
-print(project.name)
-print(__closure__.delegate.name)
+# hello.craftr
+world = { self('World!') }
+world { print('Hello,', self) }
 ```
 
-And such are the following assignments:
+This is transpiled to
 
 ```py
-name = 'my-project-name'
-project.name = 'my-project-name'
-__closure__.delegate.name = 'my-project-name'
+# $ python -m craftr.dsl hello.craftr -E | grep -v -e '^$'
+def _closure_1(self):
+    self('World!')
+world = _closure_1
+def _closure_2(self):
+    print('Hello,', self)
+world(_closure_2)
 ```
 
-In order to define a local variable that is not looked up through the closure, it must be prefixed
-with the `def` keyword.
+Abnd evaluates to
 
 ```py
-def name = 'local variable called name'
-assert project.name != name
+# $ python -m craftr.dsl hello.craftr
+Hello, World!
 ```
 
-Function calls at the root of the statement do not need to be parenthesised, but it may be needed
-to disambiguate certain syntactical constructors.
+## Language features
+
+### Closures
+
+Closures can define a parameter list and can also have a single expression as their body. Only closures without
+a parameter list will receive `self` as a default argument.
+
+<table><tr><th>Craftr DSL</th><th>Python</th></tr>
+
+<tr><td>
 
 ```py
-print 'Hello, World', file=sys.stderr
-print *args  # Multiply print by args?
-print(*args) # Ah yes, that's it
-print *args, file=sys.stderr  # Actually a syntax error
+filter({ self % 2 }, range(5))
 ```
-
-A new closure can be defined by using the `() -> { ... } ` or just `{ ... }` syntax. It is a common
-pattern in Craftr build scripts to pass a closure to a function in order to allow that function to
-invoke it with a new delegate (for example a `Task` object).
+</td><td>
 
 ```py
-task('sayHello') {
-  assert __closure__.delegate is project.tasks.sayHello
-  do_last {
-    print 'Hello, World!'
-  }
-}
-
-# Error: Unable to resolve 'do_last' in Project context
-do_last {
-  print 'Not happening'
-}
+def _closure_1(self):
+    self % 2
+filter(_closure_1, range(5))
 ```
+</td></tr>
 
-Closures can also accept arguments. With an argument list provided, a closure definition may also omit
-the curly braces and contain exactly one expression.
+
+<tr><td>
 
 ```py
-print list(filter(k -> k % 2, range(10)))  # 1, 3, 5, 7, 9
-
-promise.then((status, value) -> {
-  if status is not None:
-    raise Exception(status)
-  return do_something(value)
-})
+filter(x -> x % 2, range(5))
 ```
+</td><td>
 
+```py
+def _closure_1(x):
+    return x % 2
+filter(_closure_1, range(5))
+```
+</td></tr>
+
+
+<tr><td>
+
+```py
+reduce((a, b) -> {
+  a.append(b * 2)
+  return a
+}, [1, 2, 3], [])
+```
+</td><td>
+
+```py
+def _closure_1(a, b):
+    a.append(b * 2)
+    return a
+reduce(_closure_1, [1, 2, 3], [])
+```
+</td></tr>
+
+</table>
+
+
+### Function calls without parentheses
+
+Such function calls are only supported at the statement level. A function can be called without parentheses by
+simply omitting them. Variadic and keyword arguments are supported as expected. Applying a closure on an object
+is basically the same as calling that object with the function, and arguments following the closure are still
+supported.
+
+
+<table><tr><th>Craftr DSL</th><th>Python</th></tr>
+
+<tr><td>
+
+```py
+print 'Hello, World!', file=sys.stderr
+```
+</td><td>
+
+```py
+print('Hello, World!', file=sys.stderr)
+```
+</td></tr>
+
+
+<tr><td>
+
+```py
+map {
+  print('Hello,', self)
+}, ['John', 'World']
+```
+</td><td>
+
+```py
+def _closure_1(self):
+    print('Hello,', self)
+map(_closure_1, ['John', 'World'])
+```
+</td></tr>
+
+
+<tr><td>
+
+```py
+list(map {  # Not allowed inside an expression
+  print('Hello,', self)
+}, ['John', 'World'])
+```
+</td><td>
+
+```py
+craftr.dsl.rewrite.SyntaxError: 
+  in <stdin> at line 1: expected ) but got TokenProxy(Token(type=<Token.Control: 8>, value='{', pos=Cursor(offset=9, line=1, column=9)))
+  |list(map {
+  |~~~~~~~~~^
+```
+</td></tr>
+
+
+</table>
+
+
+
+### Limitations
+
+Craftr DSL is intended to behave as a complete syntactic superset of standard Python. However there are currently
+some limitations, namely:
+
+* Literal sets cannot be expressed due to the grammar conflict with parameter-less closures
+* Type annotations are not currently supported
+* The walrus operator is not currently supported
 
 ---
 
