@@ -22,9 +22,12 @@ def execute(
 ) -> None:
 
   if hasattr(code, 'read'):
-    code = t.cast(t.TextIO, code.read())
+    code = t.cast(t.TextIO, code).read()
     filename = getattr(code, 'name', None)
 
-  ast = transpile_to_ast(code, filename or '<string>', options)
-  code = compile(ast, filename, 'exec')
-  exec(code, globals, locals or globals)
+  assert isinstance(code, str)
+  filename = filename or '<string>'
+
+  ast = transpile_to_ast(code, filename, options)
+  compiled_code = compile(ast, filename, 'exec')
+  exec(compiled_code, globals, locals or globals)
