@@ -1,8 +1,0 @@
-=== TEST multiline_closure_immediate_call ===
-{
-  for i in range(10):
-    print(i)
-}()
-=== EXPECTS ===
-_closure_1()
-=== END ===

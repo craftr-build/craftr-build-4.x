@@ -1,9 +1,0 @@
-=== TEST multiline_string_argument ===
-dedent '''
-  Hello, World!
-'''
-=== EXPECTS ===
-dedent('''
-  Hello, World!
-''')
-=== END ===

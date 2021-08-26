@@ -1,5 +1,0 @@
-=== TEST unparen_call_with_kwarg ===
-print 'Hello, world!', file=sys.stdout
-=== EXPECTS ===
-print('Hello, world!', file=sys.stdout)
-=== END ===

@@ -2,12 +2,17 @@
 import typing as t
 
 from craftr.build.lib import ExecutableInfo, IExecutableProvider, TaskFactoryExtension
+from craftr.build.lib.helpers import PluginRegistration
 from craftr.core.actions import Action, CommandAction
 from craftr.core.property import Property
 from craftr.core.project import Project
 from craftr.core.task import Task
 
+plugin = PluginRegistration()
+apply = plugin.apply
 
+
+@plugin.exports('run')
 class RunTask(Task):
 
   executable: Property[t.Union[IExecutableProvider, ExecutableInfo, str]]
@@ -35,7 +40,3 @@ class RunTask(Task):
 
     assert isinstance(executable, ExecutableInfo)
     return [CommandAction(executable.invokation_layout or [executable.filename])]
-
-
-def apply(project: 'Project', _name: str):
-  project.add_extension('run', TaskFactoryExtension(project, 'run', RunTask))

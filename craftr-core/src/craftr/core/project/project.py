@@ -4,9 +4,8 @@ import string
 import typing as t
 import weakref
 from pathlib import Path
-from craftr.core.closure import Closure
 
-from craftr.core.closure import IConfigurable
+from craftr.core.configurable import Closure
 from craftr.core.task import Task
 from craftr.core.util.preconditions import check_instance_of, check_not_none
 
@@ -18,8 +17,12 @@ T_Task = t.TypeVar('T_Task', bound='Task')
 
 class ExtensibleObject:
 
-  def __init__(self) -> None:
+  def __init__(self, name: str) -> None:
+    self._name = name
     self._extensions: t.Dict[str, t.Any] = {}
+
+  def __repr__(self) -> str:
+    return f'ExtensibleObject(name={self._name!r})'
 
   def __getattr__(self, key: t.Any) -> t.Any:
     try:
@@ -31,7 +34,7 @@ class ExtensibleObject:
     self._extensions[key] = extension
 
 
-class Project(ExtensibleObject):
+class Project:
   """
   A project is a collection of tasks, usually populated through a build script, tied to a
   directory. Projects can have sub projects and there is usually only one root project in
@@ -52,6 +55,7 @@ class Project(ExtensibleObject):
     self._tasks: t.Dict[str, 'Task'] = {}
     self._subprojects: t.Dict[Path, 'Project'] = {}
     self._on_apply: t.Optional[Closure] = None
+    self.exports = ExtensibleObject(self.path)
 
   def __repr__(self) -> str:
     return f'Project("{self.path}")'
@@ -175,14 +179,15 @@ class Project(ExtensibleObject):
 
       check_instance_of(plugin_name, str, 'plugin_name')
       plugin = self.context.plugin_loader.load_plugin(plugin_name)
-      plugin.apply(self, plugin_name)
+      return plugin.apply(self, plugin_name)
 
     elif from_project is not None:
       from_project = self.subproject(from_project) if isinstance(from_project, str) else from_project
       check_instance_of(from_project, (str, Project), 'from_project')
       if not from_project._on_apply:
         raise ValueError(f'{from_project} has no on_apply handler')
-      from_project._on_apply.apply(self)
+      from_project._on_apply(self)
+      return from_project.exports
 
     else:
       raise TypeError('need plugin_name or from_project')

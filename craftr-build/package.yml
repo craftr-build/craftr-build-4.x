@@ -1,10 +1,13 @@
 name: craftr-build
-version: 0.0.0
+version: 5.0.0
 author: Niklas Rosenstein <rosensteinniklas@gmail.com>
 modulename: craftr.build
-description: Package description here.
+description: CLI and DSL frontend for the Craftr build system.
+typed: true
 requirements:
-- python ^3.9
+- craftr-core ~0.1.0
+- craftr-dsl ~0.2.0
+- python ^3.8
 entrypoints:
   craftr.plugins:
   - cxx = craftr.build.plugins.cxx
@@ -12,4 +15,3 @@ entrypoints:
   - processor = craftr.build.plugins.processor
   console_scripts:
   - craftr = craftr.build.main:main
-typed: true

@@ -9,6 +9,7 @@ import shlex as sh
 import subprocess as sp
 import typing as t
 from pathlib import Path
+import typing_extensions as te
 
 from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, NativeLibInfo, PluginRegistration
 from craftr.core import Action, HavingProperties, Property, Settings, Task
@@ -41,7 +42,7 @@ class Props(HavingProperties):
   """ Base props for building C/C++ libraries or applications. """
 
   naming_scheme: NamingScheme = NamingScheme.CURRENT
-  sources: t.Annotated[Property[t.List[Path]], Task.Input]
+  sources: te.Annotated[Property[t.List[Path]], Task.Input]
   include_paths: Property[t.List[Path]]
   public_include_paths: Property[t.List[Path]]
   build_options: Property[t.List[str]]
@@ -49,8 +50,8 @@ class Props(HavingProperties):
   language: Property[Language]
   product_name: Property[str]
   produces: Property[ProductType]
-  outputs: t.Annotated[Property[t.List[Path]], Task.Output]
-  executable: t.Annotated[Property[IExecutableProvider], Task.Output]
+  outputs: te.Annotated[Property[t.List[Path]], Task.Output]
+  executable: te.Annotated[Property[IExecutableProvider], Task.Output]
 
 
 @plugin.exports('compile')

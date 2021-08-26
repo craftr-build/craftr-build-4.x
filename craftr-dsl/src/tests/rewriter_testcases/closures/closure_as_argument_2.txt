@@ -1,5 +1,0 @@
-=== TEST closure_as_argument_2 ===
-do_something({ return True }, range(10))
-=== EXPECTS ==
-do_something(_closure_1, range(10))
-=== END ==

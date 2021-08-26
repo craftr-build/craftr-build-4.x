@@ -1,9 +1,11 @@
 
 import enum
+import sys
 import typing as t
 import weakref
 from pathlib import Path
 
+import typing_extensions as te
 from craftr.core.util.preconditions import check_not_none
 from craftr.core.util.typing import unpack_type_hint
 from .provider import Box, NoValueError, Provider, T, visit_captured_providers
@@ -172,14 +174,16 @@ class HavingProperties:
   def __init__(self, **kwargs: t.Any) -> None:
     self.__properties: t.Dict[str, Property] = {}
 
-    for key, value in t.get_type_hints(type(self), include_extras=True).items():
+    type_hints = t.get_type_hints(type(self)) if sys.version_info < (3, 9) else t.get_type_hints(type(self), include_extras=True)
+
+    for key, value in type_hints.items():
 
       type_, args = unpack_type_hint(value)
       if type_ is None:
         continue
 
       annotations: t.List[t.Any] = []
-      if type_ == t.Annotated:  # type: ignore
+      if type_ == te.Annotated:  # type: ignore
         type_, annotations = args[0], list(args[1:])
         type_, args = unpack_type_hint(type_)
 
@@ -194,10 +198,10 @@ class HavingProperties:
         raise RuntimeError('Too many arguments for Property[...] generic', type(self).__name__, key)
 
       # Also accept annotations in the value argument of the Property[] generic.
-      if unpack_type_hint(value_type)[0] == t.Annotated:   # type: ignore
+      if unpack_type_hint(value_type)[0] == te.Annotated:   # type: ignore
         _, args = unpack_type_hint(value_type)
         value_type = args[0]
-        # NOTE(NiklasRosenstein): Visually, the annotations of the inner t.Annotated hint will
+        # NOTE(NiklasRosenstein): Visually, the annotations of the inner te.Annotated hint will
         #   appear before the annotations of the outter hint, so we'll keep that order in tact.
         annotations = args[1:] + annotations
 

@@ -1,5 +1,0 @@
-=== TEST singleline_closure_immediate_call ===
-{ do_heavy_stuff() }()
-=== EXPECTS ===
-_closure_1()
-=== END ===

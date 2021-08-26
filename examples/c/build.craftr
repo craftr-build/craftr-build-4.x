@@ -1,18 +1,18 @@
 # type: ignore
 
-apply 'cxx'
-apply 'run'
+cxx = project.apply('cxx')
+run = project.apply('run')
 
 cxx.compile('lib') {
-  sources = [project.file('src/hellosayer.c')]
-  produces = 'static_library'
+  self.sources = [project.file('src/hellosayer.c')]
+  self.produces = 'static_library'
 }
 
 cxx.compile('main') {
-  sources = [project.file('src/main.c')]
-  dependencies.append tasks.lib
+  self.sources = [project.file('src/main.c')]
+  self.dependencies.append project.tasks.lib
 }
 
-run {
-  dependencies.append tasks.main
+run.run {
+  self.dependencies.append project.tasks.main
 }

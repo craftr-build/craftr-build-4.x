@@ -7,7 +7,7 @@ from pathlib import Path
 from nr.caching.api import KeyDoesNotExist
 
 from craftr.core.property import HavingProperties, collect_properties
-from craftr.core.closure import Closure, IConfigurable
+from craftr.core.configurable import Closure, Configurable
 from craftr.core.util.collections import unique
 from craftr.core.util.preconditions import check_instance_of, check_not_none
 from .state import calculate_task_hash, unwrap_file_property
@@ -26,7 +26,7 @@ class TaskPropertyType(enum.Enum):
   OutputFile = enum.auto()
 
 
-class Task(HavingProperties, IConfigurable):
+class Task(HavingProperties, Configurable):
   """
   A task represents a set of sequential actions that are configurable through properties and may
   have dependencies on other tasks. Using the property system, dependencies between tasks can be
@@ -197,8 +197,8 @@ class Task(HavingProperties, IConfigurable):
       action = LambdaAction(lambda context: closure.with_locals(context=context).apply(self))
     self.do_last_actions.append(action)
 
-  # IConfigurable
-  def configure(self, closure: 'Closure') -> 'Task':
-    closure.apply(self)
+  # Configurable
+  def __call__(self, closure: Closure) -> 'Task':
+    closure(self)
     self.finalize()
     return self

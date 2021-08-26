@@ -1,5 +1,0 @@
-=== TEST keyword_arguments_var ===
-print('Hello, world!', file=sys.stdout, **kwargs)
-=== EXPECTS ===
-print('Hello, world!', file=sys.stdout, **kwargs)
-=== END ===

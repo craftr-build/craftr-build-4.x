@@ -3,6 +3,7 @@ import enum
 import typing as t
 from pathlib import Path
 import pytest
+import typing_extensions as te
 from craftr.core.property.property import Box, Property, HavingProperties
 from craftr.core.property.typechecking import TypeCheckingError
 
@@ -13,7 +14,7 @@ def test_having_properties_constructor():
 
   class MyClass(HavingProperties):
     a: Property[int]
-    b: t.Annotated[Property[str], my_annotation]
+    b: te.Annotated[Property[str], my_annotation]
 
   assert MyClass().get_properties().keys() == set(['a', 'b'])
   assert my_annotation in MyClass().b.annotations
@@ -47,9 +48,9 @@ def test_property_type_checking():
 def test_property_annotation_in_value_hint():
 
   class MyClass(HavingProperties):
-    a: t.Annotated[Property[int], 42]
-    b: Property[t.Annotated[int, 42]]
-    c: t.Annotated[Property[t.Annotated[int, 42]], 90]
+    a: te[Property[int], 42]
+    b: Property[te.Annotated[int, 42]]
+    c: te.Annotated[Property[te.Annotated[int, 42]], 90]
 
   obj = MyClass()
 

@@ -15,14 +15,17 @@ else:
   print("warning: file \"{}\" does not exist.".format(readme_file), file=sys.stderr)
   long_description = None
 
-requirements = []
+requirements = [
+  'craftr-core >=0.1.0,<0.2.0',
+  'craftr-dsl >=0.2.0,<0.3.0',
+]
 
 setuptools.setup(
   name = 'craftr-build',
-  version = '0.0.0',
+  version = '5.0.0',
   author = 'Niklas Rosenstein',
   author_email = 'rosensteinniklas@gmail.com',
-  description = 'Package description here.',
+  description = 'CLI and DSL frontend for the Craftr build system.',
   long_description = long_description,
   long_description_content_type = 'text/markdown',
   url = None,
@@ -33,7 +36,7 @@ setuptools.setup(
   install_requires = requirements,
   extras_require = {},
   tests_require = [],
-  python_requires = '>=3.9.0,<4.0.0',
+  python_requires = '>=3.8.0,<4.0.0',
   data_files = [],
   entry_points = {
     'craftr.plugins': [

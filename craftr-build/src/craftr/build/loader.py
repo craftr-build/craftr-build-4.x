@@ -1,10 +1,9 @@
 
 import typing as t
 from pathlib import Path
-from craftr.dsl import transpile_to_ast
+from craftr.dsl import execute, transpile_to_ast
 from craftr.core.context import Context
 from craftr.core.project import CannotLoadProject, IProjectLoader, Project
-from craftr.core.closure import closure
 
 BUILD_SCRIPT_FILENAME = 'build.craftr'
 
@@ -15,12 +14,8 @@ class DslProjectLoader(IProjectLoader):
     if (filename := path / BUILD_SCRIPT_FILENAME).exists():
       project = Project(context, parent, path)
       context.initialize_project(project)
-      @closure(project, capture_frame=False)
-      def _execute(__closure__):
-        module = transpile_to_ast(filename.read_text(), str(filename))
-        scope = {'project': project, '__file__': str(filename), '__name__': project.name, '__closure__': __closure__}
-        __closure__.locals = scope
-        exec(compile(module, str(filename), 'exec'), scope, scope)
-      _execute()
+      scope = {'project': project, '__file__': str(filename), '__name__': project.name}
+      execute(filename.read_text(), str(filename), scope)
       return project
+
     raise CannotLoadProject(self, context, parent, path)

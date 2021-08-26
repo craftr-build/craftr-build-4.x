@@ -2,7 +2,7 @@
 import weakref
 import types
 import typing as t
-from craftr.core.closure import Closure
+from craftr.core.configurable import Closure
 from craftr.core.project import Project
 from craftr.core.project.project import ExtensibleObject
 from craftr.core.task import Task
@@ -10,16 +10,6 @@ from craftr.core.util.preconditions import check_not_none
 
 T = t.TypeVar('T')
 T_Task = t.TypeVar('T_Task', bound=Task)
-
-
-class _Namespace(ExtensibleObject):
-
-  def __init__(self, name: str) -> None:
-    super().__init__()
-    self._name = name
-
-  def __repr__(self) -> str:
-    return f'_Namespace(name={self._name!r})'
 
 
 class TaskFactoryExtension(t.Generic[T_Task]):
@@ -77,7 +67,7 @@ class TaskFactoryExtension(t.Generic[T_Task]):
       task = project.task(arg or self._default_name, self._task_type)
     else:
       task = project.task(self._default_name, self._task_type)
-      task.configure(arg)
+      task(arg)
     return task
 
 
@@ -128,7 +118,7 @@ class PluginRegistration:
     return arg1
 
   def build_namespace(self, project: Project, name: str) -> t.Any:
-    obj = _Namespace(name)
+    obj = ExtensibleObject(name)
     for key, value in self._exports.items():
       if isinstance(value, type) and issubclass(value, Task):
         # TODO(nrosenstein): Better default task name?
@@ -138,4 +128,4 @@ class PluginRegistration:
     return obj
 
   def apply(self, project: Project, name: str) -> None:
-    project.add_extension(name, self.build_namespace(project, name))
+    return self.build_namespace(project, name)

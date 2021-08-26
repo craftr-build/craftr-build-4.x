@@ -1,9 +1,0 @@
-=== TEST assign_closure ===
-myfunc = (project) -> {
-  class MyTask(Task):
-    pass
-  project.add_extension('mytask', MyTask)
-}
-=== EXPECTS ===
-myfunc = _closure_1
-=== END ===

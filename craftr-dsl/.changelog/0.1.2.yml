@@ -1,7 +1,0 @@
-release_date: '2021-02-03'
-changes:
-- type: change
-  component: general
-  description: Add `Runtime.set_property_value()` and use that for setting values
-    on `Assign` statements instead of directly assigning to `self`
-  fixes: []
