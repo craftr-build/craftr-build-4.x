@@ -16,7 +16,7 @@ class TranspileOptions:
   """ Options for transpiling Craftr DSL code. """
 
   closure_target: str = '__closure__'
-  pure_builtins: t.Set[str] = frozenset(['__closure_decorator__'])
+  pure_builtins: t.Collection[str] = frozenset(['__closure_decorator__'])
   preamble: str = 'from craftr.core.closure import closure as __closure_decorator__\n'
   closure_def_prefix: str = '@__closure_decorator__(__closure__)\n'
   closure_arguments_prefix: str = '__closure__, '
@@ -27,12 +27,12 @@ def transpile_to_ast(code: str, filename: str, options: t.Optional[TranspileOpti
   rewrite = Rewriter(code, filename).rewrite()
   module = ast.parse(rewrite.code, filename, mode='exec', type_comments=False)
   module = ClosureRewriter(filename, options or TranspileOptions(), rewrite.closures).visit(module)
-  module = NameRewriter(options or TranspileOptions()).visit(module)
+  module = t.cast(ast.Module, NameRewriter(options or TranspileOptions()).visit(module))
   return ast.fix_missing_locations(module)
 
 
 def transpile_to_source(code: str, filename: str, options: t.Optional[TranspileOptions] = None) -> str:
-  from astor import to_source
+  from astor import to_source  # type: ignore
   return to_source(transpile_to_ast(code, filename, options))
 
 
@@ -67,7 +67,7 @@ class ClosureRewriter(ast.NodeTransformer):
     if closure.expr:
       function_code += ' ' * closure.indent + 'return ' + closure.expr
     else:
-      function_code += closure.body
+      function_code += closure.body or ''
 
     self.log.debug('_get_closure_def(%r): parse function body\n\n%s\n', closure_id,
         '  ' + '\n  '.join(function_code.lstrip().splitlines()))
@@ -77,7 +77,7 @@ class ClosureRewriter(ast.NodeTransformer):
     assert isinstance(func, ast.FunctionDef)
     return func
 
-  def visit_Name(self, name: ast.Name) -> ast.Name:
+  def visit_Name(self, name: ast.Name) -> ast.AST:
     if name.id in self.closures:
       for node in reversed(self._hierarchy):
         if isinstance(node, ast.stmt):
@@ -87,7 +87,7 @@ class ClosureRewriter(ast.NodeTransformer):
           raise RuntimeError('did not find inner statement to inject closure')
     return self.generic_visit(name)
 
-  def visit_Module(self, node: ast.Module) -> ast.Module:
+  def visit_Module(self, node: ast.Module) -> ast.AST:
     preamble = ast.parse(self.options.preamble, self.filename, mode='exec')
     node.body[0:0] = preamble.body
     return self.generic_visit(node)
@@ -97,6 +97,8 @@ class ClosureRewriter(ast.NodeTransformer):
     try:
       result: t.Union[ast.AST, t.List[ast.AST]] = super().visit(node)
       if node in self._closure_inserts:
+        assert isinstance(node, ast.stmt)
+        assert isinstance(result, ast.AST)
         result = [result]
         for closure_id in self._closure_inserts.get(node, []):
           func = self.visit(self._get_closure_def(closure_id))
@@ -132,7 +134,7 @@ class NameRewriter(ast.NodeTransformer):
     if isinstance(target, ast.Name):
       names.add(target.id)
     elif isinstance(target, (ast.List, ast.Tuple)):
-      names.update(n.id for n in target.elts)
+      names.update(n.id for n in target.elts)  # type: ignore  # TODO (@NiklasRosenstein)
     else:
       raise TypeError(f'expected Name/List/Tuple, got {type(target).__name__}')
     with self._with_locals(names):
@@ -149,7 +151,7 @@ class NameRewriter(ast.NodeTransformer):
         return True
     return varname == self.options.closure_target or varname in self.options.pure_builtins
 
-  def visit_Name(self, node: ast.Name) -> ast.Expr:
+  def visit_Name(self, node: ast.Name) -> ast.AST:
     if self._has_nonlocal(node.id):
       return node
     return ast.Subscript(
@@ -157,7 +159,7 @@ class NameRewriter(ast.NodeTransformer):
       slice=ast.Constant(value=node.id),
       ctx=node.ctx)
 
-  def visit_Assign(self, assign: ast.Assign) -> ast.Name:
+  def visit_Assign(self, assign: ast.Assign) -> ast.AST:
     if len(assign.targets) == 1 and isinstance(assign.targets[0], ast.Name):
       name = assign.targets[0]
       if name.id.startswith(self.options.local_vardef_prefix):
@@ -165,11 +167,11 @@ class NameRewriter(ast.NodeTransformer):
         self._add_to_locals({name.id})
     return self.generic_visit(assign)
 
-  def visit_For(self, node: ast.For) -> ast.For:
+  def visit_For(self, node: ast.For) -> ast.AST:
     with self._with_locals_from_target(node.target):
       return self.generic_visit(node)
 
-  def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
+  def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
     self._add_to_locals({node.name})
     names: t.Set[str] = set()
     for arg in node.args.args:
@@ -183,11 +185,11 @@ class NameRewriter(ast.NodeTransformer):
     with self._with_locals(names):
       return self.generic_visit(node)
 
-  def visit_ClassDef(self, node: ast.ClassDef) -> ast.ClassDef:
+  def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
     self._add_to_locals({node.name})
     return self.generic_visit(node)
 
-  def visit_Import(self, node: ast.Import) -> ast.Import:
+  def visit_Import(self, node: ast.Import) -> ast.AST:
     names: t.Set[str] = set()
     for name in node.names:
       if name.asname:
@@ -197,7 +199,7 @@ class NameRewriter(ast.NodeTransformer):
     self._add_to_locals(names)
     return self.generic_visit(node)
 
-  def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:
+  def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST:
     self.visit_Import(ast.Import(names=node.names))  # Dispatch name detection
     return self.generic_visit(node)
 

@@ -23,6 +23,11 @@ requirements = [
   'nr.functional >=0.1.0,<1.0.0',
   'termcolor >=1.1.0,<2.0.0',
 ]
+test_requirements = [
+  'types-termcolor',
+]
+extras_require = {}
+extras_require['test'] = test_requirements
 
 setuptools.setup(
   name = 'craftr-dsl',
@@ -38,8 +43,8 @@ setuptools.setup(
   package_dir = {'': 'src'},
   include_package_data = True,
   install_requires = requirements,
-  extras_require = {},
-  tests_require = [],
+  extras_require = extras_require,
+  tests_require = test_requirements,
   python_requires = '>=3.6.0,<4.0.0',
   data_files = [],
   entry_points = {
