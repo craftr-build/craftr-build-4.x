@@ -34,3 +34,22 @@ jobs:
     - name: Build and run examples/c
       run: cd examples/c && craftr :run
 
+
+  build-haskell-example:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.x']
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Craftr
+      run: python -m pip install -e craftr-core -e craftr-build
+    # Github Actions always have GHC available.
+    - name: Build and run examples/c
+      run: cd examples/haskell && craftr run
+
