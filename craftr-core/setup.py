@@ -17,6 +17,7 @@ else:
 
 requirements = [
   'nr.caching >=0.3.2,<1.0.0',
+  'typing-extensions >=3.10.0.0,<4.0.0',
 ]
 
 setuptools.setup(
