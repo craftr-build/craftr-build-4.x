@@ -32,5 +32,5 @@ jobs:
     - name: Install Craftr
       run: python -m pip install -e craftr-core -e craftr-build
     - name: Build and run examples/c
-      run: cd craftr-build/examples/c && craftr :run
+      run: cd examples/c && craftr :run
 
