@@ -1,5 +1,5 @@
 === TEST assign_closure ===
-def myfunc = (project) -> {
+myfunc = (project) -> {
 
   class MyClass(IConfigurable):
     def __init__(self, task_name):
@@ -12,17 +12,14 @@ def myfunc = (project) -> {
           print self.task_name, self.data_files
         }
       }
+
   project.add_extension('mytask', MyClass)
 }
 === EXPECTS ===
-from craftr.core.closure import closure as __closure_decorator__
+def _closure_1(project):
 
 
-@__closure_decorator__(__closure__)
-def _closure_1(__closure__, project):
-
-
-    class MyClass(__closure__['IConfigurable']):
+    class MyClass(IConfigurable):
 
         def __init__(self, task_name):
             self.task_name = task_name
@@ -31,14 +28,11 @@ def _closure_1(__closure__, project):
         def configure(self, closure):
             closure.apply(self)
 
-            @__closure_decorator__(__closure__)
-            def _closure_1_closure_1(__closure__):
+            def _closure_1_closure_1(self):
 
-                @__closure_decorator__(__closure__)
-                def _closure_1_closure_1_closure_1_closure_1(__closure__):
-                    __closure__['print'](self.task_name, self.data_files)
-                __closure__['do_last'](_closure_1_closure_1_closure_1_closure_1
-                    )
+                def _closure_1_closure_1_closure_1_closure_1(self):
+                    print(self.task_name, self.data_files)
+                do_last(_closure_1_closure_1_closure_1_closure_1)
             project.task(self.task_name)(_closure_1_closure_1)
     project.add_extension('mytask', MyClass)
 

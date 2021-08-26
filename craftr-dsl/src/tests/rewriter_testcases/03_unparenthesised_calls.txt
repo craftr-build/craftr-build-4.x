@@ -1,8 +1,0 @@
-
-
-=== TEST unparen_call_with_kwarg_expandsion ===
-print *args, 'Hello, world!', **kwargs
-=== EXPECTS SYNTAX ERROR ===
-print *args, 'Hello, world!', **kwargs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-=== END ===
