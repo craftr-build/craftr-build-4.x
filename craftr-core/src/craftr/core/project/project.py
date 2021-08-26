@@ -6,10 +6,10 @@ import weakref
 from pathlib import Path
 
 from craftr.core.configurable import Closure
-from craftr.core.task import Task
 from craftr.core.util.preconditions import check_instance_of, check_not_none
 
 if t.TYPE_CHECKING:
+  from craftr.core.task import Task
   from craftr.core.context import Context
 
 T_Task = t.TypeVar('T_Task', bound='Task')
@@ -34,7 +34,7 @@ class ExtensibleObject:
     self._extensions[key] = extension
 
 
-class Project:
+class Project(ExtensibleObject):
   """
   A project is a collection of tasks, usually populated through a build script, tied to a
   directory. Projects can have sub projects and there is usually only one root project in
@@ -46,7 +46,7 @@ class Project:
     parent: t.Optional['Project'],
     directory: t.Union[str, Path],
   ) -> None:
-    super().__init__()
+    super().__init__(str(directory))
     self._context = weakref.ref(context)
     self._parent = weakref.ref(parent) if parent is not None else parent
     self.directory = Path(directory)
@@ -108,6 +108,7 @@ class Project:
     if name in self._tasks:
       raise ValueError(f'task name already used: {name!r}')
 
+    from craftr.core.task import Task
     task = (task_class or Task)(self, name)
     self._tasks[name] = task
     return t.cast(T_Task, task)
@@ -203,6 +204,13 @@ class Project:
 
     return [Path(f) for f in glob.glob(str(self.directory / pattern))]
 
+  def finalize(self) -> None:
+    for task in self.tasks:
+      if not task.finalized:
+        task.finalize()
+    for project in self.subprojects():
+      project.finalize()
+
 
 class TaskContainer:
 
@@ -231,3 +239,9 @@ class TaskContainer:
 
   def __getitem__(self, key: str) -> t.Union['Task', t.Set['Task']]:
     return self._tasks[key]
+
+
+def all_tasks(project: Project) -> t.Iterator['Task']:
+  yield from project.tasks
+  for subproject in project.subprojects():
+    yield from all_tasks(subproject)

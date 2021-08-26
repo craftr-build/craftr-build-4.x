@@ -13,5 +13,6 @@ entrypoints:
   - cxx = craftr.build.plugins.cxx
   - run = craftr.build.plugins.run
   - processor = craftr.build.plugins.processor
+  - haskell = craftr.build.plugins.haskell
   console_scripts:
   - craftr = craftr.build.main:main

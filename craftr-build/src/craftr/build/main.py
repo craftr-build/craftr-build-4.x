@@ -3,8 +3,8 @@ import argparse
 from pathlib import Path
 
 from craftr.core.context import Context
+from craftr.core.project.project import all_tasks
 from craftr.core.settings import Settings
-from craftr.dsl import transpile_to_source
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-O', '--option', default=[], action='append',
@@ -12,16 +12,13 @@ parser.add_argument('-O', '--option', default=[], action='append',
 parser.add_argument('--settings-file', default=Context.CRAFTR_SETTINGS_FILE, type=Path,
   help='Point to another settings file. (default: %(default)s)')
 parser.add_argument('tasks', metavar='task', nargs='*')
-parser.add_argument('-t', '--transpile', help='Transpile the specified file and print its output.')
 parser.add_argument('-v', '--verbose', action='store_true',
   help='Enable verbose mode (like -Ocraftr.core.verbose=true).')
+parser.add_argument('-l', '--list', action='store_true', help='List all tasks.')
 
 
 def main():
   args = parser.parse_args()
-  if args.transpile:
-    print(transpile_to_source(Path(args.transpile).read_text(), args.transpile))
-    return
 
   settings = Settings.from_file(Path(args.settings_file))
   settings.update(Settings.parse(args.option))
@@ -30,6 +27,13 @@ def main():
 
   context = Context(settings)
   context.load_project(Path.cwd())
+  context.finalize()
+
+  if args.list:
+    for task in all_tasks(context.root_project):
+      print(task.path)
+    return
+
   context.execute(args.tasks or None)
 
 

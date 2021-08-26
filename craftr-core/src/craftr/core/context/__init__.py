@@ -94,6 +94,9 @@ class Context:
     else:
       return Path(build_directory)
 
+  def finalize(self) -> None:
+    self.root_project.finalize()
+
   def execute(self, selection: t.Union[None, str, t.List[str], Task, t.List[Task]] = None) -> None:
     root_project = check_not_none(self.root_project, 'no root project initialized')
     selected_tasks: t.Set[Task] = set()

@@ -1,0 +1,7 @@
+# type: ignore
+
+project.apply("haskell")
+
+project.haskellApplication {
+  self.srcs = ["Main.hs"]
+}

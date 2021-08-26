@@ -1,11 +1,10 @@
 
 import typing as t
 
-from craftr.build.lib import ExecutableInfo, IExecutableProvider, TaskFactoryExtension
+from craftr.build.lib import ExecutableInfo, IExecutableProvider
 from craftr.build.lib.helpers import PluginRegistration
 from craftr.core.actions import Action, CommandAction
 from craftr.core.property import Property
-from craftr.core.project import Project
 from craftr.core.task import Task
 
 plugin = PluginRegistration()
