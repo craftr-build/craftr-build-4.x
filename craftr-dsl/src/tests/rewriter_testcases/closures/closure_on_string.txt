@@ -1,0 +1,10 @@
+=== TEST closure_on_string ===
+'Hello, World' {
+  print(type(self).__name__)
+  print(type(self()).__name__)
+  print(self())
+  print(self.upper())
+}
+=== EXPECTS ===
+'Hello, World'(_closure_1)
+=== END ===
