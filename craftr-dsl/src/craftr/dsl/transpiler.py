@@ -15,19 +15,37 @@ from .rewrite import Closure, Rewriter
 class TranspileOptions:
   """ Options for transpiling Craftr DSL code. """
 
-  closure_target: str = '__closure__'
-  pure_builtins: t.Collection[str] = frozenset(['__closure_decorator__'])
-  preamble: str = 'from craftr.core.closure import closure as __closure_decorator__\n'
-  closure_def_prefix: str = '@__closure_decorator__(__closure__)\n'
-  closure_arguments_prefix: str = '__closure__, '
+  #: If enabled, names are read, written and deleted through the `__getitem__()`, `__setitem__()` and
+  #: `__delitem__()` of the given name. If you need extra flexibility, you can set this to the name of
+  #: a global object that is then responsible for name resolution.
+  closure_target: t.Optional[str] = None  # '__closure__'
+
+  #: Set of builtin names that are "pure", i.e. they are never touched by the #NameRerwriter.
+  #: This is only used if #closure_target is set.
+  pure_builtins: t.Collection[str] = frozenset()  # frozenset(['__closure_decorator__'])
+
+  #: This is only used if #closure_target is specified and the #NameRewriter kicks in. Variable declarations
+  #: prefixed with `def` are prefixed with the given string.
   local_vardef_prefix: str = '_def_'
+
+  #: A preamble of pure Python code to include at the top of the module.
+  preamble: str = ''  # 'from craftr.core.closure import closure as __closure_decorator__\n'
+
+  #: Pure python code to include before a closure definition, for example to decorate it.
+  closure_def_prefix: str = ''  # '@__closure_decorator__(__closure__)\n'
+
+  #: The default argument list for closures without an explicit argument list. Defaults to `self, ` because
+  #: closures without an explicit argument list are expected to take at least one argument.
+  closure_default_arglist: str = 'self, '
 
 
 def transpile_to_ast(code: str, filename: str, options: t.Optional[TranspileOptions] = None) -> ast.Module:
-  rewrite = Rewriter(code, filename).rewrite()
+  options = options or TranspileOptions()
+  rewrite = Rewriter(code, filename, supports_local_def=options.closure_target is not None).rewrite()
   module = ast.parse(rewrite.code, filename, mode='exec', type_comments=False)
-  module = ClosureRewriter(filename, options or TranspileOptions(), rewrite.closures).visit(module)
-  module = t.cast(ast.Module, NameRewriter(options or TranspileOptions()).visit(module))
+  module = ClosureRewriter(filename, options, rewrite.closures).visit(module)
+  if options.closure_target:
+    module = t.cast(ast.Module, NameRewriter(options).visit(module))
   return ast.fix_missing_locations(module)
 
 
@@ -61,8 +79,9 @@ class ClosureRewriter(ast.NodeTransformer):
 
     closure = self.closures[closure_id]
     arglist = ', '.join(closure.parameters or [])
-    function_code = f'{self.options.closure_def_prefix}def {closure_id}(' \
-        f'{self.options.closure_arguments_prefix}{arglist}):\n'
+    if not arglist:
+      arglist = self.options.closure_default_arglist
+    function_code = f'{self.options.closure_def_prefix}def {closure_id}({arglist}):\n'
     function_code = '\n' * (function_code.count('\n') + closure.line) + function_code
     if closure.expr:
       function_code += ' ' * closure.indent + 'return ' + closure.expr
