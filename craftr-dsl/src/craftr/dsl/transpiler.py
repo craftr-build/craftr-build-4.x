@@ -78,9 +78,10 @@ class ClosureRewriter(ast.NodeTransformer):
     """
 
     closure = self.closures[closure_id]
-    arglist = ', '.join(closure.parameters or [])
-    if not arglist:
+    if closure.parameters is None:
       arglist = self.options.closure_default_arglist
+    else:
+      arglist = ', '.join(closure.parameters)
     function_code = f'{self.options.closure_def_prefix}def {closure_id}({arglist}):\n'
     function_code = '\n' * (function_code.count('\n') + closure.line) + function_code
     if closure.expr:
