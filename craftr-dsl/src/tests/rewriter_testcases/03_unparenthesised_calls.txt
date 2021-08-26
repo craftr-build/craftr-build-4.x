@@ -1,29 +1,8 @@
 
-=== TEST unparen_call_with_kwarg ===
-print 'Hello, world!', file=sys.stdout
-=== EXPECTS ===
-print('Hello, world!', file=sys.stdout)
-=== END ===
-
-=== TEST unparen_call_with_kwarg_expandsion ===
-print a, *args, 'Hello, world!', **kwargs
-=== EXPECTS ===
-print(a, *args, 'Hello, world!', **kwargs)
-=== END ===
 
 === TEST unparen_call_with_kwarg_expandsion ===
 print *args, 'Hello, world!', **kwargs
 === EXPECTS SYNTAX ERROR ===
 print *args, 'Hello, world!', **kwargs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-=== END ===
-
-=== TEST multiline_string_argument ===
-dedent '''
-  Hello, World!
-'''
-=== EXPECTS ===
-dedent('''
-  Hello, World!
-''')
 === END ===

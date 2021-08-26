@@ -1,0 +1,18 @@
+=== TEST function_def_vs_local_var_def ===
+def foobar():
+  pass
+contextvar = 42
+def localvar = 'foobar'
+__closure__['print'](contextvar, localvar)
+=== EXPECTS ===
+from craftr.core.closure import closure as __closure_decorator__
+
+
+def foobar():
+    pass
+
+
+__closure__['contextvar'] = 42
+localvar = 'foobar'
+__closure__['print'](__closure__['contextvar'], localvar)
+=== END ===

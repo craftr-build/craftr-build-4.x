@@ -1,0 +1,5 @@
+=== TEST closure_as_argument_1 ===
+filter(k -> k == 2, range(10))
+=== EXPECTS ==
+filter(_closure_1, range(10))
+=== END ==

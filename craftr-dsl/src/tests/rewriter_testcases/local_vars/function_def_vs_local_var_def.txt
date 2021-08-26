@@ -1,4 +1,3 @@
-
 === TEST function_def_vs_local_var_def ===
 def foobar():
   pass

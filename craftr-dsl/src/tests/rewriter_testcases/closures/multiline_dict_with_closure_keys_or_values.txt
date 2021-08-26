@@ -1,0 +1,11 @@
+=== TEST multiline_dict_with_closure_keys_or_values ===
+{
+  () -> 10: { print 'Hello, World!' }(),
+  'foo': 'bar'
+}
+=== EXPECTS ===
+{
+  _closure_1: _closure_2(),
+  'foo': 'bar'
+}
+=== END ===

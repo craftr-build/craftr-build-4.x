@@ -1,4 +1,5 @@
 
+import os
 import re
 import typing as t
 from dataclasses import dataclass
@@ -71,10 +72,14 @@ def cases_from(path: Path) -> t.Callable[[t.Callable], t.Callable]:
   Decorator for a test function to parametrize it wil the test cases from a directory.
   """
 
-
   def _load(path):
     return {t.name: t for t in parse_testcase_file(path.read_text(), str(path))}
-  test_cases = {path: _load(path) for path in path.iterdir()}
+
+  test_cases = {}
+  for root, dirs, files in os.walk(path):
+    for filename in map(Path(root).joinpath, files):
+      if filename.suffix == '.txt':
+        test_cases[filename] = _load(filename)
   test_parameters = [(path, name) for path, tests in test_cases.items() for name in tests]
 
   def decorator(func: t.Callable) -> t.Callable:

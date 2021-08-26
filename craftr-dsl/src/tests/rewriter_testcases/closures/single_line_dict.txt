@@ -1,0 +1,5 @@
+=== TEST single_line_dict ===
+{ 'hello': 'foobar', random(0, 1): 'eggs' }
+=== EXPECTS ===
+{ 'hello': 'foobar', random(0, 1): 'eggs' }
+=== END ===

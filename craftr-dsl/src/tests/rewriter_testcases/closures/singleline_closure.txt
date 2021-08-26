@@ -1,0 +1,5 @@
+=== TEST singleline_closure ===
+{ do_heavy_stuff() }
+=== EXPECTS ===
+_closure_1
+=== END ===

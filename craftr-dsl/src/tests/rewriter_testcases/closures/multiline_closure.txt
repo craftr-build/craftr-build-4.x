@@ -1,0 +1,8 @@
+=== TEST multiline_closure ===
+print {
+  for i in range(10):
+    print(i)
+}
+=== EXPECTS ===
+print(_closure_1)
+=== END ===

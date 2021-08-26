@@ -1,0 +1,5 @@
+=== TEST keyword_arguments ===
+print('Hello, world!', file=sys.stdout)
+=== EXPECTS ===
+print('Hello, world!', file=sys.stdout)
+=== END ===

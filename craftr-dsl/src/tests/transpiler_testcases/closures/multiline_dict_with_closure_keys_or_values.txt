@@ -1,0 +1,35 @@
+=== TEST multiline_dict_with_closure_keys_or_values ===
+{
+  () -> 10: { print 'Hello, World!' }(),
+  'foo': 'bar'
+}
+=== EXPECTS ===
+from craftr.core.closure import closure as __closure_decorator__
+
+
+@__closure_decorator__(__closure__)
+def _closure_1(__closure__):
+    return 10
+
+
+@__closure_decorator__(__closure__)
+def _closure_2(__closure__):
+    __closure__['print']('Hello, World!')
+
+
+{_closure_1: _closure_2(), 'foo': 'bar'}
+=== END ===
+
+=== TEST closure_with_arg ===
+filter(k -> k == 2, range(10))
+=== EXPECTS ===
+from craftr.core.closure import closure as __closure_decorator__
+
+
+@__closure_decorator__(__closure__)
+def _closure_1(__closure__, k):
+    return k == 2
+
+
+__closure__['filter'](_closure_1, __closure__['range'](10))
+=== END ===
