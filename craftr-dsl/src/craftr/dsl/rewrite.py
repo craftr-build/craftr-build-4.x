@@ -3,7 +3,6 @@
 Rewrite Craftr DSL code to pure Python code.
 """
 
-import ast
 import contextlib
 import enum
 import typing as t
