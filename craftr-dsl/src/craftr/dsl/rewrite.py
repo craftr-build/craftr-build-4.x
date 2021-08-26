@@ -136,9 +136,18 @@ class Rewriter:
   BINARY_OPERATORS = frozenset(['-', '+', '*', '**', '/', '//', '^', '|', '&', '.', '==', '<=', '>=', '<', '>', 'is', '%'])
   PYTHON_BLOCK_KEYWORDS = frozenset(['class', 'def', 'if', 'elif', 'else', 'for', 'while', 'with'])
 
-  def __init__(self, text: str, filename: str) -> None:
+  def __init__(self, text: str, filename: str, supports_local_def: bool) -> None:
+    """
+    # Arguments
+    text: The Craftr DSL code to parse and turn into an AST-like structure.
+    filename: The filename where the DSL code is from.
+    supports_local_def: Whether the `def varname = ...` syntax is allowed and understood. This is an important
+      syntax feature when enabling the #NameRewriter with #TranspileOptions.closure_target.
+    """
+
     self.tokenizer = Tokenizer(rule_set, text)
     self.filename = filename
+    self.supports_local_def = supports_local_def
     self._closure_stack: t.List[str] = []  #: Used to construct nested closure names.
     self._closure_counter = 0  #: Used to assign a unique number to every closure.
     self._closures: t.Dict[str, Closure] = {}
@@ -573,7 +582,7 @@ class Rewriter:
     code += token.value
     token.next()
 
-    if token.tv == (Token.Name, 'def') and (defcode := self._test_local_def()):
+    if self.supports_local_def and token.tv == (Token.Name, 'def') and (defcode := self._test_local_def()):
       return code + defcode
 
     if token.type == Token.Name and token.value in self.PYTHON_BLOCK_KEYWORDS:
