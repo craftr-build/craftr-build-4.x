@@ -25,7 +25,7 @@ def main():
   if args.verbose:
     settings.set('craftr.core.verbose', True)
 
-  context = Context(settings)
+  context = Context(settings=settings)
   context.load_project(Path.cwd())
   context.finalize()
 
