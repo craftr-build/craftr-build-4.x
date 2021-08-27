@@ -1,6 +1,7 @@
 
 import glob
 import string
+import sys
 import typing as t
 import weakref
 from pathlib import Path
@@ -17,7 +18,7 @@ T_Task = t.TypeVar('T_Task', bound='Task')
 
 class ExtensibleObject:
 
-  def __init__(self, name: str) -> None:
+  def __init__(self, name: t.Optional[str] = None) -> None:
     self._name = name
     self._extensions: t.Dict[str, t.Any] = {}
 
@@ -43,19 +44,31 @@ class Project(ExtensibleObject):
 
   def __init__(self,
     context: 'Context',
-    parent: t.Optional['Project'],
-    directory: t.Union[str, Path],
+    parent: t.Optional['Project'] = None,
+    directory: t.Union[None, str, Path] = None,
   ) -> None:
-    super().__init__(str(directory))
+    """
+    Create a new project. If no *directory* is specified, it will default to the parent directory
+    of the caller. If the given *context* does not have a root project defined yet, the project
+    will be promoted to the root project.
+    """
+
+    if directory is None:
+      directory = Path(sys._getframe(1).f_code.co_filename).parent
+
+    super().__init__()
     self._context = weakref.ref(context)
     self._parent = weakref.ref(parent) if parent is not None else parent
-    self.directory = Path(directory)
+    self.directory = Path(directory) if directory else context.directory
     self._name: t.Optional[str] = None
     self._build_directory: t.Optional[Path] = None
     self._tasks: t.Dict[str, 'Task'] = {}
     self._subprojects: t.Dict[Path, 'Project'] = {}
     self._on_apply: t.Optional[Closure] = None
     self.exports = ExtensibleObject(self.path)
+
+    if not context._root_project:
+      context._root_project = self
 
   def __repr__(self) -> str:
     return f'Project("{self.path}")'

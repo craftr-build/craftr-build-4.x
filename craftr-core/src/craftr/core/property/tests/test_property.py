@@ -48,7 +48,7 @@ def test_property_type_checking():
 def test_property_annotation_in_value_hint():
 
   class MyClass(HavingProperties):
-    a: te[Property[int], 42]
+    a: te.Annotated[Property[int], 42]
     b: Property[te.Annotated[int, 42]]
     c: te.Annotated[Property[te.Annotated[int, 42]], 90]
 

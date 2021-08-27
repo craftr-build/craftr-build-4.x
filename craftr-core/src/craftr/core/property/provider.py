@@ -2,6 +2,7 @@
 import abc
 import types
 import typing as t
+from craftr.core.property.typechecking import TypeCheckingContext, check_type
 
 from craftr.core.util.preconditions import check_instance_of
 
@@ -28,6 +29,16 @@ def _add_operator(left: t.Any, right: t.Any) -> t.Any:
   elif not isinstance(left, str) and isinstance(left, t.Sequence) and isinstance(right, t.Sequence):
     return list(left) + list(right)
   return left + right
+
+
+def _visit_nested(val: t.Any, callback: t.Callable[[t.Any], None]) -> None:
+  callback(val)
+  if isinstance(val, t.Sequence) and not isinstance(val, (str, bytes, memoryview, bytearray)):
+    for item in val:
+      _visit_nested(item, callback)
+  elif isinstance(val, t.Mapping):
+    for value in val.values():
+      _visit_nested(value, callback)
 
 
 class NoValueError(Exception):
@@ -100,13 +111,32 @@ class Provider(t.Generic[T], metaclass=abc.ABCMeta):
 
 class Box(Provider[T]):
 
-  def __init__(self, value: t.Optional[T]) -> None:
+  def __init__(self, value: t.Union[t.Callable[[], T], t.Optional[T]]) -> None:
     self._value = value
 
   def get(self) -> T:
     if self._value is None:
       raise NoValueError
+    if callable(self._value):
+      return self._value()
     return self._value
+
+  def visit(self, func: t.Callable[['Provider'], bool]) -> None:
+    if not func(self):
+      return
+    if callable(self._value):
+      # Check if the closure captures any properies.
+      assert isinstance(self._value, _IHasClosure)
+      for cell in (self._value.__closure__ or []):
+        if isinstance(cell.cell_contents, Provider):
+          cell.cell_contents.visit(func)
+      value = self._value()
+    else:
+      value = self._value
+    def callback(val: t.Any) -> None:
+      if isinstance(val, Provider):
+        func(val)
+    _visit_nested(value, callback)
 
 
 def visit_captured_providers(subject: t.Callable, func: t.Callable[[Provider], bool]) -> None:

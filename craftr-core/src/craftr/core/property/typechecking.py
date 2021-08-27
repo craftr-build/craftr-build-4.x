@@ -67,13 +67,17 @@ class BaseContext:
 
 class TypeCheckingContext(BaseContext):
 
-  def __init__(self,
+  def __init__(
+    self,
     type_hint: t.Any,
     message_prefix: t.Optional[t.Callable[[], str]] = None,
-    force_accept: t.Optional[t.Callable[[t.Any], bool]] = None) -> None:
+    force_accept: t.Optional[t.Callable[[t.Any], bool]] = None,
+    callback: t.Optional[t.Callable[[t.Any], None]] = None,
+  ) -> None:
     super().__init__(type_hint)
     self._message_prefix = message_prefix
     self._force_accept_func = force_accept
+    self._callback = callback
 
   def force_accept_value(self, value: t.Any, type_hint_args: t.List[t.Any]) -> bool:
     if self._force_accept_func is not None:
@@ -194,7 +198,6 @@ class _UnionHandler(TypeCheckingHandler):
         except TypeCheckingError as exc:
           original_errors.append(exc)
     # TODO(NiklasRosenstein): Do something useful with the original errors.
-    #print(type_hint_args, repr(value))
     raise context.type_error(value, t.Union[tuple(type_hint_args)])
 
   def mutable_visit(self, value: t.Any, type_hint_args: t.List[t.Any], context: MutableVisitContext) -> t.Any:
@@ -238,8 +241,14 @@ def check_type(
   recursively to exhaustively verify the value type.
   """
 
+  if context._callback:
+    context._callback(value)
+
   type_, type_args = unpack_type_hint(context.type_hint)
   type_is_type = isinstance(type_, type)
+
+  if isinstance(type_, t.TypeVar):
+    return
 
   if context.force_accept_value(value, type_args):
     return

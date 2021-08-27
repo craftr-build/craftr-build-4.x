@@ -12,12 +12,14 @@ from .provider import Box, NoValueError, Provider, T, visit_captured_providers
 from .typechecking import TypeCheckingContext, type_repr, check_type, mutate_values, MutableVisitContext
 
 
-def _unpack_nested_providers(value: t.Any, type_hint: t.Any) -> t.Any:
-  def mutator(value: t.Any, type_hint_args: t.List[t.Any], context: MutableVisitContext) -> t.Any:
-    if isinstance(value, Provider):
-      return value.get()
-    return value
-  return mutate_values(value, MutableVisitContext(type_hint, mutator, True))
+def _unpack_nested_providers(value: t.Any) -> t.Any:
+  if isinstance(value, t.Sequence) and not isinstance(value, (str, bytes, bytearray, memoryview)):
+    return [_unpack_nested_providers(x) for x in value]
+  elif isinstance(value, t.Mapping):
+    return {k: _unpack_nested_providers(v) for k, v in value.items()}
+  elif isinstance(value, Provider):
+    return value.get()
+  return value
 
 
 def on_property_set_value(value_type: t.Any, value: t.Any) -> t.Any:
@@ -105,11 +107,11 @@ class Property(Provider[T]):
   def set_default(self, func: t.Callable[[], T]) -> None:
     self._default = func
 
-  def set(self, value: t.Union[T, Provider[T]]) -> None:
+  def set(self, value: t.Union[T, t.Callable[[], T], Provider[T]]) -> None:
     if self._finalized:
       raise RuntimeError(f'{self} is finalized')
     nested_providers: t.List[Provider] = []
-    if not isinstance(value, Provider):
+    if not isinstance(value, Provider) and not callable(value):
       value = on_property_set_value(self.value_type, value)
       # TODO(NiklasRosenstein): `force_accept` parameter should check if the types match.
       def force_accept(value: t.Any) -> bool:
@@ -123,6 +125,8 @@ class Property(Provider[T]):
           type_hint=self.value_type,
           message_prefix=lambda: f'while setting property {self.fqn}: ',
           force_accept=force_accept))
+      value = Box(value)
+    elif callable(value):
       value = Box(value)
     self._value = value
     self._nested_providers = nested_providers
@@ -139,7 +143,7 @@ class Property(Provider[T]):
       if self._default is None:
         raise NoValueError(self.fqn)
       return self._default()
-    value = _unpack_nested_providers(self._value.get(), self.value_type)
+    value = _unpack_nested_providers(self._value.get())
     value = on_property_set_value(self.value_type, value)
     check_type(value, TypeCheckingContext(self.value_type, lambda: f'while getting property {self.fqn}: '))
     return value
@@ -250,6 +254,8 @@ def collect_properties(provider: t.Union[HavingProperties, Provider]) -> t.List[
       prop.visit(_append_if_property)
   elif isinstance(provider, Provider):
     provider.visit(_append_if_property)
+    if provider in result:
+      result.remove(provider)
   else:
     raise TypeError('expected Provider or HavingProperties instance, '
       f'got {type(provider).__name__}')

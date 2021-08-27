@@ -1,35 +1,44 @@
 # craftr-core
 
-The `craftr-core` package provides the core functionality for the Craftr build system, such as
-an abstraction for units of work (actions) and the dependencies between that work (tasks).
-A property system allows for the lazy evaluation of configuration values while keeping track
-of the data lineage in order to compute task dependencies.
+The `craftr-core` package provides the core build system functions for the Craftr build system.
 
-To use the `craftr-core` package from a plain Python script, you need to manually instantiate at
-`Context` and `Project`.
+## Concepts
+
+### Projects
+
+A project is the main unit that is used to represent a collection of tasks. A project has a collection
+of tasks and possibly other sub-projects. Every project has a name and unique ID (aka. path) inside the
+current build context.
+
+### Tasks
+
+Tasks encapsulate the configuration and logic of an operation in a build. Examples include the compilation
+or generation of source files, copying or compressing files. Such operations are usually described using a
+sequence of Actions, see below. Dependencies between individual tasks describe a directed acyclic graph used
+for determining the order in which tasks need to be executed.
+
+A task has a set of input and output files. If an input files changes or an output file does not exist, a
+task is considered outdated and will be executed again. There are also tasks that are not executed by
+default unless depended on by another tasks that is executed or explicitly specified as to be executed in
+a given execution of the build graph.
+
+### Actions
+
+An action is a concrete unit of work that can be executed as part of a build. A task is usually described
+by one or more actions. Dependencies between actions express the order in which they are to be executed
+relative to the other actions produced by the same task.
+
+### Plugins
+
+Plugins are reusable pieces of build logic that can be applied to projects. A plugin usually registers
+a new task or task factory in the project which is subsequently accessible via the `project.ext` object
+or from the namespace object returned by `Project.apply()`.
+
+
 
 __Example__
 
 ```python
-import sys
-from craftr.core import Context
-from craftr.core.actions import WriteFileAction, CommandAction
-
-ctx = Context()
-project = ctx.project()
-
-write_task = project.task('writeFile', WriteFileAction.as_task)
-write_task.text = 'print("Hello, World!")\n'
-write_task.file_path = project.build_directory / 'out.py'
-
-run_task = project.task('runFile', CommandAction.as_task)
-run_task.commands = [[sys.executable, write_task.file_path]]
-run_task.default = False
-run_task.always_outdated = True
-
-assert write_task in run_task.get_dependencies()
-
-ctx.execute(sys.argv[1:] or None)
 ```
 
 Run with

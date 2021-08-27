@@ -23,4 +23,7 @@ def unpack_type_hint(hint: t.Any) -> t.Tuple[t.Optional[t.Any], t.List[t.Any]]:
   if isinstance(hint, t._SpecialForm):
     return hint, []
 
+  if isinstance(hint, t.TypeVar):
+    return hint, []
+
   return None, []

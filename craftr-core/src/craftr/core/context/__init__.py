@@ -1,6 +1,4 @@
 
-import os
-import sys
 import typing as t
 from pathlib import Path
 
@@ -32,14 +30,14 @@ class Context:
   DEFAULT_SELECTOR = 'craftr.core.task.selector.default.DefaultTaskSelector'
   DEFAULT_PROJECT_LOADER = 'craftr.core.project.loader.delegate.DelegateProjectLoader'
   CRAFTR_SETTINGS_FILE = Path('build.settings')
-  CRAFTR_DIRECTORY = Path('.craftr')
 
-  def __init__(self,
-      settings: t.Optional[Settings] = None,
-      executor: t.Optional[IExecutor] = None,
-      plugin_loader: t.Optional[IPluginLoader] = None,
-      project_loader: t.Optional[IProjectLoader] = None,
-      ) -> None:
+  def __init__(
+    self, *,
+    settings: t.Optional[Settings] = None,
+    executor: t.Optional[IExecutor] = None,
+    plugin_loader: t.Optional[IPluginLoader] = None,
+    project_loader: t.Optional[IProjectLoader] = None,
+  ) -> None:
 
     if settings is None and self.CRAFTR_SETTINGS_FILE.exists():
       settings = Settings.parse(self.CRAFTR_SETTINGS_FILE.read_text().splitlines())
@@ -57,8 +55,14 @@ class Context:
     self.task_selector = self.settings.get_instance(
         ITaskSelector, 'core.task_selector', self.DEFAULT_SELECTOR)  # type: ignore
     self.graph = ExecutionGraph()
-    self.metadata_store: NamespaceStore = JsonDirectoryStore(
-        str(self.CRAFTR_DIRECTORY / 'metadata'), create_dir=True)
+    self._metadata_store: t.Optional[NamespaceStore] = None
+
+  @property
+  def metadata_store(self) -> NamespaceStore:
+    if self._metadata_store is None:
+      self._metadata_store = JsonDirectoryStore(
+        str(self.get_default_build_directory(self.root_project) / '.craftr-metadata'), create_dir=True)
+    return self._metadata_store
 
   @property
   def root_project(self) -> t.Optional[Project]:
