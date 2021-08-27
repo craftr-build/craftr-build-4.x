@@ -34,7 +34,6 @@ jobs:
     - name: Build and run examples/c
       run: cd examples/c && craftr :run
 
-
   build-haskell-example:
     runs-on: ubuntu-latest
     strategy:

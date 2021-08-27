@@ -14,5 +14,6 @@ entrypoints:
   - run = craftr.build.plugins.run
   - processor = craftr.build.plugins.processor
   - haskell = craftr.build.plugins.haskell
+  - ocaml = craftr.build.plugins.ocaml
   console_scripts:
   - craftr = craftr.build.main:main
