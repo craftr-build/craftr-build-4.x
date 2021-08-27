@@ -28,12 +28,17 @@ class DelegateProjectLoader(IProjectLoader, IHasFromSettings):
   def __init__(self, delegates: t.List[IProjectLoader]) -> None:
     self.delegates = delegates
 
+  def __repr__(self) -> str:
+    return f'{type(self).__name__}(delegates={self.delegates!r})'
+
   @classmethod
   def from_settings(cls, settings: 'Settings') -> 'DelegateProjectLoader':
     delegates: t.List[IProjectLoader] = []
     names = settings.get('core.plugin.loader.delegates', cls.DEFAULT_DELEGATES).split(',')
     for name in map(str.strip, names):
-      ignore_unresolved = bool(name.endswith('?') and name[:-1])
+      ignore_unresolved = name.endswith('?')
+      if ignore_unresolved:
+        name = name[:-1]
       try:
         delegates.append(settings.create_instance(IProjectLoader, name))  # type: ignore
       except ImportError as exc:

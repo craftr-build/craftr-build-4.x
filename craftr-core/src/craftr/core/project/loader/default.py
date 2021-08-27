@@ -18,6 +18,9 @@ BUILD_SCRIPT_FILENAME = Path('build.craftr.py')
 
 class DefaultProjectLoader(IProjectLoader):
 
+  def __repr__(self) -> str:
+    return f'{type(self).__name__}()'
+
   def load_project(self, context: 'Context', parent: t.Optional[Project], path: Path) -> Project:
     if (filename := path / BUILD_SCRIPT_FILENAME).exists():
       project = Project(context, parent, path)
