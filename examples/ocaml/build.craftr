@@ -4,5 +4,4 @@ project.apply("ocaml")
 
 project.ocamlApplication {
   self.srcs = ["Main.ml"]
-  self.standalone = True
 }
