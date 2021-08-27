@@ -66,6 +66,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Setup Ocaml
       uses: ocaml/setup-ocaml@v2
+    - name: Install Ocaml with Opam
+      run: opam init
     - name: Install Craftr
       run: python -m pip install -e craftr-core -e craftr-build
     - name: Build and run examples/c
