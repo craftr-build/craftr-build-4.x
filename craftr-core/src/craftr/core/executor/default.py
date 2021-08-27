@@ -9,6 +9,11 @@ from craftr.core.actions.action import ActionContext
 from craftr.core.executor.api import IExecutor
 from craftr.core.task import Task
 
+try:
+  from termcolor import colored
+except ImportError:
+  def colored(s, *a, **kw): return str(s)
+
 if t.TYPE_CHECKING:
   from .graph import ExecutionGraph
   from craftr.core.settings import Settings
@@ -35,4 +40,4 @@ class DefaultExecutor(IExecutor):
           action.execute(context)
         task.completed()
       else:
-        print('> Task', task.path, 'UP TO DATE', flush=True)
+        print('> Task', task.path, colored('UP TO DATE', 'green'), flush=True)
