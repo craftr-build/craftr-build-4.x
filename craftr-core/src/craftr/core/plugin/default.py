@@ -16,7 +16,7 @@ class DefaultPluginLoader(IPluginLoader):
 
   @classmethod
   def from_settings(cls, settings: Settings) -> 'DefaultPluginLoader':
-    return cls(settings.get('craftr.core.system.plugin.DefaultPluginLoader', cls.entrypoint_name))
+    return cls(settings.get('core.plugin.entrypoint', cls.entrypoint_name))
 
   def load_plugin(self, plugin_name: str) -> IPlugin:
     for ep in pkg_resources.iter_entry_points(self.entrypoint_name, plugin_name):

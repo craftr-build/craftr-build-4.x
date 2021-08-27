@@ -34,21 +34,21 @@ Plugins are reusable pieces of build logic that can be applied to projects. A pl
 a new task or task factory in the project which is subsequently accessible via the `project.ext` object
 or from the namespace object returned by `Project.apply()`.
 
+### Settings
 
+Craftr settings are files in a line-based `key=value` format. There are a bunch of settings that control
+the behaviour of the Craftr core components. No settings file is loaded implicitly by the `Context` class.
 
-__Example__
-
-```python
-```
-
-Run with
-
-```
-$ python build.py :runFile
-> Task craftr-core:writeFile
-> Task craftr-core:runFile
-Hello, World!
-```
+| Option                         | Default value |
+| ------------------------------ | ------------- |
+| `core.build_directory`         | `.build`
+| `core.executor`                | `craftr.core.executor.default.DefaultExecutor`
+| `core.plugin.loader`           | `craftr.core.plugin.default.DefaultPluginLoader`
+| `core.plugin.loader.delegates` | `craftr.core.project.loader.default.DefaultProjectLoader,craftr.build.loader.DslProjectLoader?`
+| `core.plugin.entrypoint`       | `craftr.plugins`
+| `core.project.loader`          | `craftr.core.project.loader.delegate.DelegateProjectLoader`
+| `core.verbose`                 | `False`
+| `core.task_selector`           | `craftr.core.task.selector.default.DefaultTaskSelector`
 
 ---
 

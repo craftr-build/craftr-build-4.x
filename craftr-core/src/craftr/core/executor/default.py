@@ -21,7 +21,7 @@ class DefaultExecutor(IExecutor):
 
   @classmethod
   def from_settings(cls, settings: 'Settings') -> 'DefaultExecutor':
-    return cls(settings.get_bool('craftr.core.verbose', False))
+    return cls(settings.get_bool('core.verbose', False))
 
   def execute(self, graph: 'ExecutionGraph') -> None:
     outdated_tasks: t.Set[Task] = set()
