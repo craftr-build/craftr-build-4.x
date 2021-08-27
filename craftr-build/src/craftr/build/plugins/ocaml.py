@@ -28,7 +28,7 @@ class OcamlApplication(Task):
     self.standalone.set_default(lambda: True)
     self.output_directory.set_default(lambda: os.path.join(self.project.build_directory, 'ocaml', self.name))
     self.product_name.set_default(lambda: 'main')
-    self.suffix.set_default(lambda: '.exe' if (self.standalone.get() and os.name == 'nt') else '.cma' if self.standalone.get() else '')
+    self.suffix.set_default(lambda: '.exe' if (self.standalone.get() and os.name == 'nt') else '' if self.standalone.get() else '.cma')
     self.output_file.set_default(lambda: os.path.join(self.output_directory.get(), self.product_name.get() + self.suffix.get()))
 
     self.run = self.project.task(self.name + 'Run')
