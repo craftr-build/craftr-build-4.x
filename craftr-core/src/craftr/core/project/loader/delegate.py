@@ -23,7 +23,7 @@ class DelegateProjectLoader(IProjectLoader, IHasFromSettings):
 
   log = logging.getLogger(__qualname__ + '.' + __name__)  # type: ignore
 
-  DEFAULT_DELEGATES = 'craftr.core.project.loader.default.DefaultProjectLoader,craftr.build.loader.DslProjectLoader'
+  DEFAULT_DELEGATES = 'craftr.core.project.loader.default.DefaultProjectLoader,craftr.build.loader.DslProjectLoader?'
 
   def __init__(self, delegates: t.List[IProjectLoader]) -> None:
     self.delegates = delegates
