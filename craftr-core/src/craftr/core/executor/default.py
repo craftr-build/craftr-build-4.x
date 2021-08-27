@@ -29,10 +29,10 @@ class DefaultExecutor(IExecutor):
     for task in graph.get_ordered_tasks():
       if task.is_outdated() or any(x in outdated_tasks for x in task.get_dependencies()):
         outdated_tasks.add(task)
-        print('> Task', task.path)
+        print('> Task', task.path, flush=True)
         actions = task.do_first_actions + task.get_actions() + task.do_last_actions
         for action in actions:
           action.execute(context)
         task.completed()
       else:
-        print('> Task', task.path, 'UP TO DATE')
+        print('> Task', task.path, 'UP TO DATE', flush=True)
