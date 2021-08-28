@@ -17,3 +17,6 @@ entrypoints:
   - ocaml = craftr.build.plugins.ocaml
   console_scripts:
   - craftr = craftr.build.main:main
+test-drivers:
+- type: mypy
+#- type: pytest
