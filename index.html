@@ -1,358 +1,233 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf8">
-    <title>Home</title>
-    <link href="static/style.css" rel="stylesheet">
-    <link href="static/pygments.css" rel="stylesheet">
-  </head>
-  <body>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="None">
+  
+  
+  <link rel="shortcut icon" href="img/favicon.ico">
+  <title>My Project</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Home";
+    var mkdocs_page_input_path = "index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="js/jquery-2.1.1.min.js" defer></script>
+  <script src="js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
     
-    <div class="sidebar">
-      
-      <div class="logo">
-        <img src="static/logo.png">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> My Project</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
       </div>
-      
-      <div class="title">
-        <p><a href="index.html">The Craftr build system</a></p>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href=".">Home</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting started</a>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">API Documentation</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="api-documentation/craftr.build.loader/">craftr.build.loader</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="api-documentation/craftr.build.lib.interfaces.native/">craftr.build.lib.interfaces.native</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="api-documentation/craftr.build.lib.helpers/">craftr.build.lib.helpers</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Plugins</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="plugins/craftr.build.plugins.cxx/">craftr.build.plugins.cxx</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="plugins/craftr.build.plugins.haskell/">craftr.build.plugins.haskell</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="plugins/craftr.build.plugins.ocaml/">craftr.build.plugins.ocaml</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="plugins/craftr.build.plugins.processor/">craftr.build.plugins.processor</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="plugins/craftr.build.plugins.run/">craftr.build.plugins.run</a>
+                    </li>
+                </ul>
       </div>
-      <hr/>
-      <div class="toc">
-        
-    <ul>
-      
-      <li><a class="active" href="index.html">Home</a></li>
-      
-        <div class="toc"><ul><li><a href="#Welcome-to-the-Craftr-documentation">Welcome to the Craftr documentation!</a><ul><li><a href="#How-to-Install-Craftr">How to Install  Craftr</a></li><li><a href="#Examples">Examples</a></li></ul></li></ul></div>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="getting-started.html">Getting Started</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="tips.html">Tips & Tricks</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="dsl.html">The Craftr DSL</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl.html">Standard Library</a></li>
-      
-      
-    <ul>
-      
-      <li><a class="" >Language Support</a></li>
-      
-      
-    <ul>
-      
-      <li><a class="" href="stl/lang/csharp.html">C#</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/lang/cxx.html">C/C++</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/lang/cython.html">Cython</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/lang/haskell.html">Haskell</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/lang/java.html">Java</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/lang/ocaml.html">Ocaml</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/lang/vala.html">Vala</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-    </ul>
-    
-      
-      <li><a class="" >Libraries</a></li>
-      
-      
-    <ul>
-      
-      <li><a class="" href="stl/libs/glew.html">GLEW</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/libs/glfw.html">GLFW</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/libs/opencl.html">OpenCL</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/libs/sfml.html">SFML</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-    </ul>
-    
-      
-      <li><a class="" >Tools</a></li>
-      
-      
-    <ul>
-      
-      <li><a class="" href="stl/tools/cache.html">Build Cache</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/tools/cmake.html">CMake</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/tools/download.html">Download</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/tools/msvc.html">MSVC</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/tools/pkg-config.html">pkg-config</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/tools/platform-commands.html">Platform Commands</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-      <li><a class="" href="stl/tools/batchvars.html">Windows Batch Files</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-    </ul>
-    
-      
-    </ul>
-    
-      
-      <li><a class="" href="extending-craftr.html">Extending Craftr</a></li>
-      
-      
-    <ul>
-      
-    </ul>
-    
-      
-    </ul>
-    
-      </div>
-      
-        <hr/>
-        <div class="author">
-          <p class="subtitle">About the author:</p>
-          
-          <a href="https://github.com/NiklasRosenstein">@NiklasRosenstein on GitHub</a>
-          
-          
-          <a href="mailto:rosensteinniklas@gmail.com">Contact via email</a>
-          
-        </div>
-      
-      <hr/>
-      <div class="statigen-notice">Built with <a href="https://github.com/NiklasRosenstein/statigen">statigen</a>.</div>
     </div>
-    <div class="content">
-      <div class="content-inner">
-        
-        <h1 id="Welcome-to-the-Craftr-documentation">Welcome to the Craftr documentation!</h1>
-<p>Craftr is a modular software build system written in Python that has native
-support for C/C++, C#, Cython, Java and other languages. Craftr uses <a href="https://github.com/ninja-build/ninja">Ninja</a>
-as its build backbone.</p><h3 id="How-to-Install-Craftr">How to Install  Craftr</h3>
-<p>Craftr builds on the <a href="https://github.com/nodepy/nodepy">Node.py</a> runtime and must be installed via its package
-manager <code class="codespan">nodepy-pm</code>.</p>
-<pre><code>$ pip install nodepy-runtime
-$ nodepy https://nodepy.org/install-pm.py
-$ nodepy-pm install git+https://github.com/craftr-build/craftr.git
-</pre></code>
-<hr/><h3 id="Examples">Examples</h3><table>
-<tr><th>
-C</th><th>
-C++</th></tr>
-<tr>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.c"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/cxx"</span>
-  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'main.c'</span><span class="p">]</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:cxx.run</code></p></td>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.cpp"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/cxx"</span>
-  <span class="n">cxx</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'main.cpp'</span><span class="p">]</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:cxx.run</code></p></td>
-</tr>
-<tr><th>
-C#</th><th>
-Java</th></tr>
-<tr>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.csharp"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/csharp"</span>
-  <span class="n">csharp</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s1">'src/*.cs'</span><span class="p">)</span>
-  <span class="n">csharp</span><span class="o">.</span><span class="n">packages</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Newtonsoft.JSON:10.0.3'</span><span class="p">]</span>
-  <span class="n">csharp</span><span class="o">.</span><span class="n">bundle</span> <span class="o">=</span> <span class="bp">True</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:csharp.runBundle</code></p></td>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.java"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/java"</span>
-  <span class="n">java</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="s1">'src/**/*.java'</span><span class="p">)</span>
-  <span class="n">java</span><span class="o">.</span><span class="n">artifacts</span> <span class="o">=</span> <span class="p">[</span>
-      <span class="s1">'org.tensorflow:tensorflow:1.4.0'</span>
-    <span class="p">]</span>
-  <span class="n">java</span><span class="o">.</span><span class="n">mainClass</span> <span class="o">=</span> <span class="s1">'Main'</span>
-  <span class="n">java</span><span class="o">.</span><span class="n">bundleType</span> <span class="o">=</span> <span class="s1">'merge'</span>  <span class="c1"># Or 'onejar'</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:java.runBundle</code></p></td>
-</tr>
-<tr><th>
-Haskell</th><th>
-OCaml</th></tr>
-<tr>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.haskell"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/haskell"</span>
-  <span class="n">haskell</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.hs'</span><span class="p">]</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:haskell.run</code></p></td>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.ocaml"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/ocaml"</span>
-  <span class="n">ocaml</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.ml'</span><span class="p">]</span>
-  <span class="c1"># False to produce an OCaml bytecode file</span>
-  <span class="n">ocaml</span><span class="o">.</span><span class="n">standalone</span> <span class="o">=</span> <span class="bp">True</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:ocaml.run</code></p></td>
-</tr>
-<tr><th>
-Vala</th><th>
-Cython</th></tr>
-<tr>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"examples.vala"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/vala"</span>
-  <span class="n">vala</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.vala'</span><span class="p">]</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main:vala.run</code></p></td>
-<td><div class="highlight"><pre><span></span><span class="n">project</span> <span class="s2">"example.cython"</span>
-<span class="n">target</span> <span class="s2">"main"</span><span class="p">:</span>
-  <span class="n">requires</span> <span class="s2">"craftr/lang/cython"</span>
-  <span class="n">cython</span><span class="o">.</span><span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Primes.pyx'</span><span class="p">]</span>
-  <span class="n">cython</span><span class="o">.</span><span class="n">main</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'src/Main.pyx'</span><span class="p">]</span>
-</pre></div>
-<p>Run as <code class="codespan">craftr -cb main/Main:cxx.run</code></p></td>
-</tr>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">My Project</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Home</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/Me/my-project/edit/master/docs/index.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="craftr-build">craftr-build</h1>
+<p>Frontend for the Craftr build framework.</p>
+<p><strong>Requirements</strong></p>
+<ul>
+<li>Python 3.8+</li>
+</ul>
+<h2 id="getting-started">Getting started</h2>
+<p>Builds in Craftr are described using the Craftr DSL or plain Python in a file called
+<code>build.craftr</code> or <code>build.craftr.py</code>, respectively. DSL code is transpiled into pure
+Python code, so everything you can do in the DSL you can also do in Python, though it
+is usually more convenient to use the DSL.</p>
+<p>Most commonly, the first thing to do in the build script is to apply a plugin. Plugins
+provide the means to describe specific build tasks. They do so by registering named extensions
+to the <code>project</code> object, which in the Craftr DSL is used implicitly to resolve variables.</p>
+<p>We'll use the <code>cxx</code> plugin to define a build task for a C program and the <code>run</code> plugin to
+add a non-default task to execute the built program.</p>
+<table align="center">
+  <tr><th>Craftr DSL</th><th>Python</th></tr>
+  <tr><td>
+
+  ```py
+  apply 'cxx'
+  apply 'run'
+
+  cxx.compile {
+    sources = glob('src/**/*.cpp')
+    produces = 'executable'
+  }
+
+  run {
+    dependencies.append tasks.compile
+  }
+  ```
+  </td><td>
+
+  ```py
+  project.apply('cxx')
+  project.apply('run')
+
+  compile_task = project.cxx.compile()
+  compile_task.sources = project.glob('src/**/*.cpp')
+  compile_task.produces = 'executable'
+  compile_task.finalize()
+
+  run_task = project.run()
+  run_task.dependencies.append(compile_task)
+  run_task.finalize()
+  ```
+  </td></tr>
 </table>
 
-      </div>
+<p>The build can then be executed using the Craftr CLI.</p>
+<pre><code>$ craftr run
+&gt; Task my-project:compile
+&gt; Task my-project:run
+Hello, World!
+</code></pre>
+<hr />
+<p align="center">Copyright &copy; 2021 &ndash; Niklas Rosenstein</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api-documentation/craftr.build.loader/" class="btn btn-neutral float-right" title="craftr.build.loader">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
     </div>
-  </body>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/Me/my-project/" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+      <span><a href="api-documentation/craftr.build.loader/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '.';</script>
+    <script src="js/theme_extra.js" defer></script>
+    <script src="js/theme.js" defer></script>
+      <script src="search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
 </html>
+
+<!--
+MkDocs version : 1.2.2
+Build Date UTC : 2021-08-28 21:01:26.300836+00:00
+-->
