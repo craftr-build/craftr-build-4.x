@@ -27,7 +27,6 @@ def main():
 
   context = Context(settings=settings)
   context.load_project(Path.cwd())
-  context.finalize()
 
   if args.list:
     for task in all_tasks(context.root_project):

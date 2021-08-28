@@ -1,10 +1,10 @@
-# craftr
+# craftr-build
 
-Craftr is a Gradle-like build-system implemented in Python.
+Frontend for the Craftr build framework.
 
 __Requirements__
 
-* Python 3.9 or newer
+* Python 3.8+
 
 ## Getting started
 

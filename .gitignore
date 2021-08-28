@@ -9,4 +9,4 @@ build/
 .pytest_cache/
 .venv*/
 /test.py
-!craftr-build/src/craftr/build
+!src/craftr/build
