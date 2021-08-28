@@ -16,7 +16,7 @@ entrypoints:
   - haskell = craftr.build.plugins.haskell
   - ocaml = craftr.build.plugins.ocaml
   console_scripts:
-  - craftr = craftr.build.main:main
+  - craftr = craftr.build.__main__:main
 test-drivers:
 - type: mypy
 #- type: pytest

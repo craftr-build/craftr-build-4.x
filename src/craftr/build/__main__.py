@@ -26,10 +26,10 @@ def main():
     settings.set('craftr.core.verbose', True)
 
   context = Context(settings=settings)
-  context.load_project(Path.cwd())
+  project = context.load_project(Path.cwd())
 
   if args.list:
-    for task in all_tasks(context.root_project):
+    for task in all_tasks(project):
       print(task.path)
     return
 

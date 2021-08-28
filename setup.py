@@ -47,7 +47,7 @@ setuptools.setup(
       'ocaml = craftr.build.plugins.ocaml',
     ],
     'console_scripts': [
-      'craftr = craftr.build.main:main',
+      'craftr = craftr.build.__main__:main',
     ]
   },
   cmdclass = {},
