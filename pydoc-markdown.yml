@@ -1,0 +1,36 @@
+loaders:
+  - type: python
+processors:
+  - type: filter
+  - type: smart
+  - type: crossref
+renderer:
+  type: mkdocs
+  pages:
+    - title: Home
+      name: index
+      source: README.md
+    - title: API Documentation
+      children:
+        - title: craftr.build.loader
+          contents: [ craftr.build.loader, craftr.build.loader.* ]
+        - title: craftr.build.lib.interfaces.native
+          contents: [ craftr.build.lib.interfaces.native, craftr.build.lib.interfaces.native.* ]
+        - title: craftr.build.lib.helpers
+          contents: [ craftr.build.lib.helpers, craftr.build.lib.helpers.* ]
+    - title: Plugins
+      children:
+        - title: craftr.build.plugins.cxx
+          contents: [ craftr.build.plugins.cxx, craftr.build.plugins.cxx.* ]
+        - title: craftr.build.plugins.haskell
+          contents: [ craftr.build.plugins.haskell, craftr.build.plugins.haskell.* ]
+        - title: craftr.build.plugins.ocaml
+          contents: [ craftr.build.plugins.ocaml, craftr.build.plugins.ocaml.* ]
+        - title: craftr.build.plugins.processor
+          contents: [ craftr.build.plugins.processor, craftr.build.plugins.processor.* ]
+        - title: craftr.build.plugins.run
+          contents: [ craftr.build.plugins.run, craftr.build.plugins.run.* ]
+  mkdocs_config:
+    site_name: My Project
+    theme: readthedocs
+    repo_url: https://github.com/Me/my-project
