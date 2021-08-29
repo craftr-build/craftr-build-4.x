@@ -19,7 +19,7 @@ class RunTask(Task):
     self.always_outdated = True
 
   def get_actions(self) -> t.List[Action]:
-    executable = self.executable.or_else(None)
+    executable = self.executable.or_none()
     if isinstance(executable, str):
       executable = ExecutableInfo(executable)
     elif isinstance(executable, IExecutableProvider):

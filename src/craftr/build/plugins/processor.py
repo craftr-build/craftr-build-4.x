@@ -2,15 +2,17 @@
 import typing as t
 from pathlib import Path
 
-from craftr.build.lib import ExecutableInfo, TaskFactoryExtension
+import typing_extensions as te
+
+from craftr.build.lib import ExecutableInfo
 from craftr.core.actions import Action, CreateDirectoryAction, CommandAction
 from craftr.core import Namespace, Project, Property, Task
 
 
 class ProcessorTask(Task):
-  inputs: t.Annotated[Property[t.List[Path]], Task.Input]
-  outputs: t.Annotated[Property[t.List[Path]], Task.Output]
-  additional_vars: t.Annotated[Property[t.Dict[str, t.List[str]]], Task.Input]
+  inputs: te.Annotated[Property[t.List[Path]], Task.Input]
+  outputs: te.Annotated[Property[t.List[Path]], Task.Output]
+  additional_vars: te.Annotated[Property[t.Dict[str, t.List[str]]], Task.Input]
   executable: Property[ExecutableInfo]
   args: Property[t.List[str]]
   batch: Property[bool]
@@ -31,20 +33,23 @@ class ProcessorTask(Task):
     inputs = self.inputs.get()
     outputs = self.outputs.get()
     actions: t.List[Action] = [CreateDirectoryAction(d) for d in set(p.parent for p in outputs)]
+    additional_vars: t.Dict[str, t.List[str]] = self.additional_vars.or_else({})
     if self.batch.or_else(True):
       if len(inputs) != len(outputs):
         raise ValueError('inputs must be same length as outputs')
-      additional_vars = self.additional_vars.or_else({})
       for key, value in additional_vars.items():
         if len(value) != len(inputs):
           raise ValueError(f'additional_vars[{key!r}] must have same length as inputs')
       for index, (infile, outfile) in enumerate(zip(inputs, outputs)):
         template_vars = {k: [v[index]] for k, v in additional_vars.items()}
-        template_vars['in'] = [infile]
-        template_vars['out'] = [outfile]
+        template_vars['in'] = [str(infile)]
+        template_vars['out'] = [str(outfile)]
         actions.append(self._render_command(executable, template_vars))
     else:
-      actions.append(self._render_command(inputs, outputs))
+      template_vars = {k: v for k, v in additional_vars.items()}
+      template_vars['in'] = list(map(str, inputs))
+      template_vars['out'] = list(map(str, outputs))
+      actions.append(self._render_command(executable, template_vars))
     return actions
 
 

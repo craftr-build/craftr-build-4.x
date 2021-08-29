@@ -9,7 +9,9 @@ import shlex as sh
 import subprocess as sp
 import typing as t
 from pathlib import Path
+
 import typing_extensions as te
+from nr.preconditions import check_not_none
 
 from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, NativeLibInfo
 from craftr.core import Action, HavingProperties, Property, Settings, Task, Project
@@ -42,7 +44,7 @@ class Props(HavingProperties):
   include_paths: Property[t.List[Path]]
   public_include_paths: Property[t.List[Path]]
   build_options: Property[t.List[str]]
-  libs: Property[t.List[NativeLibInfo]] = []
+  libs: Property[t.List[NativeLibInfo]]
   language: Property[Language]
   product_name: Property[str]
   produces: Property[ProductType]
@@ -59,24 +61,24 @@ class CompileTask(Task, Props, IExecutableProvider, INativeLibProvider):
     assert self.produces.get() == ProductType.EXECUTABLE, self.produces.get()
     return self.product_name.get() + self.naming_scheme['e']
 
-  def _get_executable_path(self) -> str:
-    return str(self._get_preferred_output_directory() / self._get_executable_name())
+  def _get_executable_path(self) -> Path:
+    return self._get_preferred_output_directory() / self._get_executable_name()
 
   def _get_library_name(self) -> str:
     assert self.produces.get().is_lib, self.produces.get()
     return self.naming_scheme['lp'] + self.product_name.get() + self.naming_scheme['ls']
 
-  def _get_library_path(self) -> str:
-    return str(self._get_preferred_output_directory() / self._get_library_name())
+  def _get_library_path(self) -> Path:
+    return self._get_preferred_output_directory() / self._get_library_name()
 
   def _get_objects_output_directory(self) -> Path:
     return self._get_preferred_output_directory() / 'obj'
 
-  def _get_objects_paths(self) -> t.List[str]:
+  def _get_objects_paths(self) -> t.List[Path]:
     object_dir = self._get_objects_output_directory()
-    return [str((object_dir / Path(f).name).with_suffix(self.naming_scheme['o'])) for f in self.sources.get()]
+    return [(object_dir / Path(f).name).with_suffix(self.naming_scheme['o']) for f in self.sources.get()]
 
-  def _detect_language(self, source_file: str) -> str:
+  def _detect_language(self, source_file: str) -> Language:
     if source_file.endswith('.cpp') or source_file.endswith('.cc'):
       return Language.CPP
     else:
@@ -90,35 +92,35 @@ class CompileTask(Task, Props, IExecutableProvider, INativeLibProvider):
     Retrieves native lib info from the `pkg-config` tool and appends it to the #libs property.
     """
 
-    self.libs += [pkg_config(pkg_names, static, self.project.context.settings)]
+    self.libs.set(self.libs + [pkg_config(pkg_names, static, self.project.context.settings)])
 
   # IExecutableProvider
-  def get_executable_info(self) -> ExecutableInfo:
+  def get_executable_info(self) -> t.Optional[ExecutableInfo]:
     if self.produces.get() == ProductType.EXECUTABLE:
-      return ExecutableInfo(self._get_executable_path())
+      return ExecutableInfo(str(self._get_executable_path()))
     return None
 
   # INativeLibProvider
   def get_native_lib_info(self) -> t.Optional[NativeLibInfo]:
     if self.produces.get().is_lib:
       include_paths = list(map(str, self.public_include_paths.or_else_get(lambda: self.include_paths.or_else([]))))
-      return NativeLibInfo(name=self.path, library_files=[self._get_library_path()], include_paths=include_paths)
+      return NativeLibInfo(name=self.path, library_files=[str(self._get_library_path())], include_paths=include_paths)
     return None
 
   # Task
   def init(self) -> None:
     self.product_name.set_default(lambda: self.project.name)
-    self.produces = ProductType.EXECUTABLE
-    self.executable.set_default(self.get_executable_info)
+    self.produces.set(ProductType.EXECUTABLE)
+    self.executable.set_default(lambda: self)
 
   # Task
   def finalize(self) -> None:
     if self.produces.get() == ProductType.EXECUTABLE:
-      self.outputs = [self._get_executable_path()]
+      self.outputs.set([self._get_executable_path()])
     elif self.produces.get().is_lib:
-      self.outputs = [self._get_library_path()]
+      self.outputs.set([self._get_library_path()])
     elif self.produces.get() == ProductType.OBJECTS:
-      self.outputs = self._get_objects_paths()
+      self.outputs.set(self._get_objects_paths())
     else: assert False, self.produces
     super().finalize()
 
@@ -156,13 +158,13 @@ class CompileTask(Task, Props, IExecutableProvider, INativeLibProvider):
     for source_file, object_file in zip(map(str, self.sources.get()), object_files):
       language = self.language.or_else_get(lambda: self._detect_language(source_file))
       compiler = self._get_compiler(language)
-      compile_command = [compiler] + flags + ['-c', source_file, '-o', object_file]
+      compile_command = [compiler] + flags + ['-c', source_file, '-o', str(object_file)]
       actions.append(CommandAction(command=compile_command))
       languages.add(language)
 
     # Generate the archive or link action.
     if self.produces.get() == ProductType.STATIC_LIBRARY:
-      archive_command = ['ar', 'rcs', self._get_library_path()] + self._get_objects_paths()
+      archive_command = ['ar', 'rcs', str(self._get_library_path())] + list(map(str, self._get_objects_paths()))
       actions.append(CommandAction(command=archive_command))
     elif self.produces.get() != ProductType.OBJECTS:
       if self.produces.get() == ProductType.EXECUTABLE:
@@ -174,7 +176,7 @@ class CompileTask(Task, Props, IExecutableProvider, INativeLibProvider):
       for ndep in native_deps:
         flags += ['-L' + x for x in ndep.library_search_paths]
         flags += ['-l' + x for x in ndep.library_names]
-      linker_command = [compiler] + flags + object_files + static_libs + ['-o', str(product_filename)]
+      linker_command = [compiler] + flags + list(map(str, object_files)) + static_libs + ['-o', str(product_filename)]
       actions.append(CommandAction(command=linker_command))
 
     return actions
@@ -184,7 +186,7 @@ class PkgConfigError(Exception):
   pass
 
 
-def pkg_config(pkg_names: t.List[str], static: bool, settings: 'Settings') -> NativeLibInfo:
+def pkg_config(pkg_names: t.Sequence[str], static: bool, settings: 'Settings') -> NativeLibInfo:
   """
   This function runs the `pkg-config` command with the specified *pkg_name* and returns the
   library data that can be consumed by the #Compile task.
