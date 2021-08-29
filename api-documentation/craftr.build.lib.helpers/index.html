@@ -57,16 +57,6 @@
                     <li class="toctree-l1"><a class="reference internal" href="../craftr.build.lib.interfaces.native/">craftr.build.lib.interfaces.native</a>
                     </li>
                     <li class="toctree-l1 current"><a class="reference internal current" href="./">craftr.build.lib.helpers</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#taskfactoryextension-objects">TaskFactoryExtension Objects</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#__call__">__call__</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#pluginregistration-objects">PluginRegistration Objects</a>
-    </li>
-    </ul>
                     </li>
                 </ul>
                 <p class="caption"><span class="caption-text">Plugins</span></p>
@@ -122,53 +112,7 @@
           <div role="main">
             <div class="section">
               
-                <p><a id="craftr.build.lib.helpers"></a></p>
-<h1 id="craftrbuildlibhelpers">craftr.build.lib.helpers</h1>
-<p><a id="craftr.build.lib.helpers.TaskFactoryExtension"></a></p>
-<h2 id="taskfactoryextension-objects">TaskFactoryExtension Objects</h2>
-<pre><code class="language-python">class TaskFactoryExtension(t.Generic[T_Task])
-</code></pre>
-<p>This is a helper class that wraps a <code>Task</code> subclass to act as a factory for that class. It is used
-as a convenience when registering a task as an extension to a <code>Project</code> such that it can be used
-to define a default task as well as defining a custom named task of the type.</p>
-<pre><code class="language-py">def apply(project: Project, name: str) -&gt; None:
-  project.register_extension('myTaskType', TaskFactoryExtension(project, 'myTaskType', MyTaskType))
-</code></pre>
-<p>Inside a project, the task can then be instantiated with a configuration closure, and optionally
-with a custom task name.</p>
-<pre><code class="language-py">myTaskType {
-  # ...
-}
-myTaskType('otherTaskName') {
-  # ...
-}
-
-assert 'myTaskType' in tasks
-assert 'otherTaskName' in tasks
-</code></pre>
-<p><a id="craftr.build.lib.helpers.TaskFactoryExtension.__call__"></a></p>
-<h4 id="__call__">__call__</h4>
-<pre><code class="language-python"> | __call__(arg: t.Union[str, Closure] = None) -&gt; T_Task
-</code></pre>
-<p>Create a new instance of the task type. If a string is specified, it will be used as the task
-name. If a closure is specified, the default task name will be used and the task will be
-configured with the closure.</p>
-<p><a id="craftr.build.lib.helpers.PluginRegistration"></a></p>
-<h2 id="pluginregistration-objects">PluginRegistration Objects</h2>
-<pre><code class="language-python">class PluginRegistration()
-</code></pre>
-<p>Utility class to register classes and functions using decorators and later export them into a
-project when your plugin is applied to a project.</p>
-<pre><code class="language-py">from craftr.build.lib import PluginRegistration
-from craftr.core.task import Task
-
-plugin = PluginRegistration()
-apply = plugin.apply
-
-@plugin.exports
-class MyCustomTask(Task):
-  # ...
-</code></pre>
+                
               
             </div>
           </div>
