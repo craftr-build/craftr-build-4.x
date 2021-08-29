@@ -11,17 +11,13 @@ import typing as t
 from pathlib import Path
 import typing_extensions as te
 
-from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, NativeLibInfo, PluginRegistration
+from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, NativeLibInfo
 from craftr.core import Action, HavingProperties, Property, Settings, Task, Project
 from craftr.core.actions import CommandAction, CreateDirectoryAction
 from craftr.core.plugin import Namespace
 from .namingscheme import NamingScheme
 
-plugin = PluginRegistration()
-apply = plugin.apply
 
-
-@plugin.exports
 class ProductType(enum.Enum):
   OBJECTS = enum.auto()
   EXECUTABLE = enum.auto()
@@ -33,7 +29,6 @@ class ProductType(enum.Enum):
     return self in (ProductType.SHARED_LIBRARY, ProductType.STATIC_LIBRARY)
 
 
-@plugin.exports
 class Language(enum.Enum):
   C = enum.auto()
   CPP = enum.auto()
@@ -55,7 +50,6 @@ class Props(HavingProperties):
   executable: te.Annotated[Property[IExecutableProvider], Task.Output]
 
 
-@plugin.exports('compile')
 class CompileTask(Task, Props, IExecutableProvider, INativeLibProvider):
 
   def _get_preferred_output_directory(self) -> Path:

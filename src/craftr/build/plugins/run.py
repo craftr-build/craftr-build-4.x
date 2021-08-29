@@ -5,7 +5,6 @@ from craftr.core.plugin.api import Namespace
 from craftr.core.project.project import Project
 
 from craftr.build.lib import ExecutableInfo, IExecutableProvider
-from craftr.build.lib.helpers import PluginRegistration
 from craftr.core.actions import Action, CommandAction
 from craftr.core.property import Property
 from craftr.core.task import Task

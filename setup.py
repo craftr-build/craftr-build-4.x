@@ -16,7 +16,7 @@ else:
   long_description = None
 
 requirements = [
-  'craftr-core >=0.1.0,<0.2.0',
+  'craftr-core >=0.2.0,<0.3.0',
   'craftr-dsl >=0.2.0,<0.3.0',
   'nr.preconditions >=0.0.4,<1.0.0',
 ]

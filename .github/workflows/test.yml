@@ -24,9 +24,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: python -m pip install shut==0.18.0 git+https://github.com/craftr-build/craftr-core.git -q
+      run: python -m pip install shut==0.18.0 -q
     - name: Test
-      run: shut pkg test
+      run: shut pkg test --isolate
     - name: Verify package
       run: shut pkg checks
 
@@ -75,7 +75,7 @@ jobs:
         version: latest
         platform: x64
     - name: Install Craftr
-      run: python -m pip install git+https://github.com/craftr-build/craftr-core.git -e .
+      run: python -m pip install -e .
     - name: Build and run examples/c
       run: cd examples/c && craftr :run
 
@@ -91,7 +91,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Craftr
-      run: python -m pip install git+https://github.com/craftr-build/craftr-core.git -e .
+      run: python -m pip install -e .
     # Github Actions always have GHC available.
     - name: Build and run examples/c
       run: cd examples/haskell && craftr run
@@ -110,6 +110,6 @@ jobs:
     - name: Setup Ocaml
       run: sudo apt-get install ocaml
     - name: Install Craftr
-      run: python -m pip install git+https://github.com/craftr-build/craftr-core.git -e .
+      run: python -m pip install -e .
     - name: Build and run examples/c
       run: cd examples/ocaml && craftr run

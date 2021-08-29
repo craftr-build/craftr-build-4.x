@@ -5,7 +5,7 @@ modulename: craftr.build
 description: CLI and DSL frontend for the Craftr build system.
 typed: true
 requirements:
-- craftr-core ~0.1.0
+- craftr-core ~0.2.0
 - craftr-dsl ~0.2.0
 - python ^3.8
 - nr.preconditions ^0.0.4
