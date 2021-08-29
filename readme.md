@@ -1,3 +1,7 @@
+> If you're looking for the latest stable version of Craftr, check out the [4.x][] branch.
+
+  [4.x]: https://github.com/craftr-build/craftr-build/tree/4.x
+
 # craftr-build
 
 Frontend for the Craftr build framework.
