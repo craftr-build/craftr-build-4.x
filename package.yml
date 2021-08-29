@@ -8,6 +8,7 @@ requirements:
 - craftr-core ~0.1.0
 - craftr-dsl ~0.2.0
 - python ^3.8
+- nr.preconditions ^0.0.4
 entrypoints:
   craftr.plugins:
   - cxx = craftr.build.plugins.cxx
@@ -19,4 +20,3 @@ entrypoints:
   - craftr = craftr.build.__main__:main
 test-drivers:
 - type: mypy
-#- type: pytest
