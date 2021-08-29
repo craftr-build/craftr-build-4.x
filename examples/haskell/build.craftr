@@ -1,7 +1,7 @@
 # type: ignore
 
-project.apply("haskell")
+apply 'haskell'
 
-project.haskellApplication {
+haskellApplication {
   self.srcs = ["Main.hs"]
 }

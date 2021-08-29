@@ -1,5 +1,8 @@
 
 import typing as t
+from craftr.core.plugin.api import Namespace
+
+from craftr.core.project.project import Project
 
 from craftr.build.lib import ExecutableInfo, IExecutableProvider
 from craftr.build.lib.helpers import PluginRegistration
@@ -7,11 +10,7 @@ from craftr.core.actions import Action, CommandAction
 from craftr.core.property import Property
 from craftr.core.task import Task
 
-plugin = PluginRegistration()
-apply = plugin.apply
 
-
-@plugin.exports('run')
 class RunTask(Task):
 
   executable: Property[t.Union[IExecutableProvider, ExecutableInfo, str]]
@@ -39,3 +38,7 @@ class RunTask(Task):
 
     assert isinstance(executable, ExecutableInfo)
     return [CommandAction(executable.invokation_layout or [executable.filename])]
+
+
+def apply(project: Project, namespace: Namespace) -> None:
+  namespace.add_task_factory('run', RunTask)

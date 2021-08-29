@@ -12,8 +12,9 @@ from pathlib import Path
 import typing_extensions as te
 
 from craftr.build.lib import IExecutableProvider, ExecutableInfo, INativeLibProvider, NativeLibInfo, PluginRegistration
-from craftr.core import Action, HavingProperties, Property, Settings, Task
+from craftr.core import Action, HavingProperties, Property, Settings, Task, Project
 from craftr.core.actions import CommandAction, CreateDirectoryAction
+from craftr.core.plugin import Namespace
 from .namingscheme import NamingScheme
 
 plugin = PluginRegistration()
@@ -55,7 +56,7 @@ class Props(HavingProperties):
 
 
 @plugin.exports('compile')
-class Compile(Task, Props, IExecutableProvider, INativeLibProvider):
+class CompileTask(Task, Props, IExecutableProvider, INativeLibProvider):
 
   def _get_preferred_output_directory(self) -> Path:
     return self.project.build_directory / self.name
@@ -185,8 +186,6 @@ class Compile(Task, Props, IExecutableProvider, INativeLibProvider):
     return actions
 
 
-
-
 class PkgConfigError(Exception):
   pass
 
@@ -275,3 +274,10 @@ def pkg_config(pkg_names: t.List[str], static: bool, settings: 'Settings') -> Na
     defines=defines,
     compiler_flags=compile_flags,
     linker_flags=link_flags)
+
+
+def apply(project: Project, namespace: Namespace) -> None:
+  namespace.add('CxxProductType', ProductType)
+  namespace.add('CxxLanguage', Language)
+  namespace.add('CxxCompileTask', CompileTask)
+  namespace.add_task_factory('cxx', CompileTask)

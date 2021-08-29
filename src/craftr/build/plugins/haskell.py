@@ -6,15 +6,13 @@ Provides a simple interface to building Haskell applications.
 import os
 import typing as t
 import typing_extensions as te
-from craftr.build.lib.helpers import TaskFactoryExtension
 
-from craftr.core import Project, Property, Task
+from craftr.core import Project, Property, Task, Namespace
 from craftr.core.actions import CreateDirectoryAction, CommandAction
 from craftr.core.actions.action import Action
-from craftr.core.configurable import Closure
 
 
-class HaskellApplication(Task):
+class HaskellApplicationTask(Task):
 
   srcs: te.Annotated[Property[t.List[str]], Task.InputFile]
   compiler_flags: Property[t.List[str]]
@@ -57,6 +55,6 @@ class HaskellApplication(Task):
     return actions
 
 
-def apply(project: Project, name: str) -> None:
-  project.add_extension('HaskellApplication', HaskellApplication)
-  project.add_extension('haskellApplication', TaskFactoryExtension(project, 'haskellApplication', HaskellApplication))
+def apply(project: Project, namespace: Namespace) -> None:
+  namespace.add('HaskellApplicationTask', HaskellApplicationTask)
+  namespace.add_task_factory('haskellApplication', HaskellApplicationTask)

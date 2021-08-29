@@ -2,6 +2,6 @@
 
 project.apply("ocaml")
 
-project.ocamlApplication {
+ocamlApplication {
   self.srcs = ["Main.ml"]
 }

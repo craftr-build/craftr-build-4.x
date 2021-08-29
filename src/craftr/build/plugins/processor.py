@@ -1,11 +1,11 @@
 
 import typing as t
 from pathlib import Path
+
 from craftr.build.lib import ExecutableInfo, TaskFactoryExtension
 from craftr.core.actions import Action, CreateDirectoryAction, CommandAction
-from craftr.core.project import Project
-from craftr.core.property import Property
-from craftr.core.task import Task
+from craftr.core import Namespace, Project, Property, Task
+
 
 class ProcessorTask(Task):
   inputs: t.Annotated[Property[t.List[Path]], Task.Input]
@@ -47,5 +47,7 @@ class ProcessorTask(Task):
       actions.append(self._render_command(inputs, outputs))
     return actions
 
-def apply(project: Project, name: str) -> None:
-  project.add_extension('processor', TaskFactoryExtension(project, 'processor', ProcessorTask))
+
+def apply(project: Project, namespace: Namespace) -> None:
+  namespace.add('ProcessorTask', ProcessorTask)
+  namespace.add_task_factory('processor', ProcessorTask)

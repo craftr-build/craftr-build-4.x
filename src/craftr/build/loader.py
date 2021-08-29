@@ -14,8 +14,9 @@ class DslProjectLoader(IProjectLoader):
     if (filename := path / BUILD_SCRIPT_FILENAME).exists():
       project = Project(context, parent, path)
       context.initialize_project(project)
-      scope = {'project': project, '__file__': str(filename), '__name__': project.name}
-      execute(filename.read_text(), str(filename), scope)
+      project.ext.add('__file__', str(filename))
+      project.ext.add('__name__', project.name)
+      execute(filename.read_text(), str(filename), project.ext.__attrs__)
       return project
 
     raise CannotLoadProject(self, context, parent, path)

@@ -6,14 +6,13 @@ Provides a simple interface to building OCaml applications.
 import os
 import typing as t
 import typing_extensions as te
-from craftr.build.lib.helpers import TaskFactoryExtension
 
-from craftr.core import Project, Property, Task
+from craftr.core import Project, Property, Task, Namespace
 from craftr.core.actions import CreateDirectoryAction, CommandAction
 from craftr.core.actions.action import Action
 
 
-class OcamlApplication(Task):
+class OcamlApplicationTask(Task):
 
   output_file: te.Annotated[Property[str], Task.Output]
   srcs: te.Annotated[Property[t.List[str]], Task.InputFile]
@@ -54,6 +53,6 @@ class OcamlApplication(Task):
     ]
 
 
-def apply(project: Project, name: str) -> None:
-  project.add_extension('OcamlApplication', OcamlApplication)
-  project.add_extension('ocamlApplication', TaskFactoryExtension(project, 'ocamlApplication', OcamlApplication))
+def apply(project: Project, namespace: Namespace) -> None:
+  namespace.add('OcamlApplicationTask', OcamlApplicationTask)
+  namespace.add_task_factory('ocamlApplication', OcamlApplicationTask)
