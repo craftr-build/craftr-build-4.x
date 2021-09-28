@@ -1,7 +1,7 @@
 # type: ignore
 
-project.apply("ocaml")
+apply "ocaml"
 
 ocamlApplication {
-  self.srcs = ["Main.ml"]
+  srcs = ["Main.ml"]
 }

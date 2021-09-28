@@ -3,5 +3,5 @@
 apply 'haskell'
 
 haskellApplication {
-  self.srcs = ["Main.hs"]
+  srcs = ["Main.hs"]
 }

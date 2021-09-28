@@ -3,16 +3,16 @@
 apply 'cxx'
 apply 'run'
 
-cxx('lib') {
-  self.sources = [project.file('src/hellosayer.c')]
-  self.produces = 'static_library'
+cxx 'lib' {
+  sources = [project.file('src/hellosayer.c')]
+  produces = 'static_library'
 }
 
-cxx('main') {
-  self.sources = [project.file('src/main.c')]
-  self.dependencies.append project.tasks.lib
+cxx 'main' {
+  sources = [project.file('src/main.c')]
+  dependencies.append project.tasks.lib
 }
 
 run {
-  self.dependencies.append project.tasks.main
+  dependencies.append project.tasks.main
 }
